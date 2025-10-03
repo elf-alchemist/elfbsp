@@ -29,17 +29,25 @@ set(PROJECT_STRING "${PROJECT_NAME} ${PROJECT_VERSION}")
 
 configure_file(config.h.in config.h)
 
-add_compile_options(
-    -Wall
-    -Wextra
-    -Wshadow
-    -Wno-unused-parameter
-    -O3
-    -fno-exceptions
-    -fno-rtti
-    -fno-strict-aliasing
-    -fwrapv
-)
+if(MSVC)
+    add_compile_options(
+        /D_CRT_NONSTDC_NO_DEPRECATE
+        /D_CRT_SECURE_NO_WARNINGS
+        /W3
+    )
+else()
+    add_compile_options(
+        -Wall
+        -Wextra
+        -Wshadow
+        -Wno-unused-parameter
+        -O3
+        -fno-exceptions
+        -fno-rtti
+        -fno-strict-aliasing
+        -fwrapv
+    )
+endif()
 
 add_executable(elfbsp
     src/elfbsp.cpp
