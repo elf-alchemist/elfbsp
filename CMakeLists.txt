@@ -64,10 +64,11 @@ target_include_directories(elfbsp PRIVATE ${CMAKE_BINARY_DIR})
 if(WIN32)
     set(CPACK_GENERATOR ZIP)
     install(FILES LICENSE.txt DESTINATION .)
+    install(FILES elfbsp.cfg DESTINATION .)
     if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.21 AND NOT VCPKG_TOOLCHAIN)
         install(
             TARGETS elfbsp
-            RUNTIME_DEPENDENCIES 
+            RUNTIME_DEPENDENCIES
                 PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
                 POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
                 DIRECTORIES $<TARGET_FILE_DIR:elfbsp> $ENV{PATH}
@@ -78,6 +79,7 @@ if(WIN32)
     endif()
 else()
     install(FILES LICENSE.txt DESTINATION "share/doc/${PROJECT_NAME}")
+    install(FILES elfbsp.cfg DESTINATION "share/doc/${PROJECT_NAME}")
     install(TARGETS elfbsp RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 include(CPack)
