@@ -23,20 +23,22 @@ jobs:
         config:
           - name: Linux GCC
             os: ubuntu-latest
-            compiler: gcc
             shell: bash
 
           - name: macOS Clang
             os: macos-latest
-            compiler: clang
             shell: bash
 
           - name: MSYS2 UCRT64
             os: windows-latest
-            compiler: gcc
             shell: 'msys2 {0}'
             msystem: ucrt64
             msys-env: mingw-w64-ucrt-x86_64
+
+          - name: MSVC x64
+            os: windows-latest
+            shell: pwsh
+            arch: x64
 
     steps:
       - name: Install dependencies (Linux)
@@ -56,11 +58,15 @@ jobs:
             ${{ matrix.config.msys-env }}-cmake
             ${{ matrix.config.msys-env }}-ninja
 
+      - name: Developer Command Prompt
+        if: ${{ matrix.config.name == 'MSVC x64' }}
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.config.arch }}
+
       - uses: actions/checkout@v4
 
       - name: Configure
-        env:
-          CC: ${{ matrix.config.compiler }}
         run: |
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
@@ -73,8 +79,16 @@ jobs:
           cpack
 
       - name: Upload Artifacts
-        if: runner.os == 'Windows'
+        if: ${{ matrix.config.name == 'MSVC x64' }}
         uses: actions/upload-artifact@v4
         with:
-          name: MSYS2-UCRT64
+          name: Win64
           path: build/*.zip
+
+      - name: Release
+        if: ${{ matrix.config.name == 'MSVC x64' && contains(github.ref, 'tags') }}
+        uses: ncipollo/release-action@v1
+        with:
+          name: ELFBSP
+          allowUpdates: true
+          artifacts: build/*.zip

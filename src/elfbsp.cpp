@@ -398,7 +398,7 @@ void ShowHelp()
 
 void ShowVersion()
 {
-	printf("%s - [%s]\n", PROJECT_STRING, ISO_8601_DATE);
+	printf("%s\n", PROJECT_STRING);
 
 	fflush(stdout);
 }
