@@ -1,0 +1,80 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ master ]
+    tags: ['*']
+    paths-ignore: ['**.md']
+  pull_request:
+    branches: [ master ]
+    paths-ignore: ['**.md']
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.config.shell }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: Linux GCC
+            os: ubuntu-latest
+            compiler: gcc
+            shell: bash
+
+          - name: macOS Clang
+            os: macos-latest
+            compiler: clang
+            shell: bash
+
+          - name: MSYS2 UCRT64
+            os: windows-latest
+            compiler: gcc
+            shell: 'msys2 {0}'
+            msystem: ucrt64
+            msys-env: mingw-w64-ucrt-x86_64
+
+    steps:
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install ninja-build
+
+      - name: Install dependencies (MSYS2)
+        if: matrix.config.shell == 'msys2 {0}'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.config.msystem }}
+          update: false
+          install: >-
+            ${{ matrix.config.msys-env }}-gcc
+            ${{ matrix.config.msys-env }}-cmake
+            ${{ matrix.config.msys-env }}-ninja
+
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        env:
+          CC: ${{ matrix.config.compiler }}
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Install
+        run: |
+          cd build
+          cpack
+
+      - name: Upload Artifacts
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MSYS2-UCRT64
+          path: build/*.zip
