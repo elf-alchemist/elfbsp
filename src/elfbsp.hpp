@@ -92,6 +92,7 @@ constexpr const char PRINT_HELP[] =
 	"Usage: elfbsp [options...] FILE...\n"
 	"\n"
 	"Available options are:\n"
+	"    -d --doc           Documentation, shows all options\n"
 	"    -v --verbose       Verbose output, show all warnings\n"
 	"    -b --backup        Backup input files (.bak extension)\n"
 	"    -f --fast          Faster partition selection\n"
