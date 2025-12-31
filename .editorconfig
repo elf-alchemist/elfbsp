@@ -16,3 +16,8 @@ switch_case_indent = true
 space_redirects    = true
 keep_padding       = true
 function_next_line = true
+
+[*.yml]
+indent_style = space
+indent_size  = 2
+tab_width    = 2
