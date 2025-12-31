@@ -41,7 +41,8 @@ jobs:
               brew update
               brew install ninja
             configure: |
-              -G Ninja
+              -G Ninja \
+              -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
 
           - name: Windows MinGW
             os: windows-latest
