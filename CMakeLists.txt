@@ -5,7 +5,6 @@ project(elfbsp
         LANGUAGES C CXX)
 
 include(CheckIncludeFile)
-include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
@@ -61,8 +60,8 @@ add_executable(elfbsp
 
 target_include_directories(elfbsp PRIVATE ${CMAKE_BINARY_DIR})
 
+set(CPACK_GENERATOR ZIP)
 if(WIN32)
-    set(CPACK_GENERATOR ZIP)
     install(FILES LICENSE.txt DESTINATION .)
     install(FILES elfbsp.cfg DESTINATION .)
     if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.21 AND NOT VCPKG_TOOLCHAIN)
@@ -78,6 +77,7 @@ if(WIN32)
         install(TARGETS elfbsp RUNTIME DESTINATION .)
     endif()
 else()
+    include(GNUInstallDirs)
     install(FILES LICENSE.txt DESTINATION "share/doc/${PROJECT_NAME}")
     install(FILES elfbsp.cfg DESTINATION "share/doc/${PROJECT_NAME}")
     install(TARGETS elfbsp RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -25,7 +25,7 @@ jobs:
             os: ubuntu-latest
             shell: bash
             artifact-name: linux_x86_64
-            artifact-path: build/*.tar.gz
+            artifact-path: build/*.zip
             install: |
               sudo apt-get update
               sudo apt-get install -y ninja-build
