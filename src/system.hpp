@@ -48,8 +48,6 @@
 #include <cmath>
 #include <cstring>
 
-#include "config.h"
-
 #ifndef WIN32
 #include <unistd.h>
 #endif

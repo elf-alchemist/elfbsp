@@ -8,6 +8,8 @@ include(CheckIncludeFile)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+set(CMAKE_INSTALL_DO_STRIP TRUE)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Set a default build type if none was specified
 set(default_build_type "RelWithDebInfo")
@@ -56,6 +58,12 @@ add_executable(elfbsp
     src/parse.cpp
     src/utility.cpp
     src/wad.cpp
+)
+
+target_compile_definitions(elfbsp PRIVATE
+    PROJECT_NAME="${PROJECT_NAME}"
+    PROJECT_VERSION="${PROJECT_VERSION}"
+    PROJECT_STRING="${PROJECT_NAME} ${PROJECT_VERSION}"
 )
 
 target_include_directories(elfbsp PRIVATE ${CMAKE_BINARY_DIR})
