@@ -192,7 +192,7 @@ typedef struct raw_zdoom_seg_s
 {
 	uint32_t start;      // from this vertex...
 	uint32_t end;        // ... to this vertex
-	uint16_t linedef;    // linedef that this seg goes along, or -1
+	uint16_t linedef;    // linedef that this seg goes along, or NO_INDEX
 	uint8_t  side;       // 0 if on right of linedef, 1 if on left
 
 } PACKEDATTR raw_zdoom_seg_t;
@@ -202,7 +202,7 @@ typedef struct raw_xgl2_seg_s
 {
 	uint32_t vertex;     // from this vertex...
 	uint32_t partner;    // ... to this vertex
-	uint32_t linedef;    // linedef that this seg goes along, or -1
+	uint32_t linedef;    // linedef that this seg goes along, or NO_INDEX
 	uint8_t  side;       // 0 if on right of linedef, 1 if on left
 } PACKEDATTR raw_xgl2_seg_t;
 

@@ -19,9 +19,14 @@
 
 #include <cassert>
 #include <cctype>
+#include <cinttypes>
 #include <cstdlib>
+#include <string>
+#include <bits/basic_string.h>
 
 #include "parse.hpp"
+#include "system.hpp"
+#include "utility.hpp"
 
 namespace elfbsp
 {
@@ -35,7 +40,7 @@ token_kind_e lexer_c::Next(std::string& s)
 	if (pos >= data.size())
 		return TOK_EOF;
 
-	unsigned char ch = (unsigned char) data[pos];
+	byte ch = (byte) data[pos];
 
 	if (ch == '"')
 		return ParseString(s);
@@ -69,12 +74,12 @@ bool lexer_c::Match(const char *s)
 		if (pos + ofs >= data.size())
 			return false;
 
-		unsigned char A = (unsigned char) data[pos + ofs];
-		unsigned char B = (unsigned char) s[0];
+		byte A = (byte) data[pos + ofs];
+		byte B = (byte) s[0];
 
 		// don't change a char when high-bit is set (for UTF-8)
-		if (A < 128) A = std::tolower(A);
-		if (B < 128) B = std::tolower(B);
+		if (A < 128) A = (byte) std::tolower(A);
+		if (B < 128) B = (byte) std::tolower(B);
 
 		if (A != B)
 			return false;
@@ -85,7 +90,7 @@ bool lexer_c::Match(const char *s)
 	// for a keyword, require a non-alphanumeric char after it.
 	if (is_keyword && pos < data.size())
 	{
-		unsigned char ch = (unsigned char) data[pos];
+		byte ch = (byte) data[pos];
 
 		if (std::isalnum(ch) || ch >= 128)
 			return false;
@@ -107,11 +112,15 @@ void lexer_c::Rewind()
 	line = 1;
 }
 
+size_t LEX_Index(const std::string& s)
+{
+	return std::strtoumax(s.c_str(), NULL, 0);
+}
 
-int LEX_Int(const std::string& s)
+int32_t LEX_Int(const std::string& s)
 {
 	// strtol handles all the integer sequences of the UDMF spec
-	return (int)std::strtol(s.c_str(), NULL, 0);
+	return (int32_t)std::strtol(s.c_str(), NULL, 0);
 }
 
 
@@ -136,7 +145,7 @@ void lexer_c::SkipToNext()
 {
 	while (pos < data.size())
 	{
-		unsigned char ch = (unsigned char) data[pos];
+		byte ch = (byte) data[pos];
 
 		// bump line number at end of a line
 		if (ch == '\n')
@@ -149,10 +158,10 @@ void lexer_c::SkipToNext()
 			continue;
 		}
 
-		if (ch == '/' && pos+1 < data.size())
+		if (ch == DIR_SEP_CH && pos+1 < data.size())
 		{
 			// single line comment?
-			if (data[pos+1] == '/')
+			if (data[pos+1] == DIR_SEP_CH)
 			{
 				pos += 2;
 
@@ -169,7 +178,7 @@ void lexer_c::SkipToNext()
 
 				while (pos < data.size())
 				{
-					if (pos+1 < data.size() && data[pos] == '*' && data[pos+1] == '/')
+					if (pos+1 < data.size() && data[pos] == '*' && data[pos+1] == DIR_SEP_CH)
 					{
 						pos += 2;
 						break;
@@ -197,11 +206,11 @@ token_kind_e lexer_c::ParseIdentifier(std::string& s)
 
 	for (;;)
 	{
-		unsigned char ch = (unsigned char) data[pos];
+		byte ch = (byte) data[pos];
 
 		// don't change a char when high-bit is set (for UTF-8)
 		if (ch < 128)
-			ch = std::tolower(ch);
+			ch = (byte) std::tolower(ch);
 
 		if (! (std::isalnum(ch) || ch == '_' || ch >= 128))
 			break;
@@ -235,7 +244,7 @@ token_kind_e lexer_c::ParseNumber(std::string& s)
 		if (pos >= data.size())
 			break;
 
-		unsigned char ch = (unsigned char) data[pos];
+		byte ch = (byte) data[pos];
 
 		// this is fairly lax, but adequate for our purposes
 		if (! (std::isalnum(ch) || ch == '+' || ch == '-' || ch == '.'))
@@ -255,12 +264,12 @@ token_kind_e lexer_c::ParseString(std::string& s)
 
 	while (pos < data.size())
 	{
-		unsigned char ch = (unsigned char) data[pos++];
+		byte ch = (byte) data[pos++];
 
 		if (ch == '"')
 			break;
 
-		if (ch == '\\')
+		if (ch == DIR_SEP_CH)
 		{
 			ParseEscape(s);
 			continue;
@@ -288,16 +297,16 @@ void lexer_c::ParseEscape(std::string& s)
 {
 	if (pos >= data.size())
 	{
-		s.push_back('\\');
+		s.push_back(DIR_SEP_CH);
 		return;
 	}
 
-	unsigned char ch = (unsigned char) data[pos];
+	char ch = data[pos];
 
 	// avoid control chars, especially newline
 	if (ch < 32 || ch == 127)
 	{
-		s.push_back('\\');
+		s.push_back(DIR_SEP_CH);
 		return;
 	}
 
@@ -308,14 +317,14 @@ void lexer_c::ParseEscape(std::string& s)
 	{
 		int val = (int)(ch - '0');
 
-		ch = (unsigned char) data[pos];
+		ch = data[pos];
 		if ('0' <= ch && ch <= '7')
 		{
 			val = val * 8 + (int)(ch - '0');
 			pos++;
 		}
 
-		ch = (unsigned char) data[pos];
+		ch = data[pos];
 		if ('0' <= ch && ch <= '7')
 		{
 			val = val * 8 + (int)(ch - '0');
@@ -336,10 +345,10 @@ void lexer_c::ParseEscape(std::string& s)
 		*p++ = 'x';
 		*p++ = '0';
 
-		ch = (unsigned char) data[pos];
+		ch = data[pos];
 		if (std::isxdigit(ch)) { *p++ = ch; pos++; }
 
-		ch = (unsigned char) data[pos];
+		ch = data[pos];
 		if (std::isxdigit(ch)) { *p++ = ch; pos++; }
 
 		*p = 0;

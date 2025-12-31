@@ -52,23 +52,14 @@
 #include <unistd.h>
 #endif
 
-// allow using std::min, std::max with MSVC
-#undef min
-#undef max
-
-
 // sized types
-
 typedef uint8_t byte;
 
-
 // misc constants
-
 #define MSG_BUF_LEN  1024
 
 
 // basic macros
-
 #undef  NULL
 #define NULL  nullptr
 
@@ -88,7 +79,7 @@ typedef uint8_t byte;
 // to disk.
 //
 
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__clang__)
 #define PACKEDATTR __attribute__((packed))
 #else
 #define PACKEDATTR
@@ -96,49 +87,14 @@ typedef uint8_t byte;
 
 
 // endianness
-
 #if defined(__GNUC__) || defined(__clang__)
 #define __Swap16  __builtin_bswap16
 #define __Swap32  __builtin_bswap32
 #define __Swap64  __builtin_bswap64
-
-#elif defined(_MSC_VER)
-#define __Swap16  _byteswap_ushort
-#define __Swap32  _byteswap_ulong
-#define __Swap64  _byteswap_uint64
-
-#else
-static inline uint16_t __Swap16(uint16_t n) {
-	uint16_t a;
-	a  = (n & 0xFF) << 8;
-	a |= (n >> 8) & 0xFF;
-	return a;
-}
-static inline uint32_t __Swap32(uint32_t n) {
-	uint32_t a;
-	a  = (n & 0xFFU)   << 24;
-	a |= (n & 0xFF00U) << 8;
-	a |= (n >>  8) & 0xFF00U;
-	a |= (n >> 24) & 0xFFU;
-	return a;
-}
-static inline uint64_t __Swap64(uint64_t n) {
-	uint64_t a;
-	a  = (n & 0xFFULL)       << 56;
-	a |= (n & 0xFF00ULL)     << 40;
-	a |= (n & 0xFF0000ULL)   << 24;
-	a |= (n & 0xFF000000ULL) << 8;
-	a |= (n >>  8) & 0xFF000000ULL;
-	a |= (n >> 24) & 0xFF0000ULL;
-	a |= (n >> 40) & 0xFF00ULL;
-	a |= (n >> 56) & 0xFFULL;
-	return a;
-}
 #endif
 
 // the Makefile or build system must define BIG_ENDIAN_CPU
 // WISH: some preprocessor checks to detect a big-endian cpu.
-
 #ifdef BIG_ENDIAN_CPU
 #define LE_U16(x)  __Swap16(x)
 #define LE_U32(x)  __Swap32(x)
@@ -164,6 +120,7 @@ static inline uint64_t __Swap64(uint64_t n) {
 #define BE_S32(x)  ((int32_t) BE_U32((uint32_t) (x)))
 #define BE_S64(x)  ((int64_t) BE_U64((uint64_t) (x)))
 
+constexpr size_t NO_INDEX = (size_t)(-1);
 
 #endif  /* __ELFBSP_SYSTEM_H__ */
 

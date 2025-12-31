@@ -56,11 +56,11 @@ bool HasExtension(const char *filename)
 		if (filename[A] == '.')
 			return true;
 
-		if (filename[A] == '/')
+		if (filename[A] == DIR_SEP_CH)
 			break;
 
 #ifdef WIN32
-		if (filename[A] == '\\' || filename[A] == ':')
+		if (filename[A] == DIR_SEP_CH || filename[A] == ':')
 			break;
 #endif
 	}
@@ -78,8 +78,8 @@ bool MatchExtension(const char *filename, const char *ext)
 	if (! ext)
 		return ! HasExtension(filename);
 
-	int A = (int)strlen(filename) - 1;
-	int B = (int)strlen(ext) - 1;
+	size_t A = strlen(filename) - 1;
+	size_t B = strlen(ext) - 1;
 
 	for (; B >= 0 ; B--, A--)
 	{
@@ -97,33 +97,33 @@ bool MatchExtension(const char *filename, const char *ext)
 //
 // FindExtension
 //
-// Return offset of the '.', or -1 when no extension was found.
+// Return offset of the '.', or NO_INDEX when no extension was found.
 //
-int FindExtension(const char *filename)
+size_t FindExtension(const char *filename)
 {
 	if (filename[0] == 0)
-		return -1;
+		return NO_INDEX;
 
-	int pos = (int)strlen(filename) - 1;
+	size_t pos = strlen(filename) - 1;
 
 	for (; pos >= 0 && filename[pos] != '.' ; pos--)
 	{
 		char ch = filename[pos];
 
-		if (ch == '/')
+		if (ch == DIR_SEP_CH)
 			break;
 
 #ifdef WIN32
-		if (ch == '\\' || ch == ':')
+		if (ch == DIR_SEP_CH || ch == ':')
 			break;
 #endif
 	}
 
 	if (pos < 0)
-		return -1;
+		return NO_INDEX;
 
 	if (filename[pos] != '.')
-		return -1;
+		return NO_INDEX;
 
 	return pos;
 }
@@ -259,9 +259,10 @@ int StringCaseCmpMax(const char *s1, const char *s2, size_t len)
 //
 // Allocate memory with error checking.  Zeros the memory.
 //
-void *UtilCalloc(int size)
+template<typename T>
+T *UtilCalloc(size_t size)
 {
-	void *ret = calloc(1, size);
+	T *ret = calloc(1, size);
 
 	if (!ret)
 		cur_info->FatalError("Out of memory (cannot allocate %d bytes)\n", size);
@@ -273,9 +274,10 @@ void *UtilCalloc(int size)
 //
 // Reallocate memory with error checking.
 //
-void *UtilRealloc(void *old, int size)
+template<typename T>
+T *UtilRealloc(T *old, size_t size)
 {
-	void *ret = realloc(old, size);
+	T *ret = realloc(old, size);
 
 	if (!ret)
 		cur_info->FatalError("Out of memory (cannot reallocate %d bytes)\n", size);

@@ -96,7 +96,5 @@ CMakeUserPresets.json
 # End of https://www.toptal.com/developers/gitignore/api/c,c++,cmake
 
 # Build artifacts
-build/*
-.cache/*
-*/elfbsp
-*/zzdummy
+build/
+.cache/

@@ -34,10 +34,10 @@ std::string opt_output;
 
 std::vector< const char * > wad_list;
 
-int total_failed_files = 0;
-int total_empty_files  = 0;
-int total_built_maps   = 0;
-int total_failed_maps  = 0;
+size_t total_failed_files = 0;
+size_t total_empty_files  = 0;
+size_t total_built_maps   = 0;
+size_t total_failed_maps  = 0;
 
 struct map_range_t
 {
@@ -186,7 +186,7 @@ bool CheckMapInRange(const map_range_t *range, const char *name)
 }
 
 
-bool CheckMapInMaplist(int lev_idx)
+bool CheckMapInMaplist(size_t lev_idx)
 {
 	// when --map is not used, allow everything
 	if (map_list.empty())
@@ -207,7 +207,7 @@ build_result_e BuildFile()
 	config.total_warnings = 0;
 	config.total_minor_issues = 0;
 
-	int num_levels = elfbsp::LevelsInWad();
+	size_t num_levels = elfbsp::LevelsInWad();
 
 	if (num_levels == 0)
 	{
@@ -216,13 +216,13 @@ build_result_e BuildFile()
 		return BUILD_OK;
 	}
 
-	int visited  = 0;
-	int failures = 0;
+	size_t visited  = 0;
+	size_t failures = 0;
 
 	build_result_e res = BUILD_OK;
 
 	// loop over each level in the wad
-	for (int n = 0 ; n < num_levels ; n++)
+	for (size_t n = 0 ; n < num_levels ; n++)
 	{
 		if (! CheckMapInMaplist(n))
 			continue;
@@ -335,7 +335,7 @@ void BackupFile(const char *filename)
 
 	// replace file extension (if any) with .bak
 
-	int ext_pos = elfbsp::FindExtension(filename);
+	size_t ext_pos = elfbsp::FindExtension(filename);
 	if (ext_pos > 0)
 		dest_name.resize(ext_pos);
 
@@ -736,7 +736,7 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	int total_files = (int)wad_list.size();
+	size_t total_files = wad_list.size();
 
 	if (total_files == 0)
 	{
@@ -799,8 +799,8 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
-		int built = total_files - total_empty_files;
-		int empty = total_empty_files;
+		size_t built = total_files - total_empty_files;
+		size_t empty = total_empty_files;
 
 		config.Print("Ok, built %d file%s, %d file%s empty.\n",
 				built, (built == 1 ? "" : "s"),

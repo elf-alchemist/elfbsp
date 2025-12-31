@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "elfbsp.hpp"
+#include "system.hpp"
 
 namespace elfbsp
 {
@@ -52,14 +53,8 @@ extern Wad_file * cur_wad;
 
 #define BugError  cur_info->FatalError
 
-#if defined(__GNUC__)
-#define SYS_ASSERT(cond)  ((cond) ? (void)0 :  \
+#define SYS_ASSERT(cond) ((cond) ? (void)0 :  \
         BugError("Assertion (%s) failed\nIn function %s (%s:%d)\n", #cond , __func__, __FILE__, __LINE__))
-
-#else
-#define SYS_ASSERT(cond)  ((cond) ? (void)0 :  \
-        BugError("Assertion (%s) failed\nIn file %s:%d\n", #cond , __FILE__, __LINE__))
-#endif
 
 
 void Failure(const char *fmt, ...);
@@ -129,7 +124,7 @@ public:
 
 	// vertex index.  Always valid after loading and pruning of unused
 	// vertices has occurred.
-	int index;
+	size_t index;
 
 	// vertex is newly created (from a seg split)
 	bool is_new;
@@ -160,7 +155,7 @@ class sector_t
 {
 public:
 	// sector index.  Always valid after loading & pruning.
-	int index;
+	size_t index;
 
 	// most info (floor_h, floor_tex, etc) omitted.  We don't need to
 	// write the SECTORS lump, only read it.
@@ -173,7 +168,7 @@ public:
 	// Thus: on every 2-sided linedef, the sectors on both sides will be
 	// in the same group.  The rej_next, rej_prev fields are a link in a
 	// RING, containing all sectors of the same group.
-	int rej_group;
+	size_t rej_group;
 
 	sector_t *rej_next;
 	sector_t *rej_prev;
@@ -187,7 +182,7 @@ public:
 	sector_t *sector;
 
 	// sidedef index.  Always valid after loading & pruning.
-	int index;
+	size_t index;
 };
 
 
@@ -230,7 +225,7 @@ public:
 
 	// linedef index.  Always valid after loading & pruning of zero
 	// length lines has occurred.
-	int index;
+	size_t index;
 
 public:
 	double MinX() const
@@ -250,7 +245,7 @@ public:
 	// write the THINGS lump, only read it.
 
 	// Always valid (thing indices never change).
-	int index;
+	size_t index;
 };
 
 
@@ -277,7 +272,7 @@ public:
 	// seg index.  Only valid once the seg has been added to a
 	// subsector.  A negative value means it is invalid -- there
 	// shouldn't be any of these once the BSP tree has been built.
-	int index;
+	size_t index;
 
 	// when true, this seg has become zero length (integer rounding of the
 	// start and end vertices produces the same location).  It should be
@@ -337,11 +332,11 @@ public:
 	seg_t *seg_list;
 
 	// count of segs -- only valid after RenumberSegs() is called
-	int seg_count;
+	size_t seg_count;
 
 	// subsector index.  Always valid, set when the subsector is
 	// initially created.
-	int index;
+	size_t index;
 
 	// approximate middle point
 	double mid_x;
@@ -352,7 +347,7 @@ public:
 
 	void DetermineMiddle();
 	void ClockwiseOrder();
-	void RenumberSegs(int& cur_seg_index);
+	void RenumberSegs(size_t& cur_seg_index);
 
 	void RoundOff();
 	void Normalise();
@@ -398,7 +393,7 @@ public:
 
 	// node index.  Only valid once the NODES or GL_NODES lump has been
 	// created.
-	int index;
+	size_t index;
 
 public:
 	void SetPartition(const seg_t *part);
@@ -422,8 +417,8 @@ public:
 	quadtree_c *subs[2];
 
 	// count of real/mini segs contained in this node AND ALL CHILDREN.
-	int real_num;
-	int mini_num;
+	size_t real_num;
+	size_t mini_num;
 
 	// list of segs completely contained in this node.
 	seg_t *list;
@@ -462,19 +457,19 @@ extern std::vector<subsec_t *>  lev_subsecs;
 extern std::vector<node_t *>    lev_nodes;
 extern std::vector<walltip_t *> lev_walltips;
 
-#define num_vertices  ((int)lev_vertices.size())
-#define num_linedefs  ((int)lev_linedefs.size())
-#define num_sidedefs  ((int)lev_sidedefs.size())
-#define num_sectors   ((int)lev_sectors.size())
-#define num_things    ((int)lev_things.size())
+#define num_vertices  (lev_vertices.size())
+#define num_linedefs  (lev_linedefs.size())
+#define num_sidedefs  (lev_sidedefs.size())
+#define num_sectors   (lev_sectors.size())
+#define num_things    (lev_things.size())
 
-#define num_segs      ((int)lev_segs.size())
-#define num_subsecs   ((int)lev_subsecs.size())
-#define num_nodes     ((int)lev_nodes.size())
-#define num_walltips  ((int)lev_walltips.size())
+#define num_segs      (lev_segs.size())
+#define num_subsecs   (lev_subsecs.size())
+#define num_nodes     (lev_nodes.size())
+#define num_walltips  (lev_walltips.size())
 
-extern int num_old_vert;
-extern int num_new_vert;
+extern size_t num_old_vert;
+extern size_t num_new_vert;
 
 
 /* ----- function prototypes ----------------------- */
@@ -491,7 +486,7 @@ subsec_t  *NewSubsec();
 node_t    *NewNode();
 walltip_t *NewWallTip();
 
-Lump_c * CreateLevelLump(const char *name, int max_size = -1);
+Lump_c * CreateLevelLump(const char *name, size_t max_size = NO_INDEX);
 Lump_c * FindLevelLump(const char *name);
 
 /* limit flags, to show what went wrong */
