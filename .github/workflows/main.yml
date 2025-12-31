@@ -24,51 +24,63 @@ jobs:
           - name: Linux GCC
             os: ubuntu-latest
             shell: bash
+            artifact-name: linux_x86_64
+            artifact-path: build/*.zip
+            install: |
+              sudo apt-get update
+              sudo apt-get install -y ninja-build
+            configure: |
+              -G Ninja
 
-          - name: macOS Clang
+          - name: MacOS Clang
             os: macos-latest
             shell: bash
+            artifact-name: macos_universal
+            artifact-path: build/*.zip
+            install: |
+              brew update
+              brew install ninja
+            configure: |
+              -G Ninja \
+              -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
 
-          - name: MSYS2 UCRT64
+          - name: Windows MinGW
             os: windows-latest
             shell: 'msys2 {0}'
-            msystem: ucrt64
-            msys-env: mingw-w64-ucrt-x86_64
-
-          - name: MSVC x64
-            os: windows-latest
-            shell: pwsh
-            arch: x64
+            msystem: mingw64
+            msys-env: mingw-w64-x86_64
+            artifact-name: windows_x86_64
+            artifact-path: build/*.zip
+            install: |
+              pacman -Syu --noconfirm
+              pacman -S --noconfirm \
+                mingw-w64-x86_64-gcc \
+                mingw-w64-x86_64-cmake \
+                mingw-w64-x86_64-ninja
+            configure: |
+              -G Ninja \
+              -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++ -Wl,--gc-sections"
 
     steps:
-      - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install ninja-build
-
-      - name: Install dependencies (MSYS2)
+      - name: Setup MSYS2
         if: matrix.config.shell == 'msys2 {0}'
         uses: msys2/setup-msys2@v2
         with:
           msystem: ${{ matrix.config.msystem }}
-          update: false
-          install: >-
-            ${{ matrix.config.msys-env }}-gcc
-            ${{ matrix.config.msys-env }}-cmake
-            ${{ matrix.config.msys-env }}-ninja
-
-      - name: Developer Command Prompt
-        if: ${{ matrix.config.name == 'MSVC x64' }}
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: ${{ matrix.config.arch }}
+          update: true
 
       - uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: ${{ matrix.config.install }}
+
       - name: Configure
-        run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: >-
+          cmake
+          -S .
+          -B build
+          -DCMAKE_BUILD_TYPE=Release
+          ${{ matrix.config.configure }}
 
       - name: Build
         run: cmake --build build
@@ -78,17 +90,27 @@ jobs:
           cd build
           cpack
 
+      - name: Extract Version Number (Release)
+        if: contains(github.ref, 'tags')
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF##*_}" >> $GITHUB_ENV
+
+      - name: Extract Version Number (Development)
+        if: "!contains(github.ref, 'tags')"
+        shell: bash
+        run: echo "VERSION=dev-${GITHUB_SHA::7}" >> $GITHUB_ENV
+
       - name: Upload Artifacts
-        if: ${{ matrix.config.name == 'MSVC x64' }}
         uses: actions/upload-artifact@v4
         with:
-          name: Win64
-          path: build/*.zip
+          name: elfbsp_${{ env.VERSION }}_${{ matrix.config.artifact-name }}
+          path: ${{ matrix.config.artifact-path }}
 
       - name: Release
-        if: ${{ matrix.config.name == 'MSVC x64' && contains(github.ref, 'tags') }}
+        if: ${{ contains(github.ref, 'tags') }}
         uses: ncipollo/release-action@v1
         with:
-          name: ELFBSP
+          name: ELFBSP ${{ env.VERSION }}
+          bodyFile: CHANGELOG.md
           allowUpdates: true
-          artifacts: build/*.zip
+          artifacts: ${{ matrix.config.artifact-path }}
