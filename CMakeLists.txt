@@ -6,6 +6,8 @@ project(elfbsp
 
 include(CheckIncludeFile)
 
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_INSTALL_DO_STRIP TRUE)
@@ -28,26 +30,34 @@ set(PROJECT_COPYRIGHT "Copyright (C) 1994-2025")
 set(PROJECT_LICENSE "GNU General Public License, version 2")
 set(PROJECT_STRING "${PROJECT_NAME} ${PROJECT_VERSION}")
 
-configure_file(config.h.in config.h)
+option(ENABLE_WERROR "Treat warnings as errors" OFF)
+option(ENABLE_ASAN "Enable ASan" OFF)
+option(ENABLE_UBSAN "Enable UBSan" OFF)
+option(ENABLE_TSAN "Enable TSan" OFF)
+option(ENABLE_HARDENING "Enable hardening flags" OFF)
+option(ENABLE_LTO "Enable link time Optimization" OFF)
 
-if(MSVC)
-    add_compile_options(
-        /D_CRT_NONSTDC_NO_DEPRECATE
-        /D_CRT_SECURE_NO_WARNINGS
-        /W3
-    )
-else()
-    add_compile_options(
-        -Wall
-        -Wextra
-        -Wshadow
-        -Wno-unused-parameter
-        -O3
-        -fno-exceptions
-        -fno-rtti
-        -fno-strict-aliasing
-        -fwrapv
-    )
+set(SAN_COUNT 0)
+foreach(san ENABLE_ASAN ENABLE_UBSAN ENABLE_TSAN)
+    if(${san})
+        math(EXPR SAN_COUNT "${SAN_COUNT} + 1")
+    endif()
+endforeach()
+
+if(SAN_COUNT GREATER 1)
+    message(FATAL_ERROR "Only one sanitizer may be enabled at a time.")
+endif()
+
+if(ENABLE_LTO AND SAN_COUNT GREATER 0)
+    message(FATAL_ERROR "LTO cannot be enabled together with sanitizers.")
+endif()
+
+if(SAN_COUNT GREATER 0)
+    if(NOT CMAKE_BUILD_TYPE MATCHES "Debug|RelWithDebInfo")
+        message(FATAL_ERROR
+                "Sanitizers require Debug or RelWithDebInfo build type "
+                "(current: ${CMAKE_BUILD_TYPE}).")
+    endif()
 endif()
 
 add_executable(elfbsp
@@ -65,6 +75,61 @@ target_compile_definitions(elfbsp PRIVATE
     PROJECT_VERSION="${PROJECT_VERSION}"
     PROJECT_STRING="${PROJECT_NAME} ${PROJECT_VERSION}"
 )
+
+target_compile_options(elfbsp PRIVATE
+    -Wall
+    -Wextra
+    -Wshadow
+    -Wconversion
+    -Wsign-conversion
+    -Wno-unused-parameter
+)
+
+target_compile_options(elfbsp PRIVATE
+    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:RelWithDebInfo>:-O3>
+    $<$<CONFIG:Debug>:-O0>
+    $<$<CONFIG:MinSizeRel>:-Os>
+)
+
+target_compile_options(elfbsp PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
+)
+
+if(ENABLE_WERROR)
+    target_compile_options(elfbsp PRIVATE -Werror)
+endif()
+
+if(ENABLE_ASAN)
+    target_compile_options(elfbsp PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+    target_link_options(elfbsp PRIVATE -fsanitize=address)
+endif()
+
+if(ENABLE_UBSAN)
+    target_compile_options(elfbsp PRIVATE -fsanitize=undefined)
+    target_link_options(elfbsp PRIVATE -fsanitize=undefined)
+endif()
+
+if(ENABLE_TSAN)
+    target_compile_options(elfbsp PRIVATE -fsanitize=thread)
+    target_link_options(elfbsp PRIVATE -fsanitize=thread)
+endif()
+
+if(ENABLE_HARDENING)
+    target_compile_options(elfbsp PRIVATE -fstack-protector-strong)
+    target_link_options(elfbsp PRIVATE -Wl,-z,relro -Wl,-z,now)
+endif()
+
+if(ENABLE_LTO)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+    if(ipo_supported)
+        set_property(TARGET elfbsp PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(WARNING "LTO not supported: ${ipo_error}")
+    endif()
+endif()
 
 target_include_directories(elfbsp PRIVATE ${CMAKE_BINARY_DIR})
 
