@@ -78,16 +78,16 @@ bool MatchExtension(const char *filename, const char *ext)
 	if (! ext)
 		return ! HasExtension(filename);
 
-	size_t A = strlen(filename) - 1;
-	size_t B = strlen(ext) - 1;
+	size_t A = strlen(filename);
+	size_t B = strlen(ext);
 
-	for (;; B--, A--)
+	while (A-- && B--)
 	{
 		if (toupper(filename[A]) != toupper(ext[B]))
 			return false;
 	}
 
-	return (A >= 1) && (filename[A] == '.');
+	return filename[A] == '.';
 }
 
 

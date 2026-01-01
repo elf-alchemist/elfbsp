@@ -1098,7 +1098,7 @@ size_t Wad_file::PositionForWrite(size_t max_size)
 
 	total_size = (size_t)ftell(fp);
 
-	if ((int64_t)total_size < 0)
+	if ((int32_t)total_size < 0)
 		cur_info->FatalError("Error seeking to new write position.\n");
 
 	if (want_pos > total_size)
@@ -1197,11 +1197,14 @@ void Wad_file::WriteDirectory()
 
 	fflush(fp);
 
-	total_size = ftell(fp);
+	total_size = (size_t)ftell(fp);
 
 #if DEBUG_WAD
 	cur_info->Debug("total_size: %d\n", total_size);
 #endif
+
+	if ((int32_t)total_size < 0)
+		cur_info->FatalError("Error determining WAD size.\n");
 
 	// update header at start of file
 
