@@ -9,7 +9,7 @@ New features:
 * Specials 998, and 1084 through to 1086, which prevent the generation of a given Seg, are NOT guranteed to work properlly -- only use this for testing!
 
 Build system:
-* Added automated GitHub Actions CI
+* Added automated GitHub Actions CI (Thanks @rfomin)
 * Now using only CMake, instead of bespoke Makefile
 * Now compiled with GCC for Linux, Clang for MacOS, and MinGW for Windows
 
