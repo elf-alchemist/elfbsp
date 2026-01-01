@@ -51,11 +51,11 @@ private:
 
 	std::string lumpname;
 
-	int l_start;
-	int l_length;
+	size_t l_start;
+	size_t l_length;
 
 	// constructor is private
-	Lump_c(Wad_file *_par, const char *_name, int _start, int _len);
+	Lump_c(Wad_file *_par, const char *_name, size_t _start, size_t _len);
 	Lump_c(Wad_file *_par, const raw_wad_entry_t *entry);
 
 	void MakeEntry(raw_wad_entry_t *entry);
@@ -64,7 +64,7 @@ public:
 	~Lump_c();
 
 	const char *Name() const { return lumpname.c_str(); }
-	int Length() const { return l_length; }
+	size_t Length() const { return l_length; }
 
 	// case insensitive match on the lump name
 	bool Match(const char *s) const;
@@ -77,7 +77,7 @@ public:
 	bool Seek(int offset);
 
 	// read some data from the lump, returning true if OK.
-	bool Read(void *data, int len);
+	bool Read(void *data, size_t len);
 
 	// read a line of text, returns true if OK, false on EOF
 	bool GetLine(char *buffer, size_t buf_size);
@@ -85,7 +85,7 @@ public:
 	// write some data to the lump.  Only the lump which had just
 	// been created with Wad_file::AddLump() or RecreateLump() can be
 	// written to.
-	bool Write(const void *data, int len);
+	bool Write(const void *data, size_t len);
 
 	// write some text to the lump
 	void Printf(const char *msg, ...);
@@ -130,25 +130,25 @@ private:
 	// zero means "currently unknown", which only occurs after a
 	// call to BeginWrite() and before any call to AddLump() or
 	// the finalizing EndWrite().
-	int total_size;
+	size_t total_size;
 
 	std::vector<Lump_c *> directory;
 
-	int dir_start;
-	int dir_count;
+	size_t dir_start;
+	size_t dir_count;
 
 	// these are lump indices (into 'directory' vector)
-	std::vector<int> levels;
-	std::vector<int> patches;
-	std::vector<int> sprites;
-	std::vector<int> flats;
-	std::vector<int> tx_tex;
+	std::vector<size_t> levels;
+	std::vector<size_t> patches;
+	std::vector<size_t> sprites;
+	std::vector<size_t> flats;
+	std::vector<size_t> tx_tex;
 
 	bool begun_write;
-	int  begun_max_size;
+	size_t begun_max_size;
 
 	// when >= 0, the next added lump is placed _before_ this
-	int insert_point;
+	size_t insert_point;
 
 	// constructor is private
 	Wad_file(const char *_name, char _mode, FILE * _fp);
@@ -174,28 +174,28 @@ public:
 	const char *PathName() const { return filename.c_str(); }
 	bool IsReadOnly() const { return mode == 'r'; }
 
-	int TotalSize() const { return total_size; }
+	size_t TotalSize() const { return total_size; }
 
-	int NumLumps() const { return (int)directory.size(); }
-	Lump_c * GetLump(int index);
+	size_t NumLumps() const { return directory.size(); }
+	Lump_c * GetLump(size_t index);
 	Lump_c * FindLump(const char *name);
-	int FindLumpNum(const char *name);
+	size_t FindLumpNum(const char *name);
 
 	Lump_c * FindLumpInNamespace(const char *name, char group);
 
-	int LevelCount() const { return (int)levels.size(); }
-	int LevelHeader(int lev_num);
-	int LevelLastLump(int lev_num);
+	size_t LevelCount() const { return levels.size(); }
+	size_t LevelHeader(size_t lev_num);
+	size_t LevelLastLump(size_t lev_num);
 
 	// these return a level number (0 .. count-1)
-	int LevelFind(const char *name);
-	int LevelFindByNumber(int number);
-	int LevelFindFirst();
+	size_t LevelFind(const char *name);
+	size_t LevelFindByNumber(int32_t number);
+	size_t LevelFindFirst();
 
 	// returns a lump index, -1 if not found
-	int LevelLookupLump(int lev_num, const char *name);
+	size_t LevelLookupLump(size_t lev_num, const char *name);
 
-	map_format_e LevelFormat(int lev_num);
+	map_format_e LevelFormat(size_t lev_num);
 
 	void  SortLevels();
 
@@ -216,31 +216,31 @@ public:
 	void EndWrite();
 
 	// change name of a lump (can be a level marker too)
-	void RenameLump(int index, const char *new_name);
+	void RenameLump(size_t index, const char *new_name);
 
 	// remove the given lump(s)
 	// this will change index numbers on existing lumps
 	// (previous results of FindLumpNum or LevelHeader are invalidated).
-	void RemoveLumps(int index, int count = 1);
+	void RemoveLumps(size_t index, size_t count = 1);
 
 	// this removes the level marker PLUS all associated level lumps
 	// which follow it.
-	void RemoveLevel(int lev_num);
+	void RemoveLevel(size_t lev_num);
 
 	// removes any ZNODES lump from a UDMF level.
-	void RemoveZNodes(int lev_num);
+	void RemoveZNodes(size_t lev_num);
 
 	// insert a new lump.
 	// The second form is for a level marker.
 	// The 'max_size' parameter (if >= 0) specifies the most data
 	// you will write into the lump -- writing more will corrupt
 	// something else in the WAD.
-	Lump_c * AddLump (const char *name, int max_size = -1);
-	Lump_c * AddLevel(const char *name, int max_size = -1, int *lev_num = NULL);
+	Lump_c * AddLump (const char *name, size_t max_size = NO_INDEX);
+	Lump_c * AddLevel(const char *name, size_t max_size = NO_INDEX, size_t *lev_num = nullptr);
 
 	// setup lump to write new data to it.
 	// the old contents are lost.
-	void RecreateLump(Lump_c *lump, int max_size = -1);
+	void RecreateLump(Lump_c *lump, size_t max_size = NO_INDEX);
 
 	// set the insertion point -- the next lump will be added *before*
 	// this index, and it will be incremented so that a sequence of
@@ -249,7 +249,7 @@ public:
 	// passing a negative value or invalid index will reset the
 	// insertion point -- future lumps get added at the END.
 	// RemoveLumps(), RemoveLevel() and EndWrite() also reset it.
-	void InsertPoint(int index = -1);
+	void InsertPoint(size_t index = NO_INDEX);
 
 private:
 	static Wad_file * Create(const char *filename, char mode);
@@ -263,28 +263,28 @@ private:
 	// look at all the lumps and determine the lowest offset from
 	// start of file where we can write new data.  The directory itself
 	// is ignored for this.
-	int HighWaterMark();
+	size_t HighWaterMark();
 
 	// look at all lumps in directory and determine the lowest offset
 	// where a lump of the given length will fit.  Returns same as
 	// HighWaterMark() when no largest gaps exist.  The directory itself
 	// is ignored since it will be re-written at EndWrite().
-	int FindFreeSpace(int length);
+	size_t FindFreeSpace(size_t length);
 
 	// find a place (possibly at end of WAD) where we can write some
 	// data of max_size (-1 means unlimited), and seek to that spot
 	// (possibly writing some padding zeros -- the difference should
 	// be no more than a few bytes).  Returns new position.
-	int PositionForWrite(int max_size = -1);
+	size_t PositionForWrite(size_t max_size = NO_INDEX);
 
-	bool FinishLump(int final_size);
-	int  WritePadding(int count);
+	bool FinishLump(size_t final_size);
+	size_t WritePadding(size_t count);
 
 	// write the new directory, updating the dir_xxx variables
 	// (including the CRC).
 	void WriteDirectory();
 
-	void FixGroup(std::vector<int>& group, int index, int num_added, int num_removed);
+	void FixGroup(std::vector<size_t>& group, size_t index, size_t num_added, size_t num_removed);
 
 private:
 	// deliberately don't implement these
@@ -302,7 +302,7 @@ private:
 		level_name_CMP_pred(Wad_file * _w) : wad(_w)
 		{ }
 
-		inline bool operator() (const int A, const int B) const
+		inline bool operator() (const size_t A, const size_t B) const
 		{
 			const Lump_c *L1 = wad->directory[A];
 			const Lump_c *L2 = wad->directory[B];

@@ -41,7 +41,7 @@ Wad_file * cur_wad;
 
 static int block_x, block_y;
 static int block_w, block_h;
-static int block_count;
+static size_t block_count;
 
 static int block_mid_x = 0;
 static int block_mid_y = 0;
@@ -51,8 +51,8 @@ static uint16_t ** block_lines;
 static uint16_t *block_ptrs;
 static uint16_t *block_dups;
 
-static int block_compression;
-static int block_overflowed;
+static int32_t block_compression;
+static bool block_overflowed;
 
 #define BLOCK_LIMIT  16000
 
@@ -146,7 +146,7 @@ int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax,
 
 #define BK_QUANTUM  32
 
-static void BlockAdd(int blk_num, int line_index)
+static void BlockAdd(size_t blk_num, size_t line_index)
 {
 	uint16_t *cur = block_lines[blk_num];
 
@@ -154,7 +154,7 @@ static void BlockAdd(int blk_num, int line_index)
 	cur_info->Debug("Block %d has line %d\n", blk_num, line_index);
 #endif
 
-	if (blk_num < 0 || blk_num >= block_count)
+	if (blk_num >= block_count)
 		BugError("BlockAdd: bad block number %d\n", blk_num);
 
 	if (! cur)
@@ -175,7 +175,7 @@ static void BlockAdd(int blk_num, int line_index)
 	}
 
 	// compute new checksum
-	cur[BK_XOR] = (uint16_t) (((cur[BK_XOR] << 4) | (cur[BK_XOR] >> 12)) ^ line_index);
+	cur[BK_XOR] = (((cur[BK_XOR] << 4) | (cur[BK_XOR] >> 12)) ^ line_index);
 
 	cur[BK_FIRST + cur[BK_NUM]] = LE_U16(line_index);
 	cur[BK_NUM]++;
@@ -189,24 +189,23 @@ static void BlockAddLine(const linedef_t *L)
 	int x2 = (int) L->end->x;
 	int y2 = (int) L->end->y;
 
-	int bx1 = (std::min(x1,x2) - block_x) / 128;
-	int by1 = (std::min(y1,y2) - block_y) / 128;
-	int bx2 = (std::max(x1,x2) - block_x) / 128;
-	int by2 = (std::max(y1,y2) - block_y) / 128;
-
-	int bx, by;
-	int line_index = L->index;
+	size_t line_index = L->index;
 
 #if DEBUG_BLOCKMAP
 	cur_info->Debug("BlockAddLine: %d (%d,%d) -> (%d,%d)\n", line_index,
 			x1, y1, x2, y2);
 #endif
 
+	int bx1_temp = (std::min(x1,x2) - block_x) / 128;
+	int by1_temp = (std::min(y1,y2) - block_y) / 128;
+	int bx2_temp = (std::max(x1,x2) - block_x) / 128;
+	int by2_temp = (std::max(y1,y2) - block_y) / 128;
+
 	// handle truncated blockmaps
-	if (bx1 < 0) bx1 = 0;
-	if (by1 < 0) by1 = 0;
-	if (bx2 >= block_w) bx2 = block_w - 1;
-	if (by2 >= block_h) by2 = block_h - 1;
+	size_t bx1 = (size_t)std::max(bx1_temp, 0) ;
+	size_t by1 = (size_t)std::max(by1_temp, 0) ;
+	size_t bx2 = (size_t)std::min(bx2_temp, block_w - 1);
+	size_t by2 = (size_t)std::min(by2_temp, block_h - 1);
 
 	if (bx2 < bx1 || by2 < by1)
 		return;
@@ -214,9 +213,9 @@ static void BlockAddLine(const linedef_t *L)
 	// handle simple case #1: completely horizontal
 	if (by1 == by2)
 	{
-		for (bx=bx1 ; bx <= bx2 ; bx++)
+		for (size_t bx=bx1 ; bx <= bx2 ; bx++)
 		{
-			int blk_num = by1 * block_w + bx;
+			size_t blk_num = by1 * block_w + bx;
 			BlockAdd(blk_num, line_index);
 		}
 		return;
@@ -225,9 +224,9 @@ static void BlockAddLine(const linedef_t *L)
 	// handle simple case #2: completely vertical
 	if (bx1 == bx2)
 	{
-		for (by=by1 ; by <= by2 ; by++)
+		for (size_t by=by1 ; by <= by2 ; by++)
 		{
-			int blk_num = by * block_w + bx1;
+			size_t blk_num = by * block_w + bx1;
 			BlockAdd(blk_num, line_index);
 		}
 		return;
@@ -235,13 +234,13 @@ static void BlockAddLine(const linedef_t *L)
 
 	// handle the rest (diagonals)
 
-	for (by=by1 ; by <= by2 ; by++)
-	for (bx=bx1 ; bx <= bx2 ; bx++)
+	for (size_t by=by1 ; by <= by2 ; by++)
+	for (size_t bx=bx1 ; bx <= bx2 ; bx++)
 	{
-		int blk_num = by * block_w + bx;
+		size_t blk_num = bx + by * block_w;
 
-		int minx = block_x + bx * 128;
-		int miny = block_y + by * 128;
+		int minx = block_x + 128 * bx;
+		int miny = block_y + 128 * by;
 		int maxx = minx + 127;
 		int maxy = miny + 127;
 
@@ -257,7 +256,7 @@ static void CreateBlockmap(void)
 {
 	block_lines = (uint16_t **) UtilCalloc(block_count * sizeof(uint16_t *));
 
-	for (int i=0 ; i < num_linedefs ; i++)
+	for (size_t i = 0 ; i < num_linedefs ; i++)
 	{
 		const linedef_t *L = lev_linedefs[i];
 
@@ -303,13 +302,12 @@ static int BlockCompare(const void *p1, const void *p2)
 
 static void CompressBlockmap(void)
 {
-	int i;
-	int cur_offset;
+	size_t cur_offset;
 #if DEBUG_BLOCKMAP
-	int dup_count=0;
+	size_t dup_count=0;
 #endif
 
-	int orig_size, new_size;
+	size_t orig_size, new_size;
 
 	block_ptrs = (uint16_t *)UtilCalloc(block_count * sizeof(uint16_t));
 	block_dups = (uint16_t *)UtilCalloc(block_count * sizeof(uint16_t));
@@ -318,7 +316,7 @@ static void CompressBlockmap(void)
 	// will be next to each other.  The duplicate array gives the order
 	// of the blocklists in the BLOCKMAP lump.
 
-	for (i=0 ; i < block_count ; i++)
+	for (size_t i = 0 ; i < block_count ; i++)
 		block_dups[i] = (uint16_t) i;
 
 	qsort(block_dups, block_count, sizeof(uint16_t), BlockCompare);
@@ -330,10 +328,10 @@ static void CompressBlockmap(void)
 	orig_size = 4 + block_count;
 	new_size  = cur_offset;
 
-	for (i=0 ; i < block_count ; i++)
+	for (size_t i = 0 ; i < block_count ; i++)
 	{
-		int blk_num = block_dups[i];
-		int count;
+		size_t blk_num = block_dups[i];
+		size_t count;
 
 		// empty block ?
 		if (block_lines[blk_num] == NULL)
@@ -389,7 +387,7 @@ static void CompressBlockmap(void)
 			cur_offset, dup_count);
 #endif
 
-	block_compression = (orig_size - new_size) * 100 / orig_size;
+	block_compression = int32_t((orig_size - new_size) * 100 / orig_size);
 
 	// there's a tiny chance of new_size > orig_size
 	if (block_compression < 0)
@@ -397,22 +395,22 @@ static void CompressBlockmap(void)
 }
 
 
-static int CalcBlockmapSize()
+static size_t CalcBlockmapSize()
 {
 	// compute size of final BLOCKMAP lump.
 	// it does not need to be exact, but it *does* need to be bigger
 	// (or equal) to the actual size of the lump.
 
 	// header + null_block + a bit extra
-	int size = 20;
+	size_t size = 20;
 
 	// the pointers (offsets to the line lists)
 	size = size + block_count * 2;
 
 	// add size of each block
-	for (int i=0 ; i < block_count ; i++)
+	for (size_t i = 0 ; i < block_count ; i++)
 	{
-		int blk_num = block_dups[i];
+		size_t blk_num = block_dups[i];
 
 		// ignore duplicate or empty blocks
 		if (blk_num == DUMMY_DUP)
@@ -421,7 +419,7 @@ static int CalcBlockmapSize()
 		uint16_t *blk = block_lines[blk_num];
 		SYS_ASSERT(blk);
 
-		size += (1 + (int)(blk[BK_NUM]) + 1) * 2;
+		size += ((blk[BK_NUM]) + 1 + 1) * 2;
 	}
 
 	return size;
@@ -430,9 +428,7 @@ static int CalcBlockmapSize()
 
 static void WriteBlockmap(void)
 {
-	int i;
-
-	int max_size = CalcBlockmapSize();
+	size_t max_size = CalcBlockmapSize();
 
 	Lump_c *lump = CreateLevelLump("BLOCKMAP", max_size);
 
@@ -443,15 +439,15 @@ static void WriteBlockmap(void)
 	// fill in header
 	raw_blockmap_header_t header;
 
-	header.x_origin = LE_U16(block_x);
-	header.y_origin = LE_U16(block_y);
-	header.x_blocks = LE_U16(block_w);
-	header.y_blocks = LE_U16(block_h);
+	header.x_origin = LE_S16(block_x);
+	header.y_origin = LE_S16(block_y);
+	header.x_blocks = LE_S16(block_w);
+	header.y_blocks = LE_S16(block_h);
 
 	lump->Write(&header, sizeof(header));
 
 	// handle pointers
-	for (i=0 ; i < block_count ; i++)
+	for (size_t i = 0 ; i < block_count ; i++)
 	{
 		uint16_t ptr = LE_U16(block_ptrs[i]);
 
@@ -465,7 +461,7 @@ static void WriteBlockmap(void)
 	lump->Write(null_block, sizeof(null_block));
 
 	// handle each block list
-	for (i=0 ; i < block_count ; i++)
+	for (size_t i = 0 ; i < block_count ; i++)
 	{
 		int blk_num = block_dups[i];
 
@@ -487,7 +483,7 @@ static void WriteBlockmap(void)
 
 static void FreeBlockmap(void)
 {
-	for (int i=0 ; i < block_count ; i++)
+	for (size_t i=0 ; i < block_count ; i++)
 	{
 		if (block_lines[i])
 			UtilFree(block_lines[i]);
@@ -507,7 +503,7 @@ static void FindBlockmapLimits(bbox_t *bbox)
 	bbox->minx = bbox->miny = SHRT_MAX;
 	bbox->maxx = bbox->maxy = SHRT_MIN;
 
-	for (int i=0 ; i < num_linedefs ; i++)
+	for (size_t i = 0; i < num_linedefs ; i++)
 	{
 		const linedef_t *L = lev_linedefs[i];
 
@@ -619,7 +615,7 @@ void PutBlockmap()
 
 
 static uint8_t *rej_matrix;
-static int      rej_total_size;	// in bytes
+static size_t   rej_total_size;	// in bytes
 
 
 //
@@ -632,7 +628,7 @@ static void Reject_Init()
 	rej_matrix = new uint8_t[rej_total_size];
 	memset(rej_matrix, 0, rej_total_size);
 
-	for (int i=0 ; i < num_sectors ; i++)
+	for (size_t i = 0 ; i < num_sectors ; i++)
 	{
 		sector_t *sec = lev_sectors[i];
 
@@ -656,7 +652,7 @@ static void Reject_Free()
 //
 static void Reject_GroupSectors()
 {
-	for (int i=0 ; i < num_linedefs ; i++)
+	for (size_t i = 0 ; i < num_linedefs ; i++)
 	{
 		const linedef_t *line = lev_linedefs[i];
 
@@ -737,9 +733,9 @@ static void Reject_DebugGroups()
 
 static void Reject_ProcessSectors()
 {
-	for (int view=0 ; view < num_sectors ; view++)
+	for (size_t view = 0 ; view < num_sectors ; view++)
 	{
-		for (int target=0 ; target < view ; target++)
+		for (size_t target = 0 ; target < view ; target++)
 		{
 			sector_t *view_sec = lev_sectors[view];
 			sector_t *targ_sec = lev_sectors[target];
@@ -749,8 +745,8 @@ static void Reject_ProcessSectors()
 
 			// for symmetry, do both sides at same time
 
-			int p1 = view * num_sectors + target;
-			int p2 = target * num_sectors + view;
+			size_t p1 = view * num_sectors + target;
+			size_t p2 = target * num_sectors + view;
 
 			rej_matrix[p1 >> 3] |= (1 << (p1 & 7));
 			rej_matrix[p2 >> 3] |= (1 << (p2 & 7));
@@ -809,8 +805,8 @@ void PutReject()
 
 const char *lev_current_name;
 
-int lev_current_idx;
-int lev_current_start;
+size_t lev_current_idx;
+size_t lev_current_start;
 
 map_format_e lev_format;
 bool lev_force_xnod;
@@ -831,9 +827,9 @@ std::vector<subsec_t *>  lev_subsecs;
 std::vector<node_t *>    lev_nodes;
 std::vector<walltip_t *> lev_walltips;
 
-int num_old_vert = 0;
-int num_new_vert = 0;
-int num_real_lines = 0;
+size_t num_old_vert = 0;
+size_t num_new_vert = 0;
+size_t num_real_lines = 0;
 
 
 /* ----- allocation routines ---------------------------- */
@@ -911,72 +907,72 @@ walltip_t *NewWallTip()
 
 void FreeVertices()
 {
-	for (unsigned int i = 0 ; i < lev_vertices.size() ; i++)
-		UtilFree((void *) lev_vertices[i]);
+	for (size_t i = 0 ; i < lev_vertices.size() ; i++)
+		UtilFree(lev_vertices[i]);
 
 	lev_vertices.clear();
 }
 
 void FreeLinedefs()
 {
-	for (unsigned int i = 0 ; i < lev_linedefs.size() ; i++)
-		UtilFree((void *) lev_linedefs[i]);
+	for (size_t i = 0 ; i < lev_linedefs.size() ; i++)
+		UtilFree(lev_linedefs[i]);
 
 	lev_linedefs.clear();
 }
 
 void FreeSidedefs()
 {
-	for (unsigned int i = 0 ; i < lev_sidedefs.size() ; i++)
-		UtilFree((void *) lev_sidedefs[i]);
+	for (size_t i = 0 ; i < lev_sidedefs.size() ; i++)
+		UtilFree(lev_sidedefs[i]);
 
 	lev_sidedefs.clear();
 }
 
 void FreeSectors()
 {
-	for (unsigned int i = 0 ; i < lev_sectors.size() ; i++)
-		UtilFree((void *) lev_sectors[i]);
+	for (size_t i = 0 ; i < lev_sectors.size() ; i++)
+		UtilFree(lev_sectors[i]);
 
 	lev_sectors.clear();
 }
 
 void FreeThings()
 {
-	for (unsigned int i = 0 ; i < lev_things.size() ; i++)
-		UtilFree((void *) lev_things[i]);
+	for (size_t i = 0 ; i < lev_things.size() ; i++)
+		UtilFree(lev_things[i]);
 
 	lev_things.clear();
 }
 
 void FreeSegs()
 {
-	for (unsigned int i = 0 ; i < lev_segs.size() ; i++)
-		UtilFree((void *) lev_segs[i]);
+	for (size_t i = 0 ; i < lev_segs.size() ; i++)
+		UtilFree(lev_segs[i]);
 
 	lev_segs.clear();
 }
 
 void FreeSubsecs()
 {
-	for (unsigned int i = 0 ; i < lev_subsecs.size() ; i++)
-		UtilFree((void *) lev_subsecs[i]);
+	for (size_t i = 0 ; i < lev_subsecs.size() ; i++)
+		UtilFree(lev_subsecs[i]);
 
 	lev_subsecs.clear();
 }
 
 void FreeNodes()
 {
-	for (unsigned int i = 0 ; i < lev_nodes.size() ; i++)
-		UtilFree((void *) lev_nodes[i]);
+	for (size_t i = 0 ; i < lev_nodes.size() ; i++)
+		UtilFree(lev_nodes[i]);
 
 	lev_nodes.clear();
 }
 
 void FreeWallTips()
 {
-	for (unsigned int i = 0 ; i < lev_walltips.size() ; i++)
-		UtilFree((void *) lev_walltips[i]);
+	for (size_t i = 0 ; i < lev_walltips.size() ; i++)
+		UtilFree(lev_walltips[i]);
 
 	lev_walltips.clear();
 }
@@ -984,7 +980,7 @@ void FreeWallTips()
 
 /* ----- reading routines ------------------------------ */
 
-static vertex_t *SafeLookupVertex(int num)
+static vertex_t *SafeLookupVertex(size_t num)
 {
 	if (num >= num_vertices)
 		cur_info->FatalError("illegal vertex number #%d\n", num);
@@ -1009,7 +1005,7 @@ static inline sidedef_t *SafeLookupSidedef(uint16_t num)
 		return NULL;
 
 	// silently ignore illegal sidedef numbers
-	if (num >= (unsigned int)num_sidedefs)
+	if (num >= num_sidedefs)
 		return NULL;
 
 	return lev_sidedefs[num];
@@ -1018,12 +1014,12 @@ static inline sidedef_t *SafeLookupSidedef(uint16_t num)
 
 void GetVertices()
 {
-	int count = 0;
+	size_t count = 0;
 
 	Lump_c *lump = FindLevelLump("VERTEXES");
 
 	if (lump)
-		count = lump->Length() / (int)sizeof(raw_vertex_t);
+		count = lump->Length() / sizeof(raw_vertex_t);
 
 #if DEBUG_LOAD
 	cur_info->Debug("GetVertices: num = %d\n", count);
@@ -1035,7 +1031,7 @@ void GetVertices()
 	if (! lump->Seek(0))
 		cur_info->FatalError("Error seeking to vertices.\n");
 
-	for (int i = 0 ; i < count ; i++)
+	for (size_t i = 0 ; i < count ; i++)
 	{
 		raw_vertex_t raw;
 
@@ -1054,12 +1050,12 @@ void GetVertices()
 
 void GetSectors()
 {
-	int count = 0;
+	size_t count = 0;
 
 	Lump_c *lump = FindLevelLump("SECTORS");
 
 	if (lump)
-		count = lump->Length() / (int)sizeof(raw_sector_t);
+		count = lump->Length() / sizeof(raw_sector_t);
 
 	if (lump == NULL || count == 0)
 		return;
@@ -1071,7 +1067,7 @@ void GetSectors()
 	cur_info->Debug("GetSectors: num = %d\n", count);
 #endif
 
-	for (int i = 0 ; i < count ; i++)
+	for (size_t i = 0 ; i < count ; i++)
 	{
 		raw_sector_t raw;
 
@@ -1087,12 +1083,12 @@ void GetSectors()
 
 void GetThings()
 {
-	int count = 0;
+	size_t count = 0;
 
 	Lump_c *lump = FindLevelLump("THINGS");
 
 	if (lump)
-		count = lump->Length() / (int)sizeof(raw_thing_t);
+		count = lump->Length() / sizeof(raw_thing_t);
 
 	if (lump == NULL || count == 0)
 		return;
@@ -1104,7 +1100,7 @@ void GetThings()
 	cur_info->Debug("GetThings: num = %d\n", count);
 #endif
 
-	for (int i = 0 ; i < count ; i++)
+	for (size_t i = 0 ; i < count ; i++)
 	{
 		raw_thing_t raw;
 
@@ -1122,12 +1118,12 @@ void GetThings()
 
 void GetThingsHexen()
 {
-	int count = 0;
+	size_t count = 0;
 
 	Lump_c *lump = FindLevelLump("THINGS");
 
 	if (lump)
-		count = lump->Length() / (int)sizeof(raw_hexen_thing_t);
+		count = lump->Length() / sizeof(raw_hexen_thing_t);
 
 	if (lump == NULL || count == 0)
 		return;
@@ -1139,7 +1135,7 @@ void GetThingsHexen()
 	cur_info->Debug("GetThingsHexen: num = %d\n", count);
 #endif
 
-	for (int i = 0 ; i < count ; i++)
+	for (size_t i = 0 ; i < count ; i++)
 	{
 		raw_hexen_thing_t raw;
 
@@ -1157,12 +1153,12 @@ void GetThingsHexen()
 
 void GetSidedefs()
 {
-	int count = 0;
+	size_t count = 0;
 
 	Lump_c *lump = FindLevelLump("SIDEDEFS");
 
 	if (lump)
-		count = lump->Length() / (int)sizeof(raw_sidedef_t);
+		count = lump->Length() / sizeof(raw_sidedef_t);
 
 	if (lump == NULL || count == 0)
 		return;
@@ -1174,7 +1170,7 @@ void GetSidedefs()
 	cur_info->Debug("GetSidedefs: num = %d\n", count);
 #endif
 
-	for (int i = 0 ; i < count ; i++)
+	for (size_t i = 0 ; i < count ; i++)
 	{
 		raw_sidedef_t raw;
 
@@ -1183,19 +1179,19 @@ void GetSidedefs()
 
 		sidedef_t *side = NewSidedef();
 
-		side->sector = SafeLookupSector(LE_S16(raw.sector));
+		side->sector = SafeLookupSector(LE_U16(raw.sector));
 	}
 }
 
 
 void GetLinedefs()
 {
-	int count = 0;
+	size_t count = 0;
 
 	Lump_c *lump = FindLevelLump("LINEDEFS");
 
 	if (lump)
-		count = lump->Length() / (int)sizeof(raw_linedef_t);
+		count = lump->Length() / sizeof(raw_linedef_t);
 
 	if (lump == NULL || count == 0)
 		return;
@@ -1207,7 +1203,7 @@ void GetLinedefs()
 	cur_info->Debug("GetLinedefs: num = %d\n", count);
 #endif
 
-	for (int i = 0 ; i < count ; i++)
+	for (size_t i = 0 ; i < count ; i++)
 	{
 		raw_linedef_t raw;
 
@@ -1261,12 +1257,12 @@ void GetLinedefs()
 
 void GetLinedefsHexen()
 {
-	int count = 0;
+	size_t count = 0;
 
 	Lump_c *lump = FindLevelLump("LINEDEFS");
 
 	if (lump)
-		count = lump->Length() / (int)sizeof(raw_hexen_linedef_t);
+		count = lump->Length() / sizeof(raw_hexen_linedef_t);
 
 	if (lump == NULL || count == 0)
 		return;
@@ -1278,7 +1274,7 @@ void GetLinedefsHexen()
 	cur_info->Debug("GetLinedefsHexen: num = %d\n", count);
 #endif
 
-	for (int i = 0 ; i < count ; i++)
+	for (size_t i = 0 ; i < count ; i++)
 	{
 		raw_hexen_linedef_t raw;
 
@@ -1344,7 +1340,7 @@ static inline int VanillaSegAngle(const seg_t *seg)
 	if (angle < 0)
 		angle += 360.0;
 
-	int16_t result = (int16_t) floor(angle * 65536.0 / 360.0 + 0.5);
+	short_angle_t result = short_angle_t(floor(angle * 65536.0 / 360.0 + 0.5));
 
 	// [EA] ZokumBSP
 	// 1080 => Additive degrees stored in tag
@@ -1353,19 +1349,19 @@ static inline int VanillaSegAngle(const seg_t *seg)
 	// 1083 => Set to BAM stored in tag
 	if (seg->linedef->special == Special_RotateDegrees)
 	{
-		result += DegreesToShortBAM(seg->linedef->tag);
+		result += DegreesToShortBAM(uint32_t(seg->linedef->tag));
 	}
 	else if (seg->linedef->special == Special_RotateDegreesHard)
 	{
-		result = DegreesToShortBAM(seg->linedef->tag);
+		result = DegreesToShortBAM(uint32_t(seg->linedef->tag));
 	}
 	else if (seg->linedef->special == Special_RotateAngleT)
 	{
-		result += (int16_t)seg->linedef->tag;
+		result += short_angle_t(seg->linedef->tag);
 	}
 	else if (seg->linedef->special == Special_RotateAngleTHard)
 	{
-		result = (int16_t)seg->linedef->tag;
+		result = short_angle_t(seg->linedef->tag);
 	}
 
 	return result;
@@ -1383,13 +1379,13 @@ static inline int VanillaSegAngle(const seg_t *seg)
 void ParseThingField(thing_t *thing, const std::string& key, token_kind_e kind, const std::string& value)
 {
 	if (key == "x")
-		thing->x = LEX_Double(value);
+		thing->x = (int32_t)(LEX_Double(value) * 65536.0);
 
 	if (key == "y")
-		thing->y = LEX_Double(value);
+		thing->y = (int32_t)(LEX_Double(value) * 65536.0);
 
 	if (key == "type")
-		thing->type = LEX_Double(value);
+		thing->type = LEX_Int(value);
 }
 
 
@@ -1413,9 +1409,9 @@ void ParseSidedefField(sidedef_t *side, const std::string& key, token_kind_e kin
 {
 	if (key == "sector")
 	{
-		int num = LEX_Int(value);
+		size_t num = LEX_Index(value);
 
-		if (num < 0 || num >= num_sectors)
+		if (num >= num_sectors)
 			cur_info->FatalError("illegal sector number #%d\n", (int)num);
 
 		side->sector = lev_sectors[num];
@@ -1426,22 +1422,22 @@ void ParseSidedefField(sidedef_t *side, const std::string& key, token_kind_e kin
 void ParseLinedefField(linedef_t *line, const std::string& key, token_kind_e kind, const std::string& value)
 {
 	if (key == "v1")
-		line->start = SafeLookupVertex(LEX_Int(value));
+		line->start = SafeLookupVertex(LEX_Index(value));
 
 	if (key == "v2")
-		line->end = SafeLookupVertex(LEX_Int(value));
+		line->end = SafeLookupVertex(LEX_Index(value));
 
 	if (key == "special")
-		line->special = LEX_Int(value);
+		line->special = LEX_UInt(value);
 
 	if (key == "twosided")
 		line->two_sided = LEX_Boolean(value);
 
 	if (key == "sidefront")
 	{
-		int num = LEX_Int(value);
+		size_t num = LEX_Index(value);
 
-		if (num < 0 || num >= (int)num_sidedefs)
+		if (num >= num_sidedefs)
 			line->right = NULL;
 		else
 			line->right = lev_sidedefs[num];
@@ -1449,9 +1445,9 @@ void ParseLinedefField(linedef_t *line, const std::string& key, token_kind_e kin
 
 	if (key == "sideback")
 	{
-		int num = LEX_Int(value);
+		size_t num = LEX_Index(value);
 
-		if (num < 0 || num >= (int)num_sidedefs)
+		if (num >= num_sidedefs)
 			line->left = NULL;
 		else
 			line->left = lev_sidedefs[num];
@@ -1607,7 +1603,7 @@ void ParseUDMF()
 	if (lump == NULL || ! lump->Seek(0))
 		cur_info->FatalError("Error finding TEXTMAP lump.\n");
 
-	int remain = lump->Length();
+	size_t remain = lump->Length();
 
 	// load the lump into this string
 	std::string data;
@@ -1616,7 +1612,7 @@ void ParseUDMF()
 	{
 		char buffer[4096];
 
-		int want = std::min(remain, (int)sizeof(buffer));
+		size_t want = std::min(remain, sizeof(buffer));
 
 		if (! lump->Read(buffer, want))
 			cur_info->FatalError("Error reading TEXTMAP lump.\n");
@@ -1652,14 +1648,12 @@ void MarkOverflow(int flags)
 
 void PutVertices()
 {
-	int count, i;
-
 	// this size is worst-case scenario
-	int size = num_vertices * (int)sizeof(raw_vertex_t);
-
+	size_t size = num_vertices * sizeof(raw_vertex_t);
 	Lump_c *lump = CreateLevelLump("VERTEXES", size);
 
-	for (i=0, count=0 ; i < num_vertices ; i++)
+	size_t count = 0;
+	for (size_t i = 0 ; i < num_vertices ; i++)
 	{
 		raw_vertex_t raw;
 
@@ -1714,11 +1708,11 @@ static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
 void PutSegs()
 {
 	// this size is worst-case scenario
-	int size = num_segs * (int)sizeof(raw_seg_t);
+	size_t size = num_segs * sizeof(raw_seg_t);
 
 	Lump_c *lump = CreateLevelLump("SEGS", size);
 
-	for (int i=0 ; i < num_segs ; i++)
+	for (size_t i = 0 ; i < num_segs ; i++)
 	{
 		raw_seg_t raw;
 
@@ -1760,11 +1754,11 @@ void PutSegs()
 
 void PutSubsecs()
 {
-	int size = num_subsecs * (int)sizeof(raw_subsec_t);
+	size_t size = num_subsecs * sizeof(raw_subsec_t);
 
 	Lump_c * lump = CreateLevelLump("SSECTORS", size);
 
-	for (int i=0 ; i < num_subsecs ; i++)
+	for (size_t i = 0 ; i < num_subsecs ; i++)
 	{
 		raw_subsec_t raw;
 
@@ -1791,7 +1785,7 @@ void PutSubsecs()
 }
 
 
-static int node_cur_index;
+static size_t node_cur_index;
 
 static void PutOneNode(node_t *node, Lump_c *lump)
 {
@@ -1848,10 +1842,10 @@ static void PutOneNode(node_t *node, Lump_c *lump)
 
 void PutNodes(node_t *root)
 {
-	int struct_size = (int)sizeof(raw_node_t);
+	size_t struct_size = sizeof(raw_node_t);
 
 	// this can be bigger than the actual size, but never smaller
-	int max_size = (num_nodes + 1) * struct_size;
+	size_t max_size = (num_nodes + 1) * struct_size;
 
 	Lump_c *lump = CreateLevelLump("NODES", max_size);
 
@@ -1925,18 +1919,13 @@ struct Compare_seg_pred
 
 void SortSegs()
 {
-	// do a sanity check
-	for (int i = 0 ; i < num_segs ; i++)
-		if (lev_segs[i]->index < 0)
-			BugError("Seg %p never reached a subsector!\n", i);
-
 	// sort segs into ascending index
 	std::sort(lev_segs.begin(), lev_segs.end(), Compare_seg_pred());
 
 	// remove unwanted segs
 	while (lev_segs.size() > 0 && lev_segs.back()->index == SEG_IS_GARBAGE)
 	{
-		UtilFree((void *) lev_segs.back());
+		UtilFree(lev_segs.back());
 		lev_segs.pop_back();
 	}
 }
@@ -1946,15 +1935,14 @@ void SortSegs()
 
 void PutZVertices(Lump_c *lump)
 {
-	int count, i;
-
 	uint32_t orgverts = LE_U32(num_old_vert);
 	uint32_t newverts = LE_U32(num_new_vert);
 
 	lump->Write(&orgverts, 4);
 	lump->Write(&newverts, 4);
 
-	for (i=0, count=0 ; i < num_vertices ; i++)
+	size_t count = 0;
+	for (size_t i = 0 ; i < num_vertices ; i++)
 	{
 		raw_zdoom_vertex_t raw;
 
@@ -1981,9 +1969,8 @@ void PutZSubsecs(Lump_c *lump)
 	uint32_t raw_num = LE_U32(num_subsecs);
 	lump->Write(&raw_num, 4);
 
-	int cur_seg_index = 0;
-
-	for (int i=0 ; i < num_subsecs ; i++)
+	size_t cur_seg_index = 0;
+	for (size_t i = 0 ; i < num_subsecs ; i++)
 	{
 		const subsec_t *sub = lev_subsecs[i];
 
@@ -1991,7 +1978,7 @@ void PutZSubsecs(Lump_c *lump)
 		lump->Write(&raw_num, 4);
 
 		// sanity check the seg index values
-		int count = 0;
+		size_t count = 0;
 		for (const seg_t *seg = sub->seg_list ; seg ; seg = seg->next, cur_seg_index++)
 		{
 			if (cur_seg_index != seg->index)
@@ -2016,7 +2003,7 @@ void PutZSegs(Lump_c *lump)
 	uint32_t raw_num = LE_U32(num_segs);
 	lump->Write(&raw_num, 4);
 
-	for (int i=0 ; i < num_segs ; i++)
+	for (size_t i=0 ; i < num_segs ; i++)
 	{
 		const seg_t *seg = lev_segs[i];
 
@@ -2046,7 +2033,7 @@ void PutXGL3Segs(Lump_c *lump)
 	uint32_t raw_num = LE_U32(num_segs);
 	lump->Write(&raw_num, 4);
 
-	for (int i=0 ; i < num_segs ; i++)
+	for (size_t i = 0 ; i < num_segs ; i++)
 	{
 		const seg_t *seg = lev_segs[i];
 
@@ -2056,8 +2043,8 @@ void PutXGL3Segs(Lump_c *lump)
 		raw_xgl2_seg_t raw = {};
 
 		raw.vertex  = LE_U32(VertexIndex_XNOD(seg->start));
-		raw.partner = LE_U32(seg->partner ? seg->partner->index : -1);
-		raw.linedef = LE_U32(seg->linedef ? seg->linedef->index : -1);
+		raw.partner = LE_U32(seg->partner ? seg->partner->index : NO_INDEX);
+		raw.linedef = LE_U32(seg->linedef ? seg->linedef->index : NO_INDEX);
 		raw.side    = (uint8_t) seg->side;
 
 		lump->Write(&raw, sizeof(raw));
@@ -2083,10 +2070,10 @@ static void PutOneZNode(Lump_c *lump, node_t *node, bool xgl3)
 
 	if (xgl3)
 	{
-		uint32_t x  = LE_S32(I_ROUND(node->x  * 65536.0));
-		uint32_t y  = LE_S32(I_ROUND(node->y  * 65536.0));
-		uint32_t dx = LE_S32(I_ROUND(node->dx * 65536.0));
-		uint32_t dy = LE_S32(I_ROUND(node->dy * 65536.0));
+		int32_t x  = LE_S32(I_ROUND(node->x  * 65536.0));
+		int32_t y  = LE_S32(I_ROUND(node->y  * 65536.0));
+		int32_t dx = LE_S32(I_ROUND(node->dx * 65536.0));
+		int32_t dy = LE_S32(I_ROUND(node->dy * 65536.0));
 
 		lump->Write(&x,  4);
 		lump->Write(&y,  4);
@@ -2160,13 +2147,13 @@ void PutZNodes(Lump_c *lump, node_t *root, bool xgl3)
 }
 
 
-static int CalcZDoomNodesSize()
+static size_t CalcZDoomNodesSize()
 {
 	// compute size of the ZDoom format nodes.
 	// it does not need to be exact, but it *does* need to be bigger
 	// (or equal) to the actual size of the lump.
 
-	int size = 32;  // header + a bit extra
+	size_t size = 32;  // header + a bit extra
 
 	size += 8 + num_vertices * 8;
 	size += 4 + num_subsecs  * 4;
@@ -2181,7 +2168,7 @@ void SaveZDFormat(node_t *root_node)
 {
 	SortSegs();
 
-	int max_size = CalcZDoomNodesSize();
+	size_t max_size = CalcZDoomNodesSize();
 
 	Lump_c *lump = CreateLevelLump("NODES", max_size);
 
@@ -2291,13 +2278,13 @@ void FreeLevel()
 
 static void AddMissingLump(const char *name, const char *after)
 {
-	if (cur_wad->LevelLookupLump(lev_current_idx, name) >= 0)
+	if (cur_wad->LevelLookupLump(lev_current_idx, name) != NO_INDEX)
 		return;
 
-	int exist = cur_wad->LevelLookupLump(lev_current_idx, after);
+	size_t exist = cur_wad->LevelLookupLump(lev_current_idx, after);
 
 	// if this happens, the level structure is very broken
-	if (exist < 0)
+	if (exist != NO_INDEX)
 	{
 		Warning("Missing %s lump -- level structure is broken\n", after);
 
@@ -2405,7 +2392,7 @@ build_result_e SaveUDMF(node_t *root_node)
 	// remove any existing ZNODES lump
 	cur_wad->RemoveZNodes(lev_current_idx);
 
-	Lump_c *lump = CreateLevelLump("ZNODES", -1);
+	Lump_c *lump = CreateLevelLump("ZNODES", NO_INDEX);
 
 	// [EA] Ensure needed lumps exist
 	AddMissingLump("REJECT",   "ZNODES");
@@ -2434,16 +2421,12 @@ build_result_e SaveUDMF(node_t *root_node)
 
 Lump_c * FindLevelLump(const char *name)
 {
-	int idx = cur_wad->LevelLookupLump(lev_current_idx, name);
-
-	if (idx < 0)
-		return NULL;
-
-	return cur_wad->GetLump(idx);
+	size_t idx = cur_wad->LevelLookupLump(lev_current_idx, name);
+	return (idx != NO_INDEX) ? cur_wad->GetLump(idx) : nullptr;
 }
 
 
-Lump_c * CreateLevelLump(const char *name, int max_size)
+Lump_c * CreateLevelLump(const char *name, size_t max_size)
 {
 	// look for existing one
 	Lump_c *lump = FindLevelLump(name);
@@ -2454,7 +2437,7 @@ Lump_c * CreateLevelLump(const char *name, int max_size)
 	}
 	else
 	{
-		int last_idx = cur_wad->LevelLastLump(lev_current_idx);
+		size_t last_idx = cur_wad->LevelLastLump(lev_current_idx);
 
 		// in UDMF maps, insert before the ENDMAP lump, otherwise insert
 		// after the last known lump of the level.
@@ -2498,7 +2481,7 @@ void OpenWad(const char *filename)
 }
 
 
-void CloseWad()
+void CloseWad(void)
 {
 	if (cur_wad != NULL)
 	{
@@ -2509,7 +2492,7 @@ void CloseWad()
 }
 
 
-int LevelsInWad()
+size_t LevelsInWad(void)
 {
 	if (cur_wad == NULL)
 		return 0;
@@ -2518,11 +2501,11 @@ int LevelsInWad()
 }
 
 
-const char * GetLevelName(int lev_idx)
+const char * GetLevelName(size_t lev_idx)
 {
 	SYS_ASSERT(cur_wad != NULL);
 
-	int lump_idx = cur_wad->LevelHeader(lev_idx);
+	size_t lump_idx = cur_wad->LevelHeader(lev_idx);
 
 	return cur_wad->GetLump(lump_idx)->Name();
 }
@@ -2530,7 +2513,7 @@ const char * GetLevelName(int lev_idx)
 
 /* ----- build nodes for a single level ----- */
 
-build_result_e BuildLevel(int lev_idx)
+build_result_e BuildLevel(size_t lev_idx)
 {
 	if (cur_info->cancelled)
 		return BUILD_Cancelled;

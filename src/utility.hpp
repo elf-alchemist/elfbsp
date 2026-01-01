@@ -21,6 +21,7 @@
 #ifndef __ELFBSP_UTILITY_H__
 #define __ELFBSP_UTILITY_H__
 
+#include <cstddef>
 #include <cstdint>
 
 namespace elfbsp
@@ -37,7 +38,7 @@ namespace elfbsp
 // filename functions
 bool HasExtension  (const char *filename);
 bool MatchExtension(const char *filename, const char *ext);
-int  FindExtension (const char *filename);
+size_t FindExtension (const char *filename);
 
 // file utilities
 bool FileExists(const char *filename);
@@ -46,8 +47,8 @@ bool FileRename(const char *old_name, const char *new_name);
 bool FileDelete(const char *filename);
 
 // memory allocation, guaranteed to not return NULL.
-void *UtilCalloc(int size);
-void *UtilRealloc(void *old, int size);
+void *UtilCalloc(size_t size);
+void *UtilRealloc(void *old, size_t size);
 void UtilFree(void *data);
 
 // math stuff
@@ -56,7 +57,7 @@ double ComputeAngle(double dx, double dy);
 
 // string utilities
 int StringCaseCmp   (const char *s1, const char *s2);
-int StringCaseCmpMax(const char *s1, const char *s2, std::size_t len);
+int StringCaseCmpMax(const char *s1, const char *s2, size_t len);
 
 // checksum functions
 void Adler32_Begin(uint32_t *crc);

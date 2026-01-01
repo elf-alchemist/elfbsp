@@ -957,7 +957,7 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part,
 		buddy->start = next->vertex;
 		buddy->end   = cut->vertex;
 
-		seg->index   = buddy->index   = -1;
+		seg->index   = buddy->index   = NO_INDEX;
 		seg->linedef = buddy->linedef = NULL;
 		seg->side    = buddy->side    = 0;
 
@@ -1244,7 +1244,7 @@ seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end,
 	seg->partner = NULL;
 
 	seg->source_line = seg->linedef;
-	seg->index = -1;
+	seg->index = NO_INDEX;
 
 	seg->Recompute();
 
@@ -1260,7 +1260,7 @@ seg_t *CreateSegs()
 {
 	seg_t *list = NULL;
 
-	for (int i=0 ; i < num_linedefs ; i++)
+	for (size_t i = 0 ; i < num_linedefs ; i++)
 	{
 		linedef_t *line = lev_linedefs[i];
 
@@ -1425,21 +1425,21 @@ void subsec_t::ClockwiseOrder()
 	// choose the seg that will be first (the game engine will typically use
 	// that to determine the sector).  In particular, we don't like self
 	// referencing linedefs (they are often used for deep-water effects).
-	int first = 0;
+	size_t first = 0;
 	int score = -1;
 
-	for (i=0 ; i < array.size() ; i++)
+	for (size_t j = 0 ; i < array.size() ; i++)
 	{
 		int cur_score = 3;
 
-		if (! array[i]->linedef)
+		if (! array[j]->linedef)
 			cur_score = 0;
-		else if (array[i]->linedef->self_ref)
+		else if (array[j]->linedef->self_ref)
 			cur_score = 2;
 
 		if (cur_score > score)
 		{
-			first = i;
+			first = j;
 			score = cur_score;
 		}
 	}
@@ -1447,9 +1447,9 @@ void subsec_t::ClockwiseOrder()
 	// transfer sorted array back into sub
 	seg_list = NULL;
 
-	for (i = 0 ; i < array.size() ; i++)
+	for (size_t j = 0 ; j < array.size() ; j++)
 	{
-		size_t k = (first + i) % array.size();
+		size_t k = (first + j) % array.size();
 		AddToTail(array[k]);
 	}
 
@@ -1511,7 +1511,7 @@ void subsec_t::SanityCheckHasRealSeg() const
 }
 
 
-void subsec_t::RenumberSegs(int& cur_seg_index)
+void subsec_t::RenumberSegs(size_t& cur_seg_index)
 {
 #if DEBUG_SUBSEC
 	cur_info->Debug("Subsec: Renumbering %d\n", index);
@@ -1679,9 +1679,9 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */,
 
 void ClockwiseBspTree()
 {
-	int cur_seg_index = 0;
+	size_t cur_seg_index = 0;
 
-	for (int i=0 ; i < num_subsecs ; i++)
+	for (size_t i = 0 ; i < num_subsecs ; i++)
 	{
 		subsec_t *sub = lev_subsecs[i];
 
@@ -1733,7 +1733,7 @@ void subsec_t::Normalise()
 		new_tail = seg;
 
 		// this updated later
-		seg->index = -1;
+		seg->index = NO_INDEX;
 	}
 
 	if (new_head == NULL)
@@ -1747,9 +1747,9 @@ void NormaliseBspTree()
 {
 	// unlinks all minisegs from each subsector
 
-	int cur_seg_index = 0;
+	size_t cur_seg_index = 0;
 
-	for (int i=0 ; i < num_subsecs ; i++)
+	for (size_t i = 0 ; i < num_subsecs ; i++)
 	{
 		subsec_t *sub = lev_subsecs[i];
 
@@ -1761,7 +1761,7 @@ void NormaliseBspTree()
 
 void RoundOffVertices()
 {
-	for (int i = 0 ; i < num_vertices ; i++)
+	for (size_t i = 0 ; i < num_vertices ; i++)
 	{
 		vertex_t *vert = lev_vertices[i];
 
@@ -1875,7 +1875,7 @@ void subsec_t::RoundOff()
 		new_tail = seg;
 
 		// this updated later
-		seg->index = -1;
+		seg->index = NO_INDEX;
 	}
 
 	if (new_head == NULL)
@@ -1887,11 +1887,11 @@ void subsec_t::RoundOff()
 
 void RoundOffBspTree()
 {
-	int cur_seg_index = 0;
+	size_t cur_seg_index = 0;
 
 	RoundOffVertices();
 
-	for (int i=0 ; i < num_subsecs ; i++)
+	for (size_t i = 0 ; i < num_subsecs ; i++)
 	{
 		subsec_t *sub = lev_subsecs[i];
 

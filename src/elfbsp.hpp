@@ -26,6 +26,7 @@
 // Node Build Information Structure
 //
 
+#include <cstddef>
 #define SPLIT_COST_MIN       1
 #define SPLIT_COST_DEFAULT  11
 #define SPLIT_COST_MAX      32
@@ -217,16 +218,16 @@ void OpenWad(const char *filename);
 void CloseWad();
 
 // give the number of levels detected in the wad.
-int LevelsInWad();
+size_t LevelsInWad();
 
 // retrieve the name of a particular level.
-const char *GetLevelName(int lev_idx);
+const char *GetLevelName(size_t lev_idx);
 
 // build the nodes of a particular level.  if cancelled, returns the
 // BUILD_Cancelled result and the wad is unchanged.  otherwise the wad
 // is updated to store the new lumps and returns either BUILD_OK or
 // BUILD_LumpOverflow if some limits were exceeded.
-build_result_e BuildLevel(int lev_idx);
+build_result_e BuildLevel(size_t lev_idx);
 
 
 }  // namespace elfbsp

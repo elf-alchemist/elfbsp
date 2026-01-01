@@ -192,7 +192,7 @@ typedef struct raw_zdoom_seg_s
 {
 	uint32_t start;      // from this vertex...
 	uint32_t end;        // ... to this vertex
-	uint16_t linedef;    // linedef that this seg goes along, or -1
+	uint16_t linedef;    // linedef that this seg goes along, or NO_INDEX
 	uint8_t  side;       // 0 if on right of linedef, 1 if on left
 
 } PACKEDATTR raw_zdoom_seg_t;
@@ -202,7 +202,7 @@ typedef struct raw_xgl2_seg_s
 {
 	uint32_t vertex;     // from this vertex...
 	uint32_t partner;    // ... to this vertex
-	uint32_t linedef;    // linedef that this seg goes along, or -1
+	uint32_t linedef;    // linedef that this seg goes along, or NO_INDEX
 	uint8_t  side;       // 0 if on right of linedef, 1 if on left
 } PACKEDATTR raw_xgl2_seg_t;
 
@@ -445,10 +445,21 @@ typedef enum zokumbsp_specials_e : uint32_t
 	Special_Unknown2, // line tag value becomes seg's associated line index? why?
 } zokumbsp_specials_t;
 
+typedef uint32_t long_angle_t;
+typedef uint16_t short_angle_t;
+constexpr uint32_t ANG45 = 0x20000000;
 
-#define ANG45        0x20000000
-#define DegreesToLongBAM(x)   (ANG45 * (x / 45))
-#define DegreesToShortBAM(x) ((ANG45 * (x / 45)) >> 16)
+template<typename T>
+constexpr inline static long_angle_t DegreesToLongBAM(T x)
+{
+	return ANG45 * (x / 45);
+}
+
+template<typename T>
+constexpr inline static short_angle_t DegreesToShortBAM(T x)
+{
+	return (ANG45 * (x / 45)) >> 16;
+}
 
 //
 // Sector attributes.

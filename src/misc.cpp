@@ -109,7 +109,7 @@ void MarkPolyobjSector(sector_t *sector)
 	// the sector from being split.
 	sector->has_polyobj = true;
 
-	for (int i = 0 ; i < num_linedefs ; i++)
+	for (size_t i = 0 ; i < num_linedefs ; i++)
 	{
 		linedef_t *L = lev_linedefs[i];
 
@@ -124,7 +124,6 @@ void MarkPolyobjSector(sector_t *sector)
 
 void MarkPolyobjPoint(double x, double y)
 {
-	int i;
 	int inside_count = 0;
 
 	double best_dist = 999999;
@@ -140,7 +139,7 @@ void MarkPolyobjPoint(double x, double y)
 	int bmaxx = (int) (x + POLY_BOX_SZ);
 	int bmaxy = (int) (y + POLY_BOX_SZ);
 
-	for (i = 0 ; i < num_linedefs ; i++)
+	for (size_t i = 0 ; i < num_linedefs ; i++)
 	{
 		const linedef_t *L = lev_linedefs[i];
 
@@ -171,7 +170,7 @@ void MarkPolyobjPoint(double x, double y)
 	//       If the point is sitting directly on a (two-sided) line,
 	//       then we mark the sectors on both sides.
 
-	for (i = 0 ; i < num_linedefs ; i++)
+	for (size_t i = 0 ; i < num_linedefs ; i++)
 	{
 		const linedef_t *L = lev_linedefs[i];
 
@@ -231,7 +230,7 @@ void MarkPolyobjPoint(double x, double y)
 		sector = best_match->left ? best_match->left->sector : NULL;
 
 #if DEBUG_POLYOBJ
-	cur_info->Debug("  Sector %d contains the polyobj.\n", sector ? sector->index : -1);
+	cur_info->Debug("  Sector %d contains the polyobj.\n", sector ? sector->index : NO_INDEX);
 #endif
 
 	if (sector == NULL)
@@ -249,8 +248,6 @@ void MarkPolyobjPoint(double x, double y)
 //
 void DetectPolyobjSectors(bool is_udmf)
 {
-	int i;
-
 	// -JL- There's a conflict between Hexen polyobj thing types and Doom thing
 	//      types. In Doom type 3001 is for Imp and 3002 for Demon. To solve
 	//      this problem, first we are going through all lines to see if the
@@ -269,6 +266,7 @@ void DetectPolyobjSectors(bool is_udmf)
 	//       things in UDMF maps.
 
 	// -JL- First go through all lines to see if level contains any polyobjs
+	size_t i;
 	for (i = 0 ; i < num_linedefs ; i++)
 	{
 		linedef_t *L = lev_linedefs[i];
@@ -289,9 +287,9 @@ void DetectPolyobjSectors(bool is_udmf)
 	if (is_udmf)
 		hexen_style = false;
 
-	for (i = 0 ; i < num_things ; i++)
+	for (size_t j = 0 ; j < num_things ; j++)
 	{
-		thing_t *T = lev_things[i];
+		thing_t *T = lev_things[j];
 
 		if (T->type == ZDOOM_PO_SPAWN_TYPE || T->type == ZDOOM_PO_SPAWNCRUSH_TYPE)
 		{
@@ -305,9 +303,9 @@ void DetectPolyobjSectors(bool is_udmf)
 	cur_info->Debug("Using %s style polyobj things\n", hexen_style ? "HEXEN" : "ZDOOM");
 #endif
 
-	for (i = 0 ; i < num_things ; i++)
+	for (size_t j = 0 ; j < num_things ; j++)
 	{
-		thing_t *T = lev_things[i];
+		thing_t *T = lev_things[j];
 
 		double x = (double) T->x;
 		double y = (double) T->y;
@@ -366,11 +364,11 @@ void DetectOverlappingVertices(void)
 	std::sort(array.begin(), array.end(), Compare_vertex_X_pred());
 
 	// now mark them off
-	for (int i=0 ; i < num_vertices - 1 ; i++)
+	for (size_t i = 0 ; i < num_vertices - 1 ; i++)
 	{
 		vertex_t *A = array[i];
 
-		for (int k = i+1 ; k < num_vertices ; k++)
+		for (size_t k = i+1 ; k < num_vertices ; k++)
 		{
 			vertex_t *B = array[k];
 
@@ -393,7 +391,7 @@ void DetectOverlappingVertices(void)
 	// DOES NOT affect the on-disk linedefs.
 	// this is mainly to help the miniseg creation code.
 
-	for (int i=0 ; i < num_linedefs ; i++)
+	for (size_t i = 0 ; i < num_linedefs ; i++)
 	{
 		linedef_t *L = lev_linedefs[i];
 
@@ -412,12 +410,12 @@ void DetectOverlappingVertices(void)
 
 void PruneVerticesAtEnd(void)
 {
-	int old_num = num_vertices;
+	size_t old_num = num_vertices;
 
 	// scan all vertices.
 	// only remove from the end, so stop when hit a used one.
 
-	for (int i = num_vertices - 1 ; i >= 0 ; i--)
+	for (size_t i = num_vertices - 1 ; i != NO_INDEX ; i--)
 	{
 		vertex_t *V = lev_vertices[i];
 
@@ -429,7 +427,7 @@ void PruneVerticesAtEnd(void)
 		lev_vertices.pop_back();
 	}
 
-	int unused = old_num - num_vertices;
+	size_t unused = old_num - num_vertices;
 
 	if (unused > 0)
 	{
@@ -460,13 +458,13 @@ void DetectOverlappingLines(void)
 
 	std::sort(array.begin(), array.end(), Compare_line_MinX_pred());
 
-	int count = 0;
+	size_t count = 0;
 
-	for (int i=0 ; i < num_linedefs - 1 ; i++)
+	for (size_t i=0 ; i < num_linedefs - 1 ; i++)
 	{
 		linedef_t *A = array[i];
 
-		for (int k = i+1 ; k < num_linedefs ; k++)
+		for (size_t k = i+1 ; k < num_linedefs ; k++)
 		{
 			linedef_t *B = array[k];
 
@@ -542,7 +540,7 @@ void vertex_t::AddWallTip(double dx, double dy, bool open_left, bool open_right)
 
 void CalculateWallTips()
 {
-	for (int i=0 ; i < num_linedefs ; i++)
+	for (size_t i = 0 ; i < num_linedefs ; i++)
 	{
 		const linedef_t *L = lev_linedefs[i];
 

@@ -20,6 +20,7 @@
 #ifndef __ELFBSP_PARSE_H__
 #define __ELFBSP_PARSE_H__
 
+#include <cstdint>
 #include <string>
 
 namespace elfbsp
@@ -81,9 +82,11 @@ private:
 };
 
 // helpers for converting numeric tokens.
-int    LEX_Int    (const std::string& s);
-double LEX_Double (const std::string& s);
-bool   LEX_Boolean(const std::string& s);
+size_t   LEX_Index  (const std::string& s);
+int32_t  LEX_Int    (const std::string& s);
+uint32_t LEX_UInt   (const std::string& s);
+double   LEX_Double (const std::string& s);
+bool     LEX_Boolean(const std::string& s);
 
 } // namespace elfbsp
 

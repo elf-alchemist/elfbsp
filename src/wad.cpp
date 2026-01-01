@@ -48,7 +48,7 @@ void LumpWarning(const char *fmt, ...)
 //  LUMP Handling
 //------------------------------------------------------------------------
 
-Lump_c::Lump_c(Wad_file *_par, const char *_name, int _start, int _len) :
+Lump_c::Lump_c(Wad_file *_par, const char *_name, size_t _start, size_t _len) :
 	parent(_par), lumpname(), l_start(_start), l_length(_len)
 {
 	// ensure lump name is uppercase
@@ -104,8 +104,7 @@ void Lump_c::Rename(const char *new_name)
 	// ensure lump name is uppercase
 	lumpname.clear();
 
-	const char * s;
-	for (s = new_name ; *s != 0 ; s++)
+	for (const char * s = new_name ; *s != 0 ; s++)
 		lumpname.push_back(toupper(*s));
 }
 
@@ -114,11 +113,11 @@ bool Lump_c::Seek(int offset)
 {
 	SYS_ASSERT(offset >= 0);
 
-	return (fseek(parent->fp, l_start + offset, SEEK_SET) == 0);
+	return (fseek(parent->fp, (int32_t)l_start + offset, SEEK_SET) == 0);
 }
 
 
-bool Lump_c::Read(void *data, int len)
+bool Lump_c::Read(void *data, size_t len)
 {
 	SYS_ASSERT(data && len > 0);
 
@@ -128,11 +127,12 @@ bool Lump_c::Read(void *data, int len)
 
 bool Lump_c::GetLine(char *buffer, size_t buf_size)
 {
-	int cur_pos = (int)ftell(parent->fp);
+	int64_t signed_cur_pos = ftell(parent->fp);
 
-	if (cur_pos < 0)
+	if (signed_cur_pos < 0)
 		return false;
 
+	size_t cur_pos = static_cast<size_t>(signed_cur_pos);
 	cur_pos -= l_start;
 
 	if (cur_pos >= l_length)
@@ -161,7 +161,7 @@ bool Lump_c::GetLine(char *buffer, size_t buf_size)
 }
 
 
-bool Lump_c::Write(const void *data, int len)
+bool Lump_c::Write(const void *data, size_t len)
 {
 	SYS_ASSERT(data && len > 0);
 
@@ -183,7 +183,7 @@ void Lump_c::Printf(const char *msg, ...)
 
 	buffer[sizeof(buffer) - 1] = 0;
 
-	Write(buffer, (int)strlen(buffer));
+	Write(buffer, strlen(buffer));
 }
 
 
@@ -205,7 +205,7 @@ Wad_file::Wad_file(const char *_name, char _mode, FILE * _fp) :
 	total_size(0), directory(),
 	dir_start(0), dir_count(0),
 	levels(), patches(), sprites(), flats(), tx_tex(),
-	begun_write(false), insert_point(-1)
+	begun_write(false), insert_point(NO_INDEX)
 {
 	// nothing needed
 }
@@ -217,7 +217,7 @@ Wad_file::~Wad_file()
 	fclose(fp);
 
 	// free the directory
-	for (int k = 0 ; k < NumLumps() ; k++)
+	for (size_t k = 0 ; k < NumLumps() ; k++)
 		delete directory[k];
 
 	directory.clear();
@@ -263,13 +263,13 @@ retry:
 	if (fseek(fp, 0, SEEK_END) != 0)
 		cur_info->FatalError("Error determining WAD size.\n");
 
-	w->total_size = (int)ftell(fp);
+	w->total_size = (size_t)ftell(fp);
 
 #if DEBUG_WAD
 	cur_info->Debug("total_size = %d\n", w->total_size);
 #endif
 
-	if (w->total_size < 0)
+	if ((int64_t)w->total_size < 0)
 		cur_info->FatalError("Error determining WAD size.\n");
 
 	w->ReadDirectory();
@@ -299,7 +299,7 @@ Wad_file * Wad_file::Create(const char *filename, char mode)
 	fwrite(&header, sizeof(header), 1, fp);
 	fflush(fp);
 
-	w->total_size = (int)sizeof(header);
+	w->total_size = sizeof(header);
 
 	return w;
 }
@@ -359,9 +359,9 @@ static bool IsLevelLump(const char *name)
 }
 
 
-Lump_c * Wad_file::GetLump(int index)
+Lump_c * Wad_file::GetLump(size_t index)
 {
-	SYS_ASSERT(0 <= index && index < NumLumps());
+	SYS_ASSERT(index < NumLumps());
 	SYS_ASSERT(directory[index]);
 
 	return directory[index];
@@ -370,63 +370,63 @@ Lump_c * Wad_file::GetLump(int index)
 
 Lump_c * Wad_file::FindLump(const char *name)
 {
-	for (int k = 0 ; k < NumLumps() ; k++)
+	for (size_t k = 0 ; k < NumLumps() ; k++)
 		if (directory[k]->Match(name))
 			return directory[k];
 
 	return NULL;  // not found
 }
 
-int Wad_file::FindLumpNum(const char *name)
+size_t Wad_file::FindLumpNum(const char *name)
 {
-	for (int k = 0 ; k < NumLumps() ; k++)
+	for (size_t k = 0 ; k < NumLumps() ; k++)
 		if (directory[k]->Match(name))
 			return k;
 
-	return -1;  // not found
+	return NO_INDEX;  // not found
 }
 
 
 #define MAX_LUMPS_IN_A_LEVEL  21
 
-int Wad_file::LevelLookupLump(int lev_num, const char *name)
+size_t Wad_file::LevelLookupLump(size_t lev_num, const char *name)
 {
-	int start  = LevelHeader(lev_num);
-	int finish = LevelLastLump(lev_num);
+	size_t start  = LevelHeader(lev_num);
+	size_t finish = LevelLastLump(lev_num);
 
-	for (int k = start+1 ; k <= finish ; k++)
+	for (size_t k = start+1 ; k <= finish ; k++)
 	{
-		SYS_ASSERT(0 <= k && k < NumLumps());
+		SYS_ASSERT(k < NumLumps());
 
 		if (directory[k]->Match(name))
 			return k;
 	}
 
-	return -1;  // not found
+	return NO_INDEX;  // not found
 }
 
 
-int Wad_file::LevelFind(const char *name)
+size_t Wad_file::LevelFind(const char *name)
 {
-	for (int k = 0 ; k < (int)levels.size() ; k++)
+	for (size_t k = 0 ; k < levels.size() ; k++)
 	{
-		int index = levels[k];
+		size_t index = levels[k];
 
-		SYS_ASSERT(0 <= index && index < NumLumps());
+		SYS_ASSERT(index < NumLumps());
 		SYS_ASSERT(directory[index]);
 
 		if (directory[index]->Match(name))
 			return k;
 	}
 
-	return -1;  // not found
+	return NO_INDEX;  // not found
 }
 
 
-int Wad_file::LevelLastLump(int lev_num)
+size_t Wad_file::LevelLastLump(size_t lev_num)
 {
-	int start = LevelHeader(lev_num);
-	int count = 1;
+	size_t start = LevelHeader(lev_num);
+	size_t count = 1;
 
 	// UDMF level?
 	if (LevelFormat(lev_num) == MAPF_UDMF)
@@ -457,55 +457,56 @@ int Wad_file::LevelLastLump(int lev_num)
 }
 
 
-int Wad_file::LevelFindByNumber(int number)
+size_t Wad_file::LevelFindByNumber(int32_t number)
 {
 	// sanity check
 	if (number <= 0 || number > 99)
-		return -1;
+		return NO_INDEX;
 
 	char buffer[10];
-	int index;
+	size_t index;
 
 	 // try MAP## first
 	sprintf(buffer, "MAP%02d", number);
 
 	index = LevelFind(buffer);
-	if (index >= 0)
+	if (index != NO_INDEX)
 		return index;
 
 	// otherwise try E#M#
-	sprintf(buffer, "E%dM%d", std::max(1, number / 10), number % 10);
+	div_t exmy = div(number, 10);
+	sprintf(buffer, "E%dM%d", std::max(1, exmy.quot), exmy.rem);
 
 	index = LevelFind(buffer);
-	if (index >= 0)
+	if (index != NO_INDEX)
 		return index;
 
-	return -1;  // not found
+	return NO_INDEX;  // not found
 }
 
 
-int Wad_file::LevelFindFirst()
+size_t Wad_file::LevelFindFirst()
 {
 	if (levels.size() > 0)
 		return 0;
 	else
-		return -1;  // none
+		return NO_INDEX;  // none
 }
 
 
-int Wad_file::LevelHeader(int lev_num)
+size_t Wad_file::LevelHeader(size_t lev_num)
 {
-	SYS_ASSERT(0 <= lev_num && lev_num < LevelCount());
+	SYS_ASSERT(lev_num < LevelCount());
 
 	return levels[lev_num];
 }
 
 
-map_format_e Wad_file::LevelFormat(int lev_num)
+map_format_e Wad_file::LevelFormat(size_t lev_num)
 {
-	int start = LevelHeader(lev_num);
+	size_t start = LevelHeader(lev_num);
 
-	if (start + 2 < (int)NumLumps())
+	if (start + 2 < NumLumps())
 	{
 		const char *name = GetLump(start + 1)->Name();
 
@@ -513,7 +514,7 @@ map_format_e Wad_file::LevelFormat(int lev_num)
 			return MAPF_UDMF;
 	}
 
-	if (start + LL_BEHAVIOR < (int)NumLumps())
+	if (start + LL_BEHAVIOR < NumLumps())
 	{
 		const char *name = GetLump(start + LL_BEHAVIOR)->Name();
 
@@ -527,24 +528,22 @@ map_format_e Wad_file::LevelFormat(int lev_num)
 
 Lump_c * Wad_file::FindLumpInNamespace(const char *name, char group)
 {
-	int k;
-
 	switch (group)
 	{
 		case 'P':
-			for (k = 0 ; k < (int)patches.size() ; k++)
+			for (size_t k = 0 ; k < patches.size() ; k++)
 				if (directory[patches[k]]->Match(name))
 					return directory[patches[k]];
 			break;
 
 		case 'S':
-			for (k = 0 ; k < (int)sprites.size() ; k++)
+			for (size_t k = 0 ; k < sprites.size() ; k++)
 				if (directory[sprites[k]]->Match(name))
 					return directory[sprites[k]];
 			break;
 
 		case 'F':
-			for (k = 0 ; k < (int)flats.size() ; k++)
+			for (size_t k = 0 ; k < flats.size() ; k++)
 				if (directory[flats[k]]->Match(name))
 					return directory[flats[k]];
 			break;
@@ -572,16 +571,16 @@ void Wad_file::ReadDirectory()
 
 	kind = header.ident[0];
 
-	dir_start = LE_S32(header.dir_start);
-	dir_count = LE_S32(header.num_entries);
+	dir_start = LE_U32(header.dir_start);
+	dir_count = LE_U32(header.num_entries);
 
-	if (dir_count < 0 || dir_count > 32000)
+	if (dir_count > 32000)
 		cur_info->FatalError("Bad WAD header, too many entries (%d)\n", dir_count);
 
 	if (fseek(fp, dir_start, SEEK_SET) != 0)
 		cur_info->FatalError("Error seeking to WAD directory.\n");
 
-	for (int i = 0 ; i < dir_count ; i++)
+	for (size_t i = 0 ; i < dir_count ; i++)
 	{
 		raw_wad_entry_t entry;
 
@@ -604,7 +603,7 @@ void Wad_file::DetectLevels()
 	// The test here is rather lax, since wads exist with a non-standard
 	// ordering of level lumps.
 
-	for (int k = 0 ; k+1 < NumLumps() ; k++)
+	for (size_t k = 0 ; k+1 < NumLumps() ; k++)
 	{
 		int part_mask  = 0;
 		int part_count = 0;
@@ -620,7 +619,7 @@ void Wad_file::DetectLevels()
 		}
 
 		// check whether the next four lumps are level lumps
-		for (int i = 1 ; i <= 4 ; i++)
+		for (size_t i = 1 ; i <= 4 ; i++)
 		{
 			if (k+i >= NumLumps())
 				break;
@@ -684,7 +683,7 @@ void Wad_file::ProcessNamespaces()
 {
 	char active = 0;
 
-	for (int k = 0 ; k < NumLumps() ; k++)
+	for (size_t k = 0 ; k < NumLumps() ; k++)
 	{
 		const char *name = directory[k]->Name();
 
@@ -827,14 +826,14 @@ void Wad_file::EndWrite()
 	WriteDirectory();
 
 	// reset the insertion point
-	insert_point = -1;
+	insert_point = NO_INDEX;
 }
 
 
-void Wad_file::RenameLump(int index, const char *new_name)
+void Wad_file::RenameLump(size_t index, const char *new_name)
 {
 	SYS_ASSERT(begun_write);
-	SYS_ASSERT(0 <= index && index < NumLumps());
+	SYS_ASSERT(index < NumLumps());
 
 	Lump_c *lump = directory[index];
 	SYS_ASSERT(lump);
@@ -843,20 +842,18 @@ void Wad_file::RenameLump(int index, const char *new_name)
 }
 
 
-void Wad_file::RemoveLumps(int index, int count)
+void Wad_file::RemoveLumps(size_t index, size_t count)
 {
 	SYS_ASSERT(begun_write);
-	SYS_ASSERT(0 <= index && index < NumLumps());
+	SYS_ASSERT(index < NumLumps());
 	SYS_ASSERT(directory[index]);
 
-	int i;
-
-	for (i = 0 ; i < count ; i++)
+	for (size_t i = 0 ; i < count ; i++)
 	{
 		delete directory[index + i];
 	}
 
-	for (i = index ; i+count < NumLumps() ; i++)
+	for (size_t i = index ; i+count < NumLumps() ; i++)
 		directory[i] = directory[i+count];
 
 	directory.resize(directory.size() - (size_t)count);
@@ -869,17 +866,17 @@ void Wad_file::RemoveLumps(int index, int count)
 	FixGroup(tx_tex,  index, 0, count);
 
 	// reset the insertion point
-	insert_point = -1;
+	insert_point = NO_INDEX;
 }
 
 
-void Wad_file::RemoveLevel(int lev_num)
+void Wad_file::RemoveLevel(size_t lev_num)
 {
 	SYS_ASSERT(begun_write);
-	SYS_ASSERT(0 <= lev_num && lev_num < LevelCount());
+	SYS_ASSERT(lev_num < LevelCount());
 
-	int start  = LevelHeader(lev_num);
-	int finish = LevelLastLump(lev_num);
+	size_t start  = LevelHeader(lev_num);
+	size_t finish = LevelLastLump(lev_num);
 
 	// NOTE: FixGroup() will remove the entry in levels[]
 
@@ -887,13 +884,13 @@ void Wad_file::RemoveLevel(int lev_num)
 }
 
 
-void Wad_file::RemoveZNodes(int lev_num)
+void Wad_file::RemoveZNodes(size_t lev_num)
 {
 	SYS_ASSERT(begun_write);
-	SYS_ASSERT(0 <= lev_num && lev_num < LevelCount());
+	SYS_ASSERT(lev_num < LevelCount());
 
-	short start  = LevelHeader(lev_num);
-	short finish = LevelLastLump(lev_num);
+	size_t start  = LevelHeader(lev_num);
+	size_t finish = LevelLastLump(lev_num);
 
 	for ( ; start <= finish ; start++)
 	{
@@ -906,19 +903,19 @@ void Wad_file::RemoveZNodes(int lev_num)
 }
 
 
-void Wad_file::FixGroup(std::vector<int>& group, int index,
-                        int num_added, int num_removed)
+void Wad_file::FixGroup(std::vector<size_t>& group, size_t index,
+                        size_t num_added, size_t num_removed)
 {
 	bool did_remove = false;
 
-	for (int k = 0 ; k < (int)group.size() ; k++)
+	for (size_t k = 0 ; k < group.size() ; k++)
 	{
 		if (group[k] < index)
 			continue;
 
 		if (group[k] < index + num_removed)
 		{
-			group[k] = -1;
+			group[k] = NO_INDEX;
 			did_remove = true;
 			continue;
 		}
@@ -929,28 +926,28 @@ void Wad_file::FixGroup(std::vector<int>& group, int index,
 
 	if (did_remove)
 	{
-		std::vector<int>::iterator ENDP;
+		std::vector<size_t>::iterator ENDP;
 		ENDP = std::remove(group.begin(), group.end(), -1);
 		group.erase(ENDP, group.end());
 	}
 }
 
 
-Lump_c * Wad_file::AddLump(const char *name, int max_size)
+Lump_c * Wad_file::AddLump(const char *name, size_t max_size)
 {
 	SYS_ASSERT(begun_write);
 
 	begun_max_size = max_size;
 
-	int start = PositionForWrite(max_size);
+	size_t start = PositionForWrite(max_size);
 
 	Lump_c *lump = new Lump_c(this, name, start, 0);
 
 	// check if the insert_point is still valid
 	if (insert_point >= NumLumps())
-		insert_point = -1;
+		insert_point = NO_INDEX;
 
-	if (insert_point >= 0)
+	if (insert_point != NO_INDEX)
 	{
 		// fix various arrays containing lump indices
 		FixGroup(levels,  insert_point, 1, 0);
@@ -972,31 +969,31 @@ Lump_c * Wad_file::AddLump(const char *name, int max_size)
 }
 
 
-void Wad_file::RecreateLump(Lump_c *lump, int max_size)
+void Wad_file::RecreateLump(Lump_c *lump, size_t max_size)
 {
 	SYS_ASSERT(begun_write);
 
 	begun_max_size = max_size;
 
-	int start = PositionForWrite(max_size);
+	size_t start = PositionForWrite(max_size);
 
 	lump->l_start  = start;
 	lump->l_length = 0;
 }
 
 
-Lump_c * Wad_file::AddLevel(const char *name, int max_size, int *lev_num)
+Lump_c * Wad_file::AddLevel(const char *name, size_t max_size, size_t *lev_num)
 {
-	int actual_point = insert_point;
+	size_t actual_point = insert_point;
 
-	if (actual_point < 0 || actual_point > NumLumps())
+	if (actual_point > NumLumps())
 		actual_point = NumLumps();
 
 	Lump_c * lump = AddLump(name, max_size);
 
 	if (lev_num)
 	{
-		*lev_num = (int)levels.size();
+		*lev_num = levels.size();
 	}
 
 	levels.push_back(actual_point);
@@ -1005,18 +1002,18 @@ Lump_c * Wad_file::AddLevel(const char *name, int max_size, int *lev_num)
 }
 
 
-void Wad_file::InsertPoint(int index)
+void Wad_file::InsertPoint(size_t index)
 {
 	// this is validated on usage
 	insert_point = index;
 }
 
 
-int Wad_file::HighWaterMark()
+size_t Wad_file::HighWaterMark()
 {
-	int offset = (int)sizeof(raw_wad_header_t);
+	size_t offset = sizeof(raw_wad_header_t);
 
-	for (int k = 0 ; k < NumLumps() ; k++)
+	for (size_t k = 0 ; k < NumLumps() ; k++)
 	{
 		Lump_c *lump = directory[k];
 
@@ -1024,7 +1021,7 @@ int Wad_file::HighWaterMark()
 		if (lump->Length() <= 0)
 			continue;
 
-		int l_end = lump->l_start + lump->l_length;
+		size_t l_end = lump->l_start + lump->l_length;
 
 		l_end = ((l_end + 3) / 4) * 4;
 
@@ -1036,14 +1033,14 @@ int Wad_file::HighWaterMark()
 }
 
 
-int Wad_file::FindFreeSpace(int length)
+size_t Wad_file::FindFreeSpace(size_t length)
 {
 	length = ((length + 3) / 4) * 4;
 
 	// collect non-zero length lumps and sort by their offset
 	std::vector<Lump_c *> sorted_dir;
 
-	for (int k = 0 ; k < NumLumps() ; k++)
+	for (size_t k = 0 ; k < NumLumps() ; k++)
 	{
 		Lump_c *lump = directory[k];
 
@@ -1054,14 +1051,14 @@ int Wad_file::FindFreeSpace(int length)
 	std::sort(sorted_dir.begin(), sorted_dir.end(), Lump_c::offset_CMP_pred());
 
 
-	int offset = (int)sizeof(raw_wad_header_t);
+	size_t offset = sizeof(raw_wad_header_t);
 
-	for (unsigned int k = 0 ; k < sorted_dir.size() ; k++)
+	for (size_t k = 0 ; k < sorted_dir.size() ; k++)
 	{
 		Lump_c *lump = sorted_dir[k];
 
-		int l_start = lump->l_start;
-		int l_end   = lump->l_start + lump->l_length;
+		size_t l_start = lump->l_start;
+		size_t l_end   = lump->l_start + lump->l_length;
 
 		l_end = ((l_end + 3) / 4) * 4;
 
@@ -1080,11 +1077,11 @@ int Wad_file::FindFreeSpace(int length)
 }
 
 
-int Wad_file::PositionForWrite(int max_size)
+size_t Wad_file::PositionForWrite(size_t max_size)
 {
-	int want_pos;
+	size_t want_pos;
 
-	if (max_size <= 0)
+	if (max_size == NO_INDEX)
 		want_pos = HighWaterMark();
 	else
 		want_pos = FindFreeSpace(max_size);
@@ -1099,9 +1096,9 @@ int Wad_file::PositionForWrite(int max_size)
 	if (fseek(fp, 0, SEEK_END) < 0)
 		cur_info->FatalError("Error seeking to new write position.\n");
 
-	total_size = (int)ftell(fp);
+	total_size = (size_t)ftell(fp);
 
-	if (total_size < 0)
+	if ((int64_t)total_size < 0)
 		cur_info->FatalError("Error seeking to new write position.\n");
 
 	if (want_pos > total_size)
@@ -1128,17 +1125,16 @@ int Wad_file::PositionForWrite(int max_size)
 }
 
 
-bool Wad_file::FinishLump(int final_size)
+bool Wad_file::FinishLump(size_t final_size)
 {
 	fflush(fp);
 
 	// sanity check
-	if (begun_max_size >= 0)
-		if (final_size > begun_max_size)
-			BugError("Internal Error: wrote too much in lump (%d > %d)\n",
-					 final_size, begun_max_size);
+	if (final_size > begun_max_size)
+		BugError("Internal Error: wrote too much in lump (%d > %d)\n",
+			 final_size, begun_max_size);
 
-	int pos = (int)ftell(fp);
+	size_t pos = (size_t)ftell(fp);
 
 	if (pos & 3)
 	{
@@ -1150,7 +1146,7 @@ bool Wad_file::FinishLump(int final_size)
 }
 
 
-int Wad_file::WritePadding(int count)
+size_t Wad_file::WritePadding(size_t count)
 {
 	static byte zeros[8] = { 0,0,0,0,0,0,0,0 };
 
@@ -1186,7 +1182,7 @@ void Wad_file::WriteDirectory()
 	cur_info->Debug("dir_start:%d  dir_count:%d\n", dir_start, dir_count);
 #endif
 
-	for (int k = 0 ; k < dir_count ; k++)
+	for (size_t k = 0 ; k < dir_count ; k++)
 	{
 		Lump_c *lump = directory[k];
 		SYS_ASSERT(lump);
@@ -1201,14 +1197,11 @@ void Wad_file::WriteDirectory()
 
 	fflush(fp);
 
-	total_size = (int)ftell(fp);
+	total_size = ftell(fp);
 
 #if DEBUG_WAD
 	cur_info->Debug("total_size: %d\n", total_size);
 #endif
-
-	if (total_size < 0)
-		cur_info->FatalError("Error determining WAD size.\n");
 
 	// update header at start of file
 
