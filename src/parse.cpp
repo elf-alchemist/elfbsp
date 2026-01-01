@@ -22,7 +22,6 @@
 #include <cinttypes>
 #include <cstdlib>
 #include <string>
-#include <bits/basic_string.h>
 
 #include "parse.hpp"
 #include "system.hpp"
