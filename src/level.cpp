@@ -254,6 +254,8 @@ static void BlockAddLine(const linedef_t *L)
 
 static void CreateBlockmap(void)
 {
+	extern map_format_e lev_format;
+
 	block_lines = (uint16_t **) UtilCalloc(block_count * sizeof(uint16_t *));
 
 	for (size_t i = 0 ; i < num_linedefs ; i++)
@@ -264,7 +266,7 @@ static void CreateBlockmap(void)
 		if (L->zero_len)
 			continue;
 
-		if (L->special == Special_NoBlockmap)
+		if (lev_format == MAPF_Doom && L->special == Special_NoBlockmap)
 			continue;
 
 		BlockAddLine(L);
@@ -331,7 +333,6 @@ static void CompressBlockmap(void)
 	for (size_t i = 0 ; i < block_count ; i++)
 	{
 		size_t blk_num = block_dups[i];
-		size_t count;
 
 		// empty block ?
 		if (block_lines[blk_num] == NULL)
@@ -343,7 +344,7 @@ static void CompressBlockmap(void)
 			continue;
 		}
 
-		count = 2 + block_lines[blk_num][BK_NUM];
+		size_t count = 2 + block_lines[blk_num][BK_NUM];
 
 		// duplicate ?  Only the very last one of a sequence of duplicates
 		// will update the current offset value.
@@ -497,6 +498,7 @@ static void FreeBlockmap(void)
 
 static void FindBlockmapLimits(bbox_t *bbox)
 {
+	extern map_format_e lev_format;
 	double mid_x = 0;
 	double mid_y = 0;
 
@@ -507,7 +509,7 @@ static void FindBlockmapLimits(bbox_t *bbox)
 	{
 		const linedef_t *L = lev_linedefs[i];
 
-		if (L->special == Special_NoBlockmap)
+		if (lev_format == MAPF_Doom && L->special == Special_NoBlockmap)
 			continue;
 
 		if (! L->zero_len)
@@ -1235,6 +1237,7 @@ void GetLinedefs()
 		line->two_sided   = (line->flags & MLF_TwoSided) != 0;
 		line->is_precious = (line->tag >= 900 && line->tag < 1000);
 
+		// The following three are only valid in MAPF_Doom
 		line->dont_render = (line->special == Special_DoNotRender);
 
 		line->dont_render_front = (line->special == Special_DoNotRenderFrontSeg
@@ -1341,6 +1344,9 @@ static inline int VanillaSegAngle(const seg_t *seg)
 		angle += 360.0;
 
 	short_angle_t result = short_angle_t(floor(angle * 65536.0 / 360.0 + 0.5));
+
+	if (lev_format != MAPF_Doom)
+		return result;
 
 	// [EA] ZokumBSP
 	// 1080 => Additive degrees stored in tag
