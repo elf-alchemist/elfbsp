@@ -123,6 +123,10 @@ int32_t LEX_Int(const std::string& s)
 	return (int32_t)std::strtol(s.c_str(), NULL, 0);
 }
 
+uint32_t LEX_UInt(const std::string& s)
+{
+	return (uint32_t)std::strtoul(s.c_str(), NULL, 0);
+}
 
 double LEX_Double(const std::string& s)
 {

@@ -263,13 +263,13 @@ retry:
 	if (fseek(fp, 0, SEEK_END) != 0)
 		cur_info->FatalError("Error determining WAD size.\n");
 
-	w->total_size = ftell(fp);
+	w->total_size = (size_t)ftell(fp);
 
 #if DEBUG_WAD
 	cur_info->Debug("total_size = %d\n", w->total_size);
 #endif
 
-	if (w->total_size < 0)
+	if ((int64_t)w->total_size < 0)
 		cur_info->FatalError("Error determining WAD size.\n");
 
 	w->ReadDirectory();
@@ -361,7 +361,7 @@ static bool IsLevelLump(const char *name)
 
 Lump_c * Wad_file::GetLump(size_t index)
 {
-	SYS_ASSERT(0 <= index && index < NumLumps());
+	SYS_ASSERT(index < NumLumps());
 	SYS_ASSERT(directory[index]);
 
 	return directory[index];
@@ -396,7 +396,7 @@ size_t Wad_file::LevelLookupLump(size_t lev_num, const char *name)
 
 	for (size_t k = start+1 ; k <= finish ; k++)
 	{
-		SYS_ASSERT(0 <= k && k < NumLumps());
+		SYS_ASSERT(k < NumLumps());
 
 		if (directory[k]->Match(name))
 			return k;
@@ -412,7 +412,7 @@ size_t Wad_file::LevelFind(const char *name)
 	{
 		size_t index = levels[k];
 
-		SYS_ASSERT(0 <= index && index < NumLumps());
+		SYS_ASSERT(index < NumLumps());
 		SYS_ASSERT(directory[index]);
 
 		if (directory[index]->Match(name))
@@ -470,7 +470,7 @@ size_t Wad_file::LevelFindByNumber(int32_t number)
 	sprintf(buffer, "MAP%02d", number);
 
 	index = LevelFind(buffer);
-	if (index >= 0)
+	if (index != NO_INDEX)
 		return index;
 
 	// otherwise try E#M#
@@ -478,7 +478,7 @@ size_t Wad_file::LevelFindByNumber(int32_t number)
 	sprintf(buffer, "E%dM%d", std::max(1, exmy.quot), exmy.rem);
 
 	index = LevelFind(buffer);
-	if (index >= 0)
+	if (index != NO_INDEX)
 		return index;
 
 	return NO_INDEX;  // not found
@@ -496,7 +496,7 @@ size_t Wad_file::LevelFindFirst()
 
 size_t Wad_file::LevelHeader(size_t lev_num)
 {
-	SYS_ASSERT(0 <= lev_num && lev_num < LevelCount());
+	SYS_ASSERT(lev_num < LevelCount());
 
 	return levels[lev_num];
 }
@@ -574,7 +574,7 @@ void Wad_file::ReadDirectory()
 	dir_start = LE_U32(header.dir_start);
 	dir_count = LE_U32(header.num_entries);
 
-	if (dir_count < 0 || dir_count > 32000)
+	if (dir_count > 32000)
 		cur_info->FatalError("Bad WAD header, too many entries (%d)\n", dir_count);
 
 	if (fseek(fp, dir_start, SEEK_SET) != 0)
@@ -833,7 +833,7 @@ void Wad_file::EndWrite()
 void Wad_file::RenameLump(size_t index, const char *new_name)
 {
 	SYS_ASSERT(begun_write);
-	SYS_ASSERT(0 <= index && index < NumLumps());
+	SYS_ASSERT(index < NumLumps());
 
 	Lump_c *lump = directory[index];
 	SYS_ASSERT(lump);
@@ -845,7 +845,7 @@ void Wad_file::RenameLump(size_t index, const char *new_name)
 void Wad_file::RemoveLumps(size_t index, size_t count)
 {
 	SYS_ASSERT(begun_write);
-	SYS_ASSERT(0 <= index && index < NumLumps());
+	SYS_ASSERT(index < NumLumps());
 	SYS_ASSERT(directory[index]);
 
 	for (size_t i = 0 ; i < count ; i++)
@@ -873,7 +873,7 @@ void Wad_file::RemoveLumps(size_t index, size_t count)
 void Wad_file::RemoveLevel(size_t lev_num)
 {
 	SYS_ASSERT(begun_write);
-	SYS_ASSERT(0 <= lev_num && lev_num < LevelCount());
+	SYS_ASSERT(lev_num < LevelCount());
 
 	size_t start  = LevelHeader(lev_num);
 	size_t finish = LevelLastLump(lev_num);
@@ -887,7 +887,7 @@ void Wad_file::RemoveLevel(size_t lev_num)
 void Wad_file::RemoveZNodes(size_t lev_num)
 {
 	SYS_ASSERT(begun_write);
-	SYS_ASSERT(0 <= lev_num && lev_num < LevelCount());
+	SYS_ASSERT(lev_num < LevelCount());
 
 	size_t start  = LevelHeader(lev_num);
 	size_t finish = LevelLastLump(lev_num);
@@ -986,7 +986,7 @@ Lump_c * Wad_file::AddLevel(const char *name, size_t max_size, size_t *lev_num)
 {
 	size_t actual_point = insert_point;
 
-	if (actual_point < 0 || actual_point > NumLumps())
+	if (actual_point > NumLumps())
 		actual_point = NumLumps();
 
 	Lump_c * lump = AddLump(name, max_size);
@@ -1096,9 +1096,9 @@ size_t Wad_file::PositionForWrite(size_t max_size)
 	if (fseek(fp, 0, SEEK_END) < 0)
 		cur_info->FatalError("Error seeking to new write position.\n");
 
-	total_size = ftell(fp);
+	total_size = (size_t)ftell(fp);
 
-	if (total_size < 0)
+	if ((int64_t)total_size < 0)
 		cur_info->FatalError("Error seeking to new write position.\n");
 
 	if (want_pos > total_size)
@@ -1130,10 +1130,9 @@ bool Wad_file::FinishLump(size_t final_size)
 	fflush(fp);
 
 	// sanity check
-	if (begun_max_size >= 0)
-		if (final_size > begun_max_size)
-			BugError("Internal Error: wrote too much in lump (%d > %d)\n",
-					 final_size, begun_max_size);
+	if (final_size > begun_max_size)
+		BugError("Internal Error: wrote too much in lump (%d > %d)\n",
+			 final_size, begun_max_size);
 
 	size_t pos = (size_t)ftell(fp);
 
@@ -1203,9 +1202,6 @@ void Wad_file::WriteDirectory()
 #if DEBUG_WAD
 	cur_info->Debug("total_size: %d\n", total_size);
 #endif
-
-	if (total_size < 0)
-		cur_info->FatalError("Error determining WAD size.\n");
 
 	// update header at start of file
 

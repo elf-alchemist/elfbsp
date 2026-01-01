@@ -445,10 +445,21 @@ typedef enum zokumbsp_specials_e : uint32_t
 	Special_Unknown2, // line tag value becomes seg's associated line index? why?
 } zokumbsp_specials_t;
 
+typedef uint32_t long_angle_t;
+typedef uint16_t short_angle_t;
+constexpr uint32_t ANG45 = 0x20000000;
 
-#define ANG45        0x20000000
-#define DegreesToLongBAM(x)   (ANG45 * (x / 45))
-#define DegreesToShortBAM(x) ((ANG45 * (x / 45)) >> 16)
+template<typename T>
+constexpr inline static long_angle_t DegreesToLongBAM(T x)
+{
+	return ANG45 * (x / 45);
+}
+
+template<typename T>
+constexpr inline static short_angle_t DegreesToShortBAM(T x)
+{
+	return (ANG45 * (x / 45)) >> 16;
+}
 
 //
 // Sector attributes.

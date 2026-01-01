@@ -198,9 +198,9 @@ public:
 	sidedef_t *right;   // right sidedef
 	sidedef_t *left;    // left sidede, or NULL if none
 
-	int special;
-	int tag;
-	int flags;
+	uint32_t flags;
+	uint32_t special;
+	int32_t tag;
 
 	bool dont_render;
 	bool dont_render_front;

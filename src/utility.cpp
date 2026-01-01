@@ -81,11 +81,8 @@ bool MatchExtension(const char *filename, const char *ext)
 	size_t A = strlen(filename) - 1;
 	size_t B = strlen(ext) - 1;
 
-	for (; B >= 0 ; B--, A--)
+	for (;; B--, A--)
 	{
-		if (A < 0)
-			return false;
-
 		if (toupper(filename[A]) != toupper(ext[B]))
 			return false;
 	}
@@ -106,7 +103,7 @@ size_t FindExtension(const char *filename)
 
 	size_t pos = strlen(filename) - 1;
 
-	for (; pos >= 0 && filename[pos] != '.' ; pos--)
+	for (; filename[pos] != '.' ; pos--)
 	{
 		char ch = filename[pos];
 
@@ -118,9 +115,6 @@ size_t FindExtension(const char *filename)
 			break;
 #endif
 	}
-
-	if (pos < 0)
-		return NO_INDEX;
 
 	if (filename[pos] != '.')
 		return NO_INDEX;
@@ -259,10 +253,9 @@ int StringCaseCmpMax(const char *s1, const char *s2, size_t len)
 //
 // Allocate memory with error checking.  Zeros the memory.
 //
-template<typename T>
-T *UtilCalloc(size_t size)
+void *UtilCalloc(size_t size)
 {
-	T *ret = calloc(1, size);
+	void *ret = calloc(1, size);
 
 	if (!ret)
 		cur_info->FatalError("Out of memory (cannot allocate %d bytes)\n", size);
@@ -274,10 +267,9 @@ T *UtilCalloc(size_t size)
 //
 // Reallocate memory with error checking.
 //
-template<typename T>
-T *UtilRealloc(T *old, size_t size)
+void *UtilRealloc(void *old, size_t size)
 {
-	T *ret = realloc(old, size);
+	void *ret = realloc(old, size);
 
 	if (!ret)
 		cur_info->FatalError("Out of memory (cannot reallocate %d bytes)\n", size);

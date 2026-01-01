@@ -51,8 +51,8 @@ static uint16_t ** block_lines;
 static uint16_t *block_ptrs;
 static uint16_t *block_dups;
 
-static size_t block_compression;
-static size_t block_overflowed;
+static int32_t block_compression;
+static bool block_overflowed;
 
 #define BLOCK_LIMIT  16000
 
@@ -160,7 +160,7 @@ static void BlockAdd(size_t blk_num, size_t line_index)
 	if (! cur)
 	{
 		// create empty block
-		block_lines[blk_num] = cur = UtilCalloc<uint16_t>(BK_QUANTUM * sizeof(uint16_t));
+		block_lines[blk_num] = cur = (uint16_t *)UtilCalloc(BK_QUANTUM * sizeof(uint16_t));
 		cur[BK_NUM] = 0;
 		cur[BK_MAX] = BK_QUANTUM;
 		cur[BK_XOR] = 0x1234;
@@ -171,11 +171,11 @@ static void BlockAdd(size_t blk_num, size_t line_index)
 		// no more room, so allocate some more...
 		cur[BK_MAX] += BK_QUANTUM;
 
-		block_lines[blk_num] = cur = UtilRealloc(cur, cur[BK_MAX] * sizeof(uint16_t));
+		block_lines[blk_num] = cur = (uint16_t *)UtilRealloc(cur, cur[BK_MAX] * sizeof(uint16_t));
 	}
 
 	// compute new checksum
-	cur[BK_XOR] = (uint16_t) (((cur[BK_XOR] << 4) | (cur[BK_XOR] >> 12)) ^ line_index);
+	cur[BK_XOR] = (((cur[BK_XOR] << 4) | (cur[BK_XOR] >> 12)) ^ line_index);
 
 	cur[BK_FIRST + cur[BK_NUM]] = LE_U16(line_index);
 	cur[BK_NUM]++;
@@ -237,10 +237,10 @@ static void BlockAddLine(const linedef_t *L)
 	for (size_t by=by1 ; by <= by2 ; by++)
 	for (size_t bx=bx1 ; bx <= bx2 ; bx++)
 	{
-		size_t blk_num = by * block_w + bx;
+		size_t blk_num = bx + by * block_w;
 
-		int minx = block_x + bx * 128;
-		int miny = block_y + by * 128;
+		int minx = block_x + 128 * bx;
+		int miny = block_y + 128 * by;
 		int maxx = minx + 127;
 		int maxy = miny + 127;
 
@@ -254,7 +254,7 @@ static void BlockAddLine(const linedef_t *L)
 
 static void CreateBlockmap(void)
 {
-	block_lines = UtilCalloc<uint16_t *>(block_count * sizeof(uint16_t *));
+	block_lines = (uint16_t **)UtilCalloc(block_count * sizeof(uint16_t *));
 
 	for (size_t i = 0 ; i < num_linedefs ; i++)
 	{
@@ -309,8 +309,8 @@ static void CompressBlockmap(void)
 
 	size_t orig_size, new_size;
 
-	block_ptrs = UtilCalloc<uint16_t>(block_count * sizeof(uint16_t));
-	block_dups = UtilCalloc<uint16_t>(block_count * sizeof(uint16_t));
+	block_ptrs = (uint16_t *)UtilCalloc(block_count * sizeof(uint16_t));
+	block_dups = (uint16_t *)UtilCalloc(block_count * sizeof(uint16_t));
 
 	// sort duplicate-detecting array.  After the sort, all duplicates
 	// will be next to each other.  The duplicate array gives the order
@@ -387,7 +387,7 @@ static void CompressBlockmap(void)
 			cur_offset, dup_count);
 #endif
 
-	block_compression = (orig_size - new_size) * 100 / orig_size;
+	block_compression = int32_t((orig_size - new_size) * 100 / orig_size);
 
 	// there's a tiny chance of new_size > orig_size
 	if (block_compression < 0)
@@ -836,7 +836,7 @@ size_t num_real_lines = 0;
 
 vertex_t *NewVertex()
 {
-	auto V = UtilCalloc<vertex_t>(sizeof(vertex_t));
+	vertex_t *V = (vertex_t *)UtilCalloc(sizeof(vertex_t));
 	V->index = num_vertices;
 	lev_vertices.push_back(V);
 	return V;
@@ -844,7 +844,7 @@ vertex_t *NewVertex()
 
 linedef_t *NewLinedef()
 {
-	auto L = UtilCalloc<linedef_t>(sizeof(linedef_t));
+	linedef_t *L = (linedef_t *)UtilCalloc(sizeof(linedef_t));
 	L->index = num_linedefs;
 	lev_linedefs.push_back(L);
 	return L;
@@ -852,7 +852,7 @@ linedef_t *NewLinedef()
 
 sidedef_t *NewSidedef()
 {
-	auto S = UtilCalloc<sidedef_t>(sizeof(sidedef_t));
+	sidedef_t *S = (sidedef_t *)UtilCalloc(sizeof(sidedef_t));
 	S->index = num_sidedefs;
 	lev_sidedefs.push_back(S);
 	return S;
@@ -860,7 +860,7 @@ sidedef_t *NewSidedef()
 
 sector_t *NewSector()
 {
-	auto S = UtilCalloc<sector_t>(sizeof(sector_t));
+	sector_t *S = (sector_t *)UtilCalloc(sizeof(sector_t));
 	S->index = num_sectors;
 	lev_sectors.push_back(S);
 	return S;
@@ -868,7 +868,7 @@ sector_t *NewSector()
 
 thing_t *NewThing()
 {
-	auto T = UtilCalloc<thing_t>(sizeof(thing_t));
+	thing_t* T = (thing_t*)UtilCalloc(sizeof(thing_t));
 	T->index = num_things;
 	lev_things.push_back(T);
 	return T;
@@ -876,28 +876,28 @@ thing_t *NewThing()
 
 seg_t *NewSeg()
 {
-	auto S = UtilCalloc<seg_t>(sizeof(seg_t));
+	seg_t *S = (seg_t *)UtilCalloc(sizeof(seg_t));
 	lev_segs.push_back(S);
 	return S;
 }
 
 subsec_t *NewSubsec()
 {
-	auto S = UtilCalloc<subsec_t>(sizeof(subsec_t));
+	subsec_t *S = (subsec_t *)UtilCalloc(sizeof(subsec_t));
 	lev_subsecs.push_back(S);
 	return S;
 }
 
 node_t *NewNode()
 {
-	auto N = UtilCalloc<node_t>(sizeof(node_t));
+	node_t *N = (node_t *)UtilCalloc(sizeof(node_t));
 	lev_nodes.push_back(N);
 	return N;
 }
 
 walltip_t *NewWallTip()
 {
-	auto WT = UtilCalloc<walltip_t>(sizeof(walltip_t));
+	walltip_t *WT = (walltip_t *)UtilCalloc(sizeof(walltip_t));
 	lev_walltips.push_back(WT);
 	return WT;
 }
@@ -1340,7 +1340,7 @@ static inline int VanillaSegAngle(const seg_t *seg)
 	if (angle < 0)
 		angle += 360.0;
 
-	int16_t result = (int16_t) floor(angle * 65536.0 / 360.0 + 0.5);
+	short_angle_t result = short_angle_t(floor(angle * 65536.0 / 360.0 + 0.5));
 
 	// [EA] ZokumBSP
 	// 1080 => Additive degrees stored in tag
@@ -1349,19 +1349,19 @@ static inline int VanillaSegAngle(const seg_t *seg)
 	// 1083 => Set to BAM stored in tag
 	if (seg->linedef->special == Special_RotateDegrees)
 	{
-		result += DegreesToShortBAM(seg->linedef->tag);
+		result += DegreesToShortBAM(uint32_t(seg->linedef->tag));
 	}
 	else if (seg->linedef->special == Special_RotateDegreesHard)
 	{
-		result = DegreesToShortBAM(seg->linedef->tag);
+		result = DegreesToShortBAM(uint32_t(seg->linedef->tag));
 	}
 	else if (seg->linedef->special == Special_RotateAngleT)
 	{
-		result += (int16_t)seg->linedef->tag;
+		result += short_angle_t(seg->linedef->tag);
 	}
 	else if (seg->linedef->special == Special_RotateAngleTHard)
 	{
-		result = (int16_t)seg->linedef->tag;
+		result = short_angle_t(seg->linedef->tag);
 	}
 
 	return result;
@@ -1411,7 +1411,7 @@ void ParseSidedefField(sidedef_t *side, const std::string& key, token_kind_e kin
 	{
 		size_t num = LEX_Index(value);
 
-		if (num < 0 || num >= num_sectors)
+		if (num >= num_sectors)
 			cur_info->FatalError("illegal sector number #%d\n", (int)num);
 
 		side->sector = lev_sectors[num];
@@ -1428,7 +1428,7 @@ void ParseLinedefField(linedef_t *line, const std::string& key, token_kind_e kin
 		line->end = SafeLookupVertex(LEX_Index(value));
 
 	if (key == "special")
-		line->special = LEX_Int(value);
+		line->special = LEX_UInt(value);
 
 	if (key == "twosided")
 		line->two_sided = LEX_Boolean(value);
@@ -1437,7 +1437,7 @@ void ParseLinedefField(linedef_t *line, const std::string& key, token_kind_e kin
 	{
 		size_t num = LEX_Index(value);
 
-		if (num < 0 || num >= num_sidedefs)
+		if (num >= num_sidedefs)
 			line->right = NULL;
 		else
 			line->right = lev_sidedefs[num];
@@ -1447,7 +1447,7 @@ void ParseLinedefField(linedef_t *line, const std::string& key, token_kind_e kin
 	{
 		size_t num = LEX_Index(value);
 
-		if (num < 0 || num >= num_sidedefs)
+		if (num >= num_sidedefs)
 			line->left = NULL;
 		else
 			line->left = lev_sidedefs[num];
@@ -1919,18 +1919,13 @@ struct Compare_seg_pred
 
 void SortSegs()
 {
-	// do a sanity check
-	for (size_t i = 0 ; i < num_segs ; i++)
-		if (lev_segs[i]->index < 0)
-			BugError("Seg %p never reached a subsector!\n", i);
-
 	// sort segs into ascending index
 	std::sort(lev_segs.begin(), lev_segs.end(), Compare_seg_pred());
 
 	// remove unwanted segs
 	while (lev_segs.size() > 0 && lev_segs.back()->index == SEG_IS_GARBAGE)
 	{
-		UtilFree((void *) lev_segs.back());
+		UtilFree(lev_segs.back());
 		lev_segs.pop_back();
 	}
 }
@@ -2289,7 +2284,7 @@ static void AddMissingLump(const char *name, const char *after)
 	size_t exist = cur_wad->LevelLookupLump(lev_current_idx, after);
 
 	// if this happens, the level structure is very broken
-	if (exist < 0)
+	if (exist != NO_INDEX)
 	{
 		Warning("Missing %s lump -- level structure is broken\n", after);
 
@@ -2427,11 +2422,7 @@ build_result_e SaveUDMF(node_t *root_node)
 Lump_c * FindLevelLump(const char *name)
 {
 	size_t idx = cur_wad->LevelLookupLump(lev_current_idx, name);
-
-	if (idx < 0)
-		return NULL;
-
-	return cur_wad->GetLump(idx);
+	return (idx != NO_INDEX) ? cur_wad->GetLump(idx) : nullptr;
 }
 
 

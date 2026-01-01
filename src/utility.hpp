@@ -47,9 +47,9 @@ bool FileRename(const char *old_name, const char *new_name);
 bool FileDelete(const char *filename);
 
 // memory allocation, guaranteed to not return NULL.
-template<typename T> T *UtilCalloc(size_t size);
-template<typename T> T *UtilRealloc(T *old, size_t size);
-template<typename T> void UtilFree(T *data);
+void *UtilCalloc(size_t size);
+void *UtilRealloc(void *old, size_t size);
+void UtilFree(void *data);
 
 // math stuff
 int RoundPOW2(int x);

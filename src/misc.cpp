@@ -229,7 +229,7 @@ void MarkPolyobjPoint(double x, double y)
 	else
 		sector = best_match->left ? best_match->left->sector : NULL;
 
-#if 1
+#if DEBUG_POLYOBJ
 	cur_info->Debug("  Sector %d contains the polyobj.\n", sector ? sector->index : NO_INDEX);
 #endif
 
@@ -415,7 +415,7 @@ void PruneVerticesAtEnd(void)
 	// scan all vertices.
 	// only remove from the end, so stop when hit a used one.
 
-	for (size_t i = num_vertices - 1 ; i >= 0 ; i--)
+	for (size_t i = num_vertices - 1 ; i != NO_INDEX ; i--)
 	{
 		vertex_t *V = lev_vertices[i];
 
