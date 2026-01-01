@@ -1081,7 +1081,7 @@ size_t Wad_file::PositionForWrite(size_t max_size)
 {
 	size_t want_pos;
 
-	if (max_size <= 0)
+	if (max_size == NO_INDEX)
 		want_pos = HighWaterMark();
 	else
 		want_pos = FindFreeSpace(max_size);
