@@ -254,7 +254,7 @@ static void BlockAddLine(const linedef_t *L)
 
 static void CreateBlockmap(void)
 {
-	block_lines = (uint16_t **)UtilCalloc(block_count * sizeof(uint16_t *));
+	block_lines = (uint16_t **) UtilCalloc(block_count * sizeof(uint16_t *));
 
 	for (size_t i = 0 ; i < num_linedefs ; i++)
 	{
@@ -836,7 +836,7 @@ size_t num_real_lines = 0;
 
 vertex_t *NewVertex()
 {
-	vertex_t *V = (vertex_t *)UtilCalloc(sizeof(vertex_t));
+	vertex_t *V = (vertex_t *) UtilCalloc(sizeof(vertex_t));
 	V->index = num_vertices;
 	lev_vertices.push_back(V);
 	return V;
@@ -844,7 +844,7 @@ vertex_t *NewVertex()
 
 linedef_t *NewLinedef()
 {
-	linedef_t *L = (linedef_t *)UtilCalloc(sizeof(linedef_t));
+	linedef_t *L = (linedef_t *) UtilCalloc(sizeof(linedef_t));
 	L->index = num_linedefs;
 	lev_linedefs.push_back(L);
 	return L;
@@ -852,7 +852,7 @@ linedef_t *NewLinedef()
 
 sidedef_t *NewSidedef()
 {
-	sidedef_t *S = (sidedef_t *)UtilCalloc(sizeof(sidedef_t));
+	sidedef_t *S = (sidedef_t *) UtilCalloc(sizeof(sidedef_t));
 	S->index = num_sidedefs;
 	lev_sidedefs.push_back(S);
 	return S;
@@ -860,7 +860,7 @@ sidedef_t *NewSidedef()
 
 sector_t *NewSector()
 {
-	sector_t *S = (sector_t *)UtilCalloc(sizeof(sector_t));
+	sector_t *S = (sector_t *) UtilCalloc(sizeof(sector_t));
 	S->index = num_sectors;
 	lev_sectors.push_back(S);
 	return S;
@@ -868,7 +868,7 @@ sector_t *NewSector()
 
 thing_t *NewThing()
 {
-	thing_t* T = (thing_t*)UtilCalloc(sizeof(thing_t));
+	thing_t *T = (thing_t *) UtilCalloc(sizeof(thing_t));
 	T->index = num_things;
 	lev_things.push_back(T);
 	return T;
@@ -876,28 +876,28 @@ thing_t *NewThing()
 
 seg_t *NewSeg()
 {
-	seg_t *S = (seg_t *)UtilCalloc(sizeof(seg_t));
+	seg_t *S = (seg_t *) UtilCalloc(sizeof(seg_t));
 	lev_segs.push_back(S);
 	return S;
 }
 
 subsec_t *NewSubsec()
 {
-	subsec_t *S = (subsec_t *)UtilCalloc(sizeof(subsec_t));
+	subsec_t *S = (subsec_t *) UtilCalloc(sizeof(subsec_t));
 	lev_subsecs.push_back(S);
 	return S;
 }
 
 node_t *NewNode()
 {
-	node_t *N = (node_t *)UtilCalloc(sizeof(node_t));
+	node_t *N = (node_t *) UtilCalloc(sizeof(node_t));
 	lev_nodes.push_back(N);
 	return N;
 }
 
 walltip_t *NewWallTip()
 {
-	walltip_t *WT = (walltip_t *)UtilCalloc(sizeof(walltip_t));
+	walltip_t *WT = (walltip_t *) UtilCalloc(sizeof(walltip_t));
 	lev_walltips.push_back(WT);
 	return WT;
 }
