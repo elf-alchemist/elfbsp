@@ -1,5 +1,5 @@
 
-ELFBSP 1.7
+ELFBSP 1.0
 ==========
 
 [![Top Language](https://img.shields.io/github/languages/top/elf-alchemist/elfbsp.svg)](https://github.com/elf-alchemist/elfbsp)
@@ -71,6 +71,35 @@ For a complete options list, and documentation for each one, type:
 elfbsp --doc
 ```
 
+Compiling
+---------
+
+The ELFBSP code is fairly portable C++, and does not depend
+on any third-party libraries. It requires at least C++17.
+Both GNU g++ and clang++ are known to work.
+
+Building should be fairly straight-forward on any Unix-like
+system, such as Linux, the BSDs, and even MacOS X. With the
+main development dependency being CMake
+
+On Debian Linux, you will need the following packages:
+
+- g++
+- binutils
+- cmake
+- make
+
+To build the program, type the following:
+
+```bash
+cmake -B build && make all -C build
+```
+
+To install ELFBSP, for which you will need root priveliges, do:
+
+```bash
+cmake -B build && sudo make install -C build
+```
 
 Legalese
 --------
