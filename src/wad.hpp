@@ -17,8 +17,7 @@
 //
 //------------------------------------------------------------------------
 
-#ifndef __ELFBSP_WAD_H__
-#define __ELFBSP_WAD_H__
+#pragma once
 
 #include <string>
 #include <vector>
@@ -330,8 +329,6 @@ private:
     }
   };
 };
-
-#endif /* __ELFBSP_WAD_H__ */
 
 //--- editor settings ---
 // vi:ts=4:sw=4:noexpandtab

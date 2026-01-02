@@ -19,17 +19,16 @@
 //
 //------------------------------------------------------------------------
 
-#ifndef __ELFBSP_BSP_H__
-  #define __ELFBSP_BSP_H__
+#pragma once
 
 //
 // Node Build Information Structure
 //
 
-  #include <cstddef>
-  #define SPLIT_COST_MIN     1
-  #define SPLIT_COST_DEFAULT 11
-  #define SPLIT_COST_MAX     32
+#include <cstddef>
+#define SPLIT_COST_MIN     1
+#define SPLIT_COST_DEFAULT 11
+#define SPLIT_COST_MAX     32
 
 class buildinfo_t
 {
@@ -215,8 +214,6 @@ const char *GetLevelName(size_t lev_idx);
 // is updated to store the new lumps and returns either BUILD_OK or
 // BUILD_LumpOverflow if some limits were exceeded.
 build_result_e BuildLevel(size_t lev_idx);
-
-#endif /* __ELFBSP_BSP_H__ */
 
 //--- editor settings ---
 // vi:ts=4:sw=4:noexpandtab

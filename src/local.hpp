@@ -19,8 +19,7 @@
 //
 //------------------------------------------------------------------------
 
-#ifndef __ELFBSP_LOCAL_H__
-#define __ELFBSP_LOCAL_H__
+#pragma once
 
 #include <algorithm>
 #include <vector>
@@ -613,8 +612,6 @@ void NormaliseBspTree();
 // vertices to integer coordinates (for example, removing segs whose
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree();
-
-#endif /* __ELFBSP_LOCAL_H__ */
 
 //--- editor settings ---
 // vi:ts=4:sw=4:noexpandtab
