@@ -26,7 +26,7 @@
 #include "system.hpp"
 #include "utility.hpp"
 
-#ifdef WIN32
+#if defined(WIN32)
   #include <io.h>
 #else // UNIX or MACOSX
   #include <dirent.h>
@@ -35,7 +35,7 @@
   #include <unistd.h>
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
   #include <sys/param.h>
 #endif
 
@@ -64,7 +64,7 @@ bool HasExtension(const char *filename)
       break;
     }
 
-#ifdef WIN32
+#if defined(WIN32)
     if (filename[A] == DIR_SEP_CH || filename[A] == ':')
     {
       break;
@@ -124,7 +124,7 @@ size_t FindExtension(const char *filename)
       break;
     }
 
-#ifdef WIN32
+#if defined(WIN32)
     if (ch == DIR_SEP_CH || ch == ':')
     {
       break;
@@ -199,7 +199,7 @@ bool FileCopy(const char *src_name, const char *dest_name)
 
 bool FileRename(const char *old_name, const char *new_name)
 {
-#ifdef WIN32
+#if defined(WIN32)
   return (::MoveFile(old_name, new_name) != 0);
 #else // UNIX or MACOSX
   return (rename(old_name, new_name) == 0);
@@ -208,7 +208,7 @@ bool FileRename(const char *old_name, const char *new_name)
 
 bool FileDelete(const char *filename)
 {
-#ifdef WIN32
+#if defined(WIN32)
   return (::DeleteFile(filename) != 0);
 #else // UNIX or MACOSX
   return (remove(filename) == 0);

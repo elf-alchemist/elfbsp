@@ -727,7 +727,7 @@ void ParseCommandLine(int argc, char *argv[])
     const char *arg = *argv++;
     argc--;
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
     // ignore MacOS X rubbish
     if (strncmp(arg, "-psn_", 5) == 0)
     {

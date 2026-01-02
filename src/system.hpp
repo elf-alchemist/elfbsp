@@ -28,10 +28,10 @@
  */
 
 #if defined(WIN32) || defined(_WIN32) || defined(_WIN64)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-  #ifndef WIN32
-  #define WIN32
+  #define WIN32_LEAN_AND_MEAN
+  #include <windows.h>
+  #if !defined(WIN32)
+    #define WIN32
   #endif
 #endif
 
@@ -49,8 +49,8 @@
 #include <cmath>
 #include <cstring>
 
-#ifndef WIN32
-#include <unistd.h>
+#if !defined(WIN32)
+  #include <unistd.h>
 #endif
 
 // sized types
@@ -90,7 +90,7 @@ typedef uint8_t byte;
 
 // the Makefile or build system must define BIG_ENDIAN_CPU
 // WISH: some preprocessor checks to detect a big-endian cpu.
-#ifdef BIG_ENDIAN_CPU
+#if defined(BIG_ENDIAN_CPU)
   #define LE_U16(x) __Swap16(x)
   #define LE_U32(x) __Swap32(x)
   #define LE_U64(x) __Swap64(x)

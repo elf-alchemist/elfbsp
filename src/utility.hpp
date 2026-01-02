@@ -25,7 +25,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#ifdef WIN32
+#if defined(WIN32)
   #define DIR_SEP_CH  '\\'
   #define DIR_SEP_STR "\\"
 #else
