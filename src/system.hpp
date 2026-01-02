@@ -76,9 +76,9 @@ typedef uint8_t byte;
 typedef uint8_t args_t[5];
 
 // misc constants
-inline static constexpr size_t MSG_BUF_LEN = 1024;
-inline static constexpr size_t NO_INDEX = static_cast<size_t>(-1);
-inline static constexpr uint16_t NO_INDEX_SHORT = static_cast<uint16_t>(-1);
+static constexpr size_t MSG_BUF_LEN = 1024;
+static constexpr size_t NO_INDEX = static_cast<size_t>(-1);
+static constexpr uint16_t NO_INDEX_SHORT = static_cast<uint16_t>(-1);
 
 //
 // The packed attribute forces structures to be packed into the minimum
@@ -96,8 +96,8 @@ inline static constexpr uint16_t NO_INDEX_SHORT = static_cast<uint16_t>(-1);
 #endif
 
 // endianness
-inline static constexpr bool ENDIAN_BIG = (std::endian::native == std::endian::big);
-inline static constexpr bool ENDIAN_LITTLE = !ENDIAN_BIG;
+static constexpr bool ENDIAN_BIG = (std::endian::native == std::endian::big);
+static constexpr bool ENDIAN_LITTLE = !ENDIAN_BIG;
 
 template <typename T> inline constexpr T byteswap(T value) noexcept
 {
