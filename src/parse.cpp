@@ -19,15 +19,8 @@
 //
 //------------------------------------------------------------------------------
 
-#include <cassert>
-#include <cctype>
-#include <cinttypes>
-#include <cstdlib>
-#include <string>
-
+#include "core.hpp"
 #include "parse.hpp"
-#include "system.hpp"
-#include "utility.hpp"
 
 token_kind_e lexer_c::Next(std::string &s)
 {

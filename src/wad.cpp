@@ -20,12 +20,6 @@
 //------------------------------------------------------------------------------
 
 #include "wad.hpp"
-#include "local.hpp"
-#include "raw_def.hpp"
-#include "system.hpp"
-#include "utility.hpp"
-
-static constexpr bool DEBUG_WAD = false;
 
 //------------------------------------------------------------------------
 //  LUMP Handling
@@ -53,7 +47,7 @@ Lump_c::Lump_c(Wad_file *_par, const raw_wad_entry_t *entry) : parent(_par), lum
 
   if constexpr (DEBUG_WAD)
   {
-    cur_info->Debug("new lump '%s' @ %d len:%d\n", Name(), l_start, l_length);
+    Debug("new lump '%s' @ %d len:%d\n", Name(), l_start, l_length);
   }
 }
 
@@ -84,7 +78,7 @@ void Lump_c::Rename(const char *new_name)
 
   for (const char *s = new_name; *s != 0; s++)
   {
-    lumpname.push_back(toupper(*s));
+    lumpname.push_back(static_cast<char>(toupper(*s)));
   }
 }
 
@@ -102,51 +96,6 @@ bool Lump_c::Read(void *data, size_t len)
   return (fread(data, len, 1, parent->fp) == 1);
 }
 
-bool Lump_c::GetLine(char *buffer, size_t buf_size)
-{
-  int64_t signed_cur_pos = ftell(parent->fp);
-
-  if (signed_cur_pos < 0)
-  {
-    return false;
-  }
-
-  size_t cur_pos = static_cast<size_t>(signed_cur_pos);
-  cur_pos -= l_start;
-
-  if (cur_pos >= l_length)
-  {
-    return false; // EOF
-  }
-
-  char *dest = buffer;
-  char *dest_end = buffer + buf_size - 1;
-
-  for (; cur_pos < l_length && dest < dest_end; cur_pos++)
-  {
-    *dest++ = fgetc(parent->fp);
-
-    if (dest[-1] == '\n')
-    {
-      break;
-    }
-
-    if (ferror(parent->fp))
-    {
-      return false;
-    }
-
-    if (feof(parent->fp))
-    {
-      break;
-    }
-  }
-
-  *dest = 0;
-
-  return true; // OK
-}
-
 bool Lump_c::Write(const void *data, size_t len)
 {
   SYS_ASSERT(data && len > 0);
@@ -154,21 +103,6 @@ bool Lump_c::Write(const void *data, size_t len)
   l_length += len;
 
   return (fwrite(data, len, 1, parent->fp) == 1);
-}
-
-void Lump_c::Printf(const char *msg, ...)
-{
-  static char buffer[MSG_BUF_LEN];
-
-  va_list args;
-
-  va_start(args, msg);
-  vsnprintf(buffer, sizeof(buffer), msg, args);
-  va_end(args);
-
-  buffer[sizeof(buffer) - 1] = 0;
-
-  Write(buffer, strlen(buffer));
 }
 
 bool Lump_c::Finish()
@@ -196,7 +130,7 @@ Wad_file::~Wad_file()
 {
   if constexpr (DEBUG_WAD)
   {
-    cur_info->Debug("Closing WAD file: %s\n", filename.c_str());
+    Debug("Closing WAD file: %s\n", filename.c_str());
   }
 
   fclose(fp);
@@ -221,7 +155,7 @@ Wad_file *Wad_file::Open(const char *filename, char mode)
 
   if constexpr (DEBUG_WAD)
   {
-    cur_info->Debug("Opening WAD file: %s\n", filename);
+    Debug("Opening WAD file: %s\n", filename);
   }
 
   FILE *fp = nullptr;
@@ -242,7 +176,7 @@ retry:
     {
       if constexpr (DEBUG_WAD)
       {
-        cur_info->Debug("Open r/w failed, trying again in read mode...\n");
+        Debug("Open r/w failed, trying again in read mode...\n");
       }
       mode = 'r';
       goto retry;
@@ -251,7 +185,7 @@ retry:
     int what = errno;
     if constexpr (DEBUG_WAD)
     {
-      cur_info->Debug("Open file failed: %s\n", strerror(what));
+      Debug("Open file failed: %s\n", strerror(what));
     }
     return nullptr;
   }
@@ -261,19 +195,19 @@ retry:
   // determine total size (seek to end)
   if (fseek(fp, 0, SEEK_END) != 0)
   {
-    cur_info->FatalError("Error determining WAD size.\n");
+    FatalError("Error determining WAD size.\n");
   }
 
   w->total_size = (size_t)ftell(fp);
 
   if constexpr (DEBUG_WAD)
   {
-    cur_info->Debug("total_size = %d\n", w->total_size);
+    Debug("total_size = %d\n", w->total_size);
   }
 
   if ((int64_t)w->total_size < 0)
   {
-    cur_info->FatalError("Error determining WAD size.\n");
+    FatalError("Error determining WAD size.\n");
   }
 
   w->ReadDirectory();
@@ -287,7 +221,7 @@ Wad_file *Wad_file::Create(const char *filename, char mode)
 {
   if constexpr (DEBUG_WAD)
   {
-    cur_info->Debug("Creating new WAD file: %s\n", filename);
+    Debug("Creating new WAD file: %s\n", filename);
   }
 
   FILE *fp = fopen(filename, "w+b");
@@ -616,7 +550,7 @@ Lump_c *Wad_file::FindLumpInNamespace(const char *name, char group)
       break;
 
     default:
-      cur_info->FatalError("FindLumpInNamespace: bad group '%c'\n", group);
+      FatalError("FindLumpInNamespace: bad group '%c'\n", group);
   }
 
   return nullptr; // not found!
@@ -632,7 +566,7 @@ void Wad_file::ReadDirectory()
 
   if (fread(&header, sizeof(header), 1, fp) != 1)
   {
-    cur_info->FatalError("Error reading WAD header.\n");
+    FatalError("Error reading WAD header.\n");
   }
 
   // WISH: check ident for PWAD or IWAD
@@ -644,12 +578,12 @@ void Wad_file::ReadDirectory()
 
   if (dir_count > 32000)
   {
-    cur_info->FatalError("Bad WAD header, too many entries (%d)\n", dir_count);
+    FatalError("Bad WAD header, too many entries (%d)\n", dir_count);
   }
 
   if (fseek(fp, dir_start, SEEK_SET) != 0)
   {
-    cur_info->FatalError("Error seeking to WAD directory.\n");
+    FatalError("Error seeking to WAD directory.\n");
   }
 
   for (size_t i = 0; i < dir_count; i++)
@@ -658,7 +592,7 @@ void Wad_file::ReadDirectory()
 
     if (fread(&entry, sizeof(entry), 1, fp) != 1)
     {
-      cur_info->FatalError("Error reading WAD directory.\n");
+      FatalError("Error reading WAD directory.\n");
     }
 
     Lump_c *lump = new Lump_c(this, &entry);
@@ -686,7 +620,7 @@ void Wad_file::DetectLevels()
       levels.push_back(k);
       if constexpr (DEBUG_WAD)
       {
-        cur_info->Debug("Detected level : %s (UDMF)\n", directory[k]->Name());
+        Debug("Detected level : %s (UDMF)\n", directory[k]->Name());
       }
 
       continue;
@@ -723,7 +657,7 @@ void Wad_file::DetectLevels()
 
       if constexpr (DEBUG_WAD)
       {
-        cur_info->Debug("Detected level : %s\n", directory[k]->Name());
+        Debug("Detected level : %s\n", directory[k]->Name());
       }
     }
   }
@@ -783,7 +717,7 @@ void Wad_file::ProcessNamespaces()
       {
         if constexpr (DEBUG_WAD)
         {
-          cur_info->Debug("missing %c_END marker.\n", active);
+          Debug("missing %c_END marker.\n", active);
         }
       }
 
@@ -796,7 +730,7 @@ void Wad_file::ProcessNamespaces()
       {
         if constexpr (DEBUG_WAD)
         {
-          cur_info->Debug("stray P_END marker found.\n");
+          Debug("stray P_END marker found.\n");
         }
       }
 
@@ -810,7 +744,7 @@ void Wad_file::ProcessNamespaces()
       {
         if constexpr (DEBUG_WAD)
         {
-          cur_info->Debug("missing %c_END marker.\n", active);
+          Debug("missing %c_END marker.\n", active);
         }
       }
 
@@ -823,7 +757,7 @@ void Wad_file::ProcessNamespaces()
       {
         if constexpr (DEBUG_WAD)
         {
-          cur_info->Debug("stray S_END marker found.\n");
+          Debug("stray S_END marker found.\n");
         }
       }
 
@@ -837,7 +771,7 @@ void Wad_file::ProcessNamespaces()
       {
         if constexpr (DEBUG_WAD)
         {
-          cur_info->Debug("missing %c_END marker.\n", active);
+          Debug("missing %c_END marker.\n", active);
         }
       }
 
@@ -850,7 +784,7 @@ void Wad_file::ProcessNamespaces()
       {
         if constexpr (DEBUG_WAD)
         {
-          cur_info->Debug("stray F_END marker found.\n");
+          Debug("stray F_END marker found.\n");
         }
       }
 
@@ -864,7 +798,7 @@ void Wad_file::ProcessNamespaces()
       {
         if constexpr (DEBUG_WAD)
         {
-          cur_info->Debug("missing %c_END marker.\n", active);
+          Debug("missing %c_END marker.\n", active);
         }
       }
 
@@ -877,7 +811,7 @@ void Wad_file::ProcessNamespaces()
       {
         if constexpr (DEBUG_WAD)
         {
-          cur_info->Debug("stray TX_END marker found.\n");
+          Debug("stray TX_END marker found.\n");
         }
       }
 
@@ -891,14 +825,14 @@ void Wad_file::ProcessNamespaces()
       {
         if constexpr (DEBUG_WAD)
         {
-          cur_info->Debug("skipping empty lump %s in %c_START\n", name, active);
+          Debug("skipping empty lump %s in %c_START\n", name, active);
         }
         continue;
       }
 
       if constexpr (DEBUG_WAD)
       {
-        cur_info->Debug("Namespace %c lump : %s\n", active, name);
+        Debug("Namespace %c lump : %s\n", active, name);
       }
 
       switch (active)
@@ -917,7 +851,7 @@ void Wad_file::ProcessNamespaces()
           break;
 
         default:
-          cur_info->FatalError("ProcessNamespaces: active = 0x%02x\n", (int)active);
+          FatalError("ProcessNamespaces: active = 0x%02x\n", (int)active);
       }
     }
   }
@@ -926,7 +860,7 @@ void Wad_file::ProcessNamespaces()
   {
     if (active)
     {
-      cur_info->Debug("Missing %c_END marker (at EOF)\n", active);
+      Debug("Missing %c_END marker (at EOF)\n", active);
     }
   }
 }
@@ -945,12 +879,12 @@ void Wad_file::BeginWrite()
 {
   if (mode == 'r')
   {
-    cur_info->FatalError("Wad_file::BeginWrite() called on read-only file\n");
+    FatalError("Wad_file::BeginWrite() called on read-only file\n");
   }
 
   if (begun_write)
   {
-    cur_info->FatalError("Wad_file::BeginWrite() called again without EndWrite()\n");
+    FatalError("Wad_file::BeginWrite() called again without EndWrite()\n");
   }
 
   // put the size into a quantum state
@@ -962,7 +896,7 @@ void Wad_file::EndWrite()
 {
   if (!begun_write)
   {
-    cur_info->FatalError("Wad_file::EndWrite() called without BeginWrite()\n");
+    FatalError("Wad_file::EndWrite() called without BeginWrite()\n");
   }
 
   begun_write = false;
@@ -1246,14 +1180,14 @@ size_t Wad_file::PositionForWrite(size_t max_size)
 
   if (fseek(fp, 0, SEEK_END) < 0)
   {
-    cur_info->FatalError("Error seeking to new write position.\n");
+    FatalError("Error seeking to new write position.\n");
   }
 
   total_size = (size_t)ftell(fp);
 
   if ((int32_t)total_size < 0)
   {
-    cur_info->FatalError("Error seeking to new write position.\n");
+    FatalError("Error seeking to new write position.\n");
   }
 
   if (want_pos > total_size)
@@ -1270,13 +1204,13 @@ size_t Wad_file::PositionForWrite(size_t max_size)
   {
     if (fseek(fp, want_pos, SEEK_SET) < 0)
     {
-      cur_info->FatalError("Error seeking to new write position.\n");
+      FatalError("Error seeking to new write position.\n");
     }
   }
 
   if constexpr (DEBUG_WAD)
   {
-    cur_info->Debug("POSITION FOR WRITE: %d  (total_size %d)\n", want_pos, total_size);
+    Debug("POSITION FOR WRITE: %d  (total_size %d)\n", want_pos, total_size);
   }
 
   return want_pos;
@@ -1289,7 +1223,7 @@ bool Wad_file::FinishLump(size_t final_size)
   // sanity check
   if (final_size > begun_max_size)
   {
-    cur_info->FatalError("Internal Error: wrote too much in lump (%d > %d)\n", final_size, begun_max_size);
+    FatalError("Internal Error: wrote too much in lump (%d > %d)\n", final_size, begun_max_size);
   }
 
   size_t pos = (size_t)ftell(fp);
@@ -1334,9 +1268,9 @@ void Wad_file::WriteDirectory()
 
   if constexpr (DEBUG_WAD)
   {
-    cur_info->Debug("WriteDirectory...\n");
+    Debug("WriteDirectory...\n");
+    Debug("dir_start:%d  dir_count:%d\n", dir_start, dir_count);
   }
-  cur_info->Debug("dir_start:%d  dir_count:%d\n", dir_start, dir_count);
 
   for (size_t k = 0; k < dir_count; k++)
   {
@@ -1349,7 +1283,7 @@ void Wad_file::WriteDirectory()
 
     if (fwrite(&entry, sizeof(entry), 1, fp) != 1)
     {
-      cur_info->FatalError("Error writing WAD directory.\n");
+      FatalError("Error writing WAD directory.\n");
     }
   }
 
@@ -1359,12 +1293,12 @@ void Wad_file::WriteDirectory()
 
   if constexpr (DEBUG_WAD)
   {
-    cur_info->Debug("total_size: %d\n", total_size);
+    Debug("total_size: %d\n", total_size);
   }
 
   if ((int32_t)total_size < 0)
   {
-    cur_info->FatalError("Error determining WAD size.\n");
+    FatalError("Error determining WAD size.\n");
   }
 
   // update header at start of file
@@ -1380,7 +1314,7 @@ void Wad_file::WriteDirectory()
 
   if (fwrite(&header, sizeof(header), 1, fp) != 1)
   {
-    cur_info->FatalError("Error writing WAD header.\n");
+    FatalError("Error writing WAD header.\n");
   }
 
   fflush(fp);

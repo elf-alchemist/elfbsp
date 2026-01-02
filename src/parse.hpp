@@ -21,8 +21,7 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
+#include "core.hpp"
 
 enum token_kind_e
 {

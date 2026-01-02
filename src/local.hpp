@@ -23,11 +23,8 @@
 
 #pragma once
 
-#include <algorithm>
-#include <vector>
-
 #include "elfbsp.hpp"
-#include "system.hpp"
+#include "core.hpp"
 
 class Lump_c;
 class Wad_file;
@@ -41,12 +38,6 @@ extern Wad_file *cur_wad;
 //------------------------------------------------------------------------
 // UTILITY : general purpose functions
 //------------------------------------------------------------------------
-
-// Assertion macros
-
-#define SYS_ASSERT(cond) \
-  ((cond) ? (void)0      \
-          : cur_info->FatalError("Assertion (%s) failed\nIn function %s (%s:%d)\n", #cond, __func__, __FILE__, __LINE__))
 
 void Failure(const char *fmt, ...);
 void Warning(const char *fmt, ...);
@@ -489,13 +480,13 @@ vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end);
 // SEG : Choose the best Seg to use for a node line.
 //------------------------------------------------------------------------
 
-static constexpr std::double_t IFFY_LEN = 4.0;
+static constexpr double IFFY_LEN = 4.0;
 
 // smallest distance between two points before being considered equal
-static constexpr std::double_t DIST_EPSILON = (1.0 / 1024.0);
+static constexpr double DIST_EPSILON = (1.0 / 1024.0);
 
 // smallest degrees between two angles before being considered equal
-static constexpr std::double_t ANG_EPSILON = (1.0 / 1024.0);
+static constexpr double ANG_EPSILON = (1.0 / 1024.0);
 
 inline void ListAddSeg(seg_t **list_ptr, seg_t *seg)
 {

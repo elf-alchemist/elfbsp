@@ -23,16 +23,15 @@
 
 #pragma once
 
+#include "core.hpp"
+
 //
 // Node Build Information Structure
 //
 
-#include <cstddef>
-#include <cstdint>
-
-static constexpr std::int32_t SPLIT_COST_MIN = 1;
-static constexpr std::int32_t SPLIT_COST_DEFAULT = 11;
-static constexpr std::int32_t SPLIT_COST_MAX = 32;
+static constexpr int32_t SPLIT_COST_MIN = 1;
+static constexpr int32_t SPLIT_COST_DEFAULT = 11;
+static constexpr int32_t SPLIT_COST_MAX = 32;
 
 class buildinfo_t
 {
@@ -79,11 +78,8 @@ public:
   }
 
 public:
-  virtual void Print(const char *msg, ...) = 0;
   virtual void Print_Verbose(const char *fmt, ...) = 0;
-  virtual void Debug(const char *msg, ...) = 0;
   virtual void ShowMap(const char *name) = 0;
-  virtual void FatalError(const char *fmt, ...) = 0;
 };
 
 constexpr const char PRINT_USAGE[] = "\n";

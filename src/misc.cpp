@@ -22,13 +22,7 @@
 //------------------------------------------------------------------------------
 
 #include "local.hpp"
-#include "raw_def.hpp"
-#include "system.hpp"
-#include "utility.hpp"
-
-static constexpr bool DEBUG_WALLTIPS = false;
-static constexpr bool DEBUG_POLYOBJ = false;
-static constexpr bool DEBUG_OVERLAPS = false;
+#include "core.hpp"
 
 static constexpr std::uint32_t SYS_MSG_BUFLEN = 4000;
 
@@ -91,7 +85,7 @@ void MarkPolyobjSector(sector_t *sector)
 
   if constexpr (DEBUG_POLYOBJ)
   {
-    cur_info->Debug("  Marking SECTOR %d\n", sector->index);
+    Debug("  Marking SECTOR %d\n", sector->index);
   }
 
   /* already marked ? */
@@ -140,7 +134,7 @@ void MarkPolyobjPoint(double x, double y)
     {
       if constexpr (DEBUG_POLYOBJ)
       {
-        cur_info->Debug("  Touching line was %d\n", L->index);
+        Debug("  Touching line was %d\n", L->index);
       }
 
       if (L->left != nullptr)
@@ -210,7 +204,7 @@ void MarkPolyobjPoint(double x, double y)
 
   if constexpr (DEBUG_POLYOBJ)
   {
-    cur_info->Debug("  Closest line was %d Y=%1.0f..%1.0f (dist=%1.1f)\n", best_match->index, y1, y2, best_dist);
+    Debug("  Closest line was %d Y=%1.0f..%1.0f (dist=%1.1f)\n", best_match->index, y1, y2, best_dist);
   }
 
   /* sanity check: shouldn't be directly on the line */
@@ -218,7 +212,7 @@ void MarkPolyobjPoint(double x, double y)
   {
     if (fabs(best_dist) < DIST_EPSILON)
     {
-      cur_info->Debug("  Polyobj FAILURE: directly on the line (%d)\n", best_match->index);
+      Debug("  Polyobj FAILURE: directly on the line (%d)\n", best_match->index);
     }
   }
 
@@ -236,7 +230,7 @@ void MarkPolyobjPoint(double x, double y)
 
   if constexpr (DEBUG_POLYOBJ)
   {
-    cur_info->Debug("  Sector %d contains the polyobj.\n", sector ? sector->index : NO_INDEX);
+    Debug("  Sector %d contains the polyobj.\n", sector ? sector->index : NO_INDEX);
   }
 
   if (sector == nullptr)
@@ -310,7 +304,7 @@ void DetectPolyobjSectors(bool is_udmf)
 
   if constexpr (DEBUG_POLYOBJ)
   {
-    cur_info->Debug("Using %s style polyobj things\n", hexen_style ? "HEXEN" : "ZDOOM");
+    Debug("Using %s style polyobj things\n", hexen_style ? "HEXEN" : "ZDOOM");
   }
 
   for (size_t j = 0; j < lev_things.size(); j++)
@@ -340,7 +334,7 @@ void DetectPolyobjSectors(bool is_udmf)
 
     if constexpr (DEBUG_POLYOBJ)
     {
-      cur_info->Debug("Thing %d at (%1.0f,%1.0f) is a polyobj spawner.\n", i, x, y);
+      Debug("Thing %d at (%1.0f,%1.0f) is a polyobj spawner.\n", i, x, y);
     }
 
     MarkPolyobjPoint(x, y);
@@ -399,7 +393,7 @@ void DetectOverlappingVertices(void)
 
         if constexpr (DEBUG_OVERLAPS)
         {
-          cur_info->Print("Overlap: #%d + #%d\n", array[i]->index, array[i + 1]->index);
+          Print("Overlap: #%d + #%d\n", array[i]->index, array[i + 1]->index);
         }
       }
     }
@@ -597,11 +591,11 @@ void CalculateWallTips()
     {
       vertex_t *V = lev_vertices[k];
 
-      cur_info->Debug("WallTips for vertex %d:\n", k);
+      Debug("WallTips for vertex %d:\n", k);
 
       for (walltip_t *tip = V->tip_set; tip; tip = tip->next)
       {
-        cur_info->Debug("  Angle=%1.1f left=%d right=%d\n", tip->angle, tip->open_left ? 1 : 0, tip->open_right ? 1 : 0);
+        Debug("  Angle=%1.1f left=%d right=%d\n", tip->angle, tip->open_left ? 1 : 0, tip->open_right ? 1 : 0);
       }
     }
   }
@@ -665,7 +659,7 @@ vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end)
 
   if (dlen == 0)
   {
-    cur_info->FatalError("NewVertexDegenerate: bad delta!\n");
+    FatalError("NewVertexDegenerate: bad delta!\n");
   }
 
   dx /= dlen;

@@ -21,13 +21,8 @@
 //
 //------------------------------------------------------------------------------
 
-#include <cstdarg>
-#include <string>
-#include <vector>
-
+#include "core.hpp"
 #include "elfbsp.hpp"
-#include "system.hpp"
-#include "utility.hpp"
 
 bool opt_backup = false;
 bool opt_help = false;
@@ -51,42 +46,9 @@ struct map_range_t
 
 std::vector<map_range_t> map_list;
 
-// this is > 0 when ShowMap() is used and the current line
-// has not been terminated with a new-line ('\n') character.
-int hanging_pos;
-
-void StopHanging()
-{
-  if (hanging_pos > 0)
-  {
-    hanging_pos = 0;
-
-    printf("\n");
-    fflush(stdout);
-  }
-}
-
 class mybuildinfo_t : public buildinfo_t
 {
 public:
-  void Print(const char *fmt, ...)
-  {
-    va_list arg_ptr;
-
-    static char buffer[MSG_BUF_LEN];
-
-    va_start(arg_ptr, fmt);
-    vsnprintf(buffer, MSG_BUF_LEN - 1, fmt, arg_ptr);
-    va_end(arg_ptr);
-
-    buffer[MSG_BUF_LEN - 1] = 0;
-
-    StopHanging();
-
-    printf("%s", buffer);
-    fflush(stdout);
-  }
-
   void Print_Verbose(const char *fmt, ...)
   {
     if (!verbose)
@@ -96,31 +58,18 @@ public:
 
     va_list arg_ptr;
 
-    static char buffer[MSG_BUF_LEN];
+    static char buffer[MSG_BUFFER_LENGTH];
 
     va_start(arg_ptr, fmt);
-    vsnprintf(buffer, MSG_BUF_LEN - 1, fmt, arg_ptr);
+    vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
     va_end(arg_ptr);
 
-    buffer[MSG_BUF_LEN - 1] = 0;
+    buffer[MSG_BUFFER_LENGTH - 1] = 0;
 
     StopHanging();
 
     printf("%s", buffer);
     fflush(stdout);
-  }
-
-  void Debug(const char *fmt, ...)
-  {
-    static char buffer[MSG_BUF_LEN];
-
-    va_list args;
-
-    va_start(args, fmt);
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
-    va_end(args);
-
-    fprintf(stderr, "%s", buffer);
   }
 
   void ShowMap(const char *name)
@@ -142,30 +91,6 @@ public:
     fflush(stdout);
 
     hanging_pos += strlen(name) + 2;
-  }
-
-  //
-  //  show an error message and terminate the program
-  //
-  void FatalError(const char *fmt, ...)
-  {
-    va_list arg_ptr;
-
-    static char buffer[MSG_BUF_LEN];
-
-    va_start(arg_ptr, fmt);
-    vsnprintf(buffer, MSG_BUF_LEN - 1, fmt, arg_ptr);
-    va_end(arg_ptr);
-
-    buffer[MSG_BUF_LEN - 1] = 0;
-
-    CloseWad();
-
-    StopHanging();
-
-    fprintf(stderr, "\nFATAL ERROR: %s", buffer);
-
-    exit(3);
   }
 };
 
@@ -223,7 +148,7 @@ build_result_e BuildFile()
 
   if (num_levels == 0)
   {
-    config.Print("  No levels in wad\n");
+    Print("  No levels in wad\n");
     total_empty_files += 1;
     return BUILD_OK;
   }
@@ -275,18 +200,18 @@ build_result_e BuildFile()
 
   if (visited == 0)
   {
-    config.Print("  No matching levels\n");
+    Print("  No matching levels\n");
     total_empty_files += 1;
     return BUILD_OK;
   }
 
-  config.Print("\n");
+  Print("\n");
 
   total_failed_maps += failures;
 
   if (failures > 0)
   {
-    config.Print("  Failed maps: %d (out of %d)\n", failures, visited);
+    Print("  Failed maps: %d (out of %d)\n", failures, visited);
 
     // allow building other files
     total_failed_files += 1;
@@ -294,12 +219,12 @@ build_result_e BuildFile()
 
   if (true)
   {
-    config.Print("  Serious warnings: %d\n", config.total_warnings);
+    Print("  Serious warnings: %d\n", config.total_warnings);
   }
 
   if (config.verbose)
   {
-    config.Print("  Minor issues: %d\n", config.total_minor_issues);
+    Print("  Minor issues: %d\n", config.total_minor_issues);
   }
 
   return BUILD_OK;
@@ -312,7 +237,7 @@ void ValidateInputFilename(const char *filename)
   // files with ".bak" extension cannot be backed up, so refuse them
   if (MatchExtension(filename, "bak"))
   {
-    config.FatalError("cannot process a backup file: %s\n", filename);
+    FatalError("cannot process a backup file: %s\n", filename);
   }
 
   // we do not support packages
@@ -320,7 +245,7 @@ void ValidateInputFilename(const char *filename)
       || MatchExtension(filename, "pk4") || MatchExtension(filename, "pk7") || MatchExtension(filename, "epk")
       || MatchExtension(filename, "pack") || MatchExtension(filename, "zip") || MatchExtension(filename, "rar"))
   {
-    config.FatalError("package files (like PK3) are not supported: %s\n", filename);
+    FatalError("package files (like PK3) are not supported: %s\n", filename);
   }
 
   // reject some very common formats
@@ -330,7 +255,7 @@ void ValidateInputFilename(const char *filename)
       || MatchExtension(filename, "cfg") || MatchExtension(filename, "gif") || MatchExtension(filename, "png")
       || MatchExtension(filename, "jpg") || MatchExtension(filename, "jpeg"))
   {
-    config.FatalError("not a wad file: %s\n", filename);
+    FatalError("not a wad file: %s\n", filename);
   }
 }
 
@@ -350,10 +275,10 @@ void BackupFile(const char *filename)
 
   if (!FileCopy(filename, dest_name.c_str()))
   {
-    config.FatalError("failed to create backup: %s\n", dest_name.c_str());
+    FatalError("failed to create backup: %s\n", dest_name.c_str());
   }
 
-  config.Print("\nCreated backup: %s\n", dest_name.c_str());
+  Print("\nCreated backup: %s\n", dest_name.c_str());
 }
 
 void VisitFile(unsigned int idx, const char *filename)
@@ -363,10 +288,10 @@ void VisitFile(unsigned int idx, const char *filename)
   {
     if (!FileCopy(filename, opt_output.c_str()))
     {
-      config.FatalError("failed to create output file: %s\n", opt_output.c_str());
+      FatalError("failed to create output file: %s\n", opt_output.c_str());
     }
 
-    config.Print("\nCopied input file: %s\n", filename);
+    Print("\nCopied input file: %s\n", filename);
 
     filename = opt_output.c_str();
   }
@@ -376,8 +301,8 @@ void VisitFile(unsigned int idx, const char *filename)
     BackupFile(filename);
   }
 
-  config.Print("\n");
-  config.Print("Building %s\n", filename);
+  Print("\n");
+  Print("Building %s\n", filename);
 
   // this will fatal error if it fails
   OpenWad(filename);
@@ -388,7 +313,7 @@ void VisitFile(unsigned int idx, const char *filename)
 
   if (res == BUILD_Cancelled)
   {
-    config.FatalError("CANCELLED\n");
+    FatalError("CANCELLED\n");
   }
 }
 
@@ -447,7 +372,7 @@ bool ValidateMapName(char *name)
   // Ok, convert to upper case
   for (char *s = name; *s; s++)
   {
-    *s = toupper(*s);
+    *s = static_cast<char>(toupper(*s));
   }
 
   return true;
@@ -470,32 +395,32 @@ void ParseMapRange(char *tok)
 
   if (!ValidateMapName(low))
   {
-    config.FatalError("illegal map name: '%s'\n", low);
+    FatalError("illegal map name: '%s'\n", low);
   }
 
   if (!ValidateMapName(high))
   {
-    config.FatalError("illegal map name: '%s'\n", high);
+    FatalError("illegal map name: '%s'\n", high);
   }
 
   if (strlen(low) < strlen(high))
   {
-    config.FatalError("bad map range (%s shorter than %s)\n", low, high);
+    FatalError("bad map range (%s shorter than %s)\n", low, high);
   }
 
   if (strlen(low) > strlen(high))
   {
-    config.FatalError("bad map range (%s longer than %s)\n", low, high);
+    FatalError("bad map range (%s longer than %s)\n", low, high);
   }
 
   if (low[0] != high[0])
   {
-    config.FatalError("bad map range (%s and %s start with different letters)\n", low, high);
+    FatalError("bad map range (%s and %s start with different letters)\n", low, high);
   }
 
   if (strcmp(low, high) > 0)
   {
-    config.FatalError("bad map range (wrong order, %s > %s)\n", low, high);
+    FatalError("bad map range (wrong order, %s > %s)\n", low, high);
   }
 
   // Ok
@@ -514,7 +439,7 @@ void ParseMapList(const char *arg)
   {
     if (*arg == ',')
     {
-      config.FatalError("bad map list (empty element)\n");
+      FatalError("bad map list (empty element)\n");
     }
 
     // copy characters up to next comma / end
@@ -525,7 +450,7 @@ void ParseMapList(const char *arg)
     {
       if (len > sizeof(buffer) - 4)
       {
-        config.FatalError("bad map list (very long element)\n");
+        FatalError("bad map list (very long element)\n");
       }
 
       buffer[len++] = *arg++;
@@ -580,13 +505,13 @@ void ParseShortArgument(const char *arg)
       case 'm':
       case 'o':
       case 't':
-        config.FatalError("cannot use option '-%c' like that\n", c);
+        FatalError("cannot use option '-%c' like that\n", c);
         return;
 
       case 'c':
         if (*arg == 0 || !isdigit(*arg))
         {
-          config.FatalError("missing value for '-c' option\n");
+          FatalError("missing value for '-c' option\n");
         }
 
         // we only accept one or two digits here
@@ -601,7 +526,7 @@ void ParseShortArgument(const char *arg)
 
         if (val < SPLIT_COST_MIN || val > SPLIT_COST_MAX)
         {
-          config.FatalError("illegal value for '-c' option\n");
+          FatalError("illegal value for '-c' option\n");
         }
 
         config.split_cost = val;
@@ -610,11 +535,11 @@ void ParseShortArgument(const char *arg)
       default:
         if (isprint(c) && !isspace(c))
         {
-          config.FatalError("unknown short option: '-%c'\n", c);
+          FatalError("unknown short option: '-%c'\n", c);
         }
         else
         {
-          config.FatalError("illegal short option (ascii code %d)\n", (int)(unsigned char)c);
+          FatalError("illegal short option (ascii code %d)\n", (int)(unsigned char)c);
         }
         return;
     }
@@ -653,7 +578,7 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
   {
     if (argc < 1 || argv[0][0] == '-')
     {
-      config.FatalError("missing value for '--map' option\n");
+      FatalError("missing value for '--map' option\n");
     }
 
     ParseMapList(argv[0]);
@@ -672,14 +597,14 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
   {
     if (argc < 1 || !isdigit(argv[0][0]))
     {
-      config.FatalError("missing value for '--cost' option\n");
+      FatalError("missing value for '--cost' option\n");
     }
 
     int32_t val = std::stoi(argv[0]);
 
     if (val < SPLIT_COST_MIN || val > SPLIT_COST_MAX)
     {
-      config.FatalError("illegal value for '--cost' option\n");
+      FatalError("illegal value for '--cost' option\n");
     }
 
     config.split_cost = val;
@@ -691,12 +616,12 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
 
     if (argc < 1 || argv[0][0] == '-')
     {
-      config.FatalError("missing value for '--output' option\n");
+      FatalError("missing value for '--output' option\n");
     }
 
     if (opt_output.size() > 0)
     {
-      config.FatalError("cannot use '--output' option twice\n");
+      FatalError("cannot use '--output' option twice\n");
     }
 
     opt_output = argv[0];
@@ -704,7 +629,7 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
   }
   else
   {
-    config.FatalError("unknown long option: '%s'\n", name);
+    FatalError("unknown long option: '%s'\n", name);
   }
 
   return used;
@@ -746,7 +671,7 @@ void ParseCommandLine(int argc, char *argv[])
 
     if (strcmp(arg, "-") == 0)
     {
-      config.FatalError("illegal option '-'\n");
+      FatalError("illegal option '-'\n");
     }
 
     if (strcmp(arg, "--") == 0)
@@ -816,7 +741,7 @@ int main(int argc, char *argv[])
 
   if (total_files == 0)
   {
-    config.FatalError("no files to process\n");
+    FatalError("no files to process\n");
     return 0;
   }
 
@@ -824,17 +749,17 @@ int main(int argc, char *argv[])
   {
     if (opt_backup)
     {
-      config.FatalError("cannot use --backup with --output\n");
+      FatalError("cannot use --backup with --output\n");
     }
 
     if (total_files > 1)
     {
-      config.FatalError("cannot use multiple input files with --output\n");
+      FatalError("cannot use multiple input files with --output\n");
     }
 
     if (StringCaseCmp(wad_list[0], opt_output.c_str()) == 0)
     {
-      config.FatalError("input and output files are the same\n");
+      FatalError("input and output files are the same\n");
     }
   }
 
@@ -849,7 +774,7 @@ int main(int argc, char *argv[])
 
     if (!FileExists(filename))
     {
-      config.FatalError("no such file: %s\n", filename);
+      FatalError("no such file: %s\n", filename);
     }
   }
 
@@ -858,36 +783,36 @@ int main(int argc, char *argv[])
     VisitFile(i, wad_list[i]);
   }
 
-  config.Print("\n");
+  Print("\n");
 
   if (total_failed_files > 0)
   {
-    config.Print("FAILURES occurred on %d map%s in %d file%s.\n", total_failed_maps, total_failed_maps == 1 ? "" : "s",
+    Print("FAILURES occurred on %d map%s in %d file%s.\n", total_failed_maps, total_failed_maps == 1 ? "" : "s",
                  total_failed_files, total_failed_files == 1 ? "" : "s");
 
     if (!config.verbose)
     {
-      config.Print("Rerun with --verbose to see more details.\n");
+      Print("Rerun with --verbose to see more details.\n");
     }
 
     return 2;
   }
   else if (total_built_maps == 0)
   {
-    config.Print("NOTHING was built!\n");
+    Print("NOTHING was built!\n");
 
     return 1;
   }
   else if (total_empty_files == 0)
   {
-    config.Print("Ok, built all files.\n");
+    Print("Ok, built all files.\n");
   }
   else
   {
     size_t built = total_files - total_empty_files;
     size_t empty = total_empty_files;
 
-    config.Print("Ok, built %d file%s, %d file%s empty.\n", built, (built == 1 ? "" : "s"), empty,
+    Print("Ok, built %d file%s, %d file%s empty.\n", built, (built == 1 ? "" : "s"), empty,
                  (empty == 1 ? " was" : "s were"));
   }
 

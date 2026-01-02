@@ -22,16 +22,7 @@
 //------------------------------------------------------------------------------
 
 #include "local.hpp"
-#include "system.hpp"
-#include "utility.hpp"
-
-static constexpr bool DEBUG_PICKNODE = false;
-static constexpr bool DEBUG_SPLIT = false;
-static constexpr bool DEBUG_CUTLIST = false;
-
-static constexpr bool DEBUG_BUILDER = false;
-static constexpr bool DEBUG_SORTER = false;
-static constexpr bool DEBUG_SUBSEC = false;
+#include "core.hpp"
 
 //
 // To be able to divide the nodes down, this routine must decide which
@@ -130,7 +121,7 @@ void seg_t::Recompute()
 
   if (p_length <= 0)
   {
-    cur_info->FatalError("Seg %p has zero p_length.\n", this);
+    FatalError("Seg %p has zero p_length.\n", this);
   }
 
   p_perp = psy * pdx - psx * pdy;
@@ -156,11 +147,11 @@ seg_t *SplitSeg(seg_t *old_seg, double x, double y)
 
     if (old_seg->linedef)
     {
-      cur_info->Debug("Splitting Linedef %d (%p) at (%1.1f,%1.1f)\n", old_seg->linedef->index, old_seg, x, y);
+      Debug("Splitting Linedef %d (%p) at (%1.1f,%1.1f)\n", old_seg->linedef->index, old_seg, x, y);
     }
     else
     {
-      cur_info->Debug("Splitting Miniseg %p at (%1.1f,%1.1f)\n", old_seg, x, y);
+      Debug("Splitting Miniseg %p at (%1.1f,%1.1f)\n", old_seg, x, y);
     }
   }
 
@@ -179,7 +170,7 @@ seg_t *SplitSeg(seg_t *old_seg, double x, double y)
 
   if constexpr (DEBUG_SPLIT)
   {
-    cur_info->Debug("Splitting Vertex is %04X at (%1.1f,%1.1f)\n", new_vert->index, new_vert->x, new_vert->y);
+    Debug("Splitting Vertex is %04X at (%1.1f,%1.1f)\n", new_vert->index, new_vert->x, new_vert->y);
   }
 
   // handle partners
@@ -188,7 +179,7 @@ seg_t *SplitSeg(seg_t *old_seg, double x, double y)
   {
     if constexpr (DEBUG_SPLIT)
     {
-      cur_info->Debug("Splitting Partner %p\n", old_seg->partner);
+      Debug("Splitting Partner %p\n", old_seg->partner);
     }
 
     new_seg->partner = NewSeg();
@@ -553,7 +544,7 @@ double EvalPartition(quadtree_c *tree, seg_t *part, double best_cost)
   {
     if constexpr (DEBUG_PICKNODE)
     {
-      cur_info->Debug("Eval : No real segs on %s%sside\n", info.real_left ? "" : "left ", info.real_right ? "" : "right ");
+      Debug("Eval : No real segs on %s%sside\n", info.real_left ? "" : "left ", info.real_right ? "" : "right ");
     }
 
     return -1;
@@ -576,7 +567,7 @@ double EvalPartition(quadtree_c *tree, seg_t *part, double best_cost)
 
   if constexpr (DEBUG_PICKNODE)
   {
-    cur_info->Debug("Eval %p: splits=%d iffy=%d near=%d left=%d+%d right=%d+%d cost=%1.4f\n", part, info.splits, info.iffy,
+    Debug("Eval %p: splits=%d iffy=%d near=%d left=%d+%d right=%d+%d cost=%1.4f\n", part, info.splits, info.iffy,
                     info.near_miss, info.real_left, info.mini_left, info.real_right, info.mini_right, info.cost);
   }
 
@@ -666,7 +657,7 @@ seg_t *FindFastSeg(quadtree_c *tree)
 
   if constexpr (DEBUG_PICKNODE)
   {
-    cur_info->Debug("FindFastSeg: best_H=%p (cost %1.4f) | best_V=%p (cost %1.4f)\n", best_H, H_cost, best_V, V_cost);
+    Debug("FindFastSeg: best_H=%p (cost %1.4f) | best_V=%p (cost %1.4f)\n", best_H, H_cost, best_V, V_cost);
   }
 
   if (H_cost < 0 && V_cost < 0)
@@ -699,7 +690,7 @@ bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, doubl
 
     if constexpr (DEBUG_PICKNODE)
     {
-      cur_info->Debug("PickNode:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", part->linedef ? "" : "MINI", part,
+      Debug("PickNode:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", part->linedef ? "" : "MINI", part,
                       part->start->x, part->start->y, part->end->x, part->end->y);
     }
 
@@ -750,7 +741,7 @@ seg_t *PickNode(quadtree_c *tree, int depth)
 
   if constexpr (DEBUG_PICKNODE)
   {
-    cur_info->Debug("PickNode: BEGUN (depth %d)\n", depth);
+    Debug("PickNode: BEGUN (depth %d)\n", depth);
   }
 
   /* -AJA- here is the logic for "fast mode".  We look for segs which
@@ -761,7 +752,7 @@ seg_t *PickNode(quadtree_c *tree, int depth)
   {
     if constexpr (DEBUG_PICKNODE)
     {
-      cur_info->Debug("PickNode: Looking for Fast node...\n");
+      Debug("PickNode: Looking for Fast node...\n");
     }
 
     best = FindFastSeg(tree);
@@ -770,7 +761,7 @@ seg_t *PickNode(quadtree_c *tree, int depth)
     {
       if constexpr (DEBUG_PICKNODE)
       {
-        cur_info->Debug("PickNode: Using Fast node (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", best->start->x, best->start->y,
+        Debug("PickNode: Using Fast node (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", best->start->x, best->start->y,
                         best->end->x, best->end->y);
       }
       return best;
@@ -787,11 +778,11 @@ seg_t *PickNode(quadtree_c *tree, int depth)
   {
     if (!best)
     {
-      cur_info->Debug("PickNode: NO BEST FOUND !\n");
+      Debug("PickNode: NO BEST FOUND !\n");
     }
     else
     {
-      cur_info->Debug("PickNode: Best has score %1.4f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", best_cost, best->start->x,
+      Debug("PickNode: Best has score %1.4f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", best_cost, best->start->x,
                       best->start->y, best->end->x, best->end->y);
     }
   }
@@ -969,12 +960,12 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
 
   if constexpr (DEBUG_CUTLIST)
   {
-    cur_info->Debug("CUT LIST:\n");
-    cur_info->Debug("PARTITION: (%1.1f,%1.1f) += (%1.1f,%1.1f)\n", part->psx, part->psy, part->pdx, part->pdy);
+    Debug("CUT LIST:\n");
+    Debug("PARTITION: (%1.1f,%1.1f) += (%1.1f,%1.1f)\n", part->psx, part->psy, part->pdx, part->pdy);
 
     for (cut = cut_list; cut; cut = cut->next)
     {
-      cur_info->Debug("  Vertex %8X (%1.1f,%1.1f)  Along %1.2f  [%d/%d]  %s\n", cut->vertex->index, cut->vertex->x,
+      Debug("  Vertex %8X (%1.1f,%1.1f)  Along %1.2f  [%d/%d]  %s\n", cut->vertex->index, cut->vertex->x,
                       cut->vertex->y, cut->along_dist, cut->open_before ? 1 : 0, cut->open_after ? 1 : 0,
                       cut->self_ref ? "SELFREF" : "");
     }
@@ -990,7 +981,7 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
     double len = next->along_dist - cut->along_dist;
     if (len < -0.001)
     {
-      cur_info->FatalError("Bad order in intersect list: %1.3f > %1.3f\n", cut->along_dist, next->along_dist);
+      FatalError("Bad order in intersect list: %1.3f > %1.3f\n", cut->along_dist, next->along_dist);
     }
 
     bool A = cut->open_after;
@@ -1040,10 +1031,10 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
     if constexpr (DEBUG_CUTLIST)
     {
 
-      cur_info->Debug("AddMiniseg: %p RIGHT  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->start->x, seg->start->y, seg->end->x,
+      Debug("AddMiniseg: %p RIGHT  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->start->x, seg->start->y, seg->end->x,
                       seg->end->y);
 
-      cur_info->Debug("AddMiniseg: %p LEFT   (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", buddy->start->x, buddy->start->y, buddy->end->x,
+      Debug("AddMiniseg: %p LEFT   (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", buddy->start->x, buddy->start->y, buddy->end->x,
                       buddy->end->y);
     }
   }
@@ -1457,7 +1448,7 @@ void subsec_t::ClockwiseOrder()
 
   if constexpr (DEBUG_SUBSEC)
   {
-    cur_info->Debug("Subsec: Clockwising %d\n", index);
+    Debug("Subsec: Clockwising %d\n", index);
   }
 
   std::vector<seg_t *> array;
@@ -1536,11 +1527,11 @@ void subsec_t::ClockwiseOrder()
 
   if constexpr (DEBUG_SORTER)
   {
-    cur_info->Debug("Sorted SEGS around (%1.1f,%1.1f)\n", mid_x, mid_y);
+    Debug("Sorted SEGS around (%1.1f,%1.1f)\n", mid_x, mid_y);
 
     for (seg = seg_list; seg; seg = seg->next)
     {
-      cur_info->Debug("  Seg %p: Angle %1.6f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, seg->cmp_angle, seg->start->x,
+      Debug("  Seg %p: Angle %1.6f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, seg->cmp_angle, seg->start->x,
                       seg->start->y, seg->end->x, seg->end->y);
     }
   }
@@ -1576,7 +1567,7 @@ void subsec_t::SanityCheckClosed() const
     {
       for (seg = seg_list; seg; seg = seg->next)
       {
-        cur_info->Debug("  SEG %p  (%1.1f,%1.1f) --> (%1.1f,%1.1f)\n", seg, seg->start->x, seg->start->y, seg->end->x,
+        Debug("  SEG %p  (%1.1f,%1.1f) --> (%1.1f,%1.1f)\n", seg, seg->start->x, seg->start->y, seg->end->x,
                         seg->end->y);
       }
     }
@@ -1593,14 +1584,14 @@ void subsec_t::SanityCheckHasRealSeg() const
     }
   }
 
-  cur_info->FatalError("Subsector #%d near (%1.1f,%1.1f) has no real seg!\n", index, mid_x, mid_y);
+  FatalError("Subsector #%d near (%1.1f,%1.1f) has no real seg!\n", index, mid_x, mid_y);
 }
 
 void subsec_t::RenumberSegs(size_t &cur_seg_index)
 {
   if constexpr (DEBUG_SUBSEC)
   {
-    cur_info->Debug("Subsec: Renumbering %d\n", index);
+    Debug("Subsec: Renumbering %d\n", index);
   }
 
   seg_count = 0;
@@ -1614,7 +1605,7 @@ void subsec_t::RenumberSegs(size_t &cur_seg_index)
 
     if constexpr (DEBUG_SUBSEC)
     {
-      cur_info->Debug("Subsec:   %d: Seg %p  Index %d\n", seg_count, seg, seg->index);
+      Debug("Subsec:   %d: Seg %p  Index %d\n", seg_count, seg, seg->index);
     }
   }
 }
@@ -1636,7 +1627,7 @@ subsec_t *CreateSubsec(quadtree_c *tree)
 
   if constexpr (DEBUG_SUBSEC)
   {
-    cur_info->Debug("Subsec: Creating %d\n", sub->index);
+    Debug("Subsec: Creating %d\n", sub->index);
   }
 
   return sub;
@@ -1659,7 +1650,7 @@ void DebugShowSegs(const seg_t *list)
 {
   for (const seg_t *seg = list; seg; seg = seg->next)
   {
-    cur_info->Debug("Build:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->linedef ? "" : "MINI", seg, seg->start->x,
+    Debug("Build:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->linedef ? "" : "MINI", seg, seg->start->x,
                     seg->start->y, seg->end->x, seg->end->y);
   }
 }
@@ -1676,7 +1667,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
 
   if constexpr (DEBUG_BUILDER)
   {
-    cur_info->Debug("Build: BEGUN @ %d\n", depth);
+    Debug("Build: BEGUN @ %d\n", depth);
     DebugShowSegs(list);
   }
 
@@ -1697,7 +1688,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
   {
     if constexpr (DEBUG_BUILDER)
     {
-      cur_info->Debug("Build: CONVEX\n");
+      Debug("Build: CONVEX\n");
     }
 
     *S = CreateSubsec(tree);
@@ -1708,7 +1699,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
 
   if constexpr (DEBUG_BUILDER)
   {
-    cur_info->Debug("Build: PARTITION %p (%1.0f,%1.0f) -> (%1.0f,%1.0f)\n", part, part->start->x, part->start->y, part->end->x,
+    Debug("Build: PARTITION %p (%1.0f,%1.0f) -> (%1.0f,%1.0f)\n", part, part->start->x, part->start->y, part->end->x,
                     part->end->y);
   }
 
@@ -1728,12 +1719,12 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
   /* sanity checks... */
   if (rights == nullptr)
   {
-    cur_info->FatalError("Separated seg-list has empty RIGHT side\n");
+    FatalError("Separated seg-list has empty RIGHT side\n");
   }
 
   if (lefts == nullptr)
   {
-    cur_info->FatalError("Separated seg-list has empty LEFT side\n");
+    FatalError("Separated seg-list has empty LEFT side\n");
   }
 
   if (cut_list != nullptr)
@@ -1745,7 +1736,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
 
   if constexpr (DEBUG_BUILDER)
   {
-    cur_info->Debug("Build: Going LEFT\n");
+    Debug("Build: Going LEFT\n");
   }
 
   build_result_e ret;
@@ -1759,7 +1750,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
 
   if constexpr (DEBUG_BUILDER)
   {
-    cur_info->Debug("Build: Going RIGHT\n");
+    Debug("Build: Going RIGHT\n");
   }
 
   // recursively build the right side
@@ -1771,7 +1762,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
 
   if constexpr (DEBUG_BUILDER)
   {
-    cur_info->Debug("Build: DONE\n");
+    Debug("Build: DONE\n");
   }
 
   return BUILD_OK;
@@ -1802,7 +1793,7 @@ void subsec_t::Normalise()
 
   if constexpr (DEBUG_SUBSEC)
   {
-    cur_info->Debug("Subsec: Normalising %d\n", index);
+    Debug("Subsec: Normalising %d\n", index);
   }
 
   while (seg_list)
@@ -1816,7 +1807,7 @@ void subsec_t::Normalise()
     {
       if constexpr (DEBUG_SUBSEC)
       {
-        cur_info->Debug("Subsec: Removing miniseg %p\n", seg);
+        Debug("Subsec: Removing miniseg %p\n", seg);
       }
 
       // this causes SortSegs() to remove the seg
@@ -1844,7 +1835,7 @@ void subsec_t::Normalise()
 
   if (new_head == nullptr)
   {
-    cur_info->FatalError("Subsector %d normalised to being EMPTY\n", index);
+    FatalError("Subsector %d normalised to being EMPTY\n", index);
   }
 
   seg_list = new_head;
@@ -1892,7 +1883,7 @@ void subsec_t::RoundOff()
   int degen_total = 0;
   if constexpr (DEBUG_SUBSEC)
   {
-    cur_info->Debug("Subsec: Rounding off %d\n", index);
+    Debug("Subsec: Rounding off %d\n", index);
   }
 
   // do an initial pass, just counting the degenerates
@@ -1925,7 +1916,7 @@ void subsec_t::RoundOff()
 
   if constexpr (DEBUG_SUBSEC)
   {
-    cur_info->Debug("Subsec: degen=%d real=%d\n", degen_total, real_total);
+    Debug("Subsec: degen=%d real=%d\n", degen_total, real_total);
   }
 
   // handle the (hopefully rare) case where all of the real segs
@@ -1934,12 +1925,12 @@ void subsec_t::RoundOff()
   {
     if (last_real_degen == nullptr)
     {
-      cur_info->FatalError("Subsector %d rounded off with NO real segs\n", index);
+      FatalError("Subsector %d rounded off with NO real segs\n", index);
     }
 
     if constexpr (DEBUG_SUBSEC)
     {
-      cur_info->Debug("Degenerate before: (%1.2f,%1.2f) -> (%1.2f,%1.2f)\n", last_real_degen->start->x,
+      Debug("Degenerate before: (%1.2f,%1.2f) -> (%1.2f,%1.2f)\n", last_real_degen->start->x,
                       last_real_degen->start->y, last_real_degen->end->x, last_real_degen->end->y);
     }
 
@@ -1948,7 +1939,7 @@ void subsec_t::RoundOff()
 
     if constexpr (DEBUG_SUBSEC)
     {
-      cur_info->Debug("Degenerate after:  (%d,%d) -> (%d,%d)\n", (int32_t)floor(last_real_degen->start->x),
+      Debug("Degenerate after:  (%d,%d) -> (%d,%d)\n", (int32_t)floor(last_real_degen->start->x),
                       (int32_t)floor(last_real_degen->start->y), (int32_t)floor(last_real_degen->end->x),
                       (int32_t)floor(last_real_degen->end->y));
     }
@@ -1967,7 +1958,7 @@ void subsec_t::RoundOff()
     {
       if constexpr (DEBUG_SUBSEC)
       {
-        cur_info->Debug("Subsec: Removing degenerate %p\n", seg);
+        Debug("Subsec: Removing degenerate %p\n", seg);
       }
       // this causes SortSegs() to remove the seg
       seg->index = SEG_IS_GARBAGE;
@@ -1994,7 +1985,7 @@ void subsec_t::RoundOff()
 
   if (new_head == nullptr)
   {
-    cur_info->FatalError("Subsector %d rounded off to being EMPTY\n", index);
+    FatalError("Subsector %d rounded off to being EMPTY\n", index);
   }
 
   seg_list = new_head;

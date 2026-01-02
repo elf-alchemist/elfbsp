@@ -21,18 +21,10 @@
 //
 //------------------------------------------------------------------------------
 
-#include "elfbsp.hpp"
+#include "core.hpp"
 #include "local.hpp"
 #include "parse.hpp"
-#include "raw_def.hpp"
-#include "system.hpp"
-#include "utility.hpp"
 #include "wad.hpp"
-
-static constexpr bool DEBUG_BLOCKMAP = false;
-static constexpr bool DEBUG_REJECT = false;
-static constexpr bool DEBUG_LOAD = false;
-static constexpr bool DEBUG_BSP = false;
 
 static constexpr std::uint32_t DUMMY_DUP = 0xFFFF;
 
@@ -158,18 +150,18 @@ static void BlockAdd(size_t blk_num, size_t line_index)
 
   if constexpr (DEBUG_BLOCKMAP)
   {
-    cur_info->Debug("Block %d has line %d\n", blk_num, line_index);
+    Debug("Block %d has line %d\n", blk_num, line_index);
   }
 
   if (blk_num >= block_count)
   {
-    cur_info->FatalError("BlockAdd: bad block number %d\n", blk_num);
+    FatalError("BlockAdd: bad block number %d\n", blk_num);
   }
 
   if (!cur)
   {
     // create empty block
-    block_lines[blk_num] = cur = (uint16_t *)UtilCalloc(BK_QUANTUM * sizeof(uint16_t));
+    block_lines[blk_num] = cur = UtilCalloc<uint16_t>(BK_QUANTUM * sizeof(uint16_t));
     cur[BK_NUM] = 0;
     cur[BK_MAX] = BK_QUANTUM;
     cur[BK_XOR] = 0x1234;
@@ -201,7 +193,7 @@ static void BlockAddLine(const linedef_t *L)
 
   if constexpr (DEBUG_BLOCKMAP)
   {
-    cur_info->Debug("BlockAddLine: %d (%d,%d) -> (%d,%d)\n", line_index, x1, y1, x2, y2);
+    Debug("BlockAddLine: %d (%d,%d) -> (%d,%d)\n", line_index, x1, y1, x2, y2);
   }
 
   int bx1_temp = (std::min(x1, x2) - block_x) / 128;
@@ -267,7 +259,7 @@ static void CreateBlockmap(void)
 {
   extern map_format_e lev_format;
 
-  block_lines = (uint16_t **)UtilCalloc(block_count * sizeof(uint16_t *));
+  block_lines = UtilCalloc<uint16_t *>(block_count * sizeof(uint16_t *));
 
   for (size_t i = 0; i < lev_linedefs.size(); i++)
   {
@@ -329,8 +321,8 @@ static void CompressBlockmap(void)
 
   size_t orig_size, new_size;
 
-  block_ptrs = (uint16_t *)UtilCalloc(block_count * sizeof(uint16_t));
-  block_dups = (uint16_t *)UtilCalloc(block_count * sizeof(uint16_t));
+  block_ptrs = UtilCalloc<uint16_t>(block_count * sizeof(uint16_t));
+  block_dups = UtilCalloc<uint16_t>(block_count * sizeof(uint16_t));
 
   // sort duplicate-detecting array.  After the sort, all duplicates
   // will be next to each other.  The duplicate array gives the order
@@ -399,7 +391,7 @@ static void CompressBlockmap(void)
 
   if constexpr (DEBUG_BLOCKMAP)
   {
-    cur_info->Debug("Blockmap: Last ptr = %d  duplicates = %d\n", cur_offset, dup_count);
+    Debug("Blockmap: Last ptr = %d  duplicates = %d\n", cur_offset, dup_count);
   }
 
   block_compression = int32_t((orig_size - new_size) * 100 / orig_size);
@@ -469,7 +461,7 @@ static void WriteBlockmap(void)
 
     if (ptr == 0)
     {
-      cur_info->FatalError("WriteBlockmap: offset %d not set.\n", i);
+      FatalError("WriteBlockmap: offset %d not set.\n", i);
     }
 
     lump->Write(&ptr, sizeof(uint16_t));
@@ -576,7 +568,7 @@ static void FindBlockmapLimits(bbox_t *bbox)
 
   if constexpr (DEBUG_BLOCKMAP)
   {
-    cur_info->Debug("Blockmap lines centered at (%d,%d)\n", block_mid_x, block_mid_y);
+    Debug("Blockmap lines centered at (%d,%d)\n", block_mid_x, block_mid_y);
   }
 }
 
@@ -752,7 +744,7 @@ void Reject_DebugGroups()
       num++;
     }
 
-    cur_info->Debug("Group %d  Sectors %d\n", group, num);
+    Debug("Group %d  Sectors %d\n", group, num);
   }
 }
 
@@ -855,7 +847,7 @@ size_t num_real_lines = 0;
 
 vertex_t *NewVertex()
 {
-  vertex_t *V = (vertex_t *)UtilCalloc(sizeof(vertex_t));
+  vertex_t *V = UtilCalloc<vertex_t>(sizeof(vertex_t));
   V->index = lev_vertices.size();
   lev_vertices.push_back(V);
   return V;
@@ -863,7 +855,7 @@ vertex_t *NewVertex()
 
 linedef_t *NewLinedef()
 {
-  linedef_t *L = (linedef_t *)UtilCalloc(sizeof(linedef_t));
+  linedef_t *L = UtilCalloc<linedef_t>(sizeof(linedef_t));
   L->index = lev_linedefs.size();
   lev_linedefs.push_back(L);
   return L;
@@ -871,7 +863,7 @@ linedef_t *NewLinedef()
 
 sidedef_t *NewSidedef()
 {
-  sidedef_t *S = (sidedef_t *)UtilCalloc(sizeof(sidedef_t));
+  sidedef_t *S = UtilCalloc<sidedef_t>(sizeof(sidedef_t));
   S->index = lev_sidedefs.size();
   lev_sidedefs.push_back(S);
   return S;
@@ -879,7 +871,7 @@ sidedef_t *NewSidedef()
 
 sector_t *NewSector()
 {
-  sector_t *S = (sector_t *)UtilCalloc(sizeof(sector_t));
+  sector_t *S = UtilCalloc<sector_t>(sizeof(sector_t));
   S->index = lev_sectors.size();
   lev_sectors.push_back(S);
   return S;
@@ -887,7 +879,7 @@ sector_t *NewSector()
 
 thing_t *NewThing()
 {
-  thing_t *T = (thing_t *)UtilCalloc(sizeof(thing_t));
+  thing_t *T = UtilCalloc<thing_t>(sizeof(thing_t));
   T->index = lev_things.size();
   lev_things.push_back(T);
   return T;
@@ -895,28 +887,28 @@ thing_t *NewThing()
 
 seg_t *NewSeg()
 {
-  seg_t *S = (seg_t *)UtilCalloc(sizeof(seg_t));
+  seg_t *S = UtilCalloc<seg_t>(sizeof(seg_t));
   lev_segs.push_back(S);
   return S;
 }
 
 subsec_t *NewSubsec()
 {
-  subsec_t *S = (subsec_t *)UtilCalloc(sizeof(subsec_t));
+  subsec_t *S = UtilCalloc<subsec_t>(sizeof(subsec_t));
   lev_subsecs.push_back(S);
   return S;
 }
 
 node_t *NewNode()
 {
-  node_t *N = (node_t *)UtilCalloc(sizeof(node_t));
+  node_t *N = UtilCalloc<node_t>(sizeof(node_t));
   lev_nodes.push_back(N);
   return N;
 }
 
 walltip_t *NewWallTip()
 {
-  walltip_t *WT = (walltip_t *)UtilCalloc(sizeof(walltip_t));
+  walltip_t *WT = UtilCalloc<walltip_t>(sizeof(walltip_t));
   lev_walltips.push_back(WT);
   return WT;
 }
@@ -1019,7 +1011,7 @@ static vertex_t *SafeLookupVertex(size_t num)
 {
   if (num >= lev_vertices.size())
   {
-    cur_info->FatalError("illegal vertex number #%d\n", num);
+    FatalError("illegal vertex number #%d\n", num);
   }
 
   return lev_vertices[num];
@@ -1027,14 +1019,14 @@ static vertex_t *SafeLookupVertex(size_t num)
 
 static sector_t *SafeLookupSector(uint16_t num)
 {
-  if (num >= NO_INDEX_SHORT)
+  if (num >= NO_INDEX_INT16)
   {
     return nullptr;
   }
 
   if (num >= lev_sectors.size())
   {
-    cur_info->FatalError("illegal sector number #%d\n", (int)num);
+    FatalError("illegal sector number #%d\n", (int)num);
   }
 
   return lev_sectors[num];
@@ -1042,7 +1034,7 @@ static sector_t *SafeLookupSector(uint16_t num)
 
 static inline sidedef_t *SafeLookupSidedef(uint16_t num)
 {
-  if (num >= NO_INDEX_SHORT)
+  if (num >= NO_INDEX_INT16)
   {
     return nullptr;
   }
@@ -1069,7 +1061,7 @@ void GetVertices()
 
   if constexpr (DEBUG_LOAD)
   {
-    cur_info->Debug("GetVertices: num = %d\n", count);
+    Debug("GetVertices: num = %d\n", count);
   }
 
   if (lump == nullptr || count == 0)
@@ -1079,7 +1071,7 @@ void GetVertices()
 
   if (!lump->Seek(0))
   {
-    cur_info->FatalError("Error seeking to vertices.\n");
+    FatalError("Error seeking to vertices.\n");
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1088,7 +1080,7 @@ void GetVertices()
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      cur_info->FatalError("Error reading vertices.\n");
+      FatalError("Error reading vertices.\n");
     }
 
     vertex_t *vert = NewVertex();
@@ -1118,12 +1110,12 @@ void GetSectors()
 
   if (!lump->Seek(0))
   {
-    cur_info->FatalError("Error seeking to sectors.\n");
+    FatalError("Error seeking to sectors.\n");
   }
 
   if constexpr (DEBUG_LOAD)
   {
-    cur_info->Debug("GetSectors: num = %d\n", count);
+    Debug("GetSectors: num = %d\n", count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1132,7 +1124,7 @@ void GetSectors()
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      cur_info->FatalError("Error reading sectors.\n");
+      FatalError("Error reading sectors.\n");
     }
 
     sector_t *sector = NewSector();
@@ -1159,12 +1151,12 @@ void GetThings()
 
   if (!lump->Seek(0))
   {
-    cur_info->FatalError("Error seeking to things.\n");
+    FatalError("Error seeking to things.\n");
   }
 
   if constexpr (DEBUG_LOAD)
   {
-    cur_info->Debug("GetThings: num = %d\n", count);
+    Debug("GetThings: num = %d\n", count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1173,7 +1165,7 @@ void GetThings()
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      cur_info->FatalError("Error reading things.\n");
+      FatalError("Error reading things.\n");
     }
 
     thing_t *thing = NewThing();
@@ -1202,12 +1194,12 @@ void GetThingsHexen()
 
   if (!lump->Seek(0))
   {
-    cur_info->FatalError("Error seeking to things.\n");
+    FatalError("Error seeking to things.\n");
   }
 
   if constexpr (DEBUG_LOAD)
   {
-    cur_info->Debug("GetThingsHexen: num = %d\n", count);
+    Debug("GetThingsHexen: num = %d\n", count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1216,7 +1208,7 @@ void GetThingsHexen()
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      cur_info->FatalError("Error reading things.\n");
+      FatalError("Error reading things.\n");
     }
 
     thing_t *thing = NewThing();
@@ -1245,12 +1237,12 @@ void GetSidedefs()
 
   if (!lump->Seek(0))
   {
-    cur_info->FatalError("Error seeking to sidedefs.\n");
+    FatalError("Error seeking to sidedefs.\n");
   }
 
   if constexpr (DEBUG_LOAD)
   {
-    cur_info->Debug("GetSidedefs: num = %d\n", count);
+    Debug("GetSidedefs: num = %d\n", count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1259,7 +1251,7 @@ void GetSidedefs()
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      cur_info->FatalError("Error reading sidedefs.\n");
+      FatalError("Error reading sidedefs.\n");
     }
 
     sidedef_t *side = NewSidedef();
@@ -1286,12 +1278,12 @@ void GetLinedefs()
 
   if (!lump->Seek(0))
   {
-    cur_info->FatalError("Error seeking to linedefs.\n");
+    FatalError("Error seeking to linedefs.\n");
   }
 
   if constexpr (DEBUG_LOAD)
   {
-    cur_info->Debug("GetLinedefs: num = %d\n", count);
+    Debug("GetLinedefs: num = %d\n", count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1300,7 +1292,7 @@ void GetLinedefs()
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      cur_info->FatalError("Error reading linedefs.\n");
+      FatalError("Error reading linedefs.\n");
     }
 
     linedef_t *line;
@@ -1363,12 +1355,12 @@ void GetLinedefsHexen()
 
   if (!lump->Seek(0))
   {
-    cur_info->FatalError("Error seeking to linedefs.\n");
+    FatalError("Error seeking to linedefs.\n");
   }
 
   if constexpr (DEBUG_LOAD)
   {
-    cur_info->Debug("GetLinedefsHexen: num = %d\n", count);
+    Debug("GetLinedefsHexen: num = %d\n", count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1377,7 +1369,7 @@ void GetLinedefsHexen()
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      cur_info->FatalError("Error reading linedefs.\n");
+      FatalError("Error reading linedefs.\n");
     }
 
     linedef_t *line;
@@ -1523,7 +1515,7 @@ void ParseSidedefField(sidedef_t *side, const std::string &key, token_kind_e kin
 
     if (num >= lev_sectors.size())
     {
-      cur_info->FatalError("illegal sector number #%d\n", (int)num);
+      FatalError("illegal sector number #%d\n", (int)num);
     }
 
     side->sector = lev_sectors[num];
@@ -1624,29 +1616,29 @@ void ParseUDMF_Block(lexer_c &lex, int cur_type)
 
     if (tok == TOK_EOF)
     {
-      cur_info->FatalError("Malformed TEXTMAP lump: unclosed block\n");
+      FatalError("Malformed TEXTMAP lump: unclosed block\n");
     }
 
     if (tok != TOK_Ident)
     {
-      cur_info->FatalError("Malformed TEXTMAP lump: missing key\n");
+      FatalError("Malformed TEXTMAP lump: missing key\n");
     }
 
     if (!lex.Match("="))
     {
-      cur_info->FatalError("Malformed TEXTMAP lump: missing '='\n");
+      FatalError("Malformed TEXTMAP lump: missing '='\n");
     }
 
     tok = lex.Next(value);
 
     if (tok == TOK_EOF || tok == TOK_ERROR || value == "}")
     {
-      cur_info->FatalError("Malformed TEXTMAP lump: missing value\n");
+      FatalError("Malformed TEXTMAP lump: missing value\n");
     }
 
     if (!lex.Match(";"))
     {
-      cur_info->FatalError("Malformed TEXTMAP lump: missing ';'\n");
+      FatalError("Malformed TEXTMAP lump: missing ';'\n");
     }
 
     switch (cur_type)
@@ -1678,7 +1670,7 @@ void ParseUDMF_Block(lexer_c &lex, int cur_type)
   {
     if (line->start == nullptr || line->end == nullptr)
     {
-      cur_info->FatalError("Linedef #%d is missing a vertex!\n", line->index);
+      FatalError("Linedef #%d is missing a vertex!\n", line->index);
     }
 
     if (line->right || line->left)
@@ -1710,7 +1702,7 @@ void ParseUDMF_Pass(const std::string &data, int pass)
 
     if (tok != TOK_Ident)
     {
-      cur_info->FatalError("Malformed TEXTMAP lump.\n");
+      FatalError("Malformed TEXTMAP lump.\n");
       return;
     }
 
@@ -1720,14 +1712,14 @@ void ParseUDMF_Pass(const std::string &data, int pass)
       lex.Next(section);
       if (!lex.Match(";"))
       {
-        cur_info->FatalError("Malformed TEXTMAP lump: missing ';'\n");
+        FatalError("Malformed TEXTMAP lump: missing ';'\n");
       }
       continue;
     }
 
     if (!lex.Match("{"))
     {
-      cur_info->FatalError("Malformed TEXTMAP lump: missing '{'\n");
+      FatalError("Malformed TEXTMAP lump: missing '{'\n");
     }
 
     int cur_type = 0;
@@ -1779,7 +1771,7 @@ void ParseUDMF()
 
   if (lump == nullptr || !lump->Seek(0))
   {
-    cur_info->FatalError("Error finding TEXTMAP lump.\n");
+    FatalError("Error finding TEXTMAP lump.\n");
   }
 
   size_t remain = lump->Length();
@@ -1795,7 +1787,7 @@ void ParseUDMF()
 
     if (!lump->Read(buffer, want))
     {
-      cur_info->FatalError("Error reading TEXTMAP lump.\n");
+      FatalError("Error reading TEXTMAP lump.\n");
     }
 
     data.append(buffer, want);
@@ -1853,7 +1845,7 @@ void PutVertices()
 
   if (count != num_old_vert)
   {
-    cur_info->FatalError("PutVertices miscounted (%d != %d)\n", count, num_old_vert);
+    FatalError("PutVertices miscounted (%d != %d)\n", count, num_old_vert);
   }
 
   if (count > 65534)
@@ -1913,7 +1905,7 @@ void PutSegs()
 
     if constexpr (DEBUG_BSP)
     {
-      cur_info->Debug("PUT SEG: %04X  Vert %04X->%04X  Line %04X %s  Angle %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->index,
+      Debug("PUT SEG: %04X  Vert %04X->%04X  Line %04X %s  Angle %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->index,
                       GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef), seg->side ? "L" : "R",
                       GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
     }
@@ -1947,7 +1939,7 @@ void PutSubsecs()
 
     if constexpr (DEBUG_BSP)
     {
-      cur_info->Debug("PUT SUBSEC %04X  First %04X  Num %04X\n", sub->index, GetLittleEndian(raw.first),
+      Debug("PUT SUBSEC %04X  First %04X  Num %04X\n", sub->index, GetLittleEndian(raw.first),
                       GetLittleEndian(raw.num));
     }
   }
@@ -2005,7 +1997,7 @@ static void PutOneNode(node_t *node, Lump_c *lump)
   }
   else
   {
-    cur_info->FatalError("Bad right child in node %d\n", node->index);
+    FatalError("Bad right child in node %d\n", node->index);
   }
 
   if (node->l.node)
@@ -2018,14 +2010,14 @@ static void PutOneNode(node_t *node, Lump_c *lump)
   }
   else
   {
-    cur_info->FatalError("Bad left child in node %d\n", node->index);
+    FatalError("Bad left child in node %d\n", node->index);
   }
 
   lump->Write(&raw, sizeof(raw));
 
   if constexpr (DEBUG_BSP)
   {
-    cur_info->Debug("PUT NODE %04X  Left %04X  Right %04X  (%d,%d) -> (%d,%d)\n", node->index, GetLittleEndian(raw.left),
+    Debug("PUT NODE %04X  Left %04X  Right %04X  (%d,%d) -> (%d,%d)\n", node->index, GetLittleEndian(raw.left),
                     GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
   }
 }
@@ -2050,7 +2042,7 @@ void PutNodes(node_t *root)
 
   if (node_cur_index != lev_nodes.size())
   {
-    cur_info->FatalError("PutNodes miscounted (%d != %d)\n", node_cur_index, lev_nodes.size());
+    FatalError("PutNodes miscounted (%d != %d)\n", node_cur_index, lev_nodes.size());
   }
 
   if (node_cur_index > 32767)
@@ -2149,7 +2141,7 @@ void PutZVertices(Lump_c *lump)
 
   if (count != num_new_vert)
   {
-    cur_info->FatalError("PutZVertices miscounted (%d != %d)\n", count, num_new_vert);
+    FatalError("PutZVertices miscounted (%d != %d)\n", count, num_new_vert);
   }
 }
 
@@ -2172,7 +2164,7 @@ void PutZSubsecs(Lump_c *lump)
     {
       if (cur_seg_index != seg->index)
       {
-        cur_info->FatalError("PutZSubsecs: seg index mismatch in sub %d (%d != %d)\n", i, cur_seg_index, seg->index);
+        FatalError("PutZSubsecs: seg index mismatch in sub %d (%d != %d)\n", i, cur_seg_index, seg->index);
       }
 
       count++;
@@ -2180,13 +2172,13 @@ void PutZSubsecs(Lump_c *lump)
 
     if (count != sub->seg_count)
     {
-      cur_info->FatalError("PutZSubsecs: miscounted segs in sub %d (%d != %d)\n", i, count, sub->seg_count);
+      FatalError("PutZSubsecs: miscounted segs in sub %d (%d != %d)\n", i, count, sub->seg_count);
     }
   }
 
   if (cur_seg_index != lev_segs.size())
   {
-    cur_info->FatalError("PutZSubsecs miscounted segs (%d != %d)\n", cur_seg_index, lev_segs.size());
+    FatalError("PutZSubsecs miscounted segs (%d != %d)\n", cur_seg_index, lev_segs.size());
   }
 }
 
@@ -2201,7 +2193,7 @@ void PutZSegs(Lump_c *lump)
 
     if (seg->index != i)
     {
-      cur_info->FatalError("PutZSegs: seg index mismatch (%d != %d)\n", seg->index, i);
+      FatalError("PutZSegs: seg index mismatch (%d != %d)\n", seg->index, i);
     }
 
     raw_zdoom_seg_t raw = {};
@@ -2232,7 +2224,7 @@ void PutXGL3Segs(Lump_c *lump)
 
     if (seg->index != i)
     {
-      cur_info->FatalError("PutXGL3Segs: seg index mismatch (%d != %d)\n", seg->index, i);
+      FatalError("PutXGL3Segs: seg index mismatch (%d != %d)\n", seg->index, i);
     }
 
     raw_xgl2_seg_t raw = {};
@@ -2315,7 +2307,7 @@ static void PutOneZNode(Lump_c *lump, node_t *node, bool xgl3)
   }
   else
   {
-    cur_info->FatalError("Bad right child in ZDoom node %d\n", node->index);
+    FatalError("Bad right child in ZDoom node %d\n", node->index);
   }
 
   if (node->l.node)
@@ -2328,7 +2320,7 @@ static void PutOneZNode(Lump_c *lump, node_t *node, bool xgl3)
   }
   else
   {
-    cur_info->FatalError("Bad left child in ZDoom node %d\n", node->index);
+    FatalError("Bad left child in ZDoom node %d\n", node->index);
   }
 
   lump->Write(&raw.right, 4);
@@ -2336,7 +2328,7 @@ static void PutOneZNode(Lump_c *lump, node_t *node, bool xgl3)
 
   if constexpr (DEBUG_BSP)
   {
-    cur_info->Debug("PUT Z NODE %08X  Left %08X  Right %08X  (%d,%d) -> (%d,%d)\n", node->index, GetLittleEndian(raw.left),
+    Debug("PUT Z NODE %08X  Left %08X  Right %08X  (%d,%d) -> (%d,%d)\n", node->index, GetLittleEndian(raw.left),
                     GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
   }
 }
@@ -2355,7 +2347,7 @@ void PutZNodes(Lump_c *lump, node_t *root, bool xgl3)
 
   if (node_cur_index != lev_nodes.size())
   {
-    cur_info->FatalError("PutZNodes miscounted (%d != %d)\n", node_cur_index, lev_nodes.size());
+    FatalError("PutZNodes miscounted (%d != %d)\n", node_cur_index, lev_nodes.size());
   }
 }
 
@@ -2676,14 +2668,14 @@ void OpenWad(const char *filename)
   cur_wad = Wad_file::Open(filename, 'a');
   if (cur_wad == nullptr)
   {
-    cur_info->FatalError("Cannot open file: %s\n", filename);
+    FatalError("Cannot open file: %s\n", filename);
   }
 
   if (cur_wad->IsReadOnly())
   {
     delete cur_wad;
     cur_wad = nullptr;
-    cur_info->FatalError("file is read only: %s\n", filename);
+    FatalError("file is read only: %s\n", filename);
   }
 }
 

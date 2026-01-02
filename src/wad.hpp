@@ -21,10 +21,7 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-
-#include "raw_def.hpp"
+#include "core.hpp"
 
 class Wad_file;
 
@@ -82,16 +79,10 @@ public:
   // read some data from the lump, returning true if OK.
   bool Read(void *data, size_t len);
 
-  // read a line of text, returns true if OK, false on EOF
-  bool GetLine(char *buffer, size_t buf_size);
-
   // write some data to the lump.  Only the lump which had just
   // been created with Wad_file::AddLump() or RecreateLump() can be
   // written to.
   bool Write(const void *data, size_t len);
-
-  // write some text to the lump
-  void Printf(const char *msg, ...);
 
   // mark the lump as finished (after writing data to it).
   bool Finish();
