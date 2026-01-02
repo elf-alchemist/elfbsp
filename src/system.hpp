@@ -18,8 +18,7 @@
 //------------------------------------------------------------------------
 
 #ifndef __ELFBSP_SYSTEM_H__
-#define __ELFBSP_SYSTEM_H__
-
+  #define __ELFBSP_SYSTEM_H__
 
 /*
  *  Windows support
@@ -32,7 +31,6 @@
   #define WIN32
   #endif
 #endif
-
 
 /*
  *  Standard headers
@@ -56,19 +54,17 @@
 typedef uint8_t byte;
 
 // misc constants
-#define MSG_BUF_LEN  1024
-
+#define MSG_BUF_LEN 1024
 
 // basic macros
-#undef  NULL
-#define NULL  nullptr
+#undef NULL
+#define NULL nullptr
 
-#undef  M_PI
-#define M_PI  3.14159265358979323846
+#undef M_PI
+#define M_PI 3.14159265358979323846
 
-#undef  I_ROUND
-#define I_ROUND(x)  ((int) round(x))
-
+#undef I_ROUND
+#define I_ROUND(x) ((int)round(x))
 
 //
 // The packed attribute forces structures to be packed into the minimum
@@ -80,49 +76,48 @@ typedef uint8_t byte;
 //
 
 #if defined(__GNUC__) || defined(__clang__)
-#define PACKEDATTR __attribute__((packed))
+  #define PACKEDATTR __attribute__((packed))
 #else
-#define PACKEDATTR
+  #define PACKEDATTR
 #endif
-
 
 // endianness
 #if defined(__GNUC__) || defined(__clang__)
-#define __Swap16  __builtin_bswap16
-#define __Swap32  __builtin_bswap32
-#define __Swap64  __builtin_bswap64
+  #define __Swap16 __builtin_bswap16
+  #define __Swap32 __builtin_bswap32
+  #define __Swap64 __builtin_bswap64
 #endif
 
 // the Makefile or build system must define BIG_ENDIAN_CPU
 // WISH: some preprocessor checks to detect a big-endian cpu.
 #ifdef BIG_ENDIAN_CPU
-#define LE_U16(x)  __Swap16(x)
-#define LE_U32(x)  __Swap32(x)
-#define LE_U64(x)  __Swap64(x)
-#define BE_U16(x)  ((uint16_t)(x))
-#define BE_U32(x)  ((uint32_t)(x))
-#define BE_U64(x)  ((uint64_t)(x))
+  #define LE_U16(x) __Swap16(x)
+  #define LE_U32(x) __Swap32(x)
+  #define LE_U64(x) __Swap64(x)
+  #define BE_U16(x) ((uint16_t)(x))
+  #define BE_U32(x) ((uint32_t)(x))
+  #define BE_U64(x) ((uint64_t)(x))
 #else
-#define LE_U16(x)  ((uint16_t)(x))
-#define LE_U32(x)  ((uint32_t)(x))
-#define LE_U64(x)  ((uint64_t)(x))
-#define BE_U16(x)  __Swap16(x)
-#define BE_U32(x)  __Swap32(x)
-#define BE_U64(x)  __Swap64(x)
+  #define LE_U16(x) ((uint16_t)(x))
+  #define LE_U32(x) ((uint32_t)(x))
+  #define LE_U64(x) ((uint64_t)(x))
+  #define BE_U16(x) __Swap16(x)
+  #define BE_U32(x) __Swap32(x)
+  #define BE_U64(x) __Swap64(x)
 #endif
 
 // signed versions of the above
-#define LE_S16(x)  ((int16_t) LE_U16((uint16_t) (x)))
-#define LE_S32(x)  ((int32_t) LE_U32((uint32_t) (x)))
-#define LE_S64(x)  ((int64_t) LE_U64((uint64_t) (x)))
+#define LE_S16(x) ((int16_t)LE_U16((uint16_t)(x)))
+#define LE_S32(x) ((int32_t)LE_U32((uint32_t)(x)))
+#define LE_S64(x) ((int64_t)LE_U64((uint64_t)(x)))
 
-#define BE_S16(x)  ((int16_t) BE_U16((uint16_t) (x)))
-#define BE_S32(x)  ((int32_t) BE_U32((uint32_t) (x)))
-#define BE_S64(x)  ((int64_t) BE_U64((uint64_t) (x)))
+#define BE_S16(x) ((int16_t)BE_U16((uint16_t)(x)))
+#define BE_S32(x) ((int32_t)BE_U32((uint32_t)(x)))
+#define BE_S64(x) ((int64_t)BE_U64((uint64_t)(x)))
 
 constexpr size_t NO_INDEX = (size_t)(-1);
 
-#endif  /* __ELFBSP_SYSTEM_H__ */
+#endif /* __ELFBSP_SYSTEM_H__ */
 
 //--- editor settings ---
 // vi:ts=4:sw=4:noexpandtab

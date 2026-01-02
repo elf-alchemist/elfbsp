@@ -28,21 +28,21 @@ namespace elfbsp
 {
 
 #ifdef WIN32
-#define DIR_SEP_CH   '\\'
-#define DIR_SEP_STR  "\\"
+  #define DIR_SEP_CH  '\\'
+  #define DIR_SEP_STR "\\"
 #else
-#define DIR_SEP_CH   '/'
-#define DIR_SEP_STR  "/"
+  #define DIR_SEP_CH  '/'
+  #define DIR_SEP_STR "/"
 #endif
 
 // filename functions
-bool HasExtension  (const char *filename);
+bool HasExtension(const char *filename);
 bool MatchExtension(const char *filename, const char *ext);
-size_t FindExtension (const char *filename);
+size_t FindExtension(const char *filename);
 
 // file utilities
 bool FileExists(const char *filename);
-bool FileCopy  (const char *src_name, const char *dest_name);
+bool FileCopy(const char *src_name, const char *dest_name);
 bool FileRename(const char *old_name, const char *new_name);
 bool FileDelete(const char *filename);
 
@@ -56,7 +56,7 @@ int RoundPOW2(int x);
 double ComputeAngle(double dx, double dy);
 
 // string utilities
-int StringCaseCmp   (const char *s1, const char *s2);
+int StringCaseCmp(const char *s1, const char *s2);
 int StringCaseCmpMax(const char *s1, const char *s2, size_t len);
 
 // checksum functions
@@ -66,7 +66,7 @@ void Adler32_Finish(uint32_t *crc);
 
 } // namespace elfbsp
 
-#endif  /* __ELFBSP_UTILITY_H__ */
+#endif /* __ELFBSP_UTILITY_H__ */
 
 //--- editor settings ---
 // vi:ts=4:sw=4:noexpandtab
