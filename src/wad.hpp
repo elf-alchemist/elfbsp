@@ -1,9 +1,11 @@
-//------------------------------------------------------------------------
-//  WAD Reading / Writing
-//------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 //
-//  ELFBSP  Copyright (C) 2025       Guilherme Miranda
-//          Copyright (C) 2001-2018  Andrew Apted
+//  ELFBSP
+//
+//------------------------------------------------------------------------------
+//
+//  Copyright 2025-2026 Guilherme Miranda
+//  Copyright 2001-2018 Andrew Apted
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -15,7 +17,7 @@
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
 //
-//------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 #pragma once
 

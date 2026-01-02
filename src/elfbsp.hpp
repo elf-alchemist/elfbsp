@@ -1,11 +1,13 @@
-//------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 //
-//  ELFBSP  Copyright (C) 2025       Guilherme Miranda
-//          Copyright (C) 2000-2018  Andrew Apted, et al
-//          Copyright (C) 1994-1998  Colin Reed
-//          Copyright (C) 1997-1998  Lee Killough
+//  ELFBSP
 //
-//  Originally based on the program 'BSP', version 2.3.
+//------------------------------------------------------------------------------
+//
+//  Copyright 2025-2026 Guilherme Miranda
+//  Copyright 2000-2018 Andrew Apted, et al
+//  Copyright 1994-1998 Colin Reed
+//  Copyright 1997-1998 Lee Killough
 //
 //  This program is free software; you can redistribute it and/or
 //  modify it under the terms of the GNU General Public License
@@ -17,7 +19,7 @@
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
 //
-//------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 
 #pragma once
 
