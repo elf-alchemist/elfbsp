@@ -713,6 +713,3 @@ bool vertex_t::CheckOpen(double dx, double dy) const
   // usually won't get here
   return true;
 }
-
-//--- editor settings ---
-// vi:ts=4:sw=4:noexpandtab

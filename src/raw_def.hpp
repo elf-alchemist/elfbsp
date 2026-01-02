@@ -457,6 +457,3 @@ typedef enum : uint16_t
 #define ZDOOM_PO_ANCHOR_TYPE     9300
 #define ZDOOM_PO_SPAWN_TYPE      9301
 #define ZDOOM_PO_SPAWNCRUSH_TYPE 9302
-
-//--- editor settings ---
-// vi:ts=4:sw=4:noexpandtab

@@ -1976,6 +1976,3 @@ void RoundOffBspTree()
     sub->RenumberSegs(cur_seg_index);
   }
 }
-
-//--- editor settings ---
-// vi:ts=4:sw=4:noexpandtab

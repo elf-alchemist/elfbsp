@@ -432,6 +432,3 @@ void lexer_c::ParseEscape(std::string &s)
       break;
   }
 }
-
-//--- editor settings ---
-// vi:ts=4:sw=4:noexpandtab

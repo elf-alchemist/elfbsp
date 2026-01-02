@@ -2771,6 +2771,3 @@ build_result_e BuildLevel(size_t lev_idx)
 
   return ret;
 }
-
-//--- editor settings ---
-// vi:ts=4:sw=4:noexpandtab

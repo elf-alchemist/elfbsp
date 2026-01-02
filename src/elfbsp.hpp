@@ -214,6 +214,3 @@ const char *GetLevelName(size_t lev_idx);
 // is updated to store the new lumps and returns either BUILD_OK or
 // BUILD_LumpOverflow if some limits were exceeded.
 build_result_e BuildLevel(size_t lev_idx);
-
-//--- editor settings ---
-// vi:ts=4:sw=4:noexpandtab

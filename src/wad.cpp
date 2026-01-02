@@ -1351,6 +1351,3 @@ bool Wad_file::Backup(const char *new_filename)
 
   return FileCopy(PathName(), new_filename);
 }
-
-//--- editor settings ---
-// vi:ts=4:sw=4:noexpandtab

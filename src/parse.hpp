@@ -84,6 +84,3 @@ int32_t LEX_Int(const std::string &s);
 uint32_t LEX_UInt(const std::string &s);
 double LEX_Double(const std::string &s);
 bool LEX_Boolean(const std::string &s);
-
-//--- editor settings ---
-// vi:ts=4:sw=4:noexpandtab

@@ -612,6 +612,3 @@ void NormaliseBspTree();
 // vertices to integer coordinates (for example, removing segs whose
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree();
-
-//--- editor settings ---
-// vi:ts=4:sw=4:noexpandtab

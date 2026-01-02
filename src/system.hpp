@@ -115,6 +115,3 @@ typedef uint8_t byte;
 #define BE_S64(x) ((int64_t)BE_U64((uint64_t)(x)))
 
 constexpr size_t NO_INDEX = (size_t)(-1);
-
-//--- editor settings ---
-// vi:ts=4:sw=4:noexpandtab
