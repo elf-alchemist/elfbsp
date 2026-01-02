@@ -22,16 +22,13 @@
 
 #pragma once
 
+#include "system.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
-#if defined(WIN32)
-  #define DIR_SEP_CH  '\\'
-  #define DIR_SEP_STR "\\"
-#else
-  #define DIR_SEP_CH  '/'
-  #define DIR_SEP_STR "/"
-#endif
+constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
+constexpr std::string DIR_SEP_STR = (WINDOWS) ? "/" : "\\";
 
 // filename functions
 bool HasExtension(const char *filename);
@@ -41,8 +38,6 @@ size_t FindExtension(const char *filename);
 // file utilities
 bool FileExists(const char *filename);
 bool FileCopy(const char *src_name, const char *dest_name);
-bool FileRename(const char *old_name, const char *new_name);
-bool FileDelete(const char *filename);
 
 // memory allocation, guaranteed to not return nullptr.
 void *UtilCalloc(size_t size);

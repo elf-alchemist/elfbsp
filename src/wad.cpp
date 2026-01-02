@@ -25,22 +25,7 @@
 #include "system.hpp"
 #include "utility.hpp"
 
-#define DEBUG_WAD 0
-
-#if DEBUG_WAD
-  #define FileMessage cur_info->Debug
-  #define LumpWarning cur_info->Debug
-#else
-void FileMessage(const char *fmt, ...)
-{
-  (void)fmt;
-}
-
-void LumpWarning(const char *fmt, ...)
-{
-  (void)fmt;
-}
-#endif
+static constexpr bool DEBUG_WAD = false;
 
 //------------------------------------------------------------------------
 //  LUMP Handling
@@ -63,12 +48,13 @@ Lump_c::Lump_c(Wad_file *_par, const raw_wad_entry_t *entry) : parent(_par), lum
   // ensure lump name is uppercase
   Rename(buffer);
 
-  l_start = LE_U32(entry->pos);
-  l_length = LE_U32(entry->size);
+  l_start = GetLittleEndian(entry->pos);
+  l_length = GetLittleEndian(entry->size);
 
-#if DEBUG_WAD
-  cur_info->Debug("new lump '%s' @ %d len:%d\n", Name(), l_start, l_length);
-#endif
+  if constexpr (DEBUG_WAD)
+  {
+    cur_info->Debug("new lump '%s' @ %d len:%d\n", Name(), l_start, l_length);
+  }
 }
 
 Lump_c::~Lump_c()
@@ -82,8 +68,8 @@ void Lump_c::MakeEntry(raw_wad_entry_t *entry)
   memset(entry->name, 0, 8);
   memcpy(entry->name, lumpname.c_str(), lumpname.size());
 
-  entry->pos = LE_U32(l_start);
-  entry->size = LE_U32(l_length);
+  entry->pos = GetLittleEndian((uint32_t)l_start);
+  entry->size = GetLittleEndian((uint32_t)l_length);
 }
 
 bool Lump_c::Match(const char *s) const
@@ -208,7 +194,10 @@ Wad_file::Wad_file(const char *_name, char _mode, FILE *_fp)
 
 Wad_file::~Wad_file()
 {
-  FileMessage("Closing WAD file: %s\n", filename.c_str());
+  if constexpr (DEBUG_WAD)
+  {
+    cur_info->Debug("Closing WAD file: %s\n", filename.c_str());
+  }
 
   fclose(fp);
 
@@ -230,7 +219,10 @@ Wad_file *Wad_file::Open(const char *filename, char mode)
     return Create(filename, mode);
   }
 
-  FileMessage("Opening WAD file: %s\n", filename);
+  if constexpr (DEBUG_WAD)
+  {
+    cur_info->Debug("Opening WAD file: %s\n", filename);
+  }
 
   FILE *fp = nullptr;
 
@@ -248,13 +240,19 @@ retry:
     // if file is read-only, open in 'r' mode instead
     if (mode == 'a' && (errno == EACCES || errno == EROFS))
     {
-      FileMessage("Open r/w failed, trying again in read mode...\n");
+      if constexpr (DEBUG_WAD)
+      {
+        cur_info->Debug("Open r/w failed, trying again in read mode...\n");
+      }
       mode = 'r';
       goto retry;
     }
 
     int what = errno;
-    FileMessage("Open file failed: %s\n", strerror(what));
+    if constexpr (DEBUG_WAD)
+    {
+      cur_info->Debug("Open file failed: %s\n", strerror(what));
+    }
     return nullptr;
   }
 
@@ -268,9 +266,10 @@ retry:
 
   w->total_size = (size_t)ftell(fp);
 
-#if DEBUG_WAD
-  cur_info->Debug("total_size = %d\n", w->total_size);
-#endif
+  if constexpr (DEBUG_WAD)
+  {
+    cur_info->Debug("total_size = %d\n", w->total_size);
+  }
 
   if ((int64_t)w->total_size < 0)
   {
@@ -286,7 +285,10 @@ retry:
 
 Wad_file *Wad_file::Create(const char *filename, char mode)
 {
-  FileMessage("Creating new WAD file: %s\n", filename);
+  if constexpr (DEBUG_WAD)
+  {
+    cur_info->Debug("Creating new WAD file: %s\n", filename);
+  }
 
   FILE *fp = fopen(filename, "w+b");
   if (!fp)
@@ -432,7 +434,7 @@ size_t Wad_file::FindLumpNum(const char *name)
   return NO_INDEX; // not found
 }
 
-#define MAX_LUMPS_IN_A_LEVEL 21
+static constexpr std::uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
 
 size_t Wad_file::LevelLookupLump(size_t lev_num, const char *name)
 {
@@ -614,7 +616,7 @@ Lump_c *Wad_file::FindLumpInNamespace(const char *name, char group)
       break;
 
     default:
-      BugError("FindLumpInNamespace: bad group '%c'\n", group);
+      cur_info->FatalError("FindLumpInNamespace: bad group '%c'\n", group);
   }
 
   return nullptr; // not found!
@@ -637,8 +639,8 @@ void Wad_file::ReadDirectory()
 
   kind = header.ident[0];
 
-  dir_start = LE_U32(header.dir_start);
-  dir_count = LE_U32(header.num_entries);
+  dir_start = GetLittleEndian(header.dir_start);
+  dir_count = GetLittleEndian(header.num_entries);
 
   if (dir_count > 32000)
   {
@@ -682,9 +684,11 @@ void Wad_file::DetectLevels()
     if (directory[k + 1]->Match("TEXTMAP"))
     {
       levels.push_back(k);
-#if DEBUG_WAD
-      cur_info->Debug("Detected level : %s (UDMF)\n", directory[k]->Name());
-#endif
+      if constexpr (DEBUG_WAD)
+      {
+        cur_info->Debug("Detected level : %s (UDMF)\n", directory[k]->Name());
+      }
+
       continue;
     }
 
@@ -717,9 +721,10 @@ void Wad_file::DetectLevels()
     {
       levels.push_back(k);
 
-#if DEBUG_WAD
-      cur_info->Debug("Detected level : %s\n", directory[k]->Name());
-#endif
+      if constexpr (DEBUG_WAD)
+      {
+        cur_info->Debug("Detected level : %s\n", directory[k]->Name());
+      }
     }
   }
 
@@ -776,7 +781,10 @@ void Wad_file::ProcessNamespaces()
     {
       if (active && active != 'P')
       {
-        LumpWarning("missing %c_END marker.\n", active);
+        if constexpr (DEBUG_WAD)
+        {
+          cur_info->Debug("missing %c_END marker.\n", active);
+        }
       }
 
       active = 'P';
@@ -786,7 +794,10 @@ void Wad_file::ProcessNamespaces()
     {
       if (active != 'P')
       {
-        LumpWarning("stray P_END marker found.\n");
+        if constexpr (DEBUG_WAD)
+        {
+          cur_info->Debug("stray P_END marker found.\n");
+        }
       }
 
       active = 0;
@@ -797,7 +808,10 @@ void Wad_file::ProcessNamespaces()
     {
       if (active && active != 'S')
       {
-        LumpWarning("missing %c_END marker.\n", active);
+        if constexpr (DEBUG_WAD)
+        {
+          cur_info->Debug("missing %c_END marker.\n", active);
+        }
       }
 
       active = 'S';
@@ -807,7 +821,10 @@ void Wad_file::ProcessNamespaces()
     {
       if (active != 'S')
       {
-        LumpWarning("stray S_END marker found.\n");
+        if constexpr (DEBUG_WAD)
+        {
+          cur_info->Debug("stray S_END marker found.\n");
+        }
       }
 
       active = 0;
@@ -818,7 +835,10 @@ void Wad_file::ProcessNamespaces()
     {
       if (active && active != 'F')
       {
-        LumpWarning("missing %c_END marker.\n", active);
+        if constexpr (DEBUG_WAD)
+        {
+          cur_info->Debug("missing %c_END marker.\n", active);
+        }
       }
 
       active = 'F';
@@ -828,7 +848,10 @@ void Wad_file::ProcessNamespaces()
     {
       if (active != 'F')
       {
-        LumpWarning("stray F_END marker found.\n");
+        if constexpr (DEBUG_WAD)
+        {
+          cur_info->Debug("stray F_END marker found.\n");
+        }
       }
 
       active = 0;
@@ -839,7 +862,10 @@ void Wad_file::ProcessNamespaces()
     {
       if (active && active != 'T')
       {
-        LumpWarning("missing %c_END marker.\n", active);
+        if constexpr (DEBUG_WAD)
+        {
+          cur_info->Debug("missing %c_END marker.\n", active);
+        }
       }
 
       active = 'T';
@@ -849,7 +875,10 @@ void Wad_file::ProcessNamespaces()
     {
       if (active != 'T')
       {
-        LumpWarning("stray TX_END marker found.\n");
+        if constexpr (DEBUG_WAD)
+        {
+          cur_info->Debug("stray TX_END marker found.\n");
+        }
       }
 
       active = 0;
@@ -860,13 +889,17 @@ void Wad_file::ProcessNamespaces()
     {
       if (directory[k]->Length() == 0)
       {
-        LumpWarning("skipping empty lump %s in %c_START\n", name, active);
+        if constexpr (DEBUG_WAD)
+        {
+          cur_info->Debug("skipping empty lump %s in %c_START\n", name, active);
+        }
         continue;
       }
 
-#if DEBUG_WAD
-      cur_info->Debug("Namespace %c lump : %s\n", active, name);
-#endif
+      if constexpr (DEBUG_WAD)
+      {
+        cur_info->Debug("Namespace %c lump : %s\n", active, name);
+      }
 
       switch (active)
       {
@@ -884,14 +917,17 @@ void Wad_file::ProcessNamespaces()
           break;
 
         default:
-          BugError("ProcessNamespaces: active = 0x%02x\n", (int)active);
+          cur_info->FatalError("ProcessNamespaces: active = 0x%02x\n", (int)active);
       }
     }
   }
 
-  if (active)
+  if constexpr (DEBUG_WAD)
   {
-    LumpWarning("Missing %c_END marker (at EOF)\n", active);
+    if (active)
+    {
+      cur_info->Debug("Missing %c_END marker (at EOF)\n", active);
+    }
   }
 }
 
@@ -909,12 +945,12 @@ void Wad_file::BeginWrite()
 {
   if (mode == 'r')
   {
-    BugError("Wad_file::BeginWrite() called on read-only file\n");
+    cur_info->FatalError("Wad_file::BeginWrite() called on read-only file\n");
   }
 
   if (begun_write)
   {
-    BugError("Wad_file::BeginWrite() called again without EndWrite()\n");
+    cur_info->FatalError("Wad_file::BeginWrite() called again without EndWrite()\n");
   }
 
   // put the size into a quantum state
@@ -926,7 +962,7 @@ void Wad_file::EndWrite()
 {
   if (!begun_write)
   {
-    BugError("Wad_file::EndWrite() called without BeginWrite()\n");
+    cur_info->FatalError("Wad_file::EndWrite() called without BeginWrite()\n");
   }
 
   begun_write = false;
@@ -1238,9 +1274,10 @@ size_t Wad_file::PositionForWrite(size_t max_size)
     }
   }
 
-#if DEBUG_WAD
-  cur_info->Debug("POSITION FOR WRITE: %d  (total_size %d)\n", want_pos, total_size);
-#endif
+  if constexpr (DEBUG_WAD)
+  {
+    cur_info->Debug("POSITION FOR WRITE: %d  (total_size %d)\n", want_pos, total_size);
+  }
 
   return want_pos;
 }
@@ -1252,7 +1289,7 @@ bool Wad_file::FinishLump(size_t final_size)
   // sanity check
   if (final_size > begun_max_size)
   {
-    BugError("Internal Error: wrote too much in lump (%d > %d)\n", final_size, begun_max_size);
+    cur_info->FatalError("Internal Error: wrote too much in lump (%d > %d)\n", final_size, begun_max_size);
   }
 
   size_t pos = (size_t)ftell(fp);
@@ -1295,10 +1332,11 @@ void Wad_file::WriteDirectory()
   dir_start = PositionForWrite();
   dir_count = NumLumps();
 
-#if DEBUG_WAD
-  cur_info->Debug("WriteDirectory...\n");
+  if constexpr (DEBUG_WAD)
+  {
+    cur_info->Debug("WriteDirectory...\n");
+  }
   cur_info->Debug("dir_start:%d  dir_count:%d\n", dir_start, dir_count);
-#endif
 
   for (size_t k = 0; k < dir_count; k++)
   {
@@ -1319,9 +1357,10 @@ void Wad_file::WriteDirectory()
 
   total_size = (size_t)ftell(fp);
 
-#if DEBUG_WAD
-  cur_info->Debug("total_size: %d\n", total_size);
-#endif
+  if constexpr (DEBUG_WAD)
+  {
+    cur_info->Debug("total_size: %d\n", total_size);
+  }
 
   if ((int32_t)total_size < 0)
   {
@@ -1336,8 +1375,8 @@ void Wad_file::WriteDirectory()
 
   memcpy(header.ident, (kind == 'I') ? "IWAD" : "PWAD", 4);
 
-  header.dir_start = LE_U32(dir_start);
-  header.num_entries = LE_U32(dir_count);
+  header.dir_start = GetLittleEndian((uint32_t)dir_start);
+  header.num_entries = GetLittleEndian((uint32_t)dir_count);
 
   if (fwrite(&header, sizeof(header), 1, fp) != 1)
   {

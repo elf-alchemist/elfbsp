@@ -28,9 +28,11 @@
 //
 
 #include <cstddef>
-#define SPLIT_COST_MIN     1
-#define SPLIT_COST_DEFAULT 11
-#define SPLIT_COST_MAX     32
+#include <cstdint>
+
+inline static constexpr std::int32_t SPLIT_COST_MIN = 1;
+inline static constexpr std::int32_t SPLIT_COST_DEFAULT = 11;
+inline static constexpr std::int32_t SPLIT_COST_MAX = 32;
 
 class buildinfo_t
 {

@@ -26,19 +26,6 @@
 #include "system.hpp"
 #include "utility.hpp"
 
-#if defined(WIN32)
-  #include <io.h>
-#else // UNIX or MACOSX
-  #include <dirent.h>
-  #include <sys/stat.h>
-  #include <sys/types.h>
-  #include <unistd.h>
-#endif
-
-#if defined(__APPLE__)
-  #include <sys/param.h>
-#endif
-
 //------------------------------------------------------------------------
 //  FILENAMES
 //------------------------------------------------------------------------
@@ -64,12 +51,13 @@ bool HasExtension(const char *filename)
       break;
     }
 
-#if defined(WIN32)
-    if (filename[A] == DIR_SEP_CH || filename[A] == ':')
+    if constexpr (WINDOWS)
     {
-      break;
+      if (filename[A] == DIR_SEP_CH || filename[A] == ':')
+      {
+        break;
+      }
     }
-#endif
   }
 
   return false;
@@ -124,12 +112,13 @@ size_t FindExtension(const char *filename)
       break;
     }
 
-#if defined(WIN32)
-    if (ch == DIR_SEP_CH || ch == ':')
+    if constexpr (WINDOWS)
     {
-      break;
+      if (ch == DIR_SEP_CH || ch == ':')
+      {
+        break;
+      }
     }
-#endif
   }
 
   if (filename[pos] != '.')
@@ -195,24 +184,6 @@ bool FileCopy(const char *src_name, const char *dest_name)
   fclose(src);
 
   return was_OK;
-}
-
-bool FileRename(const char *old_name, const char *new_name)
-{
-#if defined(WIN32)
-  return (::MoveFile(old_name, new_name) != 0);
-#else // UNIX or MACOSX
-  return (rename(old_name, new_name) == 0);
-#endif
-}
-
-bool FileDelete(const char *filename)
-{
-#if defined(WIN32)
-  return (::DeleteFile(filename) != 0);
-#else // UNIX or MACOSX
-  return (remove(filename) == 0);
-#endif
 }
 
 //------------------------------------------------------------------------
@@ -313,7 +284,7 @@ void UtilFree(void *data)
 {
   if (data == nullptr)
   {
-    BugError("Trying to free a nullptr\n");
+    cur_info->FatalError("Trying to free a nullptr\n");
   }
 
   free(data);

@@ -26,12 +26,11 @@
 #include "system.hpp"
 #include "utility.hpp"
 
-#define DEBUG_WALLTIPS  0
-#define DEBUG_POLYOBJ   0
-#define DEBUG_WINDOW_FX 0
-#define DEBUG_OVERLAPS  0
+static constexpr bool DEBUG_WALLTIPS = false;
+static constexpr bool DEBUG_POLYOBJ = false;
+static constexpr bool DEBUG_OVERLAPS = false;
 
-#define SYS_MSG_BUFLEN 4000
+static constexpr std::uint32_t SYS_MSG_BUFLEN = 4000;
 
 static char message_buf[SYS_MSG_BUFLEN];
 
@@ -79,7 +78,7 @@ void MinorIssue(const char *fmt, ...)
 // ANALYZE : Analyzing level structures
 //------------------------------------------------------------------------
 
-#define POLY_BOX_SZ 10
+static constexpr std::uint32_t POLY_BOX_SZ = 10;
 
 /* ----- polyobj handling ----------------------------- */
 
@@ -90,9 +89,10 @@ void MarkPolyobjSector(sector_t *sector)
     return;
   }
 
-#if DEBUG_POLYOBJ
-  cur_info->Debug("  Marking SECTOR %d\n", sector->index);
-#endif
+  if constexpr (DEBUG_POLYOBJ)
+  {
+    cur_info->Debug("  Marking SECTOR %d\n", sector->index);
+  }
 
   /* already marked ? */
   if (sector->has_polyobj)
@@ -104,7 +104,7 @@ void MarkPolyobjSector(sector_t *sector)
   // the sector from being split.
   sector->has_polyobj = true;
 
-  for (size_t i = 0; i < num_linedefs; i++)
+  for (size_t i = 0; i < lev_linedefs.size(); i++)
   {
     linedef_t *L = lev_linedefs[i];
 
@@ -132,15 +132,16 @@ void MarkPolyobjPoint(double x, double y)
   int bmaxx = (int)(x + POLY_BOX_SZ);
   int bmaxy = (int)(y + POLY_BOX_SZ);
 
-  for (size_t i = 0; i < num_linedefs; i++)
+  for (size_t i = 0; i < lev_linedefs.size(); i++)
   {
     const linedef_t *L = lev_linedefs[i];
 
     if (CheckLinedefInsideBox(bminx, bminy, bmaxx, bmaxy, (int)L->start->x, (int)L->start->y, (int)L->end->x, (int)L->end->y))
     {
-#if DEBUG_POLYOBJ
-      cur_info->Debug("  Touching line was %d\n", L->index);
-#endif
+      if constexpr (DEBUG_POLYOBJ)
+      {
+        cur_info->Debug("  Touching line was %d\n", L->index);
+      }
 
       if (L->left != nullptr)
       {
@@ -167,7 +168,7 @@ void MarkPolyobjPoint(double x, double y)
   //       If the point is sitting directly on a (two-sided) line,
   //       then we mark the sectors on both sides.
 
-  for (size_t i = 0; i < num_linedefs; i++)
+  for (size_t i = 0; i < lev_linedefs.size(); i++)
   {
     const linedef_t *L = lev_linedefs[i];
 
@@ -207,17 +208,19 @@ void MarkPolyobjPoint(double x, double y)
   double y1 = best_match->start->y;
   double y2 = best_match->end->y;
 
-#if DEBUG_POLYOBJ
-  cur_info->Debug("  Closest line was %d Y=%1.0f..%1.0f (dist=%1.1f)\n", best_match->index, y1, y2, best_dist);
-#endif
+  if constexpr (DEBUG_POLYOBJ)
+  {
+    cur_info->Debug("  Closest line was %d Y=%1.0f..%1.0f (dist=%1.1f)\n", best_match->index, y1, y2, best_dist);
+  }
 
   /* sanity check: shouldn't be directly on the line */
-#if DEBUG_POLYOBJ
-  if (fabs(best_dist) < DIST_EPSILON)
+  if constexpr (DEBUG_POLYOBJ)
   {
-    cur_info->Debug("  Polyobj FAILURE: directly on the line (%d)\n", best_match->index);
+    if (fabs(best_dist) < DIST_EPSILON)
+    {
+      cur_info->Debug("  Polyobj FAILURE: directly on the line (%d)\n", best_match->index);
+    }
   }
-#endif
 
   /* check orientation of line, to determine which side the polyobj is
    * actually on.
@@ -231,9 +234,10 @@ void MarkPolyobjPoint(double x, double y)
     sector = best_match->left ? best_match->left->sector : nullptr;
   }
 
-#if DEBUG_POLYOBJ
-  cur_info->Debug("  Sector %d contains the polyobj.\n", sector ? sector->index : NO_INDEX);
-#endif
+  if constexpr (DEBUG_POLYOBJ)
+  {
+    cur_info->Debug("  Sector %d contains the polyobj.\n", sector ? sector->index : NO_INDEX);
+  }
 
   if (sector == nullptr)
   {
@@ -268,7 +272,7 @@ void DetectPolyobjSectors(bool is_udmf)
 
   // -JL- First go through all lines to see if level contains any polyobjs
   size_t i;
-  for (i = 0; i < num_linedefs; i++)
+  for (i = 0; i < lev_linedefs.size(); i++)
   {
     linedef_t *L = lev_linedefs[i];
 
@@ -278,7 +282,7 @@ void DetectPolyobjSectors(bool is_udmf)
     }
   }
 
-  if (i == num_linedefs)
+  if (i == lev_linedefs.size())
   {
     // -JL- No polyobjs in this level
     return;
@@ -292,7 +296,7 @@ void DetectPolyobjSectors(bool is_udmf)
     hexen_style = false;
   }
 
-  for (size_t j = 0; j < num_things; j++)
+  for (size_t j = 0; j < lev_things.size(); j++)
   {
     thing_t *T = lev_things[j];
 
@@ -304,11 +308,12 @@ void DetectPolyobjSectors(bool is_udmf)
     }
   }
 
-#if DEBUG_POLYOBJ
-  cur_info->Debug("Using %s style polyobj things\n", hexen_style ? "HEXEN" : "ZDOOM");
-#endif
+  if constexpr (DEBUG_POLYOBJ)
+  {
+    cur_info->Debug("Using %s style polyobj things\n", hexen_style ? "HEXEN" : "ZDOOM");
+  }
 
-  for (size_t j = 0; j < num_things; j++)
+  for (size_t j = 0; j < lev_things.size(); j++)
   {
     thing_t *T = lev_things[j];
 
@@ -333,9 +338,10 @@ void DetectPolyobjSectors(bool is_udmf)
       }
     }
 
-#if DEBUG_POLYOBJ
-    cur_info->Debug("Thing %d at (%1.0f,%1.0f) is a polyobj spawner.\n", i, x, y);
-#endif
+    if constexpr (DEBUG_POLYOBJ)
+    {
+      cur_info->Debug("Thing %d at (%1.0f,%1.0f) is a polyobj spawner.\n", i, x, y);
+    }
 
     MarkPolyobjPoint(x, y);
   }
@@ -360,7 +366,7 @@ struct Compare_vertex_X_pred
 
 void DetectOverlappingVertices(void)
 {
-  if (num_vertices < 2)
+  if (lev_vertices.size() < 2)
   {
     return;
   }
@@ -373,11 +379,11 @@ void DetectOverlappingVertices(void)
   std::sort(array.begin(), array.end(), Compare_vertex_X_pred());
 
   // now mark them off
-  for (size_t i = 0; i < num_vertices - 1; i++)
+  for (size_t i = 0; i < lev_vertices.size() - 1; i++)
   {
     vertex_t *A = array[i];
 
-    for (size_t k = i + 1; k < num_vertices; k++)
+    for (size_t k = i + 1; k < lev_vertices.size(); k++)
     {
       vertex_t *B = array[k];
 
@@ -391,9 +397,10 @@ void DetectOverlappingVertices(void)
         // found an overlap !
         B->overlap = A->overlap ? A->overlap : A;
 
-#if DEBUG_OVERLAPS
-        cur_info->Print("Overlap: #%d + #%d\n", array[i]->index, array[i + 1]->index);
-#endif
+        if constexpr (DEBUG_OVERLAPS)
+        {
+          cur_info->Print("Overlap: #%d + #%d\n", array[i]->index, array[i + 1]->index);
+        }
       }
     }
   }
@@ -401,7 +408,7 @@ void DetectOverlappingVertices(void)
   // update the in-memory linedefs.
   // DOES NOT affect the on-disk linedefs.
   // this is mainly to help the miniseg creation code.
-  for (size_t i = 0; i < num_linedefs; i++)
+  for (size_t i = 0; i < lev_linedefs.size(); i++)
   {
     linedef_t *L = lev_linedefs[i];
 
@@ -419,11 +426,11 @@ void DetectOverlappingVertices(void)
 
 void PruneVerticesAtEnd(void)
 {
-  size_t old_num = num_vertices;
+  size_t old_num = lev_vertices.size();
 
   // scan all vertices.
   // only remove from the end, so stop when hit a used one.
-  for (size_t i = num_vertices - 1; i != NO_INDEX; i--)
+  for (size_t i = lev_vertices.size() - 1; i != NO_INDEX; i--)
   {
     vertex_t *V = lev_vertices[i];
 
@@ -437,14 +444,14 @@ void PruneVerticesAtEnd(void)
     lev_vertices.pop_back();
   }
 
-  size_t unused = old_num - num_vertices;
+  size_t unused = old_num - lev_vertices.size();
 
   if (unused > 0)
   {
     cur_info->Print_Verbose("    Pruned %d unused vertices at end\n", unused);
   }
 
-  num_old_vert = num_vertices;
+  num_old_vert = lev_vertices.size();
 }
 
 struct Compare_line_MinX_pred
@@ -468,11 +475,11 @@ void DetectOverlappingLines(void)
 
   size_t count = 0;
 
-  for (size_t i = 0; i < num_linedefs - 1; i++)
+  for (size_t i = 0; i < lev_linedefs.size() - 1; i++)
   {
     linedef_t *A = array[i];
 
-    for (size_t k = i + 1; k < num_linedefs; k++)
+    for (size_t k = i + 1; k < lev_linedefs.size(); k++)
     {
       linedef_t *B = array[k];
 
@@ -560,7 +567,7 @@ void vertex_t::AddWallTip(double dx, double dy, bool open_left, bool open_right)
 
 void CalculateWallTips()
 {
-  for (size_t i = 0; i < num_linedefs; i++)
+  for (size_t i = 0; i < lev_linedefs.size(); i++)
   {
     const linedef_t *L = lev_linedefs[i];
 
@@ -584,19 +591,20 @@ void CalculateWallTips()
     L->end->AddWallTip(x1 - x2, y1 - y2, right, left);
   }
 
-#if DEBUG_WALLTIPS
-  for (int k = 0; k < num_vertices; k++)
+  if constexpr (DEBUG_WALLTIPS)
   {
-    vertex_t *V = lev_vertices[k];
-
-    cur_info->Debug("WallTips for vertex %d:\n", k);
-
-    for (walltip_t *tip = V->tip_set; tip; tip = tip->next)
+    for (size_t k = 0; k < lev_vertices.size(); k++)
     {
-      cur_info->Debug("  Angle=%1.1f left=%d right=%d\n", tip->angle, tip->open_left ? 1 : 0, tip->open_right ? 1 : 0);
+      vertex_t *V = lev_vertices[k];
+
+      cur_info->Debug("WallTips for vertex %d:\n", k);
+
+      for (walltip_t *tip = V->tip_set; tip; tip = tip->next)
+      {
+        cur_info->Debug("  Angle=%1.1f left=%d right=%d\n", tip->angle, tip->open_left ? 1 : 0, tip->open_right ? 1 : 0);
+      }
     }
   }
-#endif
 }
 
 vertex_t *NewVertexFromSplitSeg(seg_t *seg, double x, double y)
@@ -657,13 +665,13 @@ vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end)
 
   if (dlen == 0)
   {
-    BugError("NewVertexDegenerate: bad delta!\n");
+    cur_info->FatalError("NewVertexDegenerate: bad delta!\n");
   }
 
   dx /= dlen;
   dy /= dlen;
 
-  while (I_ROUND(vert->x) == I_ROUND(start->x) && I_ROUND(vert->y) == I_ROUND(start->y))
+  while ((int32_t)floor(vert->x) == (int32_t)floor(start->x) && (int32_t)floor(vert->y) == (int32_t)floor(start->y))
   {
     vert->x += dx;
     vert->y += dy;

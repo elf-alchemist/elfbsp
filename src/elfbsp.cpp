@@ -316,22 +316,18 @@ void ValidateInputFilename(const char *filename)
   }
 
   // we do not support packages
-  if (MatchExtension(filename, "pak") || MatchExtension(filename, "pk2")
-      || MatchExtension(filename, "pk3") || MatchExtension(filename, "pk4")
-      || MatchExtension(filename, "pk7") || MatchExtension(filename, "epk")
-      || MatchExtension(filename, "pack") || MatchExtension(filename, "zip")
-      || MatchExtension(filename, "rar"))
+  if (MatchExtension(filename, "pak") || MatchExtension(filename, "pk2") || MatchExtension(filename, "pk3")
+      || MatchExtension(filename, "pk4") || MatchExtension(filename, "pk7") || MatchExtension(filename, "epk")
+      || MatchExtension(filename, "pack") || MatchExtension(filename, "zip") || MatchExtension(filename, "rar"))
   {
     config.FatalError("package files (like PK3) are not supported: %s\n", filename);
   }
 
   // reject some very common formats
-  if (MatchExtension(filename, "exe") || MatchExtension(filename, "dll")
-      || MatchExtension(filename, "com") || MatchExtension(filename, "bat")
-      || MatchExtension(filename, "txt") || MatchExtension(filename, "doc")
-      || MatchExtension(filename, "deh") || MatchExtension(filename, "bex")
-      || MatchExtension(filename, "lmp") || MatchExtension(filename, "cfg")
-      || MatchExtension(filename, "gif") || MatchExtension(filename, "png")
+  if (MatchExtension(filename, "exe") || MatchExtension(filename, "dll") || MatchExtension(filename, "com")
+      || MatchExtension(filename, "bat") || MatchExtension(filename, "txt") || MatchExtension(filename, "doc")
+      || MatchExtension(filename, "deh") || MatchExtension(filename, "bex") || MatchExtension(filename, "lmp")
+      || MatchExtension(filename, "cfg") || MatchExtension(filename, "gif") || MatchExtension(filename, "png")
       || MatchExtension(filename, "jpg") || MatchExtension(filename, "jpeg"))
   {
     config.FatalError("not a wad file: %s\n", filename);
@@ -679,7 +675,7 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
       config.FatalError("missing value for '--cost' option\n");
     }
 
-    int val = atoi(argv[0]);
+    int32_t val = std::stoi(argv[0]);
 
     if (val < SPLIT_COST_MIN || val > SPLIT_COST_MAX)
     {
@@ -727,13 +723,14 @@ void ParseCommandLine(int argc, char *argv[])
     const char *arg = *argv++;
     argc--;
 
-#if defined(__APPLE__)
-    // ignore MacOS X rubbish
-    if (strncmp(arg, "-psn_", 5) == 0)
+    if constexpr (MACOS)
     {
-      continue;
+      // ignore MacOS X rubbish
+      if (strncmp(arg, "-psn_", 5) == 0)
+      {
+        continue;
+      }
     }
-#endif
 
     if (strlen(arg) == 0)
     {

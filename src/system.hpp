@@ -24,15 +24,33 @@
 #pragma once
 
 /*
- *  Windows support
+ *  OS support
  */
 
 #if defined(WIN32) || defined(_WIN32) || defined(_WIN64)
+
   #define WIN32_LEAN_AND_MEAN
   #include <windows.h>
   #if !defined(WIN32)
     #define WIN32
   #endif
+
+constexpr bool WINDOWS = true;
+constexpr bool MACOS = false;
+constexpr bool LINUX = false;
+
+#elif defined(__APPLE__)
+
+constexpr bool WINDOWS = false;
+constexpr bool MACOS = true;
+constexpr bool LINUX = false;
+
+#elif defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
+
+constexpr bool WINDOWS = false;
+constexpr bool MACOS = false;
+constexpr bool LINUX = true;
+
 #endif
 
 /*
@@ -55,16 +73,12 @@
 
 // sized types
 typedef uint8_t byte;
+typedef uint8_t args_t[5];
 
 // misc constants
-#define MSG_BUF_LEN 1024
-
-// basic macros
-#undef M_PI
-#define M_PI 3.14159265358979323846
-
-#undef I_ROUND
-#define I_ROUND(x) ((int)round(x))
+inline static constexpr size_t MSG_BUF_LEN = 1024;
+inline static constexpr size_t NO_INDEX = static_cast<size_t>(-1);
+inline static constexpr uint16_t NO_INDEX_SHORT = static_cast<uint16_t>(-1);
 
 //
 // The packed attribute forces structures to be packed into the minimum
@@ -82,37 +96,49 @@ typedef uint8_t byte;
 #endif
 
 // endianness
-#if defined(__GNUC__) || defined(__clang__)
-  #define __Swap16 __builtin_bswap16
-  #define __Swap32 __builtin_bswap32
-  #define __Swap64 __builtin_bswap64
-#endif
+inline static constexpr bool ENDIAN_BIG = (std::endian::native == std::endian::big);
+inline static constexpr bool ENDIAN_LITTLE = !ENDIAN_BIG;
 
-// the Makefile or build system must define BIG_ENDIAN_CPU
-// WISH: some preprocessor checks to detect a big-endian cpu.
-#if defined(BIG_ENDIAN_CPU)
-  #define LE_U16(x) __Swap16(x)
-  #define LE_U32(x) __Swap32(x)
-  #define LE_U64(x) __Swap64(x)
-  #define BE_U16(x) ((uint16_t)(x))
-  #define BE_U32(x) ((uint32_t)(x))
-  #define BE_U64(x) ((uint64_t)(x))
-#else
-  #define LE_U16(x) ((uint16_t)(x))
-  #define LE_U32(x) ((uint32_t)(x))
-  #define LE_U64(x) ((uint64_t)(x))
-  #define BE_U16(x) __Swap16(x)
-  #define BE_U32(x) __Swap32(x)
-  #define BE_U64(x) __Swap64(x)
-#endif
+template <typename T> inline constexpr T byteswap(T value) noexcept
+{
+  static_assert(std::is_integral_v<T>, "byteswap: integral required");
+  static_assert(sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "byteswap: only 16/32/64-bit supported");
 
-// signed versions of the above
-#define LE_S16(x) ((int16_t)LE_U16((uint16_t)(x)))
-#define LE_S32(x) ((int32_t)LE_U32((uint32_t)(x)))
-#define LE_S64(x) ((int64_t)LE_U64((uint64_t)(x)))
+  if constexpr (sizeof(T) == 2)
+  {
+    return static_cast<T>(__builtin_bswap16(static_cast<uint16_t>(value)));
+  }
+  else if constexpr (sizeof(T) == 4)
+  {
+    return static_cast<T>(__builtin_bswap32(static_cast<uint32_t>(value)));
+  }
+  else
+  {
+    return static_cast<T>(__builtin_bswap64(static_cast<uint64_t>(value)));
+  }
+}
 
-#define BE_S16(x) ((int16_t)BE_U16((uint16_t)(x)))
-#define BE_S32(x) ((int32_t)BE_U32((uint32_t)(x)))
-#define BE_S64(x) ((int64_t)BE_U64((uint64_t)(x)))
+template <typename T> inline static constexpr T GetLittleEndian(T value)
+{
+  static_assert(std::is_integral_v<T>, "integral required");
+  if constexpr (ENDIAN_BIG)
+  {
+    return byteswap(value);
+  }
+  else
+  {
+    return value;
+  }
+}
 
-constexpr size_t NO_INDEX = (size_t)(-1);
+template <typename T> inline static constexpr T GetBigEndian(T value)
+{
+  if constexpr (ENDIAN_LITTLE)
+  {
+    return byteswap(value);
+  }
+  else
+  {
+    return value;
+  }
+}

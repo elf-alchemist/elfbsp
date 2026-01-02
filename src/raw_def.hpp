@@ -26,8 +26,7 @@
 
 /* ----- The wad structures ---------------------- */
 
-#define WAD_TEX_NAME  8
-#define WAD_FLAT_NAME 8
+inline static constexpr size_t WAD_LUMP_NAME = 8;
 
 // wad header
 typedef struct raw_wad_header_s
@@ -99,23 +98,23 @@ typedef struct raw_hexen_linedef_s
 
 typedef struct raw_sidedef_s
 {
-  int16_t x_offset; // X offset for texture
-  int16_t y_offset; // Y offset for texture
+  int16_t x_offset;  // X offset for texture
+  int16_t y_offset;  // Y offset for texture
   char upper_tex[8]; // texture name for the part above
   char lower_tex[8]; // texture name for the part below
   char mid_tex[8];   // texture name for the regular part
-  uint16_t sector; // adjacent sector
+  uint16_t sector;   // adjacent sector
 } PACKEDATTR raw_sidedef_t;
 
 typedef struct raw_sector_s
 {
-  int16_t floorh; // floor height
-  int16_t ceilh;  // ceiling height
+  int16_t floorh;    // floor height
+  int16_t ceilh;     // ceiling height
   char floor_tex[8]; // floor texture
   char ceil_tex[8];  // ceiling texture
-  uint16_t light; // light level (0-255)
-  uint16_t type;  // special type (0 = normal, 9 = secret, ...)
-  int16_t tag;    // sector activated by a linedef with same tag
+  uint16_t light;    // light level (0-255)
+  uint16_t type;     // special type (0 = normal, 9 = secret, ...)
+  int16_t tag;       // sector activated by a linedef with same tag
 } PACKEDATTR raw_sector_t;
 
 typedef struct raw_thing_s
@@ -135,8 +134,8 @@ typedef struct raw_hexen_thing_s
   int16_t angle;    // angle thing faces
   uint16_t type;    // type of thing
   uint16_t options; // when appears, deaf, dormant, etc..
-  uint8_t special; // special type
-  uint8_t args[5]; // special arguments
+  uint8_t special;  // special type
+  uint8_t args[5];  // special arguments
 } PACKEDATTR raw_hexen_thing_t;
 
 /* ----- The BSP tree structures ----------------------- */
@@ -332,10 +331,13 @@ typedef enum : uint16_t
   MLF_ZDoom_BlockEverything = 0x8000,
 } zdoom_lineflag_e;
 
-#define BOOM_GENLINE_FIRST 0x2f80
-#define BOOM_GENLINE_LAST  0x7fff
+static constexpr std::uint32_t BOOM_GENLINE_FIRST = 0x2f80;
+static constexpr std::uint32_t BOOM_GENLINE_LAST = 0x7fff;
 
-#define is_genline(tp)     ((tp) >= BOOM_GENLINE_FIRST && (tp) <= BOOM_GENLINE_LAST)
+static inline constexpr bool IsGeneralizedSpecial(uint32_t special)
+{
+  return special >= BOOM_GENLINE_FIRST && special <= BOOM_GENLINE_LAST;
+}
 
 typedef enum
 {
@@ -407,7 +409,7 @@ typedef enum : uint16_t
   MBF21SF_MonsterDeath = 0x2000,
 } compatible_sectorflag_e;
 
-  #define MSF_BoomFlags 0x0FE0
+static constexpr std::uint32_t MSF_BoomFlags = 0x0FE0;
 
 //
 // Thing attributes.
@@ -426,8 +428,8 @@ typedef enum : uint16_t
   MTF_Friend = 0x0080,
 } thing_option_e;
 
-#define MTF_EXFLOOR_MASK  0x3C00
-#define MTF_EXFLOOR_SHIFT 10
+static constexpr std::uint32_t MTF_EXFLOOR_MASK = 0x3C00;
+static constexpr std::uint32_t MTF_EXFLOOR_SHIFT = 10;
 
 typedef enum : uint16_t
 {
@@ -449,15 +451,15 @@ typedef enum : uint16_t
 //
 // Polyobject stuff
 //
-#define HEXTYPE_POLY_START       1
-#define HEXTYPE_POLY_EXPLICIT    5
+static constexpr std::uint32_t HEXTYPE_POLY_START = 1;
+static constexpr std::uint32_t HEXTYPE_POLY_EXPLICIT = 5;
 
 // -JL- Hexen polyobj thing types
-#define PO_ANCHOR_TYPE           3000
-#define PO_SPAWN_TYPE            3001
-#define PO_SPAWNCRUSH_TYPE       3002
+static constexpr std::uint32_t PO_ANCHOR_TYPE = 3000;
+static constexpr std::uint32_t PO_SPAWN_TYPE = 3001;
+static constexpr std::uint32_t PO_SPAWNCRUSH_TYPE = 3002;
 
 // -JL- ZDoom polyobj thing types
-#define ZDOOM_PO_ANCHOR_TYPE     9300
-#define ZDOOM_PO_SPAWN_TYPE      9301
-#define ZDOOM_PO_SPAWNCRUSH_TYPE 9302
+static constexpr std::uint32_t ZDOOM_PO_ANCHOR_TYPE = 9300;
+static constexpr std::uint32_t ZDOOM_PO_SPAWN_TYPE = 9301;
+static constexpr std::uint32_t ZDOOM_PO_SPAWNCRUSH_TYPE = 9302;

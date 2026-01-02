@@ -44,10 +44,9 @@ extern Wad_file *cur_wad;
 
 // Assertion macros
 
-#define BugError cur_info->FatalError
-
 #define SYS_ASSERT(cond) \
-  ((cond) ? (void)0 : BugError("Assertion (%s) failed\nIn function %s (%s:%d)\n", #cond, __func__, __FILE__, __LINE__))
+  ((cond) ? (void)0      \
+          : cur_info->FatalError("Assertion (%s) failed\nIn function %s (%s:%d)\n", #cond, __func__, __FILE__, __LINE__))
 
 void Failure(const char *fmt, ...);
 void Warning(const char *fmt, ...);
@@ -243,7 +242,7 @@ public:
   linedef_t *linedef;
 
   // 0 for right, 1 for left
-  int side;
+  bool side;
 
   // seg on other side, or nullptr if one-sided.  This relationship is
   // always one-to-one -- if one of the segs is split, the partner seg
@@ -301,9 +300,9 @@ public:
   }
 };
 
-  // a seg with this index is removed by SortSegs().
-  // it must be a very high value.
-  #define SEG_IS_GARBAGE (1 << 29)
+// a seg with this index is removed by SortSegs().
+// it must be a very high value.
+static constexpr std::uint32_t SEG_IS_GARBAGE = (1 << 29);
 
 class subsec_t
 {
@@ -433,17 +432,6 @@ extern std::vector<subsec_t *> lev_subsecs;
 extern std::vector<node_t *> lev_nodes;
 extern std::vector<walltip_t *> lev_walltips;
 
-#define num_vertices (lev_vertices.size())
-#define num_linedefs (lev_linedefs.size())
-#define num_sidedefs (lev_sidedefs.size())
-#define num_sectors  (lev_sectors.size())
-#define num_things   (lev_things.size())
-
-#define num_segs     (lev_segs.size())
-#define num_subsecs  (lev_subsecs.size())
-#define num_nodes    (lev_nodes.size())
-#define num_walltips (lev_walltips.size())
-
 extern size_t num_old_vert;
 extern size_t num_new_vert;
 
@@ -465,14 +453,13 @@ Lump_c *CreateLevelLump(const char *name, size_t max_size = NO_INDEX);
 Lump_c *FindLevelLump(const char *name);
 
 /* limit flags, to show what went wrong */
-#define LIMIT_VERTEXES 0x000001
-#define LIMIT_SECTORS  0x000002
-#define LIMIT_SIDEDEFS 0x000004
-#define LIMIT_LINEDEFS 0x000008
-
-#define LIMIT_SEGS     0x000010
-#define LIMIT_SSECTORS 0x000020
-#define LIMIT_NODES    0x000040
+static constexpr std::uint32_t LIMIT_VERTEXES = 0x000001;
+static constexpr std::uint32_t LIMIT_SECTORS = 0x000002;
+static constexpr std::uint32_t LIMIT_SIDEDEFS = 0x000004;
+static constexpr std::uint32_t LIMIT_LINEDEFS = 0x000008;
+static constexpr std::uint32_t LIMIT_SEGS = 0x000010;
+static constexpr std::uint32_t LIMIT_SSECTORS = 0x000020;
+static constexpr std::uint32_t LIMIT_NODES = 0x000040;
 
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
@@ -502,13 +489,13 @@ vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end);
 // SEG : Choose the best Seg to use for a node line.
 //------------------------------------------------------------------------
 
-#define IFFY_LEN     4.0
+static constexpr std::double_t IFFY_LEN = 4.0;
 
 // smallest distance between two points before being considered equal
-#define DIST_EPSILON (1.0 / 1024.0)
+static constexpr std::double_t DIST_EPSILON = (1.0 / 1024.0);
 
 // smallest degrees between two angles before being considered equal
-#define ANG_EPSILON  (1.0 / 1024.0)
+static constexpr std::double_t ANG_EPSILON = (1.0 / 1024.0);
 
 inline void ListAddSeg(seg_t **list_ptr, seg_t *seg)
 {
