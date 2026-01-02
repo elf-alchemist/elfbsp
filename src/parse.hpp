@@ -23,9 +23,6 @@
 #include <cstdint>
 #include <string>
 
-namespace elfbsp
-{
-
 enum token_kind_e
 {
   TOK_EOF = 0,
@@ -88,8 +85,6 @@ int32_t LEX_Int(const std::string &s);
 uint32_t LEX_UInt(const std::string &s);
 double LEX_Double(const std::string &s);
 bool LEX_Boolean(const std::string &s);
-
-} // namespace elfbsp
 
 #endif /* __ELFBSP_PARSE_H__ */
 

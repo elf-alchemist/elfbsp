@@ -155,7 +155,7 @@ public:
 
     buffer[MSG_BUF_LEN - 1] = 0;
 
-    elfbsp::CloseWad();
+    CloseWad();
 
     StopHanging();
 
@@ -197,7 +197,7 @@ bool CheckMapInMaplist(size_t lev_idx)
     return true;
   }
 
-  const char *name = elfbsp::GetLevelName(lev_idx);
+  const char *name = GetLevelName(lev_idx);
 
   for (unsigned int i = 0; i < map_list.size(); i++)
   {
@@ -215,7 +215,7 @@ build_result_e BuildFile()
   config.total_warnings = 0;
   config.total_minor_issues = 0;
 
-  size_t num_levels = elfbsp::LevelsInWad();
+  size_t num_levels = LevelsInWad();
 
   if (num_levels == 0)
   {
@@ -244,7 +244,7 @@ build_result_e BuildFile()
       config.Print_Verbose("\n");
     }
 
-    res = elfbsp::BuildLevel(n);
+    res = BuildLevel(n);
 
     // handle a failed map (due to lump overflow)
     if (res == BUILD_LumpOverflow)
@@ -306,29 +306,29 @@ void ValidateInputFilename(const char *filename)
   // NOTE: these checks are case-insensitive
 
   // files with ".bak" extension cannot be backed up, so refuse them
-  if (elfbsp::MatchExtension(filename, "bak"))
+  if (MatchExtension(filename, "bak"))
   {
     config.FatalError("cannot process a backup file: %s\n", filename);
   }
 
   // we do not support packages
-  if (elfbsp::MatchExtension(filename, "pak") || elfbsp::MatchExtension(filename, "pk2")
-      || elfbsp::MatchExtension(filename, "pk3") || elfbsp::MatchExtension(filename, "pk4")
-      || elfbsp::MatchExtension(filename, "pk7") || elfbsp::MatchExtension(filename, "epk")
-      || elfbsp::MatchExtension(filename, "pack") || elfbsp::MatchExtension(filename, "zip")
-      || elfbsp::MatchExtension(filename, "rar"))
+  if (MatchExtension(filename, "pak") || MatchExtension(filename, "pk2")
+      || MatchExtension(filename, "pk3") || MatchExtension(filename, "pk4")
+      || MatchExtension(filename, "pk7") || MatchExtension(filename, "epk")
+      || MatchExtension(filename, "pack") || MatchExtension(filename, "zip")
+      || MatchExtension(filename, "rar"))
   {
     config.FatalError("package files (like PK3) are not supported: %s\n", filename);
   }
 
   // reject some very common formats
-  if (elfbsp::MatchExtension(filename, "exe") || elfbsp::MatchExtension(filename, "dll")
-      || elfbsp::MatchExtension(filename, "com") || elfbsp::MatchExtension(filename, "bat")
-      || elfbsp::MatchExtension(filename, "txt") || elfbsp::MatchExtension(filename, "doc")
-      || elfbsp::MatchExtension(filename, "deh") || elfbsp::MatchExtension(filename, "bex")
-      || elfbsp::MatchExtension(filename, "lmp") || elfbsp::MatchExtension(filename, "cfg")
-      || elfbsp::MatchExtension(filename, "gif") || elfbsp::MatchExtension(filename, "png")
-      || elfbsp::MatchExtension(filename, "jpg") || elfbsp::MatchExtension(filename, "jpeg"))
+  if (MatchExtension(filename, "exe") || MatchExtension(filename, "dll")
+      || MatchExtension(filename, "com") || MatchExtension(filename, "bat")
+      || MatchExtension(filename, "txt") || MatchExtension(filename, "doc")
+      || MatchExtension(filename, "deh") || MatchExtension(filename, "bex")
+      || MatchExtension(filename, "lmp") || MatchExtension(filename, "cfg")
+      || MatchExtension(filename, "gif") || MatchExtension(filename, "png")
+      || MatchExtension(filename, "jpg") || MatchExtension(filename, "jpeg"))
   {
     config.FatalError("not a wad file: %s\n", filename);
   }
@@ -340,7 +340,7 @@ void BackupFile(const char *filename)
 
   // replace file extension (if any) with .bak
 
-  size_t ext_pos = elfbsp::FindExtension(filename);
+  size_t ext_pos = FindExtension(filename);
   if (ext_pos > 0)
   {
     dest_name.resize(ext_pos);
@@ -348,7 +348,7 @@ void BackupFile(const char *filename)
 
   dest_name += ".bak";
 
-  if (!elfbsp::FileCopy(filename, dest_name.c_str()))
+  if (!FileCopy(filename, dest_name.c_str()))
   {
     config.FatalError("failed to create backup: %s\n", dest_name.c_str());
   }
@@ -361,7 +361,7 @@ void VisitFile(unsigned int idx, const char *filename)
   // handle the -o option
   if (opt_output.size() > 0)
   {
-    if (!elfbsp::FileCopy(filename, opt_output.c_str()))
+    if (!FileCopy(filename, opt_output.c_str()))
     {
       config.FatalError("failed to create output file: %s\n", opt_output.c_str());
     }
@@ -380,11 +380,11 @@ void VisitFile(unsigned int idx, const char *filename)
   config.Print("Building %s\n", filename);
 
   // this will fatal error if it fails
-  elfbsp::OpenWad(filename);
+  OpenWad(filename);
 
   build_result_e res = BuildFile();
 
-  elfbsp::CloseWad();
+  CloseWad();
 
   if (res == BUILD_Cancelled)
   {
@@ -787,7 +787,7 @@ void ParseCommandLine(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
   // need this early, especially for fatal errors in utility/wad code
-  elfbsp::SetInfo(&config);
+  SetInfo(&config);
 
   ParseCommandLine(argc, argv);
 
@@ -831,7 +831,7 @@ int main(int argc, char *argv[])
       config.FatalError("cannot use multiple input files with --output\n");
     }
 
-    if (elfbsp::StringCaseCmp(wad_list[0], opt_output.c_str()) == 0)
+    if (StringCaseCmp(wad_list[0], opt_output.c_str()) == 0)
     {
       config.FatalError("input and output files are the same\n");
     }
@@ -846,7 +846,7 @@ int main(int argc, char *argv[])
 
     ValidateInputFilename(filename);
 
-    if (!elfbsp::FileExists(filename))
+    if (!FileExists(filename))
     {
       config.FatalError("no such file: %s\n", filename);
     }

@@ -27,9 +27,6 @@
 #include "system.hpp"
 #include "utility.hpp"
 
-namespace elfbsp
-{
-
 token_kind_e lexer_c::Next(std::string &s)
 {
   s.clear();
@@ -435,8 +432,6 @@ void lexer_c::ParseEscape(std::string &s)
       break;
   }
 }
-
-} // namespace elfbsp
 
 //--- editor settings ---
 // vi:ts=4:sw=4:noexpandtab

@@ -49,9 +49,6 @@
 // Rewritten again by Andrew Apted (-AJA-), 1999-2000.
 //
 
-namespace elfbsp
-{
-
 #define PRECIOUS_MULTIPLY   100
 
 #define SEG_FAST_THRESHHOLD 200
@@ -1979,8 +1976,6 @@ void RoundOffBspTree()
     sub->RenumberSegs(cur_seg_index);
   }
 }
-
-} // namespace elfbsp
 
 //--- editor settings ---
 // vi:ts=4:sw=4:noexpandtab

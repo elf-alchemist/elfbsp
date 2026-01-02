@@ -29,9 +29,6 @@
 #define DEBUG_WINDOW_FX 0
 #define DEBUG_OVERLAPS  0
 
-namespace elfbsp
-{
-
 #define SYS_MSG_BUFLEN 4000
 
 static char message_buf[SYS_MSG_BUFLEN];
@@ -716,8 +713,6 @@ bool vertex_t::CheckOpen(double dx, double dy) const
   // usually won't get here
   return true;
 }
-
-} // namespace elfbsp
 
 //--- editor settings ---
 // vi:ts=4:sw=4:noexpandtab

@@ -25,9 +25,6 @@
 
 #include "raw_def.hpp"
 
-namespace elfbsp
-{
-
 class Wad_file;
 
 typedef enum
@@ -333,8 +330,6 @@ private:
     }
   };
 };
-
-} // namespace elfbsp
 
 #endif /* __ELFBSP_WAD_H__ */
 

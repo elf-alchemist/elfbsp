@@ -28,9 +28,6 @@
 #include "elfbsp.hpp"
 #include "system.hpp"
 
-namespace elfbsp
-{
-
 class Lump_c;
 class Wad_file;
 
@@ -616,8 +613,6 @@ void NormaliseBspTree();
 // vertices to integer coordinates (for example, removing segs whose
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree();
-
-} // namespace elfbsp
 
 #endif /* __ELFBSP_LOCAL_H__ */
 

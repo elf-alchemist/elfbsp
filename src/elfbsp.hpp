@@ -194,9 +194,6 @@ typedef enum
   BUILD_LumpOverflow
 } build_result_e;
 
-namespace elfbsp
-{
-
 // set the build information.  must be done before anything else.
 void SetInfo(buildinfo_t *info);
 
@@ -218,8 +215,6 @@ const char *GetLevelName(size_t lev_idx);
 // is updated to store the new lumps and returns either BUILD_OK or
 // BUILD_LumpOverflow if some limits were exceeded.
 build_result_e BuildLevel(size_t lev_idx);
-
-} // namespace elfbsp
 
 #endif /* __ELFBSP_BSP_H__ */
 

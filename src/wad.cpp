@@ -25,9 +25,6 @@
 
 #define DEBUG_WAD 0
 
-namespace elfbsp
-{
-
 #if DEBUG_WAD
   #define FileMessage cur_info->Debug
   #define LumpWarning cur_info->Debug
@@ -1354,8 +1351,6 @@ bool Wad_file::Backup(const char *new_filename)
 
   return FileCopy(PathName(), new_filename);
 }
-
-} // namespace elfbsp
 
 //--- editor settings ---
 // vi:ts=4:sw=4:noexpandtab

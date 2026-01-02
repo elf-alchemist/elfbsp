@@ -24,9 +24,6 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace elfbsp
-{
-
 #ifdef WIN32
   #define DIR_SEP_CH  '\\'
   #define DIR_SEP_STR "\\"
@@ -63,8 +60,6 @@ int StringCaseCmpMax(const char *s1, const char *s2, size_t len);
 void Adler32_Begin(uint32_t *crc);
 void Adler32_AddBlock(uint32_t *crc, const uint8_t *data, int length);
 void Adler32_Finish(uint32_t *crc);
-
-} // namespace elfbsp
 
 #endif /* __ELFBSP_UTILITY_H__ */
 

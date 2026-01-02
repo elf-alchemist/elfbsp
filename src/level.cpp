@@ -33,9 +33,6 @@
 #define DEBUG_LOAD     0
 #define DEBUG_BSP      0
 
-namespace elfbsp
-{
-
 Wad_file *cur_wad;
 
 static int block_x, block_y;
@@ -2774,8 +2771,6 @@ build_result_e BuildLevel(size_t lev_idx)
 
   return ret;
 }
-
-} // namespace elfbsp
 
 //--- editor settings ---
 // vi:ts=4:sw=4:noexpandtab
