@@ -118,7 +118,7 @@ template <typename T> inline constexpr T byteswap(T value) noexcept
   }
 }
 
-template <typename T> inline static constexpr T GetLittleEndian(T value)
+template <typename T> static inline constexpr T GetLittleEndian(T value)
 {
   static_assert(std::is_integral_v<T>, "integral required");
   if constexpr (ENDIAN_BIG)
@@ -131,7 +131,7 @@ template <typename T> inline static constexpr T GetLittleEndian(T value)
   }
 }
 
-template <typename T> inline static constexpr T GetBigEndian(T value)
+template <typename T> static inline constexpr T GetBigEndian(T value)
 {
   if constexpr (ENDIAN_LITTLE)
   {

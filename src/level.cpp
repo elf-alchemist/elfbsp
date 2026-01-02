@@ -1027,7 +1027,7 @@ static vertex_t *SafeLookupVertex(size_t num)
 
 static sector_t *SafeLookupSector(uint16_t num)
 {
-  if (num == 0xFFFF)
+  if (num >= NO_INDEX_SHORT)
   {
     return nullptr;
   }
@@ -1042,7 +1042,7 @@ static sector_t *SafeLookupSector(uint16_t num)
 
 static inline sidedef_t *SafeLookupSidedef(uint16_t num)
 {
-  if (num == 0xFFFF)
+  if (num >= NO_INDEX_SHORT)
   {
     return nullptr;
   }

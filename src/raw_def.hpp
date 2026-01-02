@@ -26,7 +26,7 @@
 
 /* ----- The wad structures ---------------------- */
 
-inline static constexpr size_t WAD_LUMP_NAME = 8;
+static constexpr size_t WAD_LUMP_NAME = 8;
 
 // wad header
 typedef struct raw_wad_header_s
@@ -380,12 +380,12 @@ typedef uint32_t long_angle_t;
 typedef uint16_t short_angle_t;
 constexpr uint32_t ANG45 = 0x20000000;
 
-template <typename T> constexpr inline static long_angle_t DegreesToLongBAM(T x)
+template <typename T> static inline constexpr long_angle_t DegreesToLongBAM(T x)
 {
   return ANG45 * (x / 45);
 }
 
-template <typename T> constexpr inline static short_angle_t DegreesToShortBAM(T x)
+template <typename T> static inline constexpr short_angle_t DegreesToShortBAM(T x)
 {
   return (ANG45 * (x / 45)) >> 16;
 }
