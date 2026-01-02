@@ -78,7 +78,7 @@ bool HasExtension(const char *filename)
 //
 // MatchExtension
 //
-// When ext is NULL, checks if the file has no extension.
+// When ext is nullptr, checks if the file has no extension.
 //
 bool MatchExtension(const char *filename, const char *ext)
 {
@@ -311,9 +311,9 @@ void *UtilRealloc(void *old, size_t size)
 //
 void UtilFree(void *data)
 {
-  if (data == NULL)
+  if (data == nullptr)
   {
-    BugError("Trying to free a NULL pointer\n");
+    BugError("Trying to free a nullptr\n");
   }
 
   free(data);

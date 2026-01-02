@@ -232,7 +232,7 @@ Wad_file *Wad_file::Open(const char *filename, char mode)
 
   FileMessage("Opening WAD file: %s\n", filename);
 
-  FILE *fp = NULL;
+  FILE *fp = nullptr;
 
 retry:
   fp = fopen(filename, (mode == 'r' ? "rb" : "r+b"));
@@ -255,7 +255,7 @@ retry:
 
     int what = errno;
     FileMessage("Open file failed: %s\n", strerror(what));
-    return NULL;
+    return nullptr;
   }
 
   Wad_file *w = new Wad_file(filename, mode, fp);
@@ -291,7 +291,7 @@ Wad_file *Wad_file::Create(const char *filename, char mode)
   FILE *fp = fopen(filename, "w+b");
   if (!fp)
   {
-    return NULL;
+    return nullptr;
   }
 
   Wad_file *w = new Wad_file(filename, mode, fp);
@@ -416,7 +416,7 @@ Lump_c *Wad_file::FindLump(const char *name)
     }
   }
 
-  return NULL; // not found
+  return nullptr; // not found
 }
 
 size_t Wad_file::FindLumpNum(const char *name)
@@ -617,7 +617,7 @@ Lump_c *Wad_file::FindLumpInNamespace(const char *name, char group)
       BugError("FindLumpInNamespace: bad group '%c'\n", group);
   }
 
-  return NULL; // not found!
+  return nullptr; // not found!
 }
 
 void Wad_file::ReadDirectory()

@@ -118,7 +118,7 @@ public:
   // when building normal nodes, unused vertices will be pruned.
   bool is_used;
 
-  // usually NULL, unless this vertex occupies the same location as a
+  // usually nullptr, unless this vertex occupies the same location as a
   // previous vertex.
   vertex_t *overlap;
 
@@ -162,7 +162,7 @@ public:
 class sidedef_t
 {
 public:
-  // adjacent sector.  Can be NULL (invalid sidedef)
+  // adjacent sector.  Can be nullptr (invalid sidedef)
   sector_t *sector;
 
   // sidedef index.  Always valid after loading & pruning.
@@ -179,7 +179,7 @@ public:
   vertex_t *end;   // ... to this vertex
 
   sidedef_t *right; // right sidedef
-  sidedef_t *left;  // left sidede, or NULL if none
+  sidedef_t *left;  // left sidede, or nullptr if none
 
   uint32_t flags;
   uint32_t special;
@@ -201,7 +201,7 @@ public:
   // sector is the same on both sides
   bool self_ref;
 
-  // normally NULL, except when this linedef directly overlaps an earlier
+  // normally nullptr, except when this linedef directly overlaps an earlier
   // one (a rarely-used trick to create higher mid-masked textures).
   // No segs should be created for these overlapping linedefs.
   linedef_t *overlap;
@@ -239,13 +239,13 @@ public:
   vertex_t *start; // from this vertex...
   vertex_t *end;   // ... to this vertex
 
-  // linedef that this seg goes along, or NULL if miniseg
+  // linedef that this seg goes along, or nullptr if miniseg
   linedef_t *linedef;
 
   // 0 for right, 1 for left
   int side;
 
-  // seg on other side, or NULL if one-sided.  This relationship is
+  // seg on other side, or nullptr if one-sided.  This relationship is
   // always one-to-one -- if one of the segs is split, the partner seg
   // must also be split.
   seg_t *partner;
@@ -261,7 +261,7 @@ public:
   // won't be any of these when writing the V2 GL_SEGS lump].
   bool is_degenerate;
 
-  // the quad-tree node that contains this seg, or NULL if the seg
+  // the quad-tree node that contains this seg, or nullptr if the seg
   // is now in a subsector.
   quadtree_c *quad;
 
@@ -346,7 +346,7 @@ public:
 class child_t
 {
 public:
-  // child node or subsector (one must be NULL)
+  // child node or subsector (one must be nullptr)
   node_t *node;
   subsec_t *subsec;
 
@@ -387,7 +387,7 @@ public:
   int x1, y1;
   int x2, y2;
 
-  // sub-trees.  NULL for leaf nodes.
+  // sub-trees.  nullptr for leaf nodes.
   // [0] has the lower coordinates, and [1] has the higher coordinates.
   // Division of a square always occurs horizontally (e.g. 512x512 ->
   // 256x512).
@@ -548,7 +548,7 @@ public:
 /* -------- functions ---------------------------- */
 
 // scan all the segs in the list, and choose the best seg to use as a
-// partition line, returning it.  If no seg can be used, returns NULL.
+// partition line, returning it.  If no seg can be used, returns nullptr.
 // The 'depth' parameter is the current depth in the tree, used for
 // computing the current progress.
 seg_t *PickNode(quadtree_c *tree, int depth);
@@ -587,9 +587,9 @@ quadtree_c *TreeFromSegList(seg_t *list);
 
 // takes the seg list and determines if it is convex.  When it is, the
 // segs are converted to a subsector, and '*S' is the new subsector
-// (and '*N' is set to NULL).  Otherwise the seg list is divided into
+// (and '*N' is set to nullptr).  Otherwise the seg list is divided into
 // two halves, a node is created by calling this routine recursively,
-// and '*N' is the new node (and '*S' is set to NULL).  Normally
+// and '*N' is the new node (and '*S' is set to nullptr).  Normally
 // returns BUILD_OK, or BUILD_Cancelled if user stopped it.
 
 build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, node_t **N, subsec_t **S);

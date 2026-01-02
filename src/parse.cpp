@@ -129,24 +129,24 @@ void lexer_c::Rewind()
 
 size_t LEX_Index(const std::string &s)
 {
-  return std::strtoumax(s.c_str(), NULL, 0);
+  return std::strtoumax(s.c_str(), nullptr, 0);
 }
 
 int32_t LEX_Int(const std::string &s)
 {
   // strtol handles all the integer sequences of the UDMF spec
-  return (int32_t)std::strtol(s.c_str(), NULL, 0);
+  return (int32_t)std::strtol(s.c_str(), nullptr, 0);
 }
 
 uint32_t LEX_UInt(const std::string &s)
 {
-  return (uint32_t)std::strtoul(s.c_str(), NULL, 0);
+  return (uint32_t)std::strtoul(s.c_str(), nullptr, 0);
 }
 
 double LEX_Double(const std::string &s)
 {
   // strtod handles all the floating-point sequences of the UDMF spec
-  return std::strtod(s.c_str(), NULL);
+  return std::strtod(s.c_str(), nullptr);
 }
 
 bool LEX_Boolean(const std::string &s)
@@ -399,7 +399,7 @@ void lexer_c::ParseEscape(std::string &s)
 
     *p = 0;
 
-    int val = (int)std::strtol(buffer, NULL, 0);
+    int val = (int)std::strtol(buffer, nullptr, 0);
     s.push_back((char)val);
     return;
   }

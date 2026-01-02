@@ -71,7 +71,7 @@ public:
 public:
   void BumpLeft(const linedef_t *linedef)
   {
-    if (linedef != NULL)
+    if (linedef != nullptr)
     {
       real_left++;
     }
@@ -83,7 +83,7 @@ public:
 
   void BumpRight(const linedef_t *linedef)
   {
-    if (linedef != NULL)
+    if (linedef != nullptr)
     {
       real_right++;
     }
@@ -168,7 +168,7 @@ seg_t *SplitSeg(seg_t *old_seg, double x, double y)
 
   // copy seg info
   new_seg[0] = old_seg[0];
-  new_seg->next = NULL;
+  new_seg->next = nullptr;
 
   old_seg->end = new_vert;
   new_seg->start = new_vert;
@@ -400,7 +400,7 @@ bool EvalPartitionWorker(quadtree_c *tree, seg_t *part, double best_cost, eval_i
     //       to Janis Legzdinsh for spotting this obscure bug.
     if (fa <= DIST_EPSILON || fb <= DIST_EPSILON)
     {
-      if (check->linedef != NULL && check->linedef->is_precious)
+      if (check->linedef != nullptr && check->linedef->is_precious)
       {
         info->cost += 40.0 * split_cost * PRECIOUS_MULTIPLY;
       }
@@ -504,7 +504,7 @@ bool EvalPartitionWorker(quadtree_c *tree, seg_t *part, double best_cost, eval_i
       return true;
     }
 
-    if (tree->subs[c] != NULL && !tree->subs[c]->Empty())
+    if (tree->subs[c] != nullptr && !tree->subs[c]->Empty())
     {
       if (EvalPartitionWorker(tree->subs[c], part, best_cost, info))
       {
@@ -583,7 +583,7 @@ void EvaluateFastWorker(quadtree_c *tree, seg_t **best_H, seg_t **best_V, int mi
   for (seg_t *part = tree->list; part; part = part->next)
   {
     /* ignore minisegs as partition candidates */
-    if (part->linedef == NULL)
+    if (part->linedef == nullptr)
     {
       continue;
     }
@@ -629,7 +629,7 @@ void EvaluateFastWorker(quadtree_c *tree, seg_t **best_H, seg_t **best_V, int mi
   /* handle sub-blocks recursively */
   for (int c = 0; c < 2; c++)
   {
-    if (tree->subs[c] != NULL && !tree->subs[c]->Empty())
+    if (tree->subs[c] != nullptr && !tree->subs[c]->Empty())
     {
       EvaluateFastWorker(tree->subs[c], best_H, best_V, mid_x, mid_y);
     }
@@ -638,8 +638,8 @@ void EvaluateFastWorker(quadtree_c *tree, seg_t **best_H, seg_t **best_V, int mi
 
 seg_t *FindFastSeg(quadtree_c *tree)
 {
-  seg_t *best_H = NULL;
-  seg_t *best_V = NULL;
+  seg_t *best_H = nullptr;
+  seg_t *best_V = nullptr;
 
   int mid_x = (tree->x1 + tree->x2) / 2;
   int mid_y = (tree->y1 + tree->y2) / 2;
@@ -665,7 +665,7 @@ seg_t *FindFastSeg(quadtree_c *tree)
 
   if (H_cost < 0 && V_cost < 0)
   {
-    return NULL;
+    return nullptr;
   }
 
   if (H_cost < 0)
@@ -697,7 +697,7 @@ bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, doubl
 #endif
 
     /* ignore minisegs as partition candidates */
-    if (part->linedef == NULL)
+    if (part->linedef == nullptr)
     {
       continue;
     }
@@ -720,7 +720,7 @@ bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, doubl
   /* recursively handle sub-blocks */
   for (int c = 0; c < 2; c++)
   {
-    if (part_list->subs[c] != NULL && !part_list->subs[c]->Empty())
+    if (part_list->subs[c] != nullptr && !part_list->subs[c]->Empty())
     {
       if (!PickNodeWorker(part_list->subs[c], tree, best, best_cost))
       {
@@ -737,7 +737,7 @@ bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, doubl
 //
 seg_t *PickNode(quadtree_c *tree, int depth)
 {
-  seg_t *best = NULL;
+  seg_t *best = nullptr;
 
   double best_cost = 1.0e99;
 
@@ -757,7 +757,7 @@ seg_t *PickNode(quadtree_c *tree, int depth)
 
     best = FindFastSeg(tree);
 
-    if (best != NULL)
+    if (best != nullptr)
     {
 #if DEBUG_PICKNODE
       cur_info->Debug("PickNode: Using Fast node (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", best->start->x, best->start->y,
@@ -770,7 +770,7 @@ seg_t *PickNode(quadtree_c *tree, int depth)
   if (!PickNodeWorker(tree, tree, &best, &best_cost))
   {
     /* hack here : BuildNodes will detect the cancellation */
-    return NULL;
+    return nullptr;
   }
 
 #if DEBUG_PICKNODE
@@ -887,17 +887,17 @@ void DivideOneSeg(seg_t *seg, seg_t *part, seg_t **left_list, seg_t **right_list
 
 void SeparateSegs(quadtree_c *tree, seg_t *part, seg_t **left_list, seg_t **right_list, intersection_t **cut_list)
 {
-  while (tree->list != NULL)
+  while (tree->list != nullptr)
   {
     seg_t *seg = tree->list;
     tree->list = seg->next;
 
-    seg->quad = NULL;
+    seg->quad = nullptr;
     DivideOneSeg(seg, part, left_list, right_list, cut_list);
   }
 
   // recursively handle sub-blocks
-  if (tree->subs[0] != NULL)
+  if (tree->subs[0] != nullptr)
   {
     SeparateSegs(tree->subs[0], part, left_list, right_list, cut_list);
     SeparateSegs(tree->subs[1], part, left_list, right_list, cut_list);
@@ -909,7 +909,7 @@ void SeparateSegs(quadtree_c *tree, seg_t *part, seg_t **left_list, seg_t **righ
 void FindLimits2(seg_t *list, bbox_t *bbox)
 {
   // empty list?
-  if (list == NULL)
+  if (list == nullptr)
   {
     bbox->minx = 0;
     bbox->miny = 0;
@@ -921,7 +921,7 @@ void FindLimits2(seg_t *list, bbox_t *bbox)
   bbox->minx = bbox->miny = SHRT_MAX;
   bbox->maxx = bbox->maxy = SHRT_MIN;
 
-  for (; list != NULL; list = list->next)
+  for (; list != nullptr; list = list->next)
   {
     double x1 = list->start->x;
     double y1 = list->start->y;
@@ -1013,7 +1013,7 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
     buddy->end = cut->vertex;
 
     seg->index = buddy->index = NO_INDEX;
-    seg->linedef = buddy->linedef = NULL;
+    seg->linedef = buddy->linedef = nullptr;
     seg->side = buddy->side = 0;
 
     seg->source_line = buddy->source_line = part->linedef;
@@ -1103,7 +1103,7 @@ int seg_t::PointOnLineSide(double x, double y) const
 /* ----- quad-tree routines ------------------------------------ */
 
 quadtree_c::quadtree_c(int _x1, int _y1, int _x2, int _y2)
-    : x1(_x1), y1(_y1), x2(_x2), y2(_y2), real_num(0), mini_num(0), list(NULL)
+    : x1(_x1), y1(_y1), x2(_x2), y2(_y2), real_num(0), mini_num(0), list(nullptr)
 {
   int dx = x2 - x1;
   int dy = y2 - y1;
@@ -1111,8 +1111,8 @@ quadtree_c::quadtree_c(int _x1, int _y1, int _x2, int _y2)
   if (dx <= 320 && dy <= 320)
   {
     // leaf node
-    subs[0] = NULL;
-    subs[1] = NULL;
+    subs[0] = nullptr;
+    subs[1] = nullptr;
   }
   else if (dx >= dy)
   {
@@ -1128,11 +1128,11 @@ quadtree_c::quadtree_c(int _x1, int _y1, int _x2, int _y2)
 
 quadtree_c::~quadtree_c()
 {
-  if (subs[0] != NULL)
+  if (subs[0] != nullptr)
   {
     delete subs[0];
   }
-  if (subs[1] != NULL)
+  if (subs[1] != nullptr)
   {
     delete subs[1];
   }
@@ -1141,7 +1141,7 @@ quadtree_c::~quadtree_c()
 void quadtree_c::AddSeg(seg_t *seg)
 {
   // update seg counts
-  if (seg->linedef != NULL)
+  if (seg->linedef != nullptr)
   {
     real_num++;
   }
@@ -1150,7 +1150,7 @@ void quadtree_c::AddSeg(seg_t *seg)
     mini_num++;
   }
 
-  if (subs[0] != NULL)
+  if (subs[0] != nullptr)
   {
     double x_min = std::min(seg->start->x, seg->end->x);
     double y_min = std::min(seg->start->y, seg->end->y);
@@ -1195,7 +1195,7 @@ void quadtree_c::AddSeg(seg_t *seg)
 
 void quadtree_c::AddList(seg_t *new_list)
 {
-  while (new_list != NULL)
+  while (new_list != nullptr)
   {
     seg_t *seg = new_list;
     new_list = seg->next;
@@ -1206,7 +1206,7 @@ void quadtree_c::AddList(seg_t *new_list)
 
 void quadtree_c::ConvertToList(seg_t **_list)
 {
-  while (list != NULL)
+  while (list != nullptr)
   {
     seg_t *seg = list;
     list = seg->next;
@@ -1214,7 +1214,7 @@ void quadtree_c::ConvertToList(seg_t **_list)
     ListAddSeg(_list, seg);
   }
 
-  if (subs[0] != NULL)
+  if (subs[0] != nullptr)
   {
     subs[0]->ConvertToList(_list);
     subs[1]->ConvertToList(_list);
@@ -1282,7 +1282,7 @@ seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *
   seg_t *seg = NewSeg();
 
   // check for bad sidedef
-  if (side->sector == NULL)
+  if (side->sector == nullptr)
   {
     Warning("Bad sidedef on linedef #%d (Z_CheckHeap error)\n", line->index);
   }
@@ -1301,7 +1301,7 @@ seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *
   seg->end = end;
   seg->linedef = line;
   seg->side = what_side;
-  seg->partner = NULL;
+  seg->partner = nullptr;
 
   seg->source_line = seg->linedef;
   seg->index = NO_INDEX;
@@ -1317,14 +1317,14 @@ seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *
 //
 seg_t *CreateSegs()
 {
-  seg_t *list = NULL;
+  seg_t *list = nullptr;
 
   for (size_t i = 0; i < num_linedefs; i++)
   {
     linedef_t *line = lev_linedefs[i];
 
-    seg_t *left = NULL;
-    seg_t *right = NULL;
+    seg_t *left = nullptr;
+    seg_t *right = nullptr;
 
     // ignore zero-length lines
     if (line->zero_len)
@@ -1333,7 +1333,7 @@ seg_t *CreateSegs()
     }
 
     // ignore overlapping lines
-    if (line->overlap != NULL)
+    if (line->overlap != nullptr)
     {
       continue;
     }
@@ -1350,7 +1350,7 @@ seg_t *CreateSegs()
       Warning("Linedef #%d is VERY long, it may cause problems\n", line->index);
     }
 
-    if (line->right != NULL)
+    if (line->right != nullptr)
     {
       right = CreateOneSeg(line, line->start, line->end, line->right, 0);
       ListAddSeg(&list, right);
@@ -1360,12 +1360,12 @@ seg_t *CreateSegs()
       Warning("Linedef #%d has no right sidedef!\n", line->index);
     }
 
-    if (line->left != NULL)
+    if (line->left != nullptr)
     {
       left = CreateOneSeg(line, line->end, line->start, line->left, 1);
       ListAddSeg(&list, left);
 
-      if (right != NULL)
+      if (right != nullptr)
       {
         // -AJA- Partner segs.  These always maintain a one-to-one
         //       correspondence, so if one of the gets split, the
@@ -1420,16 +1420,16 @@ void subsec_t::DetermineMiddle()
 
 void subsec_t::AddToTail(seg_t *seg)
 {
-  seg->next = NULL;
+  seg->next = nullptr;
 
-  if (seg_list == NULL)
+  if (seg_list == nullptr)
   {
     seg_list = seg;
     return;
   }
 
   seg_t *tail = seg_list;
-  while (tail->next != NULL)
+  while (tail->next != nullptr)
   {
     tail = tail->next;
   }
@@ -1511,7 +1511,7 @@ void subsec_t::ClockwiseOrder()
   }
 
   // transfer sorted array back into sub
-  seg_list = NULL;
+  seg_list = nullptr;
 
   for (size_t j = 0; j < array.size(); j++)
   {
@@ -1570,7 +1570,7 @@ void subsec_t::SanityCheckHasRealSeg() const
 {
   for (seg_t *seg = seg_list; seg; seg = seg->next)
   {
-    if (seg->linedef != NULL)
+    if (seg->linedef != nullptr)
     {
       return;
     }
@@ -1611,7 +1611,7 @@ subsec_t *CreateSubsec(quadtree_c *tree)
   sub->index = num_subsecs - 1;
 
   // copy segs into subsector
-  sub->seg_list = NULL;
+  sub->seg_list = nullptr;
   tree->ConvertToList(&sub->seg_list);
   sub->DetermineMiddle();
 
@@ -1624,7 +1624,7 @@ subsec_t *CreateSubsec(quadtree_c *tree)
 
 int ComputeBspHeight(const node_t *node)
 {
-  if (node == NULL)
+  if (node == nullptr)
   {
     return 1;
   }
@@ -1648,8 +1648,8 @@ void DebugShowSegs(const seg_t *list)
 
 build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, node_t **N, subsec_t **S)
 {
-  *N = NULL;
-  *S = NULL;
+  *N = nullptr;
+  *S = nullptr;
 
   if (cur_info->cancelled)
   {
@@ -1674,7 +1674,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
     return BUILD_Cancelled;
   }
 
-  if (part == NULL)
+  if (part == nullptr)
   {
 #if DEBUG_BUILDER
     cur_info->Debug("Build: CONVEX\n");
@@ -1695,27 +1695,27 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
   *N = node;
 
   /* divide the segs into two lists: left & right */
-  seg_t *lefts = NULL;
-  seg_t *rights = NULL;
-  intersection_t *cut_list = NULL;
+  seg_t *lefts = nullptr;
+  seg_t *rights = nullptr;
+  intersection_t *cut_list = nullptr;
 
   SeparateSegs(tree, part, &lefts, &rights, &cut_list);
 
   delete tree;
-  tree = NULL;
+  tree = nullptr;
 
   /* sanity checks... */
-  if (rights == NULL)
+  if (rights == nullptr)
   {
     BugError("Separated seg-list has empty RIGHT side\n");
   }
 
-  if (lefts == NULL)
+  if (lefts == nullptr)
   {
     BugError("Separated seg-list has empty LEFT side\n");
   }
 
-  if (cut_list != NULL)
+  if (cut_list != nullptr)
   {
     AddMinisegs(cut_list, part, &lefts, &rights);
   }
@@ -1773,8 +1773,8 @@ void ClockwiseBspTree()
 void subsec_t::Normalise()
 {
   // use head + tail to maintain same order of segs
-  seg_t *new_head = NULL;
-  seg_t *new_tail = NULL;
+  seg_t *new_head = nullptr;
+  seg_t *new_tail = nullptr;
 
 #if DEBUG_SUBSEC
   cur_info->Debug("Subsec: Normalising %d\n", index);
@@ -1787,7 +1787,7 @@ void subsec_t::Normalise()
     seg_list = seg->next;
 
     // filter out minisegs
-    if (seg->linedef == NULL)
+    if (seg->linedef == nullptr)
     {
 #if DEBUG_SUBSEC
       cur_info->Debug("Subsec: Removing miniseg %p\n", seg);
@@ -1798,7 +1798,7 @@ void subsec_t::Normalise()
     }
 
     // add it to the new list
-    seg->next = NULL;
+    seg->next = nullptr;
 
     if (new_tail)
     {
@@ -1815,7 +1815,7 @@ void subsec_t::Normalise()
     seg->index = NO_INDEX;
   }
 
-  if (new_head == NULL)
+  if (new_head == nullptr)
   {
     BugError("Subsector %d normalised to being EMPTY\n", index);
   }
@@ -1854,11 +1854,11 @@ void RoundOffVertices()
 void subsec_t::RoundOff()
 {
   // use head + tail to maintain same order of segs
-  seg_t *new_head = NULL;
-  seg_t *new_tail = NULL;
+  seg_t *new_head = nullptr;
+  seg_t *new_tail = nullptr;
 
   seg_t *seg;
-  seg_t *last_real_degen = NULL;
+  seg_t *last_real_degen = nullptr;
 
   int real_total = 0;
 
@@ -1875,7 +1875,7 @@ void subsec_t::RoundOff()
     {
       seg->is_degenerate = true;
 
-      if (seg->linedef != NULL)
+      if (seg->linedef != nullptr)
       {
         last_real_degen = seg;
       }
@@ -1886,7 +1886,7 @@ void subsec_t::RoundOff()
       continue;
     }
 
-    if (seg->linedef != NULL)
+    if (seg->linedef != nullptr)
     {
       real_total++;
     }
@@ -1900,7 +1900,7 @@ void subsec_t::RoundOff()
   // became degenerate.
   if (real_total == 0)
   {
-    if (last_real_degen == NULL)
+    if (last_real_degen == nullptr)
     {
       BugError("Subsector %d rounded off with NO real segs\n", index);
     }
@@ -1922,7 +1922,7 @@ void subsec_t::RoundOff()
   }
 
   // second pass, remove the blighters...
-  while (seg_list != NULL)
+  while (seg_list != nullptr)
   {
     // remove head
     seg = seg_list;
@@ -1939,7 +1939,7 @@ void subsec_t::RoundOff()
     }
 
     // add it to new list
-    seg->next = NULL;
+    seg->next = nullptr;
 
     if (new_tail)
     {
@@ -1956,7 +1956,7 @@ void subsec_t::RoundOff()
     seg->index = NO_INDEX;
   }
 
-  if (new_head == NULL)
+  if (new_head == nullptr)
   {
     BugError("Subsector %d rounded off to being EMPTY\n", index);
   }

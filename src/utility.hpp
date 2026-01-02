@@ -44,7 +44,7 @@ bool FileCopy(const char *src_name, const char *dest_name);
 bool FileRename(const char *old_name, const char *new_name);
 bool FileDelete(const char *filename);
 
-// memory allocation, guaranteed to not return NULL.
+// memory allocation, guaranteed to not return nullptr.
 void *UtilCalloc(size_t size);
 void *UtilRealloc(void *old, size_t size);
 void UtilFree(void *data);

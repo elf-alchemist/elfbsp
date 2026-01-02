@@ -60,9 +60,6 @@ typedef uint8_t byte;
 #define MSG_BUF_LEN 1024
 
 // basic macros
-#undef NULL
-#define NULL nullptr
-
 #undef M_PI
 #define M_PI 3.14159265358979323846
 

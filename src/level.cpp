@@ -302,11 +302,11 @@ static int BlockCompare(const void *p1, const void *p2)
   {
     return 0;
   }
-  if (A == NULL)
+  if (A == nullptr)
   {
     return -1;
   }
-  if (B == NULL)
+  if (B == nullptr)
   {
     return +1;
   }
@@ -356,7 +356,7 @@ static void CompressBlockmap(void)
     size_t blk_num = block_dups[i];
 
     // empty block ?
-    if (block_lines[blk_num] == NULL)
+    if (block_lines[blk_num] == nullptr)
     {
       block_ptrs[blk_num] = (uint16_t)(4 + block_count);
       block_dups[i] = DUMMY_DUP;
@@ -376,7 +376,7 @@ static void CompressBlockmap(void)
 
       // free the memory of the duplicated block
       UtilFree(block_lines[blk_num]);
-      block_lines[blk_num] = NULL;
+      block_lines[blk_num] = nullptr;
 
 #if DEBUG_BLOCKMAP
       dup_count++;
@@ -664,7 +664,7 @@ static void Reject_Init()
 static void Reject_Free()
 {
   delete[] rej_matrix;
-  rej_matrix = NULL;
+  rej_matrix = nullptr;
 }
 
 //
@@ -1031,7 +1031,7 @@ static sector_t *SafeLookupSector(uint16_t num)
 {
   if (num == 0xFFFF)
   {
-    return NULL;
+    return nullptr;
   }
 
   if (num >= num_sectors)
@@ -1046,13 +1046,13 @@ static inline sidedef_t *SafeLookupSidedef(uint16_t num)
 {
   if (num == 0xFFFF)
   {
-    return NULL;
+    return nullptr;
   }
 
   // silently ignore illegal sidedef numbers
   if (num >= num_sidedefs)
   {
-    return NULL;
+    return nullptr;
   }
 
   return lev_sidedefs[num];
@@ -1073,7 +1073,7 @@ void GetVertices()
   cur_info->Debug("GetVertices: num = %d\n", count);
 #endif
 
-  if (lump == NULL || count == 0)
+  if (lump == nullptr || count == 0)
   {
     return;
   }
@@ -1112,7 +1112,7 @@ void GetSectors()
     count = lump->Length() / sizeof(raw_sector_t);
   }
 
-  if (lump == NULL || count == 0)
+  if (lump == nullptr || count == 0)
   {
     return;
   }
@@ -1152,7 +1152,7 @@ void GetThings()
     count = lump->Length() / sizeof(raw_thing_t);
   }
 
-  if (lump == NULL || count == 0)
+  if (lump == nullptr || count == 0)
   {
     return;
   }
@@ -1194,7 +1194,7 @@ void GetThingsHexen()
     count = lump->Length() / sizeof(raw_hexen_thing_t);
   }
 
-  if (lump == NULL || count == 0)
+  if (lump == nullptr || count == 0)
   {
     return;
   }
@@ -1236,7 +1236,7 @@ void GetSidedefs()
     count = lump->Length() / sizeof(raw_sidedef_t);
   }
 
-  if (lump == NULL || count == 0)
+  if (lump == nullptr || count == 0)
   {
     return;
   }
@@ -1276,7 +1276,7 @@ void GetLinedefs()
     count = lump->Length() / sizeof(raw_linedef_t);
   }
 
-  if (lump == NULL || count == 0)
+  if (lump == nullptr || count == 0)
   {
     return;
   }
@@ -1352,7 +1352,7 @@ void GetLinedefsHexen()
     count = lump->Length() / sizeof(raw_hexen_linedef_t);
   }
 
-  if (lump == NULL || count == 0)
+  if (lump == nullptr || count == 0)
   {
     return;
   }
@@ -1553,7 +1553,7 @@ void ParseLinedefField(linedef_t *line, const std::string &key, token_kind_e kin
 
     if (num >= num_sidedefs)
     {
-      line->right = NULL;
+      line->right = nullptr;
     }
     else
     {
@@ -1567,7 +1567,7 @@ void ParseLinedefField(linedef_t *line, const std::string &key, token_kind_e kin
 
     if (num >= num_sidedefs)
     {
-      line->left = NULL;
+      line->left = nullptr;
     }
     else
     {
@@ -1578,11 +1578,11 @@ void ParseLinedefField(linedef_t *line, const std::string &key, token_kind_e kin
 
 void ParseUDMF_Block(lexer_c &lex, int cur_type)
 {
-  vertex_t *vertex = NULL;
-  thing_t *thing = NULL;
-  sector_t *sector = NULL;
-  sidedef_t *side = NULL;
-  linedef_t *line = NULL;
+  vertex_t *vertex = nullptr;
+  thing_t *thing = nullptr;
+  sector_t *sector = nullptr;
+  sidedef_t *side = nullptr;
+  linedef_t *line = nullptr;
 
   switch (cur_type)
   {
@@ -1669,9 +1669,9 @@ void ParseUDMF_Block(lexer_c &lex, int cur_type)
 
   // validate stuff
 
-  if (line != NULL)
+  if (line != nullptr)
   {
-    if (line->start == NULL || line->end == NULL)
+    if (line->start == nullptr || line->end == nullptr)
     {
       cur_info->FatalError("Linedef #%d is missing a vertex!\n", line->index);
     }
@@ -1772,7 +1772,7 @@ void ParseUDMF()
 {
   Lump_c *lump = FindLevelLump("TEXTMAP");
 
-  if (lump == NULL || !lump->Seek(0))
+  if (lump == nullptr || !lump->Seek(0))
   {
     cur_info->FatalError("Error finding TEXTMAP lump.\n");
   }
@@ -2032,7 +2032,7 @@ void PutNodes(node_t *root)
 
   node_cur_index = 0;
 
-  if (root != NULL)
+  if (root != nullptr)
   {
     PutOneNode(root, lump);
   }
@@ -2380,7 +2380,7 @@ void SaveZDFormat(node_t *root_node)
   PutZNodes(lump, root_node, false);
 
   lump->Finish();
-  lump = NULL;
+  lump = nullptr;
 }
 
 void SaveXGL3Format(Lump_c *lump, node_t *root_node)
@@ -2397,7 +2397,7 @@ void SaveXGL3Format(Lump_c *lump, node_t *root_node)
   PutZNodes(lump, root_node, true);
 
   lump->Finish();
-  lump = NULL;
+  lump = nullptr;
 }
 
 /* ----- whole-level routines --------------------------- */
@@ -2501,7 +2501,7 @@ static void AddMissingLump(const char *name, const char *after)
 
 build_result_e SaveLevel(node_t *root_node)
 {
-  // Note: root_node may be NULL
+  // Note: root_node may be nullptr
 
   cur_wad->BeginWrite();
 
@@ -2653,7 +2653,7 @@ Lump_c *CreateLevelLump(const char *name, size_t max_size)
 // MAIN STUFF
 //------------------------------------------------------------------------
 
-buildinfo_t *cur_info = NULL;
+buildinfo_t *cur_info = nullptr;
 
 void SetInfo(buildinfo_t *info)
 {
@@ -2663,7 +2663,7 @@ void SetInfo(buildinfo_t *info)
 void OpenWad(const char *filename)
 {
   cur_wad = Wad_file::Open(filename, 'a');
-  if (cur_wad == NULL)
+  if (cur_wad == nullptr)
   {
     cur_info->FatalError("Cannot open file: %s\n", filename);
   }
@@ -2671,24 +2671,24 @@ void OpenWad(const char *filename)
   if (cur_wad->IsReadOnly())
   {
     delete cur_wad;
-    cur_wad = NULL;
+    cur_wad = nullptr;
     cur_info->FatalError("file is read only: %s\n", filename);
   }
 }
 
 void CloseWad(void)
 {
-  if (cur_wad != NULL)
+  if (cur_wad != nullptr)
   {
     // this closes the file
     delete cur_wad;
-    cur_wad = NULL;
+    cur_wad = nullptr;
   }
 }
 
 size_t LevelsInWad(void)
 {
-  if (cur_wad == NULL)
+  if (cur_wad == nullptr)
   {
     return 0;
   }
@@ -2698,7 +2698,7 @@ size_t LevelsInWad(void)
 
 const char *GetLevelName(size_t lev_idx)
 {
-  SYS_ASSERT(cur_wad != NULL);
+  SYS_ASSERT(cur_wad != nullptr);
 
   size_t lump_idx = cur_wad->LevelHeader(lev_idx);
 
@@ -2714,8 +2714,8 @@ build_result_e BuildLevel(size_t lev_idx)
     return BUILD_Cancelled;
   }
 
-  node_t *root_node = NULL;
-  subsec_t *root_sub = NULL;
+  node_t *root_node = nullptr;
+  subsec_t *root_sub = nullptr;
 
   lev_current_idx = lev_idx;
   lev_current_start = cur_wad->LevelHeader(lev_idx);
@@ -2743,7 +2743,7 @@ build_result_e BuildLevel(size_t lev_idx)
     cur_info->Print_Verbose("    Built %d NODES, %d SSECTORS, %d SEGS, %d VERTEXES\n", num_nodes, num_subsecs, num_segs,
                             num_old_vert + num_new_vert);
 
-    if (root_node != NULL)
+    if (root_node != nullptr)
     {
       cur_info->Print_Verbose("    Heights of subtrees: %d / %d\n", ComputeBspHeight(root_node->r.node),
                               ComputeBspHeight(root_node->l.node));

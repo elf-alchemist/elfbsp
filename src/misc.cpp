@@ -85,7 +85,7 @@ void MinorIssue(const char *fmt, ...)
 
 void MarkPolyobjSector(sector_t *sector)
 {
-  if (sector == NULL)
+  if (sector == nullptr)
   {
     return;
   }
@@ -108,7 +108,7 @@ void MarkPolyobjSector(sector_t *sector)
   {
     linedef_t *L = lev_linedefs[i];
 
-    if ((L->right != NULL && L->right->sector == sector) || (L->left != NULL && L->left->sector == sector))
+    if ((L->right != nullptr && L->right->sector == sector) || (L->left != nullptr && L->left->sector == sector))
     {
       L->is_precious = true;
     }
@@ -120,8 +120,8 @@ void MarkPolyobjPoint(double x, double y)
   int inside_count = 0;
 
   double best_dist = 999999;
-  const linedef_t *best_match = NULL;
-  sector_t *sector = NULL;
+  const linedef_t *best_match = nullptr;
+  sector_t *sector = nullptr;
 
   // -AJA- First we handle the "awkward" cases where the polyobj sits
   //       directly on a linedef or even a vertex.  We check all lines
@@ -142,12 +142,12 @@ void MarkPolyobjPoint(double x, double y)
       cur_info->Debug("  Touching line was %d\n", L->index);
 #endif
 
-      if (L->left != NULL)
+      if (L->left != nullptr)
       {
         MarkPolyobjSector(L->left->sector);
       }
 
-      if (L->right != NULL)
+      if (L->right != nullptr)
       {
         MarkPolyobjSector(L->right->sector);
       }
@@ -198,7 +198,7 @@ void MarkPolyobjPoint(double x, double y)
     }
   }
 
-  if (best_match == NULL)
+  if (best_match == nullptr)
   {
     Warning("Bad polyobj thing at (%1.0f,%1.0f).\n", x, y);
     return;
@@ -224,18 +224,18 @@ void MarkPolyobjPoint(double x, double y)
    */
   if ((y1 > y2) == (best_dist > 0))
   {
-    sector = best_match->right ? best_match->right->sector : NULL;
+    sector = best_match->right ? best_match->right->sector : nullptr;
   }
   else
   {
-    sector = best_match->left ? best_match->left->sector : NULL;
+    sector = best_match->left ? best_match->left->sector : nullptr;
   }
 
 #if DEBUG_POLYOBJ
   cur_info->Debug("  Sector %d contains the polyobj.\n", sector ? sector->index : NO_INDEX);
 #endif
 
-  if (sector == NULL)
+  if (sector == nullptr)
   {
     Warning("Invalid Polyobj thing at (%1.0f,%1.0f).\n", x, y);
     return;
@@ -515,7 +515,7 @@ void DetectOverlappingLines(void)
 
 void vertex_t::AddWallTip(double dx, double dy, bool open_left, bool open_right)
 {
-  SYS_ASSERT(overlap == NULL);
+  SYS_ASSERT(overlap == nullptr);
 
   walltip_t *tip = NewWallTip();
   walltip_t *after;
@@ -549,7 +549,7 @@ void vertex_t::AddWallTip(double dx, double dy, bool open_left, bool open_right)
   }
   else
   {
-    if (tip_set != NULL)
+    if (tip_set != nullptr)
     {
       tip_set->prev = tip;
     }
@@ -574,10 +574,10 @@ void CalculateWallTips()
     double x2 = L->end->x;
     double y2 = L->end->y;
 
-    bool left = (L->left != NULL) && (L->left->sector != NULL);
-    bool right = (L->right != NULL) && (L->right->sector != NULL);
+    bool left = (L->left != nullptr) && (L->left->sector != nullptr);
+    bool right = (L->right != nullptr) && (L->right->sector != nullptr);
 
-    // note that start->overlap and end->overlap should be NULL
+    // note that start->overlap and end->overlap should be nullptr
     // due to logic in DetectOverlappingVertices.
 
     L->start->AddWallTip(x2 - x1, y2 - y1, left, right);
@@ -613,7 +613,7 @@ vertex_t *NewVertexFromSplitSeg(seg_t *seg, double x, double y)
   num_new_vert++;
 
   // compute wall-tip info
-  if (seg->linedef == NULL)
+  if (seg->linedef == nullptr)
   {
     vert->AddWallTip(seg->pdx, seg->pdy, true, true);
     vert->AddWallTip(-seg->pdx, -seg->pdy, true, true);
@@ -623,8 +623,8 @@ vertex_t *NewVertexFromSplitSeg(seg_t *seg, double x, double y)
     const sidedef_t *front = seg->side ? seg->linedef->left : seg->linedef->right;
     const sidedef_t *back = seg->side ? seg->linedef->right : seg->linedef->left;
 
-    bool left = (back != NULL) && (back->sector != NULL);
-    bool right = (front != NULL) && (front->sector != NULL);
+    bool left = (back != nullptr) && (back->sector != nullptr);
+    bool right = (front != nullptr) && (front->sector != nullptr);
 
     vert->AddWallTip(seg->pdx, seg->pdy, left, right);
     vert->AddWallTip(-seg->pdx, -seg->pdy, right, left);
