@@ -103,7 +103,7 @@ typedef uint8_t args_t[5];
 static constexpr size_t MSG_BUFFER_LENGTH = 1024;
 static constexpr size_t NO_INDEX = static_cast<size_t>(-1);
 static constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
-static constexpr uint16_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
+static constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
 
 //
 // The packed attribute forces structures to be packed into the minimum
