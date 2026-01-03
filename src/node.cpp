@@ -1448,7 +1448,7 @@ void ClockwiseOrder(subsec_t *subsec)
 
   if constexpr (DEBUG_SUBSEC)
   {
-    Debug("Subsec: Clockwising %zu\n", index);
+    Debug("Subsec: Clockwising %zu\n", subsec->index);
   }
 
   std::vector<seg_t *> array;
@@ -1561,7 +1561,7 @@ void SanityCheckClosed(subsec_t *subsec)
 
   if (gaps > 0)
   {
-    MinorIssue("Subsector #%zu near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)\n", index, subsec->mid_x, subsec->mid_y, gaps,
+    MinorIssue("Subsector #%zu near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)\n", subsec->index, subsec->mid_x, subsec->mid_y, gaps,
                total);
 
     if constexpr (DEBUG_SUBSEC)

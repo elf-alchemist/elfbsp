@@ -201,7 +201,7 @@ static inline void StopHanging()
   }
 }
 
-static inline void Debug(const char *fmt, ...)
+static inline void PRINTF_ATTR(1, 2) Debug(const char *fmt, ...)
 {
   static char buffer[MSG_BUFFER_LENGTH];
 
