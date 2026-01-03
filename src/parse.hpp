@@ -41,7 +41,7 @@ public:
   {
   }
 
-  ~lexer_c()
+  ~lexer_c(void)
   {
   }
 
@@ -59,10 +59,10 @@ public:
   // give the line number for the last token returned by Next() or
   // the token implicitly checked by Match().  can be used to show
   // where in the file an error occurred.
-  int LastLine();
+  int LastLine(void);
 
   // rewind to the very beginning.
-  void Rewind();
+  void Rewind(void);
 
 private:
   const std::string &data;

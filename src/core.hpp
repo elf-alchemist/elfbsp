@@ -516,6 +516,16 @@ static inline double ComputeAngle(double dx, double dy)
   return (angle < 0) ? angle + 360.0 : angle;
 }
 
+inline static constexpr uint32_t BIT(uint32_t x)
+{
+  return (1u << x);
+}
+
+inline static constexpr bool HAS_BIT(uint32_t x, uint32_t y)
+{
+  return bool(x & y);
+}
+
 //------------------------------------------------------------------------
 // WAD STRUCTURES
 //------------------------------------------------------------------------
@@ -791,9 +801,9 @@ typedef struct patch_s
 
 typedef enum : uint16_t
 {
-  MLF_Blocking = 0x0001,      // Solid, is an obstacle
-  MLF_BlockMonsters = 0x0002, // Blocks monsters only
-  MLF_TwoSided = 0x0004,      // Backside will not be present at all if not two sided
+  MLF_Blocking = BIT(0),      // Solid, is an obstacle
+  MLF_BlockMonsters = BIT(1), // Blocks monsters only
+  MLF_TwoSided = BIT(2),      // Backside will not be present at all if not two sided
 
   // If a texture is pegged, the texture will have
   // the end exposed to air held constant at the
@@ -805,24 +815,24 @@ typedef enum : uint16_t
   // the texture at the top pixel of the line for both
   // top and bottom textures (use next to windows).
 
-  MLF_UpperUnpegged = 0x0008, // Upper texture unpegged
-  MLF_LowerUnpegged = 0x0010, // Lower texture unpegged
-  MLF_Secret = 0x0020,        // In AutoMap: don't map as two sided: IT'S A SECRET!
-  MLF_SoundBlock = 0x0040,    // Sound rendering: don't let sound cross two of these
-  MLF_DontDraw = 0x0080,      // Don't draw on the automap at all
-  MLF_Mapped = 0x0100,        // Set as if already seen, thus drawn in automap
-  MLF_Boom_PassThru = 0x0200, // -AJA- this one is from Boom. Allows multiple lines to be pushed simultaneously.
-  MLF_3DMidTex = 0x0400,      // [EA] Solid middle texture
-  MLF_Reserved = 0x0800,      // [EA] MBF21's comp_reservedlineflag
-  MLF_BlockGrounded = 0x1000, // [EA] MBF21's Block Grounded Monster
-  MLF_BlockPlayers = 0x2000,  // [EA] MBF21's Block Players Only
+  MLF_UpperUnpegged = BIT(3), // Upper texture unpegged
+  MLF_LowerUnpegged = BIT(4), // Lower texture unpegged
+  MLF_Secret = BIT(5),        // In AutoMap: don't map as two sided: IT'S A SECRET!
+  MLF_SoundBlock = BIT(6),    // Sound rendering: don't let sound cross two of these
+  MLF_DontDraw = BIT(7),      // Don't draw on the automap at all
+  MLF_Mapped = BIT(8),        // Set as if already seen, thus drawn in automap
+  MLF_Boom_PassThru = BIT(9), // -AJA- this one is from Boom. Allows multiple lines to be pushed simultaneously.
+  MLF_3DMidTex = BIT(10),      // [EA] Solid middle texture
+  MLF_Reserved = BIT(11),      // [EA] MBF21's comp_reservedlineflag
+  MLF_BlockGrounded = BIT(12), // [EA] MBF21's Block Grounded Monster
+  MLF_BlockPlayers = BIT(13),  // [EA] MBF21's Block Players Only
 } compatible_lineflag_e;
 
 typedef enum : uint16_t
 {
-  // flags 0x001 .. 0x200 are same as DOOM above
-  MLF_Hexen_Repeatable = 0x0200,
-  MLF_Hexen_Activation = 0x1c00,
+  // first few flags are same as DOOM above
+  MLF_Hexen_Repeatable = BIT(9),
+  MLF_Hexen_Activation = BIT(10) | BIT(11) | BIT(12),
 } hexen_lineflag_e;
 
 typedef enum : uint16_t
@@ -898,20 +908,21 @@ template <typename T> static inline constexpr short_angle_t DegreesToShortBAM(T 
 
 typedef enum : uint16_t
 {
-  BoomSF_TypeMask = 0x001F,
-  BoomSF_DamageMask = 0x0060,
+  SF_TypeMask = 31,
+  SF_DamageMask = BIT(5) | BIT(6),
 
-  BoomSF_Secret = 0x0080,
-  BoomSF_Friction = 0x0100,
-  BoomSF_Wind = 0x0200,
-  BoomSF_NoSounds = 0x0400,
-  BoomSF_QuietPlane = 0x0800,
+  SF_Secret = BIT(7),
+  SF_Friction = BIT(8),
+  SF_Wind = BIT(9),
+  SF_NoSounds = BIT(10),
+  SF_QuietPlane = BIT(11),
 
-  MBF21SF_AltDeathMode = 0x1000,
-  MBF21SF_MonsterDeath = 0x2000,
+  SF_AltDeathMode = BIT(12),
+  SF_MonsterDeath = BIT(13),
 } compatible_sectorflag_e;
 
-static constexpr uint32_t MSF_BoomFlags = 0x0FE0;
+static constexpr uint32_t SF_BoomFlags = SF_DamageMask | SF_Secret | SF_Friction | SF_Wind;
+static constexpr uint32_t SF_MBF21Flags = SF_DamageMask | SF_Secret | SF_Friction | SF_Wind | SF_AltDeathMode | SF_MonsterDeath;
 
 //
 // Thing attributes.
@@ -919,15 +930,15 @@ static constexpr uint32_t MSF_BoomFlags = 0x0FE0;
 
 typedef enum : uint16_t
 {
-  MTF_Easy = 0x0001,
-  MTF_Medium = 0x0002,
-  MTF_Hard = 0x0004,
-  MTF_Ambush = 0x0008,
+  MTF_Easy = BIT(0),
+  MTF_Medium = BIT(1),
+  MTF_Hard = BIT(2),
+  MTF_Ambush = BIT(3),
 
-  MTF_Not_SP = 0x0010,
-  MTF_Not_DM = 0x0020,
-  MTF_Not_COOP = 0x0040,
-  MTF_Friend = 0x0080,
+  MTF_Not_SP = BIT(4),
+  MTF_Not_DM = BIT(5),
+  MTF_Not_COOP = BIT(6),
+  MTF_Friend = BIT(7),
 } thing_option_e;
 
 static constexpr uint32_t MTF_EXFLOOR_MASK = 0x3C00;
@@ -935,19 +946,19 @@ static constexpr uint32_t MTF_EXFLOOR_SHIFT = 10;
 
 typedef enum : uint16_t
 {
-  MTF_Hexen_Easy = 0x0001,
-  MTF_Hexen_Medium = 0x0002,
-  MTF_Hexen_Hard = 0x0004,
-  MTF_Hexen_Ambush = 0x0008,
+  MTF_Hexen_Easy = BIT(0),
+  MTF_Hexen_Medium = BIT(1),
+  MTF_Hexen_Hard = BIT(2),
+  MTF_Hexen_Ambush = BIT(3),
 
-  MTF_Hexen_Dormant = 0x0010,
-  MTF_Hexen_Fighter = 0x0020,
-  MTF_Hexen_Cleric = 0x0040,
-  MTF_Hexen_Mage = 0x0080,
+  MTF_Hexen_Dormant = BIT(4),
+  MTF_Hexen_Fighter = BIT(5),
+  MTF_Hexen_Cleric = BIT(6),
+  MTF_Hexen_Mage = BIT(7),
 
-  MTF_Hexen_SP = 0x0100,
-  MTF_Hexen_COOP = 0x0200,
-  MTF_Hexen_DM = 0x0400,
+  MTF_Hexen_SP = BIT(8),
+  MTF_Hexen_COOP = BIT(9),
+  MTF_Hexen_DM = BIT(10),
 } hexen_option_e;
 
 //

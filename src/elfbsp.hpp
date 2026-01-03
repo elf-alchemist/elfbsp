@@ -58,7 +58,7 @@ public:
   int total_minor_issues;
 
 public:
-  buildinfo_t()
+  buildinfo_t(void)
       : fast(false),
 
         do_blockmap(true), do_reject(true),
@@ -73,7 +73,7 @@ public:
   {
   }
 
-  ~buildinfo_t()
+  ~buildinfo_t(void)
   {
   }
 
@@ -201,10 +201,10 @@ void SetInfo(buildinfo_t *info);
 void OpenWad(const char *filename);
 
 // close a previously opened wad.
-void CloseWad();
+void CloseWad(void);
 
 // give the number of levels detected in the wad.
-size_t LevelsInWad();
+size_t LevelsInWad(void);
 
 // retrieve the name of a particular level.
 const char *GetLevelName(size_t lev_idx);

@@ -109,12 +109,12 @@ bool lexer_c::Match(const char *s)
   return true;
 }
 
-int lexer_c::LastLine()
+int lexer_c::LastLine(void)
 {
   return line;
 }
 
-void lexer_c::Rewind()
+void lexer_c::Rewind(void)
 {
   pos = 0;
   line = 1;
@@ -154,7 +154,7 @@ bool LEX_Boolean(const std::string &s)
 
 //----------------------------------------------------------------------------
 
-void lexer_c::SkipToNext()
+void lexer_c::SkipToNext(void)
 {
   while (pos < data.size())
   {

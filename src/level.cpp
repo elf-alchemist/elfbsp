@@ -403,7 +403,7 @@ static void CompressBlockmap(void)
   }
 }
 
-static size_t CalcBlockmapSize()
+static size_t CalcBlockmapSize(void)
 {
   // compute size of final BLOCKMAP lump.
   // it does not need to be exact, but it *does* need to be bigger
@@ -572,7 +572,7 @@ static void FindBlockmapLimits(bbox_t *bbox)
   }
 }
 
-void InitBlockmap()
+void InitBlockmap(void)
 {
   bbox_t map_bbox;
 
@@ -590,7 +590,7 @@ void InitBlockmap()
   block_count = block_w * block_h;
 }
 
-void PutBlockmap()
+void PutBlockmap(void)
 {
   if (!cur_info->do_blockmap || lev_linedefs.size() == 0)
   {
@@ -636,7 +636,7 @@ static size_t rej_total_size; // in bytes
 //
 // Allocate the matrix, init sectors into individual groups.
 //
-static void Reject_Init()
+static void Reject_Init(void)
 {
   rej_total_size = (lev_sectors.size() * lev_sectors.size() + 7) / 8;
 
@@ -652,7 +652,7 @@ static void Reject_Init()
   }
 }
 
-static void Reject_Free()
+static void Reject_Free(void)
 {
   delete[] rej_matrix;
   rej_matrix = nullptr;
@@ -663,7 +663,7 @@ static void Reject_Free()
 // Now we scan the linedef list.  For each two-sectored line,
 // merge the two sector groups into one.  That's it !
 //
-static void Reject_GroupSectors()
+static void Reject_GroupSectors(void)
 {
   for (size_t i = 0; i < lev_linedefs.size(); i++)
   {
@@ -719,7 +719,7 @@ static void Reject_GroupSectors()
   }
 }
 
-void Reject_DebugGroups()
+void Reject_DebugGroups(void)
 {
   // Note: this routine is destructive to the group numbers
   for (size_t i = 0; i < lev_sectors.size(); i++)
@@ -748,7 +748,7 @@ void Reject_DebugGroups()
   }
 }
 
-static void Reject_ProcessSectors()
+static void Reject_ProcessSectors(void)
 {
   for (size_t view = 0; view < lev_sectors.size(); view++)
   {
@@ -773,7 +773,7 @@ static void Reject_ProcessSectors()
   }
 }
 
-static void Reject_WriteLump()
+static void Reject_WriteLump(void)
 {
   Lump_c *lump = CreateLevelLump("REJECT", rej_total_size);
   lump->Write(rej_matrix, rej_total_size);
@@ -785,7 +785,7 @@ static void Reject_WriteLump()
 // determining all isolated groups of sectors (islands that are
 // surrounded by void space).
 //
-void PutReject()
+void PutReject(void)
 {
   if (!cur_info->do_reject || lev_sectors.size() == 0)
   {
@@ -845,7 +845,7 @@ size_t num_real_lines = 0;
 
 /* ----- allocation routines ---------------------------- */
 
-vertex_t *NewVertex()
+vertex_t *NewVertex(void)
 {
   vertex_t *V = UtilCalloc<vertex_t>(sizeof(vertex_t));
   V->index = lev_vertices.size();
@@ -853,7 +853,7 @@ vertex_t *NewVertex()
   return V;
 }
 
-linedef_t *NewLinedef()
+linedef_t *NewLinedef(void)
 {
   linedef_t *L = UtilCalloc<linedef_t>(sizeof(linedef_t));
   L->index = lev_linedefs.size();
@@ -861,7 +861,7 @@ linedef_t *NewLinedef()
   return L;
 }
 
-sidedef_t *NewSidedef()
+sidedef_t *NewSidedef(void)
 {
   sidedef_t *S = UtilCalloc<sidedef_t>(sizeof(sidedef_t));
   S->index = lev_sidedefs.size();
@@ -869,7 +869,7 @@ sidedef_t *NewSidedef()
   return S;
 }
 
-sector_t *NewSector()
+sector_t *NewSector(void)
 {
   sector_t *S = UtilCalloc<sector_t>(sizeof(sector_t));
   S->index = lev_sectors.size();
@@ -877,7 +877,7 @@ sector_t *NewSector()
   return S;
 }
 
-thing_t *NewThing()
+thing_t *NewThing(void)
 {
   thing_t *T = UtilCalloc<thing_t>(sizeof(thing_t));
   T->index = lev_things.size();
@@ -885,28 +885,28 @@ thing_t *NewThing()
   return T;
 }
 
-seg_t *NewSeg()
+seg_t *NewSeg(void)
 {
   seg_t *S = UtilCalloc<seg_t>(sizeof(seg_t));
   lev_segs.push_back(S);
   return S;
 }
 
-subsec_t *NewSubsec()
+subsec_t *NewSubsec(void)
 {
   subsec_t *S = UtilCalloc<subsec_t>(sizeof(subsec_t));
   lev_subsecs.push_back(S);
   return S;
 }
 
-node_t *NewNode()
+node_t *NewNode(void)
 {
   node_t *N = UtilCalloc<node_t>(sizeof(node_t));
   lev_nodes.push_back(N);
   return N;
 }
 
-walltip_t *NewWallTip()
+walltip_t *NewWallTip(void)
 {
   walltip_t *WT = UtilCalloc<walltip_t>(sizeof(walltip_t));
   lev_walltips.push_back(WT);
@@ -915,7 +915,7 @@ walltip_t *NewWallTip()
 
 /* ----- free routines ---------------------------- */
 
-void FreeVertices()
+void FreeVertices(void)
 {
   for (size_t i = 0; i < lev_vertices.size(); i++)
   {
@@ -925,7 +925,7 @@ void FreeVertices()
   lev_vertices.clear();
 }
 
-void FreeLinedefs()
+void FreeLinedefs(void)
 {
   for (size_t i = 0; i < lev_linedefs.size(); i++)
   {
@@ -935,7 +935,7 @@ void FreeLinedefs()
   lev_linedefs.clear();
 }
 
-void FreeSidedefs()
+void FreeSidedefs(void)
 {
   for (size_t i = 0; i < lev_sidedefs.size(); i++)
   {
@@ -945,7 +945,7 @@ void FreeSidedefs()
   lev_sidedefs.clear();
 }
 
-void FreeSectors()
+void FreeSectors(void)
 {
   for (size_t i = 0; i < lev_sectors.size(); i++)
   {
@@ -955,7 +955,7 @@ void FreeSectors()
   lev_sectors.clear();
 }
 
-void FreeThings()
+void FreeThings(void)
 {
   for (size_t i = 0; i < lev_things.size(); i++)
   {
@@ -965,7 +965,7 @@ void FreeThings()
   lev_things.clear();
 }
 
-void FreeSegs()
+void FreeSegs(void)
 {
   for (size_t i = 0; i < lev_segs.size(); i++)
   {
@@ -975,7 +975,7 @@ void FreeSegs()
   lev_segs.clear();
 }
 
-void FreeSubsecs()
+void FreeSubsecs(void)
 {
   for (size_t i = 0; i < lev_subsecs.size(); i++)
   {
@@ -985,7 +985,7 @@ void FreeSubsecs()
   lev_subsecs.clear();
 }
 
-void FreeNodes()
+void FreeNodes(void)
 {
   for (size_t i = 0; i < lev_nodes.size(); i++)
   {
@@ -995,7 +995,7 @@ void FreeNodes()
   lev_nodes.clear();
 }
 
-void FreeWallTips()
+void FreeWallTips(void)
 {
   for (size_t i = 0; i < lev_walltips.size(); i++)
   {
@@ -1048,7 +1048,7 @@ static inline sidedef_t *SafeLookupSidedef(uint16_t num)
   return lev_sidedefs[num];
 }
 
-void GetVertices()
+void GetVertices(void)
 {
   size_t count = 0;
 
@@ -1092,7 +1092,7 @@ void GetVertices()
   num_old_vert = lev_vertices.size();
 }
 
-void GetSectors()
+void GetSectors(void)
 {
   size_t count = 0;
 
@@ -1133,7 +1133,7 @@ void GetSectors()
   }
 }
 
-void GetThings()
+void GetThings(void)
 {
   size_t count = 0;
 
@@ -1176,7 +1176,7 @@ void GetThings()
   }
 }
 
-void GetThingsHexen()
+void GetThingsHexen(void)
 {
   size_t count = 0;
 
@@ -1219,7 +1219,7 @@ void GetThingsHexen()
   }
 }
 
-void GetSidedefs()
+void GetSidedefs(void)
 {
   size_t count = 0;
 
@@ -1260,7 +1260,7 @@ void GetSidedefs()
   }
 }
 
-void GetLinedefs()
+void GetLinedefs(void)
 {
   size_t count = 0;
 
@@ -1337,7 +1337,7 @@ void GetLinedefs()
   }
 }
 
-void GetLinedefsHexen()
+void GetLinedefsHexen(void)
 {
   size_t count = 0;
 
@@ -1765,7 +1765,7 @@ void ParseUDMF_Pass(const std::string &data, int pass)
   }
 }
 
-void ParseUDMF()
+void ParseUDMF(void)
 {
   Lump_c *lump = FindLevelLump("TEXTMAP");
 
@@ -1815,7 +1815,7 @@ void MarkOverflow(int flags)
   lev_overflows = true;
 }
 
-void PutVertices()
+void PutVertices(void)
 {
   // this size is worst-case scenario
   size_t size = lev_vertices.size() * sizeof(raw_vertex_t);
@@ -1875,7 +1875,7 @@ static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
   return (uint32_t)v->index;
 }
 
-void PutSegs()
+void PutSegs(void)
 {
   // this size is worst-case scenario
   size_t size = lev_segs.size() * sizeof(raw_seg_t);
@@ -1920,7 +1920,7 @@ void PutSegs()
   }
 }
 
-void PutSubsecs()
+void PutSubsecs(void)
 {
   size_t size = lev_subsecs.size() * sizeof(raw_subsec_t);
 
@@ -2052,7 +2052,7 @@ void PutNodes(node_t *root)
   }
 }
 
-void CheckLimits()
+void CheckLimits(void)
 {
   // this could potentially be 65536, since there are no reserved values
   // for sectors, but there may be source ports or tools treating 0xFFFF
@@ -2096,7 +2096,7 @@ struct Compare_seg_pred
   }
 };
 
-void SortSegs()
+void SortSegs(void)
 {
   // sort segs into ascending index
   std::sort(lev_segs.begin(), lev_segs.end(), Compare_seg_pred());
@@ -2351,7 +2351,7 @@ void PutZNodes(Lump_c *lump, node_t *root, bool xgl3)
   }
 }
 
-static size_t CalcZDoomNodesSize()
+static size_t CalcZDoomNodesSize(void)
 {
   // compute size of the ZDoom format nodes.
   // it does not need to be exact, but it *does* need to be bigger
@@ -2405,7 +2405,7 @@ void SaveXGL3Format(Lump_c *lump, node_t *root_node)
 
 /* ----- whole-level routines --------------------------- */
 
-void LoadLevel()
+void LoadLevel(void)
 {
   Lump_c *LEV = cur_wad->GetLump(lev_current_start);
 
@@ -2466,7 +2466,7 @@ void LoadLevel()
   }
 }
 
-void FreeLevel()
+void FreeLevel(void)
 {
   FreeVertices();
   FreeSidedefs();

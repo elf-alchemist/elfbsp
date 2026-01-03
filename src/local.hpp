@@ -23,11 +23,11 @@
 
 #pragma once
 
-#include "elfbsp.hpp"
 #include "core.hpp"
+#include "elfbsp.hpp"
 
-class Lump_c;
-class Wad_file;
+struct Lump_c;
+struct Wad_file;
 
 // storage of node building parameters
 extern buildinfo_t *cur_info;
@@ -49,10 +49,10 @@ void MinorIssue(const char *fmt, ...);
 
 // compute blockmap origin & size (the block_x/y/w/h variables)
 // based on the set of loaded linedefs.
-void InitBlockmap();
+void InitBlockmap(void);
 
 // build the blockmap and write the data into the BLOCKMAP lump
-void PutBlockmap();
+void PutBlockmap(void);
 
 // utility routines...
 void GetBlockmapBounds(int *x, int *y, int *w, int *h);
@@ -64,20 +64,19 @@ int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1
 //------------------------------------------------------------------------
 
 // build the reject table and write it into the REJECT lump
-void PutReject();
+void PutReject(void);
 
 //------------------------------------------------------------------------
 // LEVEL : Level structures & read/write functions.
 //------------------------------------------------------------------------
 
-class node_t;
-class sector_t;
-class quadtree_c;
+struct node_t;
+struct sector_t;
+struct quadtree_c;
 
 // a wall-tip is where a wall meets a vertex
-class walltip_t
+struct walltip_t
 {
-public:
   // link in list.  List is kept in ANTI-clockwise order.
   walltip_t *next;
   walltip_t *prev;
@@ -92,9 +91,8 @@ public:
   bool open_right;
 };
 
-class vertex_t
+struct vertex_t
 {
-public:
   // coordinates
   double x, y;
 
@@ -114,21 +112,20 @@ public:
 
   // list of wall-tips
   walltip_t *tip_set;
-
-public:
-  // check whether a line with the given delta coordinates from this
-  // vertex is open or closed.  If there exists a walltip at same
-  // angle, it is closed, likewise if line is in void space.
-  bool CheckOpen(double dx, double dy) const;
-
-  void AddWallTip(double dx, double dy, bool open_left, bool open_right);
-
-  bool Overlaps(const vertex_t *other) const;
 };
 
-class sector_t
+
+// check whether a line with the given delta coordinates from this
+// vertex is open or closed.  If there exists a walltip at same
+// angle, it is closed, likewise if line is in void space.
+bool CheckOpen(const vertex_t *vertex, double dx, double dy);
+
+void AddWallTip(const vertex_t *vertex, double dx, double dy, bool open_left, bool open_right);
+
+bool Overlaps(const vertex_t *vertex, const vertex_t *other);
+
+struct sector_t
 {
-public:
   // sector index.  Always valid after loading & pruning.
   size_t index;
 
@@ -149,9 +146,8 @@ public:
   sector_t *rej_prev;
 };
 
-class sidedef_t
+struct sidedef_t
 {
-public:
   // adjacent sector.  Can be nullptr (invalid sidedef)
   sector_t *sector;
 
@@ -159,9 +155,8 @@ public:
   size_t index;
 };
 
-class linedef_t
+struct linedef_t
 {
-public:
   // link for list
   linedef_t *Next;
 
@@ -200,16 +195,14 @@ public:
   // length lines has occurred.
   size_t index;
 
-public:
-  double MinX() const
+  inline double MinX(void) const
   {
     return std::min(start->x, end->x);
   }
 };
 
-class thing_t
+struct thing_t
 {
-public:
   int x, y;
   int type;
 
@@ -220,9 +213,8 @@ public:
   size_t index;
 };
 
-class seg_t
+struct seg_t
 {
-public:
   // link for list
   seg_t *next;
 
@@ -272,12 +264,6 @@ public:
   // this only used by ClockwiseOrder()
   double cmp_angle;
 
-public:
-  // compute the seg private info (psx/y, pex/y, pdx/y, etc).
-  void Recompute();
-
-  int PointOnLineSide(double x, double y) const;
-
   // compute the parallel and perpendicular distances from a partition
   // line to a point.
   inline double ParallelDist(double x, double y) const
@@ -291,13 +277,17 @@ public:
   }
 };
 
+// compute the seg private info (psx/y, pex/y, pdx/y, etc).
+void Recompute(seg_t *seg);
+
+int PointOnLineSide(seg_t *seg, double x, double y);
+
 // a seg with this index is removed by SortSegs().
 // it must be a very high value.
 static constexpr std::uint32_t SEG_IS_GARBAGE = (1 << 29);
 
-class subsec_t
+struct subsec_t
 {
-public:
   // list of segs
   seg_t *seg_list;
 
@@ -311,31 +301,28 @@ public:
   // approximate middle point
   double mid_x;
   double mid_y;
-
-public:
-  void AddToTail(seg_t *seg);
-
-  void DetermineMiddle();
-  void ClockwiseOrder();
-  void RenumberSegs(size_t &cur_seg_index);
-
-  void RoundOff();
-  void Normalise();
-
-  void SanityCheckClosed() const;
-  void SanityCheckHasRealSeg() const;
 };
 
-class bbox_t
+void AddToTail(subsec_t *subsec);
+
+void DetermineMiddle(subsec_t *subsec);
+void ClockwiseOrder(subsec_t *subsec);
+void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index);
+
+void RoundOff(subsec_t *subsec);
+void Normalise(subsec_t *subsec);
+
+void SanityCheckClosed(subsec_t *subsec);
+void SanityCheckHasRealSeg(subsec_t *subsec);
+
+struct bbox_t
 {
-public:
   int minx, miny;
   int maxx, maxy;
 };
 
-class child_t
+struct child_t
 {
-public:
   // child node or subsector (one must be nullptr)
   node_t *node;
   subsec_t *subsec;
@@ -344,9 +331,8 @@ public:
   bbox_t bounds;
 };
 
-class node_t
+struct node_t
 {
-public:
   // these coordinates are high precision to support UDMF.
   // in non-UDMF maps, they will actually be integral since a
   // partition line *always* comes from a normal linedef.
@@ -362,15 +348,14 @@ public:
   // created.
   size_t index;
 
-public:
-  void SetPartition(const seg_t *part);
 };
 
-class quadtree_c
+void SetPartition(node_t *node, const seg_t *part);
+
+struct quadtree_c
 {
   // NOTE: not a real quadtree, division is always binary.
 
-public:
   // coordinates on map for this block, from lower-left corner to
   // upper-right corner.  Fully inclusive, i.e (x,y) is inside this
   // block when x1 < x < x2 and y1 < y < y2.
@@ -390,25 +375,24 @@ public:
   // list of segs completely contained in this node.
   seg_t *list;
 
-public:
   quadtree_c(int _x1, int _y1, int _x2, int _y2);
-  ~quadtree_c();
+  ~quadtree_c(void);
 
-  void AddSeg(seg_t *seg);
-  void AddList(seg_t *list);
-
-  inline bool Empty() const
+  inline bool Empty(void) const
   {
     return (real_num + mini_num) == 0;
   }
-
-  void ConvertToList(seg_t **list);
-
-  // check relationship between this box and the partition line.
-  // returns -1 or +1 if box is definitively on a particular side,
-  // or 0 if the line intersects or touches the box.
-  int OnLineSide(const seg_t *part) const;
 };
+
+void AddSeg(quadtree_c *quadtree, seg_t *seg);
+void AddList(quadtree_c *quadtree, seg_t *list);
+
+void ConvertToList(quadtree_c *quadtree, seg_t **__list);
+
+// check relationship between this box and the partition line.
+// returns -1 or +1 if box is definitively on a particular side,
+// or 0 if the line intersects or touches the box.
+int OnLineSide(quadtree_c *quadtree, const seg_t *part);
 
 /* ----- Level data arrays ----------------------- */
 
@@ -429,28 +413,28 @@ extern size_t num_new_vert;
 /* ----- function prototypes ----------------------- */
 
 // allocation routines
-vertex_t *NewVertex();
-linedef_t *NewLinedef();
-sidedef_t *NewSidedef();
-sector_t *NewSector();
-thing_t *NewThing();
+vertex_t *NewVertex(void);
+linedef_t *NewLinedef(void);
+sidedef_t *NewSidedef(void);
+sector_t *NewSector(void);
+thing_t *NewThing(void);
 
-seg_t *NewSeg();
-subsec_t *NewSubsec();
-node_t *NewNode();
-walltip_t *NewWallTip();
+seg_t *NewSeg(void);
+subsec_t *NewSubsec(void);
+node_t *NewNode(void);
+walltip_t *NewWallTip(void);
 
 Lump_c *CreateLevelLump(const char *name, size_t max_size = NO_INDEX);
 Lump_c *FindLevelLump(const char *name);
 
 /* limit flags, to show what went wrong */
-static constexpr std::uint32_t LIMIT_VERTEXES = 0x000001;
-static constexpr std::uint32_t LIMIT_SECTORS = 0x000002;
-static constexpr std::uint32_t LIMIT_SIDEDEFS = 0x000004;
-static constexpr std::uint32_t LIMIT_LINEDEFS = 0x000008;
-static constexpr std::uint32_t LIMIT_SEGS = 0x000010;
-static constexpr std::uint32_t LIMIT_SSECTORS = 0x000020;
-static constexpr std::uint32_t LIMIT_NODES = 0x000040;
+static constexpr std::uint32_t LIMIT_VERTEXES = BIT(0);
+static constexpr std::uint32_t LIMIT_SECTORS = BIT(1);
+static constexpr std::uint32_t LIMIT_SIDEDEFS = BIT(2);
+static constexpr std::uint32_t LIMIT_LINEDEFS = BIT(3);
+static constexpr std::uint32_t LIMIT_SEGS = BIT(4);
+static constexpr std::uint32_t LIMIT_SSECTORS = BIT(5);
+static constexpr std::uint32_t LIMIT_NODES = BIT(6);
 
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
@@ -497,9 +481,8 @@ inline void ListAddSeg(seg_t **list_ptr, seg_t *seg)
 // an "intersection" remembers the vertex that touches a BSP divider
 // line (especially a new vertex that is created at a seg split).
 
-class intersection_t
+struct intersection_t
 {
-public:
   // link in list.  The intersection list is kept sorted by
   // along_dist, in ascending order.
   intersection_t *next;
@@ -559,7 +542,7 @@ void FreeIntersections(void);
 
 // scan all the linedef of the level and convert each sidedef into a
 // seg (or seg pair).  Returns the list of segs.
-seg_t *CreateSegs();
+seg_t *CreateSegs(void);
 
 quadtree_c *TreeFromSegList(seg_t *list);
 
@@ -581,14 +564,14 @@ int ComputeBspHeight(const node_t *node);
 // [ This cannot be done DURING BuildNodes() since splitting a seg with
 //   a partner will insert another seg into that partner's list, usually
 //   in the wrong place order-wise. ]
-void ClockwiseBspTree();
+void ClockwiseBspTree(void);
 
 // traverse the BSP tree and do whatever is necessary to convert the
 // node information from GL standard to normal standard (for example,
 // removing minisegs).
-void NormaliseBspTree();
+void NormaliseBspTree(void);
 
 // traverse the BSP tree, doing whatever is necessary to round
 // vertices to integer coordinates (for example, removing segs whose
 // rounded coordinates degenerate to the same point).
-void RoundOffBspTree();
+void RoundOffBspTree(void);

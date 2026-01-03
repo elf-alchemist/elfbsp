@@ -23,7 +23,7 @@
 
 #include "core.hpp"
 
-class Wad_file;
+struct Wad_file;
 
 typedef enum
 {
@@ -35,11 +35,8 @@ typedef enum
 
 } map_format_e;
 
-class Lump_c
+struct Lump_c
 {
-  friend class Wad_file;
-
-private:
   Wad_file *parent;
 
   std::string lumpname;
@@ -53,15 +50,14 @@ private:
 
   void MakeEntry(raw_wad_entry_t *entry);
 
-public:
-  ~Lump_c();
+  ~Lump_c(void);
 
-  const char *Name() const
+  const char *Name(void) const
   {
     return lumpname.c_str();
   }
 
-  size_t Length() const
+  size_t Length(void) const
   {
     return l_length;
   }
@@ -85,7 +81,7 @@ public:
   bool Write(const void *data, size_t len);
 
   // mark the lump as finished (after writing data to it).
-  bool Finish();
+  bool Finish(void);
 
   // predicate for std::sort()
   struct offset_CMP_pred
@@ -96,21 +92,12 @@ public:
     }
   };
 
-private:
-  // deliberately don't implement these
-  Lump_c(const Lump_c &other);
-  Lump_c &operator=(const Lump_c &other);
 };
 
 //------------------------------------------------------------------------
 
-class Wad_file
+struct Wad_file
 {
-  friend class Lump_c;
-  friend void W_LoadFlats();
-  friend void W_LoadTextures_TX_START(Wad_file *wf);
-
-private:
   std::string filename;
 
   char mode; // mode value passed to ::Open()
@@ -144,9 +131,7 @@ private:
 
   // constructor is private
   Wad_file(const char *_name, char _mode, FILE *_fp);
-
-public:
-  ~Wad_file();
+  ~Wad_file(void);
 
   // open a wad file.
   //
@@ -163,22 +148,22 @@ public:
   // check the given wad file exists and is a WAD file
   static bool Validate(const char *filename);
 
-  const char *PathName() const
+  const char *PathName(void) const
   {
     return filename.c_str();
   }
 
-  bool IsReadOnly() const
+  bool IsReadOnly(void) const
   {
     return mode == 'r';
   }
 
-  size_t TotalSize() const
+  size_t TotalSize(void) const
   {
     return total_size;
   }
 
-  size_t NumLumps() const
+  size_t NumLumps(void) const
   {
     return directory.size();
   }
@@ -189,7 +174,7 @@ public:
 
   Lump_c *FindLumpInNamespace(const char *name, char group);
 
-  size_t LevelCount() const
+  size_t LevelCount(void) const
   {
     return levels.size();
   }
@@ -200,20 +185,20 @@ public:
   // these return a level number (0 .. count-1)
   size_t LevelFind(const char *name);
   size_t LevelFindByNumber(int32_t number);
-  size_t LevelFindFirst();
+  size_t LevelFindFirst(void);
 
   // returns a lump index, -1 if not found
   size_t LevelLookupLump(size_t lev_num, const char *name);
 
   map_format_e LevelFormat(size_t lev_num);
 
-  void SortLevels();
+  void SortLevels(void);
 
   // check whether another program has modified this WAD, and return
   // either true or false.  We test for change in file size, change
   // in directory size or location, and directory contents (CRC).
   // [ NOT USED YET.... ]
-  bool WasExternallyModified();
+  bool WasExternallyModified(void);
 
   // backup the current wad into the given filename.
   // returns true if successful, false on error.
@@ -222,8 +207,8 @@ public:
   // all changes to the wad must occur between calls to BeginWrite()
   // and EndWrite() methods.  the on-disk wad directory may be trashed
   // during this period, it will be re-written by EndWrite().
-  void BeginWrite();
-  void EndWrite();
+  void BeginWrite(void);
+  void EndWrite(void);
 
   // change name of a lump (can be a level marker too)
   void RenameLump(size_t index, const char *new_name);
@@ -261,19 +246,18 @@ public:
   // RemoveLumps(), RemoveLevel() and EndWrite() also reset it.
   void InsertPoint(size_t index = NO_INDEX);
 
-private:
   static Wad_file *Create(const char *filename, char mode);
 
   // read the existing directory.
-  void ReadDirectory();
+  void ReadDirectory(void);
 
-  void DetectLevels();
-  void ProcessNamespaces();
+  void DetectLevels(void);
+  void ProcessNamespaces(void);
 
   // look at all the lumps and determine the lowest offset from
   // start of file where we can write new data.  The directory itself
   // is ignored for this.
-  size_t HighWaterMark();
+  size_t HighWaterMark(void);
 
   // look at all lumps in directory and determine the lowest offset
   // where a lump of the given length will fit.  Returns same as
@@ -291,24 +275,15 @@ private:
   size_t WritePadding(size_t count);
 
   // write the new directory, updating the dir_xxx variables
-  // (including the CRC).
-  void WriteDirectory();
+  void WriteDirectory(void);
 
   void FixGroup(std::vector<size_t> &group, size_t index, size_t num_added, size_t num_removed);
 
-private:
-  // deliberately don't implement these
-  Wad_file(const Wad_file &other);
-  Wad_file &operator=(const Wad_file &other);
-
-private:
   // predicate for sorting the levels[] vector
   struct level_name_CMP_pred
   {
-  private:
     Wad_file *wad;
 
-  public:
     level_name_CMP_pred(Wad_file *_w) : wad(_w)
     {
     }

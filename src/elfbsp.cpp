@@ -139,7 +139,7 @@ bool CheckMapInMaplist(size_t lev_idx)
   return false;
 }
 
-build_result_e BuildFile()
+build_result_e BuildFile(void)
 {
   config.total_warnings = 0;
   config.total_minor_issues = 0;
@@ -319,28 +319,28 @@ void VisitFile(unsigned int idx, const char *filename)
 
 // ----- user information -----------------------------
 
-void ShowDoc()
+void ShowDoc(void)
 {
   printf(PRINT_DOC);
 
   fflush(stdout);
 }
 
-void ShowHelp()
+void ShowHelp(void)
 {
   printf(PRINT_HELP);
 
   fflush(stdout);
 }
 
-void ShowVersion()
+void ShowVersion(void)
 {
   printf("%s\n", PROJECT_STRING);
 
   fflush(stdout);
 }
 
-void ShowBanner()
+void ShowBanner(void)
 {
   printf("+---------------------------------------------------+\n");
   printf("|   ELFBSP %s (C) 2025 Guilherme Miranda, et al   |\n", PROJECT_VERSION);

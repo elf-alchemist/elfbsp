@@ -343,10 +343,10 @@ void DetectPolyobjSectors(bool is_udmf)
 
 /* ----- analysis routines ----------------------------- */
 
-bool vertex_t::Overlaps(const vertex_t *other) const
+bool Overlaps(const vertex_t * vertex, const vertex_t *other)
 {
-  double dx = fabs(other->x - x);
-  double dy = fabs(other->y - y);
+  double dx = fabs(other->x - vertex->x);
+  double dy = fabs(other->y - vertex->y);
   return (dx < DIST_EPSILON) && (dy < DIST_EPSILON);
 }
 
@@ -386,7 +386,7 @@ void DetectOverlappingVertices(void)
         break;
       }
 
-      if (A->Overlaps(B))
+      if (Overlaps(A, B))
       {
         // found an overlap !
         B->overlap = A->overlap ? A->overlap : A;
@@ -514,9 +514,9 @@ void DetectOverlappingLines(void)
 
 /* ----- vertex routines ------------------------------- */
 
-void vertex_t::AddWallTip(double dx, double dy, bool open_left, bool open_right)
+void AddWallTip(vertex_t *vertex, double dx, double dy, bool open_left, bool open_right)
 {
-  SYS_ASSERT(overlap == nullptr);
+  SYS_ASSERT(vertex->overlap == nullptr);
 
   walltip_t *tip = NewWallTip();
   walltip_t *after;
@@ -526,7 +526,7 @@ void vertex_t::AddWallTip(double dx, double dy, bool open_left, bool open_right)
   tip->open_right = open_right;
 
   // find the correct place (order is increasing angle)
-  for (after = tip_set; after && after->next; after = after->next)
+  for (after = vertex->tip_set; after && after->next; after = after->next)
   {
   }
 
@@ -536,7 +536,7 @@ void vertex_t::AddWallTip(double dx, double dy, bool open_left, bool open_right)
   }
 
   // link it in
-  tip->next = after ? after->next : tip_set;
+  tip->next = after ? after->next : vertex->tip_set;
   tip->prev = after;
 
   if (after)
@@ -550,16 +550,16 @@ void vertex_t::AddWallTip(double dx, double dy, bool open_left, bool open_right)
   }
   else
   {
-    if (tip_set != nullptr)
+    if (vertex->tip_set != nullptr)
     {
-      tip_set->prev = tip;
+      vertex->tip_set->prev = tip;
     }
 
-    tip_set = tip;
+    vertex->tip_set = tip;
   }
 }
 
-void CalculateWallTips()
+void CalculateWallTips(void)
 {
   for (size_t i = 0; i < lev_linedefs.size(); i++)
   {
@@ -581,8 +581,8 @@ void CalculateWallTips()
     // note that start->overlap and end->overlap should be nullptr
     // due to logic in DetectOverlappingVertices.
 
-    L->start->AddWallTip(x2 - x1, y2 - y1, left, right);
-    L->end->AddWallTip(x1 - x2, y1 - y2, right, left);
+    AddWallTip(L->start, x2 - x1, y2 - y1, left, right);
+    AddWallTip(L->end, x1 - x2, y1 - y2, right, left);
   }
 
   if constexpr (DEBUG_WALLTIPS)
@@ -617,8 +617,8 @@ vertex_t *NewVertexFromSplitSeg(seg_t *seg, double x, double y)
   // compute wall-tip info
   if (seg->linedef == nullptr)
   {
-    vert->AddWallTip(seg->pdx, seg->pdy, true, true);
-    vert->AddWallTip(-seg->pdx, -seg->pdy, true, true);
+    AddWallTip(vert, seg->pdx, seg->pdy, true, true);
+    AddWallTip(vert, -seg->pdx, -seg->pdy, true, true);
   }
   else
   {
@@ -628,8 +628,8 @@ vertex_t *NewVertexFromSplitSeg(seg_t *seg, double x, double y)
     bool left = (back != nullptr) && (back->sector != nullptr);
     bool right = (front != nullptr) && (front->sector != nullptr);
 
-    vert->AddWallTip(seg->pdx, seg->pdy, left, right);
-    vert->AddWallTip(-seg->pdx, -seg->pdy, right, left);
+    AddWallTip(vert, seg->pdx, seg->pdy, left, right);
+    AddWallTip(vert, -seg->pdx, -seg->pdy, right, left);
   }
 
   return vert;
@@ -674,7 +674,7 @@ vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end)
   return vert;
 }
 
-bool vertex_t::CheckOpen(double dx, double dy) const
+bool CheckOpen(vertex_t *vertex, double dx, double dy)
 {
   const walltip_t *tip;
 
@@ -684,7 +684,7 @@ bool vertex_t::CheckOpen(double dx, double dy) const
   // direction of the given direction (which is relative to the
   // vertex).
 
-  for (tip = tip_set; tip; tip = tip->next)
+  for (tip = vertex->tip_set; tip; tip = tip->next)
   {
     if (fabs(tip->angle - angle) < ANG_EPSILON || fabs(tip->angle - angle) > (360.0 - ANG_EPSILON))
     {
@@ -697,7 +697,7 @@ bool vertex_t::CheckOpen(double dx, double dy) const
   // the angle we're interested in.  Therefore we'll be on the RIGHT
   // side of that wall-tip.
 
-  for (tip = tip_set; tip; tip = tip->next)
+  for (tip = vertex->tip_set; tip; tip = tip->next)
   {
     if (angle + ANG_EPSILON < tip->angle)
     {

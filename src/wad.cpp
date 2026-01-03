@@ -51,7 +51,7 @@ Lump_c::Lump_c(Wad_file *_par, const raw_wad_entry_t *entry) : parent(_par), lum
   }
 }
 
-Lump_c::~Lump_c()
+Lump_c::~Lump_c(void)
 {
   // nothing needed
 }
@@ -105,7 +105,7 @@ bool Lump_c::Write(const void *data, size_t len)
   return (fwrite(data, len, 1, parent->fp) == 1);
 }
 
-bool Lump_c::Finish()
+bool Lump_c::Finish(void)
 {
   if (l_length == 0)
   {
@@ -126,7 +126,7 @@ Wad_file::Wad_file(const char *_name, char _mode, FILE *_fp)
   // nothing needed
 }
 
-Wad_file::~Wad_file()
+Wad_file::~Wad_file(void)
 {
   if constexpr (DEBUG_WAD)
   {
@@ -469,7 +469,7 @@ size_t Wad_file::LevelFindByNumber(int32_t number)
   return NO_INDEX; // not found
 }
 
-size_t Wad_file::LevelFindFirst()
+size_t Wad_file::LevelFindFirst(void)
 {
   if (levels.size() > 0)
   {
@@ -556,7 +556,7 @@ Lump_c *Wad_file::FindLumpInNamespace(const char *name, char group)
   return nullptr; // not found!
 }
 
-void Wad_file::ReadDirectory()
+void Wad_file::ReadDirectory(void)
 {
   // WISH: no fatal errors
 
@@ -603,7 +603,7 @@ void Wad_file::ReadDirectory()
   }
 }
 
-void Wad_file::DetectLevels()
+void Wad_file::DetectLevels(void)
 {
   // Determine what lumps in the wad are level markers, based on the
   // lumps which follow it.  Store the result in the 'levels' vector.
@@ -666,7 +666,7 @@ void Wad_file::DetectLevels()
   SortLevels();
 }
 
-void Wad_file::SortLevels()
+void Wad_file::SortLevels(void)
 {
   std::sort(levels.begin(), levels.end(), level_name_CMP_pred(this));
 }
@@ -697,7 +697,7 @@ static bool IsDummyMarker(const char *name)
   return false;
 }
 
-void Wad_file::ProcessNamespaces()
+void Wad_file::ProcessNamespaces(void)
 {
   char active = 0;
 
@@ -865,7 +865,7 @@ void Wad_file::ProcessNamespaces()
   }
 }
 
-bool Wad_file::WasExternallyModified()
+bool Wad_file::WasExternallyModified(void)
 {
   // this method is an unused stub
   return false;
@@ -875,7 +875,7 @@ bool Wad_file::WasExternallyModified()
 //  WAD Writing Interface
 //------------------------------------------------------------------------
 
-void Wad_file::BeginWrite()
+void Wad_file::BeginWrite(void)
 {
   if (mode == 'r')
   {
@@ -892,7 +892,7 @@ void Wad_file::BeginWrite()
   begun_write = true;
 }
 
-void Wad_file::EndWrite()
+void Wad_file::EndWrite(void)
 {
   if (!begun_write)
   {
@@ -1083,7 +1083,7 @@ void Wad_file::InsertPoint(size_t index)
   insert_point = index;
 }
 
-size_t Wad_file::HighWaterMark()
+size_t Wad_file::HighWaterMark(void)
 {
   size_t offset = sizeof(raw_wad_header_t);
 
@@ -1261,7 +1261,7 @@ size_t Wad_file::WritePadding(size_t count)
 //                   [ investigate what the difference is.... ]
 //
 
-void Wad_file::WriteDirectory()
+void Wad_file::WriteDirectory(void)
 {
   dir_start = PositionForWrite();
   dir_count = NumLumps();

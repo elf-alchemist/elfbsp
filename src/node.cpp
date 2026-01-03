@@ -86,7 +86,7 @@ public:
 
 std::vector<intersection_t *> alloc_cuts;
 
-intersection_t *NewIntersection()
+intersection_t *NewIntersection(void)
 {
   intersection_t *cut = new intersection_t;
 
@@ -108,24 +108,24 @@ void FreeIntersections(void)
 //
 // Fill in the fields 'angle', 'len', 'pdx', 'pdy', etc...
 //
-void seg_t::Recompute()
+void Recompute(seg_t *seg)
 {
-  psx = start->x;
-  psy = start->y;
-  pex = end->x;
-  pey = end->y;
-  pdx = pex - psx;
-  pdy = pey - psy;
+  seg->psx = seg->start->x;
+  seg->psy = seg->start->y;
+  seg->pex = seg->end->x;
+  seg->pey = seg->end->y;
+  seg->pdx = seg->pex - seg->psx;
+  seg->pdy = seg->pey - seg->psy;
 
-  p_length = hypot(pdx, pdy);
+  seg->p_length = hypot(seg->pdx, seg->pdy);
 
-  if (p_length <= 0)
+  if (seg->p_length <= 0)
   {
-    FatalError("Seg %p has zero p_length.\n", this);
+    FatalError("Seg %p has zero p_length.\n", seg);
   }
 
-  p_perp = psy * pdx - psx * pdy;
-  p_para = -psx * pdx - psy * pdy;
+  seg->p_perp = seg->psy * seg->pdx - seg->psx * seg->pdy;
+  seg->p_para = -seg->psx * seg->pdx - seg->psy * seg->pdy;
 }
 
 //
@@ -165,8 +165,8 @@ seg_t *SplitSeg(seg_t *old_seg, double x, double y)
   old_seg->end = new_vert;
   new_seg->start = new_vert;
 
-  old_seg->Recompute();
-  new_seg->Recompute();
+  Recompute(old_seg);
+  Recompute(new_seg);
 
   if constexpr (DEBUG_SPLIT)
   {
@@ -194,8 +194,8 @@ seg_t *SplitSeg(seg_t *old_seg, double x, double y)
     old_seg->partner->start = new_vert;
     new_seg->partner->end = new_vert;
 
-    old_seg->partner->Recompute();
-    new_seg->partner->Recompute();
+    Recompute(old_seg->partner);
+    Recompute(new_seg->partner);
 
     // link it into list
     old_seg->partner->next = new_seg->partner;
@@ -252,8 +252,8 @@ inline void ComputeIntersection(seg_t *seg, seg_t *part, double perp_c, double p
 
 void AddIntersection(intersection_t **cut_list, vertex_t *vert, seg_t *part, bool self_ref)
 {
-  bool open_before = vert->CheckOpen(-part->pdx, -part->pdy);
-  bool open_after = vert->CheckOpen(part->pdx, part->pdy);
+  bool open_before = CheckOpen(vert, -part->pdx, -part->pdy);
+  bool open_after = CheckOpen(vert, part->pdx, part->pdy);
 
   double along_dist = part->ParallelDist(vert->x, vert->y);
 
@@ -263,7 +263,7 @@ void AddIntersection(intersection_t **cut_list, vertex_t *vert, seg_t *part, boo
   /* merge with any existing vertex? */
   for (cut = (*cut_list); cut; cut = cut->next)
   {
-    if (vert->Overlaps(cut->vertex))
+    if (Overlaps(vert, cut->vertex))
     {
       return;
     }
@@ -325,7 +325,7 @@ bool EvalPartitionWorker(quadtree_c *tree, seg_t *part, double best_cost, eval_i
   //       all the segs within it at once.  Only when the partition
   //       line intercepts the box do we need to go deeper into it.
 
-  int side = tree->OnLineSide(part);
+  int side = OnLineSide(tree, part);
 
   if (side < 0)
   {
@@ -1021,8 +1021,8 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
 
     seg->source_line = buddy->source_line = part->linedef;
 
-    seg->Recompute();
-    buddy->Recompute();
+    Recompute(seg);
+    Recompute(buddy);
 
     // add the new segs to the appropriate lists
     ListAddSeg(right_list, seg);
@@ -1060,42 +1060,42 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
 // Rewritten by Andrew Apted (-AJA-), 1999-2000.
 //
 
-void node_t::SetPartition(const seg_t *part)
+void SetPartition(node_t* node, const seg_t *part)
 {
   SYS_ASSERT(part->linedef);
 
   if (part->side == 0)
   {
-    x = part->linedef->start->x;
-    y = part->linedef->start->y;
-    dx = part->linedef->end->x - x;
-    dy = part->linedef->end->y - y;
+    node->x = part->linedef->start->x;
+    node->y = part->linedef->start->y;
+    node->dx = part->linedef->end->x - node->x;
+    node->dy = part->linedef->end->y - node->y;
   }
   else /* left side */
   {
-    x = part->linedef->end->x;
-    y = part->linedef->end->y;
-    dx = part->linedef->start->x - x;
-    dy = part->linedef->start->y - y;
+    node->x = part->linedef->end->x;
+    node->y = part->linedef->end->y;
+    node->dx = part->linedef->start->x - node->x;
+    node->dy = part->linedef->start->y - node->y;
   }
 
   /* check for very long partition (overflow of dx,dy in NODES) */
 
-  if (fabs(dx) > 32766 || fabs(dy) > 32766)
+  if (fabs(node->dx) > 32766 || fabs(node->dy) > 32766)
   {
     // XGL3 nodes are 16.16 fixed point, hence we still need
     // to reduce the delta.
-    dx = dx / 2.0;
-    dy = dy / 2.0;
+    node->dx = node->dx / 2.0;
+    node->dy = node->dy / 2.0;
   }
 }
 
 //
 // Returns -1 for left, +1 for right, or 0 for intersect.
 //
-int seg_t::PointOnLineSide(double x, double y) const
+int PointOnLineSide(const seg_t *seg, double x, double y)
 {
-  double perp = PerpDist(x, y);
+  double perp = seg->PerpDist(x, y);
 
   if (fabs(perp) <= DIST_EPSILON)
   {
@@ -1131,7 +1131,7 @@ quadtree_c::quadtree_c(int _x1, int _y1, int _x2, int _y2)
   }
 }
 
-quadtree_c::~quadtree_c()
+quadtree_c::~quadtree_c(void)
 {
   if (subs[0] != nullptr)
   {
@@ -1143,19 +1143,19 @@ quadtree_c::~quadtree_c()
   }
 }
 
-void quadtree_c::AddSeg(seg_t *seg)
+void AddSeg(quadtree_c *quadtree, seg_t *seg)
 {
   // update seg counts
   if (seg->linedef != nullptr)
   {
-    real_num++;
+    quadtree->real_num++;
   }
   else
   {
-    mini_num++;
+    quadtree->mini_num++;
   }
 
-  if (subs[0] != nullptr)
+  if (quadtree->subs[0] != nullptr)
   {
     double x_min = std::min(seg->start->x, seg->end->x);
     double y_min = std::min(seg->start->y, seg->end->y);
@@ -1163,29 +1163,29 @@ void quadtree_c::AddSeg(seg_t *seg)
     double x_max = std::max(seg->start->x, seg->end->x);
     double y_max = std::max(seg->start->y, seg->end->y);
 
-    if ((x2 - x1) >= (y2 - y1))
+    if ((quadtree->x2 - quadtree->x1) >= (quadtree->y2 - quadtree->y1))
     {
-      if (x_min > subs[1]->x1)
+      if (x_min > quadtree->subs[1]->x1)
       {
-        subs[1]->AddSeg(seg);
+        AddSeg(quadtree->subs[1], seg);
         return;
       }
-      else if (x_max < subs[0]->x2)
+      else if (x_max < quadtree->subs[0]->x2)
       {
-        subs[0]->AddSeg(seg);
+        AddSeg(quadtree->subs[0], seg);
         return;
       }
     }
     else
     {
-      if (y_min > subs[1]->y1)
+      if (y_min > quadtree->subs[1]->y1)
       {
-        subs[1]->AddSeg(seg);
+        AddSeg(quadtree->subs[1], seg);
         return;
       }
-      else if (y_max < subs[0]->y2)
+      else if (y_max < quadtree->subs[0]->y2)
       {
-        subs[0]->AddSeg(seg);
+        AddSeg(quadtree->subs[0], seg);
         return;
       }
     }
@@ -1193,48 +1193,48 @@ void quadtree_c::AddSeg(seg_t *seg)
 
   // link into this node
 
-  ListAddSeg(&list, seg);
+  ListAddSeg(&quadtree->list, seg);
 
-  seg->quad = this;
+  seg->quad = quadtree;
 }
 
-void quadtree_c::AddList(seg_t *new_list)
+void AddList(quadtree_c *quadtree, seg_t *new_list)
 {
   while (new_list != nullptr)
   {
     seg_t *seg = new_list;
     new_list = seg->next;
 
-    AddSeg(seg);
+    AddSeg(quadtree, seg);
   }
 }
 
-void quadtree_c::ConvertToList(seg_t **_list)
+void ConvertToList(quadtree_c *quadtree, seg_t **_list)
 {
-  while (list != nullptr)
+  while (quadtree->list != nullptr)
   {
-    seg_t *seg = list;
-    list = seg->next;
+    seg_t *seg = quadtree->list;
+    quadtree->list = seg->next;
 
     ListAddSeg(_list, seg);
   }
 
-  if (subs[0] != nullptr)
+  if (quadtree->subs[0] != nullptr)
   {
-    subs[0]->ConvertToList(_list);
-    subs[1]->ConvertToList(_list);
+    ConvertToList(quadtree->subs[0], _list);
+    ConvertToList(quadtree->subs[1], _list);
   }
 
   // this quadtree is empty now
 }
 
-int quadtree_c::OnLineSide(const seg_t *part) const
+int OnLineSide(quadtree_c *quadtree, const seg_t *part)
 {
   // expand bounds a bit, adds some safety and loses nothing
-  double tx1 = (double)x1 - 0.4;
-  double ty1 = (double)y1 - 0.4;
-  double tx2 = (double)x2 + 0.4;
-  double ty2 = (double)y2 + 0.4;
+  double tx1 = (double)quadtree->x1 - 0.4;
+  double ty1 = (double)quadtree->y1 - 0.4;
+  double tx2 = (double)quadtree->x2 + 0.4;
+  double ty2 = (double)quadtree->y2 + 0.4;
 
   int p1, p2;
 
@@ -1264,13 +1264,13 @@ int quadtree_c::OnLineSide(const seg_t *part) const
   // now handle the cases of positive and negative slope
   else if (part->pdx * part->pdy > 0)
   {
-    p1 = part->PointOnLineSide(tx1, ty2);
-    p2 = part->PointOnLineSide(tx2, ty1);
+    p1 = PointOnLineSide(part, tx1, ty2);
+    p2 = PointOnLineSide(part, tx2, ty1);
   }
   else // NEGATIVE
   {
-    p1 = part->PointOnLineSide(tx1, ty1);
-    p2 = part->PointOnLineSide(tx2, ty2);
+    p1 = PointOnLineSide(part, tx1, ty1);
+    p2 = PointOnLineSide(part, tx2, ty2);
   }
 
   // line goes through or touches the box?
@@ -1311,7 +1311,7 @@ seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *
   seg->source_line = seg->linedef;
   seg->index = NO_INDEX;
 
-  seg->Recompute();
+  Recompute(seg);
 
   return seg;
 }
@@ -1320,7 +1320,7 @@ seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *
 // Initially create all segs, one for each linedef.
 // Must be called *after* InitBlockmap().
 //
-seg_t *CreateSegs()
+seg_t *CreateSegs(void)
 {
   seg_t *list = nullptr;
 
@@ -1396,44 +1396,44 @@ seg_t *CreateSegs()
 quadtree_c *TreeFromSegList(seg_t *list, const bbox_t *bounds)
 {
   quadtree_c *tree = new quadtree_c(bounds->minx, bounds->miny, bounds->maxx, bounds->maxy);
-  tree->AddList(list);
+  AddList(tree, list);
   return tree;
 }
 
-void subsec_t::DetermineMiddle()
+void DetermineMiddle(subsec_t *subsec)
 {
-  mid_x = 0.0;
-  mid_y = 0.0;
+  subsec->mid_x = 0;
+  subsec->mid_y = 0;
 
   int total = 0;
 
   // compute middle coordinates
-  for (seg_t *seg = seg_list; seg; seg = seg->next)
+  for (seg_t *seg = subsec->seg_list; seg; seg = seg->next)
   {
-    mid_x += seg->start->x + seg->end->x;
-    mid_y += seg->start->y + seg->end->y;
+    subsec->mid_x += seg->start->x + seg->end->x;
+    subsec->mid_y += seg->start->y + seg->end->y;
 
     total += 2;
   }
 
   if (total > 0)
   {
-    mid_x /= total;
-    mid_y /= total;
+    subsec->mid_x /= total;
+    subsec->mid_y /= total;
   }
 }
 
-void subsec_t::AddToTail(seg_t *seg)
+void AddToTail(subsec_t *subsec, seg_t *seg)
 {
   seg->next = nullptr;
 
-  if (seg_list == nullptr)
+  if (subsec->seg_list == nullptr)
   {
-    seg_list = seg;
+    subsec->seg_list = seg;
     return;
   }
 
-  seg_t *tail = seg_list;
+  seg_t *tail = subsec->seg_list;
   while (tail->next != nullptr)
   {
     tail = tail->next;
@@ -1442,7 +1442,7 @@ void subsec_t::AddToTail(seg_t *seg)
   tail->next = seg;
 }
 
-void subsec_t::ClockwiseOrder()
+void ClockwiseOrder(subsec_t *subsec)
 {
   seg_t *seg;
 
@@ -1453,10 +1453,10 @@ void subsec_t::ClockwiseOrder()
 
   std::vector<seg_t *> array;
 
-  for (seg = seg_list; seg; seg = seg->next)
+  for (seg = subsec->seg_list; seg; seg = seg->next)
   {
     // compute angles now
-    seg->cmp_angle = ComputeAngle(seg->start->x - mid_x, seg->start->y - mid_y);
+    seg->cmp_angle = ComputeAngle(seg->start->x - subsec->mid_x, seg->start->y - subsec->mid_y);
     array.push_back(seg);
   }
 
@@ -1517,19 +1517,19 @@ void subsec_t::ClockwiseOrder()
   }
 
   // transfer sorted array back into sub
-  seg_list = nullptr;
+  subsec->seg_list = nullptr;
 
   for (size_t j = 0; j < array.size(); j++)
   {
     size_t k = (first + j) % array.size();
-    AddToTail(array[k]);
+    AddToTail(subsec, array[k]);
   }
 
   if constexpr (DEBUG_SORTER)
   {
-    Debug("Sorted SEGS around (%1.1f,%1.1f)\n", mid_x, mid_y);
+    Debug("Sorted SEGS around (%1.1f,%1.1f)\n", subsec->mid_x, subsec->mid_y);
 
-    for (seg = seg_list; seg; seg = seg->next)
+    for (seg = subsec->seg_list; seg; seg = seg->next)
     {
       Debug("  Seg %p: Angle %1.6f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, seg->cmp_angle, seg->start->x,
                       seg->start->y, seg->end->x, seg->end->y);
@@ -1537,16 +1537,16 @@ void subsec_t::ClockwiseOrder()
   }
 }
 
-void subsec_t::SanityCheckClosed() const
+void SanityCheckClosed(subsec_t *subsec)
 {
   int gaps = 0;
   int total = 0;
 
   seg_t *seg, *next;
 
-  for (seg = seg_list; seg; seg = seg->next)
+  for (seg = subsec->seg_list; seg; seg = seg->next)
   {
-    next = seg->next ? seg->next : seg_list;
+    next = seg->next ? seg->next : subsec->seg_list;
 
     double dx = seg->end->x - next->start->x;
     double dy = seg->end->y - next->start->y;
@@ -1561,11 +1561,12 @@ void subsec_t::SanityCheckClosed() const
 
   if (gaps > 0)
   {
-    MinorIssue("Subsector #%d near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)\n", index, mid_x, mid_y, gaps, total);
+    MinorIssue("Subsector #%d near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)\n", index, subsec->mid_x, subsec->mid_y, gaps,
+               total);
 
     if constexpr (DEBUG_SUBSEC)
     {
-      for (seg = seg_list; seg; seg = seg->next)
+      for (seg = subsec->seg_list; seg; seg = seg->next)
       {
         Debug("  SEG %p  (%1.1f,%1.1f) --> (%1.1f,%1.1f)\n", seg, seg->start->x, seg->start->y, seg->end->x,
                         seg->end->y);
@@ -1574,9 +1575,9 @@ void subsec_t::SanityCheckClosed() const
   }
 }
 
-void subsec_t::SanityCheckHasRealSeg() const
+void SanityCheckHasRealSeg(subsec_t *subsec)
 {
-  for (seg_t *seg = seg_list; seg; seg = seg->next)
+  for (seg_t *seg = subsec->seg_list; seg; seg = seg->next)
   {
     if (seg->linedef != nullptr)
     {
@@ -1584,28 +1585,28 @@ void subsec_t::SanityCheckHasRealSeg() const
     }
   }
 
-  FatalError("Subsector #%d near (%1.1f,%1.1f) has no real seg!\n", index, mid_x, mid_y);
+  FatalError("Subsector #%d near (%1.1f,%1.1f) has no real seg!\n", index, subsec->mid_x, subsec->mid_y);
 }
 
-void subsec_t::RenumberSegs(size_t &cur_seg_index)
+void RenumberSegs(subsec_t * subsec, size_t &cur_seg_index)
 {
   if constexpr (DEBUG_SUBSEC)
   {
     Debug("Subsec: Renumbering %d\n", index);
   }
 
-  seg_count = 0;
+  subsec->seg_count = 0;
 
-  for (seg_t *seg = seg_list; seg; seg = seg->next)
+  for (seg_t *seg = subsec->seg_list; seg; seg = seg->next)
   {
     seg->index = cur_seg_index;
     cur_seg_index += 1;
 
-    seg_count++;
+    subsec->seg_count++;
 
     if constexpr (DEBUG_SUBSEC)
     {
-      Debug("Subsec:   %d: Seg %p  Index %d\n", seg_count, seg, seg->index);
+      Debug("Subsec:   %d: Seg %p  Index %d\n", subsec->seg_count, seg, seg->index);
     }
   }
 }
@@ -1622,8 +1623,8 @@ subsec_t *CreateSubsec(quadtree_c *tree)
 
   // copy segs into subsector
   sub->seg_list = nullptr;
-  tree->ConvertToList(&sub->seg_list);
-  sub->DetermineMiddle();
+  ConvertToList(tree, &sub->seg_list);
+  DetermineMiddle(sub);
 
   if constexpr (DEBUG_SUBSEC)
   {
@@ -1732,7 +1733,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
     AddMinisegs(cut_list, part, &lefts, &rights);
   }
 
-  node->SetPartition(part);
+  SetPartition(node, part);
 
   if constexpr (DEBUG_BUILDER)
   {
@@ -1768,7 +1769,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
   return BUILD_OK;
 }
 
-void ClockwiseBspTree()
+void ClockwiseBspTree(void)
 {
   size_t cur_seg_index = 0;
 
@@ -1776,16 +1777,16 @@ void ClockwiseBspTree()
   {
     subsec_t *sub = lev_subsecs[i];
 
-    sub->ClockwiseOrder();
-    sub->RenumberSegs(cur_seg_index);
+    ClockwiseOrder(sub);
+    RenumberSegs(sub, cur_seg_index);
 
     // do some sanity checks
-    sub->SanityCheckClosed();
-    sub->SanityCheckHasRealSeg();
+    SanityCheckClosed(sub);
+    SanityCheckHasRealSeg(sub);
   }
 }
 
-void subsec_t::Normalise()
+void Normalise(subsec_t *subsec)
 {
   // use head + tail to maintain same order of segs
   seg_t *new_head = nullptr;
@@ -1796,11 +1797,11 @@ void subsec_t::Normalise()
     Debug("Subsec: Normalising %d\n", index);
   }
 
-  while (seg_list)
+  while (subsec->seg_list)
   {
     // remove head
-    seg_t *seg = seg_list;
-    seg_list = seg->next;
+    seg_t *seg = subsec->seg_list;
+    subsec->seg_list = seg->next;
 
     // filter out minisegs
     if (seg->linedef == nullptr)
@@ -1838,10 +1839,10 @@ void subsec_t::Normalise()
     FatalError("Subsector %d normalised to being EMPTY\n", index);
   }
 
-  seg_list = new_head;
+  subsec->seg_list = new_head;
 }
 
-void NormaliseBspTree()
+void NormaliseBspTree(void)
 {
   // unlinks all minisegs from each subsector
   size_t cur_seg_index = 0;
@@ -1849,12 +1850,12 @@ void NormaliseBspTree()
   for (size_t i = 0; i < lev_subsecs.size(); i++)
   {
     subsec_t *sub = lev_subsecs[i];
-    sub->Normalise();
-    sub->RenumberSegs(cur_seg_index);
+    Normalise(sub);
+    RenumberSegs(sub, cur_seg_index);
   }
 }
 
-void RoundOffVertices()
+void RoundOffVertices(void)
 {
   for (size_t i = 0; i < lev_vertices.size(); i++)
   {
@@ -1869,7 +1870,7 @@ void RoundOffVertices()
   }
 }
 
-void subsec_t::RoundOff()
+void RoundOff(subsec_t *subsec)
 {
   // use head + tail to maintain same order of segs
   seg_t *new_head = nullptr;
@@ -1887,7 +1888,7 @@ void subsec_t::RoundOff()
   }
 
   // do an initial pass, just counting the degenerates
-  for (seg = seg_list; seg; seg = seg->next)
+  for (seg = subsec->seg_list; seg; seg = seg->next)
   {
     // is the seg degenerate ?
     if ((int32_t)floor(seg->start->x) == (int32_t)floor(seg->end->x)
@@ -1948,11 +1949,11 @@ void subsec_t::RoundOff()
   }
 
   // second pass, remove the blighters...
-  while (seg_list != nullptr)
+  while (subsec->seg_list != nullptr)
   {
     // remove head
-    seg = seg_list;
-    seg_list = seg->next;
+    seg = subsec->seg_list;
+    subsec->seg_list = seg->next;
 
     if (seg->is_degenerate)
     {
@@ -1988,10 +1989,10 @@ void subsec_t::RoundOff()
     FatalError("Subsector %d rounded off to being EMPTY\n", index);
   }
 
-  seg_list = new_head;
+  subsec->seg_list = new_head;
 }
 
-void RoundOffBspTree()
+void RoundOffBspTree(void)
 {
   size_t cur_seg_index = 0;
 
@@ -2001,7 +2002,7 @@ void RoundOffBspTree()
   {
     subsec_t *sub = lev_subsecs[i];
 
-    sub->RoundOff();
-    sub->RenumberSegs(cur_seg_index);
+    RoundOff(sub);
+    RenumberSegs(sub, cur_seg_index);
   }
 }
