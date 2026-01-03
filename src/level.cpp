@@ -730,7 +730,7 @@ void Reject_DebugGroups(void)
     size_t group = sec->rej_group;
     int num = 0;
 
-    if (group < 0)
+    if (group == NO_INDEX)
     {
       continue;
     }
