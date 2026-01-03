@@ -273,7 +273,7 @@ static inline constexpr T *UtilCalloc(size_t size)
 
   if (!ret)
   {
-    FatalError("Out of memory (cannot allocate %d bytes)", size);
+    FatalError("Out of memory (cannot allocate %zu bytes)", size);
   }
 
   return ret;
@@ -289,7 +289,7 @@ static inline constexpr T *UtilRealloc(T *old, size_t size)
 
   if (!ret)
   {
-    FatalError("Out of memory (cannot reallocate %d bytes)", size);
+    FatalError("Out of memory (cannot reallocate %zu bytes)", size);
   }
 
   return ret;

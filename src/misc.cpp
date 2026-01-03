@@ -393,7 +393,7 @@ void DetectOverlappingVertices(void)
 
         if constexpr (DEBUG_OVERLAPS)
         {
-          Print("Overlap: #%d + #%d\n", array[i]->index, array[i + 1]->index);
+          Print("Overlap: #%zu + #%zu\n", array[i]->index, array[i + 1]->index);
         }
       }
     }

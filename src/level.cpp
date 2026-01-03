@@ -155,7 +155,7 @@ static void BlockAdd(size_t blk_num, size_t line_index)
 
   if (blk_num >= block_count)
   {
-    FatalError("BlockAdd: bad block number %d\n", blk_num);
+    FatalError("BlockAdd: bad block number %zu\n", blk_num);
   }
 
   if (!cur)
@@ -461,7 +461,7 @@ static void WriteBlockmap(void)
 
     if (ptr == 0)
     {
-      FatalError("WriteBlockmap: offset %d not set.\n", i);
+      FatalError("WriteBlockmap: offset %zu not set.\n", i);
     }
 
     lump->Write(&ptr, sizeof(uint16_t));
@@ -1011,7 +1011,7 @@ static vertex_t *SafeLookupVertex(size_t num)
 {
   if (num >= lev_vertices.size())
   {
-    FatalError("illegal vertex number #%d\n", num);
+    FatalError("illegal vertex number #%zu\n", num);
   }
 
   return lev_vertices[num];
@@ -1670,7 +1670,7 @@ void ParseUDMF_Block(lexer_c &lex, int cur_type)
   {
     if (line->start == nullptr || line->end == nullptr)
     {
-      FatalError("Linedef #%d is missing a vertex!\n", line->index);
+      FatalError("Linedef #%zu is missing a vertex!\n", line->index);
     }
 
     if (line->right || line->left)
@@ -1845,7 +1845,7 @@ void PutVertices(void)
 
   if (count != num_old_vert)
   {
-    FatalError("PutVertices miscounted (%d != %d)\n", count, num_old_vert);
+    FatalError("PutVertices miscounted (%zu != %zu)\n", count, num_old_vert);
   }
 
   if (count > 65534)
@@ -1997,7 +1997,7 @@ static void PutOneNode(node_t *node, Lump_c *lump)
   }
   else
   {
-    FatalError("Bad right child in node %d\n", node->index);
+    FatalError("Bad right child in node %zu\n", node->index);
   }
 
   if (node->l.node)
@@ -2010,7 +2010,7 @@ static void PutOneNode(node_t *node, Lump_c *lump)
   }
   else
   {
-    FatalError("Bad left child in node %d\n", node->index);
+    FatalError("Bad left child in node %zu\n", node->index);
   }
 
   lump->Write(&raw, sizeof(raw));
@@ -2042,7 +2042,7 @@ void PutNodes(node_t *root)
 
   if (node_cur_index != lev_nodes.size())
   {
-    FatalError("PutNodes miscounted (%d != %d)\n", node_cur_index, lev_nodes.size());
+    FatalError("PutNodes miscounted (%zu != %zu)\n", node_cur_index, lev_nodes.size());
   }
 
   if (node_cur_index > 32767)
@@ -2141,7 +2141,7 @@ void PutZVertices(Lump_c *lump)
 
   if (count != num_new_vert)
   {
-    FatalError("PutZVertices miscounted (%d != %d)\n", count, num_new_vert);
+    FatalError("PutZVertices miscounted (%zu != %zu)\n", count, num_new_vert);
   }
 }
 
@@ -2164,7 +2164,7 @@ void PutZSubsecs(Lump_c *lump)
     {
       if (cur_seg_index != seg->index)
       {
-        FatalError("PutZSubsecs: seg index mismatch in sub %d (%d != %d)\n", i, cur_seg_index, seg->index);
+        FatalError("PutZSubsecs: seg index mismatch in sub %zu (%zu != %zu)\n", i, cur_seg_index, seg->index);
       }
 
       count++;
@@ -2172,13 +2172,13 @@ void PutZSubsecs(Lump_c *lump)
 
     if (count != sub->seg_count)
     {
-      FatalError("PutZSubsecs: miscounted segs in sub %d (%d != %d)\n", i, count, sub->seg_count);
+      FatalError("PutZSubsecs: miscounted segs in sub %zu (%zu != %zu)\n", i, count, sub->seg_count);
     }
   }
 
   if (cur_seg_index != lev_segs.size())
   {
-    FatalError("PutZSubsecs miscounted segs (%d != %d)\n", cur_seg_index, lev_segs.size());
+    FatalError("PutZSubsecs miscounted segs (%zu != %zu)\n", cur_seg_index, lev_segs.size());
   }
 }
 
@@ -2193,7 +2193,7 @@ void PutZSegs(Lump_c *lump)
 
     if (seg->index != i)
     {
-      FatalError("PutZSegs: seg index mismatch (%d != %d)\n", seg->index, i);
+      FatalError("PutZSegs: seg index mismatch (%zu != %zu)\n", seg->index, i);
     }
 
     raw_zdoom_seg_t raw = {};
@@ -2224,7 +2224,7 @@ void PutXGL3Segs(Lump_c *lump)
 
     if (seg->index != i)
     {
-      FatalError("PutXGL3Segs: seg index mismatch (%d != %d)\n", seg->index, i);
+      FatalError("PutXGL3Segs: seg index mismatch (%zu != %zu)\n", seg->index, i);
     }
 
     raw_xgl2_seg_t raw = {};
@@ -2307,7 +2307,7 @@ static void PutOneZNode(Lump_c *lump, node_t *node, bool xgl3)
   }
   else
   {
-    FatalError("Bad right child in ZDoom node %d\n", node->index);
+    FatalError("Bad right child in ZDoom node %zu\n", node->index);
   }
 
   if (node->l.node)
@@ -2320,7 +2320,7 @@ static void PutOneZNode(Lump_c *lump, node_t *node, bool xgl3)
   }
   else
   {
-    FatalError("Bad left child in ZDoom node %d\n", node->index);
+    FatalError("Bad left child in ZDoom node %zu\n", node->index);
   }
 
   lump->Write(&raw.right, 4);
@@ -2347,7 +2347,7 @@ void PutZNodes(Lump_c *lump, node_t *root, bool xgl3)
 
   if (node_cur_index != lev_nodes.size())
   {
-    FatalError("PutZNodes miscounted (%d != %d)\n", node_cur_index, lev_nodes.size());
+    FatalError("PutZNodes miscounted (%zu != %zu)\n", node_cur_index, lev_nodes.size());
   }
 }
 

@@ -578,7 +578,7 @@ void Wad_file::ReadDirectory(void)
 
   if (dir_count > 32000)
   {
-    FatalError("Bad WAD header, too many entries (%d)\n", dir_count);
+    FatalError("Bad WAD header, too many entries (%zu)\n", dir_count);
   }
 
   if (fseek(fp, dir_start, SEEK_SET) != 0)
@@ -1223,7 +1223,7 @@ bool Wad_file::FinishLump(size_t final_size)
   // sanity check
   if (final_size > begun_max_size)
   {
-    FatalError("Internal Error: wrote too much in lump (%d > %d)\n", final_size, begun_max_size);
+    FatalError("Internal Error: wrote too much in lump (%zu > %zu)\n", final_size, begun_max_size);
   }
 
   size_t pos = (size_t)ftell(fp);

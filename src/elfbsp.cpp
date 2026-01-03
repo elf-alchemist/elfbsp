@@ -211,7 +211,7 @@ build_result_e BuildFile(void)
 
   if (failures > 0)
   {
-    Print("  Failed maps: %d (out of %d)\n", failures, visited);
+    Print("  Failed maps: %zu (out of %zu)\n", failures, visited);
 
     // allow building other files
     total_failed_files += 1;
@@ -787,7 +787,7 @@ int main(int argc, char *argv[])
 
   if (total_failed_files > 0)
   {
-    Print("FAILURES occurred on %d map%s in %d file%s.\n", total_failed_maps, total_failed_maps == 1 ? "" : "s",
+    Print("FAILURES occurred on %zu map%s in %zu file%s.\n", total_failed_maps, total_failed_maps == 1 ? "" : "s",
                  total_failed_files, total_failed_files == 1 ? "" : "s");
 
     if (!config.verbose)
@@ -812,7 +812,7 @@ int main(int argc, char *argv[])
     size_t built = total_files - total_empty_files;
     size_t empty = total_empty_files;
 
-    Print("Ok, built %d file%s, %d file%s empty.\n", built, (built == 1 ? "" : "s"), empty,
+    Print("Ok, built %zu file%s, %zu file%s empty.\n", built, (built == 1 ? "" : "s"), empty,
                  (empty == 1 ? " was" : "s were"));
   }
 
