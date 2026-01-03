@@ -448,7 +448,7 @@ size_t Wad_file::LevelFindByNumber(int32_t number)
   size_t index;
 
   // try MAP## first
-  sprintf(buffer, "MAP%02d", number);
+  M_snprintf(buffer, sizeof(buffer), "MAP%02d", number);
 
   index = LevelFind(buffer);
   if (index != NO_INDEX)
@@ -458,7 +458,7 @@ size_t Wad_file::LevelFindByNumber(int32_t number)
 
   // otherwise try E#M#
   div_t exmy = div(number, 10);
-  sprintf(buffer, "E%dM%d", std::max(1, exmy.quot), exmy.rem);
+  M_snprintf(buffer, sizeof(buffer), "E%dM%d", std::max(1, exmy.quot), exmy.rem);
 
   index = LevelFind(buffer);
   if (index != NO_INDEX)
