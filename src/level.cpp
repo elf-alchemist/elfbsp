@@ -744,7 +744,7 @@ void Reject_DebugGroups(void)
       num++;
     }
 
-    Debug("Group %d  Sectors %d\n", group, num);
+    Debug("Group %zu  Sectors %d\n", group, num);
   }
 }
 
@@ -1905,7 +1905,7 @@ void PutSegs(void)
 
     if constexpr (DEBUG_BSP)
     {
-      Debug("PUT SEG: %04X  Vert %04X->%04X  Line %04X %s  Angle %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->index,
+      Debug("PUT SEG: %zu  Vert %04X->%04X  Line %04X %s  Angle %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->index,
                       GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef), seg->side ? "L" : "R",
                       GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
     }
@@ -1939,7 +1939,7 @@ void PutSubsecs(void)
 
     if constexpr (DEBUG_BSP)
     {
-      Debug("PUT SUBSEC %04X  First %04X  Num %04X\n", sub->index, GetLittleEndian(raw.first),
+      Debug("PUT SUBSEC %zu  First %04X  Num %04X\n", sub->index, GetLittleEndian(raw.first),
                       GetLittleEndian(raw.num));
     }
   }
@@ -2017,7 +2017,7 @@ static void PutOneNode(node_t *node, Lump_c *lump)
 
   if constexpr (DEBUG_BSP)
   {
-    Debug("PUT NODE %04X  Left %04X  Right %04X  (%d,%d) -> (%d,%d)\n", node->index, GetLittleEndian(raw.left),
+    Debug("PUT NODE %zu  Left %04X  Right %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", node->index, GetLittleEndian(raw.left),
                     GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
   }
 }
@@ -2328,7 +2328,7 @@ static void PutOneZNode(Lump_c *lump, node_t *node, bool xgl3)
 
   if constexpr (DEBUG_BSP)
   {
-    Debug("PUT Z NODE %08X  Left %08X  Right %08X  (%d,%d) -> (%d,%d)\n", node->index, GetLittleEndian(raw.left),
+    Debug("PUT Z NODE %zu  Left %08X  Right %08X  (%f,%f) -> (%f,%f)\n", node->index, GetLittleEndian(raw.left),
                     GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
   }
 }

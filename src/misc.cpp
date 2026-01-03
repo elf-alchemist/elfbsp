@@ -674,7 +674,7 @@ vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end)
   return vert;
 }
 
-bool CheckOpen(vertex_t *vertex, double dx, double dy)
+bool CheckOpen(const vertex_t *vertex, double dx, double dy)
 {
   const walltip_t *tip;
 

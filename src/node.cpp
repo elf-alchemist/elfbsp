@@ -170,7 +170,7 @@ seg_t *SplitSeg(seg_t *old_seg, double x, double y)
 
   if constexpr (DEBUG_SPLIT)
   {
-    Debug("Splitting Vertex is %04X at (%1.1f,%1.1f)\n", new_vert->index, new_vert->x, new_vert->y);
+    Debug("Splitting Vertex is %zu at (%1.1f,%1.1f)\n", new_vert->index, new_vert->x, new_vert->y);
   }
 
   // handle partners
@@ -965,7 +965,7 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
 
     for (cut = cut_list; cut; cut = cut->next)
     {
-      Debug("  Vertex %8X (%1.1f,%1.1f)  Along %1.2f  [%d/%d]  %s\n", cut->vertex->index, cut->vertex->x,
+      Debug("  Vertex %zu (%1.1f,%1.1f)  Along %1.2f  [%d/%d]  %s\n", cut->vertex->index, cut->vertex->x,
                       cut->vertex->y, cut->along_dist, cut->open_before ? 1 : 0, cut->open_after ? 1 : 0,
                       cut->self_ref ? "SELFREF" : "");
     }
@@ -1031,10 +1031,10 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
     if constexpr (DEBUG_CUTLIST)
     {
 
-      Debug("AddMiniseg: %p RIGHT  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->start->x, seg->start->y, seg->end->x,
+      Debug("AddMiniseg: %p RIGHT  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, seg->start->x, seg->start->y, seg->end->x,
                       seg->end->y);
 
-      Debug("AddMiniseg: %p LEFT   (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", buddy->start->x, buddy->start->y, buddy->end->x,
+      Debug("AddMiniseg: %p LEFT   (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, buddy->start->x, buddy->start->y, buddy->end->x,
                       buddy->end->y);
     }
   }
