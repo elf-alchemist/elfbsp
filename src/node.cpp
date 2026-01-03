@@ -147,7 +147,7 @@ seg_t *SplitSeg(seg_t *old_seg, double x, double y)
 
     if (old_seg->linedef)
     {
-      Debug("Splitting Linedef %d (%p) at (%1.1f,%1.1f)\n", old_seg->linedef->index, old_seg, x, y);
+      Debug("Splitting Linedef %zu (%p) at (%1.1f,%1.1f)\n", old_seg->linedef->index, old_seg, x, y);
     }
     else
     {
@@ -1289,7 +1289,7 @@ seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *
   // check for bad sidedef
   if (side->sector == nullptr)
   {
-    Warning("Bad sidedef on linedef #%d (Z_CheckHeap error)\n", line->index);
+    Warning("Bad sidedef on linedef #%zu (Z_CheckHeap error)\n", line->index);
   }
 
   // handle overlapping vertices, pick a nominal one
@@ -1352,7 +1352,7 @@ seg_t *CreateSegs(void)
     // check for extremely long lines
     if (hypot(line->start->x - line->end->x, line->start->y - line->end->y) >= 32000)
     {
-      Warning("Linedef #%d is VERY long, it may cause problems\n", line->index);
+      Warning("Linedef #%zu is VERY long, it may cause problems\n", line->index);
     }
 
     if (line->right != nullptr)
@@ -1362,7 +1362,7 @@ seg_t *CreateSegs(void)
     }
     else
     {
-      Warning("Linedef #%d has no right sidedef!\n", line->index);
+      Warning("Linedef #%zu has no right sidedef!\n", line->index);
     }
 
     if (line->left != nullptr)
@@ -1384,7 +1384,7 @@ seg_t *CreateSegs(void)
     {
       if (line->two_sided)
       {
-        Warning("Linedef #%d is 2s but has no left sidedef\n", line->index);
+        Warning("Linedef #%zu is 2s but has no left sidedef\n", line->index);
         line->two_sided = false;
       }
     }
@@ -1448,7 +1448,7 @@ void ClockwiseOrder(subsec_t *subsec)
 
   if constexpr (DEBUG_SUBSEC)
   {
-    Debug("Subsec: Clockwising %d\n", index);
+    Debug("Subsec: Clockwising %zu\n", index);
   }
 
   std::vector<seg_t *> array;
@@ -1561,7 +1561,7 @@ void SanityCheckClosed(subsec_t *subsec)
 
   if (gaps > 0)
   {
-    MinorIssue("Subsector #%d near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)\n", index, subsec->mid_x, subsec->mid_y, gaps,
+    MinorIssue("Subsector #%zu near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)\n", index, subsec->mid_x, subsec->mid_y, gaps,
                total);
 
     if constexpr (DEBUG_SUBSEC)
@@ -1585,14 +1585,14 @@ void SanityCheckHasRealSeg(subsec_t *subsec)
     }
   }
 
-  FatalError("Subsector #%d near (%1.1f,%1.1f) has no real seg!\n", index, subsec->mid_x, subsec->mid_y);
+  FatalError("Subsector #%zu near (%1.1f,%1.1f) has no real seg!\n", subsec->index, subsec->mid_x, subsec->mid_y);
 }
 
 void RenumberSegs(subsec_t * subsec, size_t &cur_seg_index)
 {
   if constexpr (DEBUG_SUBSEC)
   {
-    Debug("Subsec: Renumbering %d\n", index);
+    Debug("Subsec: Renumbering %zu\n", subsec->index);
   }
 
   subsec->seg_count = 0;
@@ -1606,7 +1606,7 @@ void RenumberSegs(subsec_t * subsec, size_t &cur_seg_index)
 
     if constexpr (DEBUG_SUBSEC)
     {
-      Debug("Subsec:   %d: Seg %p  Index %d\n", subsec->seg_count, seg, seg->index);
+      Debug("Subsec:   %zu: Seg %p  Index %zu\n", subsec->seg_count, seg, seg->index);
     }
   }
 }
@@ -1628,7 +1628,7 @@ subsec_t *CreateSubsec(quadtree_c *tree)
 
   if constexpr (DEBUG_SUBSEC)
   {
-    Debug("Subsec: Creating %d\n", sub->index);
+    Debug("Subsec: Creating %zu\n", sub->index);
   }
 
   return sub;
@@ -1794,7 +1794,7 @@ void Normalise(subsec_t *subsec)
 
   if constexpr (DEBUG_SUBSEC)
   {
-    Debug("Subsec: Normalising %d\n", index);
+    Debug("Subsec: Normalising %zu\n", subsec->index);
   }
 
   while (subsec->seg_list)
@@ -1836,7 +1836,7 @@ void Normalise(subsec_t *subsec)
 
   if (new_head == nullptr)
   {
-    FatalError("Subsector %d normalised to being EMPTY\n", index);
+    FatalError("Subsector %zu normalised to being EMPTY\n", subsec->index);
   }
 
   subsec->seg_list = new_head;
@@ -1884,7 +1884,7 @@ void RoundOff(subsec_t *subsec)
   int degen_total = 0;
   if constexpr (DEBUG_SUBSEC)
   {
-    Debug("Subsec: Rounding off %d\n", index);
+    Debug("Subsec: Rounding off %zu\n", subsec->index);
   }
 
   // do an initial pass, just counting the degenerates
@@ -1926,7 +1926,7 @@ void RoundOff(subsec_t *subsec)
   {
     if (last_real_degen == nullptr)
     {
-      FatalError("Subsector %d rounded off with NO real segs\n", index);
+      FatalError("Subsector %zu rounded off with NO real segs\n", subsec->index);
     }
 
     if constexpr (DEBUG_SUBSEC)
@@ -1986,7 +1986,7 @@ void RoundOff(subsec_t *subsec)
 
   if (new_head == nullptr)
   {
-    FatalError("Subsector %d rounded off to being EMPTY\n", index);
+    FatalError("Subsector %zu rounded off to being EMPTY\n", subsec->index);
   }
 
   subsec->seg_list = new_head;

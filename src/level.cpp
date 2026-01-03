@@ -150,7 +150,7 @@ static void BlockAdd(size_t blk_num, size_t line_index)
 
   if constexpr (DEBUG_BLOCKMAP)
   {
-    Debug("Block %d has line %d\n", blk_num, line_index);
+    Debug("Block %zu has line %zu\n", blk_num, line_index);
   }
 
   if (blk_num >= block_count)
@@ -193,7 +193,7 @@ static void BlockAddLine(const linedef_t *L)
 
   if constexpr (DEBUG_BLOCKMAP)
   {
-    Debug("BlockAddLine: %d (%d,%d) -> (%d,%d)\n", line_index, x1, y1, x2, y2);
+    Debug("BlockAddLine: %zu (%d,%d) -> (%d,%d)\n", line_index, x1, y1, x2, y2);
   }
 
   int bx1_temp = (std::min(x1, x2) - block_x) / 128;
@@ -391,7 +391,7 @@ static void CompressBlockmap(void)
 
   if constexpr (DEBUG_BLOCKMAP)
   {
-    Debug("Blockmap: Last ptr = %d  duplicates = %d\n", cur_offset, dup_count);
+    Debug("Blockmap: Last ptr = %zu  duplicates = %zu\n", cur_offset, dup_count);
   }
 
   block_compression = int32_t((orig_size - new_size) * 100 / orig_size);
@@ -805,7 +805,7 @@ void PutReject(void)
 
   Reject_WriteLump();
   Reject_Free();
-  cur_info->Print_Verbose("    Reject size: %d\n", rej_total_size);
+  cur_info->Print_Verbose("    Reject size: %zu\n", rej_total_size);
 }
 
 //------------------------------------------------------------------------
@@ -1026,7 +1026,7 @@ static sector_t *SafeLookupSector(uint16_t num)
 
   if (num >= lev_sectors.size())
   {
-    FatalError("illegal sector number #%d\n", (int)num);
+    FatalError("illegal sector number #%zu\n", (size_t)num);
   }
 
   return lev_sectors[num];
@@ -1061,7 +1061,7 @@ void GetVertices(void)
 
   if constexpr (DEBUG_LOAD)
   {
-    Debug("GetVertices: num = %d\n", count);
+    Debug("GetVertices: num = %zu\n", count);
   }
 
   if (lump == nullptr || count == 0)
@@ -1115,7 +1115,7 @@ void GetSectors(void)
 
   if constexpr (DEBUG_LOAD)
   {
-    Debug("GetSectors: num = %d\n", count);
+    Debug("GetSectors: num = %zu\n", count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1156,7 +1156,7 @@ void GetThings(void)
 
   if constexpr (DEBUG_LOAD)
   {
-    Debug("GetThings: num = %d\n", count);
+    Debug("GetThings: num = %zu\n", count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1199,7 +1199,7 @@ void GetThingsHexen(void)
 
   if constexpr (DEBUG_LOAD)
   {
-    Debug("GetThingsHexen: num = %d\n", count);
+    Debug("GetThingsHexen: num = %zu\n", count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1242,7 +1242,7 @@ void GetSidedefs(void)
 
   if constexpr (DEBUG_LOAD)
   {
-    Debug("GetSidedefs: num = %d\n", count);
+    Debug("GetSidedefs: num = %zu\n", count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1283,7 +1283,7 @@ void GetLinedefs(void)
 
   if constexpr (DEBUG_LOAD)
   {
-    Debug("GetLinedefs: num = %d\n", count);
+    Debug("GetLinedefs: num = %zu\n", count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1360,7 +1360,7 @@ void GetLinedefsHexen(void)
 
   if constexpr (DEBUG_LOAD)
   {
-    Debug("GetLinedefsHexen: num = %d\n", count);
+    Debug("GetLinedefsHexen: num = %zu\n", count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1515,7 +1515,7 @@ void ParseSidedefField(sidedef_t *side, const std::string &key, token_kind_e kin
 
     if (num >= lev_sectors.size())
     {
-      FatalError("illegal sector number #%d\n", (int)num);
+      FatalError("illegal sector number #%zu\n", (size_t)num);
     }
 
     side->sector = lev_sectors[num];
@@ -2444,7 +2444,7 @@ void LoadLevel(void)
     PruneVerticesAtEnd();
   }
 
-  cur_info->Print_Verbose("    Loaded %d vertices, %d sectors, %d sides, %d lines, %d things\n", lev_vertices.size(),
+  cur_info->Print_Verbose("    Loaded %zu vertices, %zu sectors, %zu sides, %zu lines, %zu things\n", lev_vertices.size(),
                           lev_sectors.size(), lev_sidedefs.size(), lev_linedefs.size(), lev_things.size());
 
   DetectOverlappingVertices();
@@ -2743,7 +2743,7 @@ build_result_e BuildLevel(size_t lev_idx)
 
   if (ret == BUILD_OK)
   {
-    cur_info->Print_Verbose("    Built %d NODES, %d SSECTORS, %d SEGS, %d VERTEXES\n", lev_nodes.size(), lev_subsecs.size(),
+    cur_info->Print_Verbose("    Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES\n", lev_nodes.size(), lev_subsecs.size(),
                             lev_segs.size(), num_old_vert + num_new_vert);
 
     if (root_node != nullptr)

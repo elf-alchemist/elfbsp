@@ -47,7 +47,7 @@ Lump_c::Lump_c(Wad_file *_par, const raw_wad_entry_t *entry) : parent(_par), lum
 
   if constexpr (DEBUG_WAD)
   {
-    Debug("new lump '%s' @ %d len:%d\n", Name(), l_start, l_length);
+    Debug("new lump '%s' @ %zu len:%zu\n", Name(), l_start, l_length);
   }
 }
 
@@ -202,7 +202,7 @@ retry:
 
   if constexpr (DEBUG_WAD)
   {
-    Debug("total_size = %d\n", w->total_size);
+    Debug("total_size = %zu\n", w->total_size);
   }
 
   if ((int64_t)w->total_size < 0)
@@ -1210,7 +1210,7 @@ size_t Wad_file::PositionForWrite(size_t max_size)
 
   if constexpr (DEBUG_WAD)
   {
-    Debug("POSITION FOR WRITE: %d  (total_size %d)\n", want_pos, total_size);
+    Debug("POSITION FOR WRITE: %zu  (total_size %zu)\n", want_pos, total_size);
   }
 
   return want_pos;
@@ -1269,7 +1269,7 @@ void Wad_file::WriteDirectory(void)
   if constexpr (DEBUG_WAD)
   {
     Debug("WriteDirectory...\n");
-    Debug("dir_start:%d  dir_count:%d\n", dir_start, dir_count);
+    Debug("dir_start:%zu  dir_count:%zu\n", dir_start, dir_count);
   }
 
   for (size_t k = 0; k < dir_count; k++)
@@ -1293,7 +1293,7 @@ void Wad_file::WriteDirectory(void)
 
   if constexpr (DEBUG_WAD)
   {
-    Debug("total_size: %d\n", total_size);
+    Debug("total_size: %zu\n", total_size);
   }
 
   if ((int32_t)total_size < 0)
