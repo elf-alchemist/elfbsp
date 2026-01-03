@@ -1438,7 +1438,7 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
     return result;
   }
 
-  // [EA] ZokumBSP
+  // -Elf- ZokumBSP
   // 1080 => Additive degrees stored in tag
   // 1081 => Set to degrees stored in tag
   // 1082 => Additive BAM stored in tag
@@ -1895,7 +1895,7 @@ void PutSegs(void)
     raw.flip = GetLittleEndian(seg->side);
     raw.dist = GetLittleEndian(VanillaSegDist(seg));
 
-    // [EA] ZokumBSP
+    // -Elf- ZokumBSP
     if ((seg->linedef->dont_render_back && seg->side) || (seg->linedef->dont_render_front && !seg->side))
     {
       raw = {};
@@ -2203,7 +2203,7 @@ void PutZSegs(Lump_c *lump)
     raw.linedef = GetLittleEndian((uint16_t)seg->linedef->index);
     raw.side = seg->side;
 
-    // [EA] ZokumBSP
+    // -Elf- ZokumBSP
     if ((seg->linedef->dont_render_back && seg->side) || (seg->linedef->dont_render_front && !seg->side))
     {
       raw = {};
@@ -2594,7 +2594,7 @@ build_result_e SaveUDMF(node_t *root_node)
 
   Lump_c *lump = CreateLevelLump("ZNODES", NO_INDEX);
 
-  // [EA] Ensure needed lumps exist
+  // -Elf- Ensure needed lumps exist
   AddMissingLump("REJECT", "ZNODES");
   AddMissingLump("BLOCKMAP", "REJECT");
 
@@ -2607,7 +2607,7 @@ build_result_e SaveUDMF(node_t *root_node)
     SaveXGL3Format(lump, root_node);
   }
 
-  // [EA]
+  // -Elf-
   PutBlockmap();
   PutReject();
 

@@ -77,8 +77,8 @@ static constexpr bool LINUX = true;
 
 #endif
 
+static constexpr char PATH_SEP_CH = (WINDOWS) ? ';' : ':';
 static constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
-static constexpr std::string DIR_SEP_STR = (WINDOWS) ? "/" : "\\";
 
 static constexpr bool DEBUG_BLOCKMAP = false;
 static constexpr bool DEBUG_REJECT = false;
@@ -836,26 +836,26 @@ typedef enum : uint16_t
   MLF_SoundBlock = BIT(6),    // Sound rendering: don't let sound cross two of these
   MLF_DontDraw = BIT(7),      // Don't draw on the automap at all
   MLF_Mapped = BIT(8),        // Set as if already seen, thus drawn in automap
-  MLF_Boom_PassThru = BIT(9), // -AJA- this one is from Boom. Allows multiple lines to be pushed simultaneously.
-  MLF_3DMidTex = BIT(10),      // [EA] Solid middle texture
-  MLF_Reserved = BIT(11),      // [EA] MBF21's comp_reservedlineflag
-  MLF_BlockGrounded = BIT(12), // [EA] MBF21's Block Grounded Monster
-  MLF_BlockPlayers = BIT(13),  // [EA] MBF21's Block Players Only
+  MLF_PassUse = BIT(9),       // Allow multiple lines to be pushed simultaneously.
+  MLF_3DMidTex = BIT(10),     // Solid middle texture
+  MLF_Reserved = BIT(11),     // comp_reservedlineflag
+  MLF_BlockGround = BIT(12),  // Block Grounded Monster
+  MLF_BlockPlayers = BIT(13), // Block Players Only
 } compatible_lineflag_e;
 
+// first few flags are same as DOOM above
 typedef enum : uint16_t
 {
-  // first few flags are same as DOOM above
   MLF_Hexen_Repeatable = BIT(9),
   MLF_Hexen_Activation = BIT(10) | BIT(11) | BIT(12),
 } hexen_lineflag_e;
 
+// these are supported by ZDoom (and derived ports)
 typedef enum : uint16_t
 {
-  // these are supported by ZDoom (and derived ports)
-  MLF_ZDoom_MonCanActivate = 0x2000,
-  MLF_ZDoom_BlockPlayers = 0x4000,
-  MLF_ZDoom_BlockEverything = 0x8000,
+  MLF_ZDoom_MonCanActivate = BIT(13),
+  MLF_ZDoom_BlockPlayers = BIT(14),
+  MLF_ZDoom_BlockEverything = BIT(15),
 } zdoom_lineflag_e;
 
 static constexpr uint32_t BOOM_GENLINE_FIRST = 0x2f80;
@@ -877,12 +877,12 @@ typedef enum
 } hexen_activation_e;
 
 // The power of node building manipulation!
-typedef enum zokumbsp_specials_e : uint32_t
+typedef enum bsp_specials_e : uint32_t
 {
   Special_VanillaScroll = 48,
 
-  Special_DoNotRender = 998, // in ZokumBSP, originally a tag :/
-  Special_NoBlockmap = 999,  // not gonna deal with that :v
+  Special_DoNotRender = 998, // in ZokumBSP, originally a tag :/ not gonna deal with that :v
+  Special_NoBlockmap = 999,  //
 
   Special_RemoteScroll = 1048, // potentialy lossy? -- i.e alters user-provided lumps?
 
@@ -899,9 +899,8 @@ typedef enum zokumbsp_specials_e : uint32_t
   Special_DoNotRenderAnySeg,   //
 
   Special_Unknown1, // related to splitting?
-  Special_Unknown2, // line tag value becomes seg's associated line index?
-                    // why?
-} zokumbsp_specials_t;
+  Special_Unknown2, // line tag value becomes seg's associated line index? why?
+} bsp_specials_t;
 
 typedef uint32_t long_angle_t;
 typedef uint16_t short_angle_t;

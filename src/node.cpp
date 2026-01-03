@@ -1343,7 +1343,7 @@ seg_t *CreateSegs(void)
       continue;
     }
 
-    // [EA] ZokumBSP
+    // -Elf- ZokumBSP
     if (line->dont_render)
     {
       continue;
