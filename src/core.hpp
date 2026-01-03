@@ -114,10 +114,25 @@ static constexpr uint16_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
 // to disk.
 //
 
-#if defined(__GNUC__) || defined(__clang__)
-  #define PACKEDATTR __attribute__((packed))
+// -Elf- updated, pulled from Chocolate Doom
+
+#if defined(__GNUC__)
+
+  #if defined(_WIN32) && !defined(__clang__)
+    #define PACKEDATTR __attribute__((packed, gcc_struct))
+  #else
+    #define PACKEDATTR __attribute__((packed))
+  #endif
+
+  #define PRINTF_ATTR(fmt, first) __attribute__((format(printf, fmt, first)))
+  #define PRINTF_ARG_ATTR(x)      __attribute__((format_arg(x)))
+  #define NORETURN                __attribute__((noreturn))
+
 #else
   #define PACKEDATTR
+  #define PRINTF_ATTR(fmt, first)
+  #define PRINTF_ARG_ATTR(x)
+  #define NORETURN
 #endif
 
 // endianness
@@ -202,7 +217,7 @@ static inline void Debug(const char *fmt, ...)
 //
 //  show a message
 //
-static inline void Print(const char *fmt, ...)
+static inline void PRINTF_ATTR(1, 2) Print(const char *fmt, ...)
 {
   static char buffer[MSG_BUFFER_LENGTH];
 
@@ -222,7 +237,7 @@ static inline void Print(const char *fmt, ...)
 //
 //  show an error message and terminate the program
 //
-static inline void FatalError(const char *fmt, ...)
+static inline void PRINTF_ATTR(1, 2) FatalError(const char *fmt, ...)
 {
   static char buffer[MSG_BUFFER_LENGTH];
 
