@@ -24,6 +24,9 @@
 #include "core.hpp"
 #include "elfbsp.hpp"
 
+#include <string>
+#include <vector>
+
 bool opt_backup = false;
 bool opt_help = false;
 bool opt_doc = false;

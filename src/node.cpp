@@ -21,8 +21,8 @@
 //
 //------------------------------------------------------------------------------
 
-#include "local.hpp"
 #include "core.hpp"
+#include "local.hpp"
 
 //
 // To be able to divide the nodes down, this routine must decide which

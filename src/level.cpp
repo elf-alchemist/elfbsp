@@ -26,6 +26,8 @@
 #include "parse.hpp"
 #include "wad.hpp"
 
+#include <algorithm>
+
 static constexpr std::uint32_t DUMMY_DUP = 0xFFFF;
 
 Wad_file *cur_wad;
@@ -172,11 +174,12 @@ static void BlockAdd(size_t blk_num, size_t line_index)
     // no more room, so allocate some more...
     cur[BK_MAX] += BK_QUANTUM;
 
-    block_lines[blk_num] = cur = (uint16_t *)UtilRealloc(cur, cur[BK_MAX] * sizeof(uint16_t));
+    block_lines[blk_num] = cur = UtilRealloc(cur, cur[BK_MAX] * sizeof(uint16_t));
   }
 
   // compute new checksum
-  cur[BK_XOR] = (((cur[BK_XOR] << 4) | (cur[BK_XOR] >> 12)) ^ line_index);
+  cur[BK_XOR] = static_cast<uint16_t>(cur[BK_XOR] << 4) | (cur[BK_XOR] >> 12);
+  cur[BK_XOR] ^= line_index;
 
   cur[BK_FIRST + cur[BK_NUM]] = GetLittleEndian((uint16_t)line_index);
   cur[BK_NUM]++;
@@ -196,16 +199,16 @@ static void BlockAddLine(const linedef_t *L)
     Debug("BlockAddLine: %zu (%d,%d) -> (%d,%d)\n", line_index, x1, y1, x2, y2);
   }
 
-  int bx1_temp = (std::min(x1, x2) - block_x) / 128;
-  int by1_temp = (std::min(y1, y2) - block_y) / 128;
-  int bx2_temp = (std::max(x1, x2) - block_x) / 128;
-  int by2_temp = (std::max(y1, y2) - block_y) / 128;
+  int32_t bx1_temp = (std::min(x1, x2) - block_x) / 128;
+  int32_t by1_temp = (std::min(y1, y2) - block_y) / 128;
+  int32_t bx2_temp = (std::max(x1, x2) - block_x) / 128;
+  int32_t by2_temp = (std::max(y1, y2) - block_y) / 128;
 
   // handle truncated blockmaps
-  size_t bx1 = (size_t)std::max(bx1_temp, 0);
-  size_t by1 = (size_t)std::max(by1_temp, 0);
-  size_t bx2 = (size_t)std::min(bx2_temp, block_w - 1);
-  size_t by2 = (size_t)std::min(by2_temp, block_h - 1);
+  int32_t bx1 = std::max(bx1_temp, 0);
+  int32_t by1 = std::max(by1_temp, 0);
+  int32_t bx2 = std::min(bx2_temp, block_w - 1);
+  int32_t by2 = std::min(by2_temp, block_h - 1);
 
   if (bx2 < bx1 || by2 < by1)
   {
@@ -215,9 +218,9 @@ static void BlockAddLine(const linedef_t *L)
   // handle simple case #1: completely horizontal
   if (by1 == by2)
   {
-    for (size_t bx = bx1; bx <= bx2; bx++)
+    for (int32_t bx = bx1; bx <= bx2; bx++)
     {
-      size_t blk_num = by1 * block_w + bx;
+      size_t blk_num = static_cast<size_t>(by1 * block_w + bx);
       BlockAdd(blk_num, line_index);
     }
     return;
@@ -226,9 +229,9 @@ static void BlockAddLine(const linedef_t *L)
   // handle simple case #2: completely vertical
   if (bx1 == bx2)
   {
-    for (size_t by = by1; by <= by2; by++)
+    for (int32_t by = by1; by <= by2; by++)
     {
-      size_t blk_num = by * block_w + bx1;
+      size_t blk_num = static_cast<size_t>(by * block_w + bx1);
       BlockAdd(blk_num, line_index);
     }
     return;
@@ -236,16 +239,16 @@ static void BlockAddLine(const linedef_t *L)
 
   // handle the rest (diagonals)
 
-  for (size_t by = by1; by <= by2; by++)
+  for (int32_t by = by1; by <= by2; by++)
   {
-    for (size_t bx = bx1; bx <= bx2; bx++)
+    for (int32_t bx = bx1; bx <= bx2; bx++)
     {
-      size_t blk_num = bx + by * block_w;
+      size_t blk_num = static_cast<size_t>(bx + by * block_w);
 
-      int minx = block_x + 128 * bx;
-      int miny = block_y + 128 * by;
-      int maxx = minx + 127;
-      int maxy = miny + 127;
+      int32_t minx = block_x + 128 * bx;
+      int32_t miny = block_y + 128 * by;
+      int32_t maxx = minx + 127;
+      int32_t maxy = miny + 127;
 
       if (CheckLinedefInsideBox(minx, miny, maxx, maxy, x1, y1, x2, y2))
       {
@@ -587,7 +590,7 @@ void InitBlockmap(void)
   block_w = ((map_bbox.maxx - block_x) / 128) + 1;
   block_h = ((map_bbox.maxy - block_y) / 128) + 1;
 
-  block_count = block_w * block_h;
+  block_count = static_cast<size_t>(block_w * block_h);
 }
 
 void PutBlockmap(void)

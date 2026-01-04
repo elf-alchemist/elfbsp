@@ -26,6 +26,8 @@
 #include "core.hpp"
 #include "elfbsp.hpp"
 
+#include <vector>
+
 struct Lump_c;
 struct Wad_file;
 

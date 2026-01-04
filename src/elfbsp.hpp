@@ -23,7 +23,8 @@
 
 #pragma once
 
-#include "core.hpp"
+#include <cstddef>
+#include <cstdint>
 
 //
 // Node Build Information Structure

@@ -21,6 +21,9 @@
 
 #include "wad.hpp"
 
+#include <algorithm>
+#include <cstdint>
+
 //------------------------------------------------------------------------
 //  LUMP Handling
 //------------------------------------------------------------------------
@@ -581,7 +584,7 @@ void Wad_file::ReadDirectory(void)
     FatalError("Bad WAD header, too many entries (%zu)\n", dir_count);
   }
 
-  if (fseek(fp, dir_start, SEEK_SET) != 0)
+  if (fseek(fp, (int32_t)dir_start, SEEK_SET) != 0)
   {
     FatalError("Error seeking to WAD directory.\n");
   }
@@ -1032,7 +1035,7 @@ Lump_c *Wad_file::AddLump(const char *name, size_t max_size)
     FixGroup(flats, insert_point, 1, 0);
     FixGroup(tx_tex, insert_point, 1, 0);
 
-    directory.insert(directory.begin() + insert_point, lump);
+    directory.insert(directory.begin() + (int32_t)insert_point, lump);
 
     insert_point++;
   }
@@ -1202,7 +1205,7 @@ size_t Wad_file::PositionForWrite(size_t max_size)
   }
   else
   {
-    if (fseek(fp, want_pos, SEEK_SET) < 0)
+    if (fseek(fp, (int32_t)want_pos, SEEK_SET) < 0)
     {
       FatalError("Error seeking to new write position.\n");
     }

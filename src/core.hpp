@@ -29,7 +29,7 @@
  */
 
 #include <cassert>
-#include <cinttypes>
+#include <cctype>
 #include <climits>
 #include <cmath>
 #include <cstdarg>
@@ -37,11 +37,6 @@
 #include <cstdio>
 #include <cstring>
 
-#include <algorithm>
-#include <iostream>
-#include <string>
-#include <strings.h>
-#include <vector>
 
 #if !defined(WIN32)
   #include <unistd.h>

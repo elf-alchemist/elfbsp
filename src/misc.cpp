@@ -24,6 +24,8 @@
 #include "local.hpp"
 #include "core.hpp"
 
+#include <algorithm>
+
 static constexpr std::uint32_t SYS_MSG_BUFLEN = 4000;
 
 static char message_buf[SYS_MSG_BUFLEN];

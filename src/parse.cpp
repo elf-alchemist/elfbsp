@@ -22,6 +22,8 @@
 #include "core.hpp"
 #include "parse.hpp"
 
+#include <cinttypes>
+
 token_kind_e lexer_c::Next(std::string &s)
 {
   s.clear();

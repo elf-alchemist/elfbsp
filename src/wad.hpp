@@ -23,6 +23,9 @@
 
 #include "core.hpp"
 
+#include <string>
+#include <vector>
+
 struct Wad_file;
 
 typedef enum
