@@ -2105,7 +2105,7 @@ void SortSegs(void)
 
 /* ----- ZDoom format writing --------------------------- */
 
-void PutZVertices(Lump_c *lump)
+static void PutXnodVertices(Lump_c *lump)
 {
   size_t orgverts = GetLittleEndian(num_old_vert);
   size_t newverts = GetLittleEndian(num_new_vert);
@@ -2139,7 +2139,7 @@ void PutZVertices(Lump_c *lump)
   }
 }
 
-void PutZSubsecs(Lump_c *lump)
+static void PutXnodSubsecs(Lump_c *lump)
 {
   size_t raw_num = GetLittleEndian(lev_subsecs.size());
   lump->Write(&raw_num, 4);
@@ -2176,7 +2176,7 @@ void PutZSubsecs(Lump_c *lump)
   }
 }
 
-void PutZSegs(Lump_c *lump)
+static void PutXnodSegs(Lump_c *lump)
 {
   size_t raw_num = GetLittleEndian(lev_segs.size());
   lump->Write(&raw_num, 4);
@@ -2190,24 +2190,17 @@ void PutZSegs(Lump_c *lump)
       FatalError("PutZSegs: seg index mismatch (%zu != %zu)\n", seg->index, i);
     }
 
-    raw_xgln_seg_t raw = {};
+    raw_xnod_seg_t raw = {};
 
     raw.start = GetLittleEndian(VertexIndex_XNOD(seg->start));
     raw.end = GetLittleEndian(VertexIndex_XNOD(seg->end));
     raw.linedef = GetLittleEndian((uint16_t)seg->linedef->index);
     raw.side = seg->side;
-
-    // -Elf- ZokumBSP
-    if ((seg->linedef->dont_render_back && seg->side) || (seg->linedef->dont_render_front && !seg->side))
-    {
-      raw = {};
-    }
-
     lump->Write(&raw, sizeof(raw));
   }
 }
 
-void PutXGL3Segs(Lump_c *lump)
+static void PutXgl2Segs(Lump_c *lump)
 {
   size_t raw_num = GetLittleEndian(lev_segs.size());
   lump->Write(&raw_num, 4);
@@ -2237,18 +2230,18 @@ void PutXGL3Segs(Lump_c *lump)
   }
 }
 
-static void PutOneZNode(Lump_c *lump, node_t *node, bool xgl3)
+static void PutOneXnodNode(Lump_c *lump, node_t *node, bool xgl3)
 {
   raw_xgl3_node_t raw;
 
   if (node->r.node)
   {
-    PutOneZNode(lump, node->r.node, xgl3);
+    PutOneXnodNode(lump, node->r.node, xgl3);
   }
 
   if (node->l.node)
   {
-    PutOneZNode(lump, node->l.node, xgl3);
+    PutOneXnodNode(lump, node->l.node, xgl3);
   }
 
   node->index = node_cur_index++;
@@ -2327,7 +2320,7 @@ static void PutOneZNode(Lump_c *lump, node_t *node, bool xgl3)
   }
 }
 
-void PutZNodes(Lump_c *lump, node_t *root, bool xgl3)
+static void PutXnodNodes(Lump_c *lump, node_t *root)
 {
   size_t raw_num = GetLittleEndian(lev_nodes.size());
   lump->Write(&raw_num, 4);
@@ -2336,7 +2329,7 @@ void PutZNodes(Lump_c *lump, node_t *root, bool xgl3)
 
   if (root)
   {
-    PutOneZNode(lump, root, xgl3);
+    PutOneXnodNode(lump, root, false);
   }
 
   if (node_cur_index != lev_nodes.size())
@@ -2345,7 +2338,25 @@ void PutZNodes(Lump_c *lump, node_t *root, bool xgl3)
   }
 }
 
-static size_t CalcZDoomNodesSize(void)
+static void PutXgl3Nodes(Lump_c *lump, node_t *root)
+{
+  size_t raw_num = GetLittleEndian(lev_nodes.size());
+  lump->Write(&raw_num, 4);
+
+  node_cur_index = 0;
+
+  if (root)
+  {
+    PutOneXnodNode(lump, root, true);
+  }
+
+  if (node_cur_index != lev_nodes.size())
+  {
+    FatalError("PutZNodes miscounted (%zu != %zu)\n", node_cur_index, lev_nodes.size());
+  }
+}
+
+static size_t CalcXnodNodesSize(void)
 {
   // compute size of the ZDoom format nodes.
   // it does not need to be exact, but it *does* need to be bigger
@@ -2353,34 +2364,34 @@ static size_t CalcZDoomNodesSize(void)
 
   size_t size = 32; // header + a bit extra
 
-  size += 8 + lev_vertices.size() * 8;
-  size += 4 + lev_subsecs.size() * 4;
-  size += 4 + lev_segs.size() * 11;
-  size += 4 + lev_nodes.size() * sizeof(raw_xgl3_node_t);
+  size += 8 + lev_vertices.size() * sizeof(raw_xnod_vertex_t);
+  size += 4 + lev_subsecs.size() * sizeof(raw_xnod_subsec_t);
+  size += 4 + lev_segs.size() * sizeof(raw_xnod_seg_t);
+  size += 4 + lev_nodes.size() * sizeof(raw_xnod_node_t);
 
   return size;
 }
 
-void SaveZDFormat(node_t *root_node)
+void SaveXnodFormat(node_t *root_node)
 {
   SortSegs();
 
-  size_t max_size = CalcZDoomNodesSize();
+  size_t max_size = CalcXnodNodesSize();
 
   Lump_c *lump = CreateLevelLump("NODES", max_size);
 
   lump->Write(XNOD_MAGIC, 4);
 
-  PutZVertices(lump);
-  PutZSubsecs(lump);
-  PutZSegs(lump);
-  PutZNodes(lump, root_node, false);
+  PutXnodVertices(lump);
+  PutXnodSubsecs(lump);
+  PutXnodSegs(lump);
+  PutXnodNodes(lump, root_node);
 
   lump->Finish();
   lump = nullptr;
 }
 
-void SaveXGL3Format(Lump_c *lump, node_t *root_node)
+static void SaveXgl3Format(Lump_c *lump, node_t *root_node)
 {
   SortSegs();
 
@@ -2388,10 +2399,10 @@ void SaveXGL3Format(Lump_c *lump, node_t *root_node)
 
   lump->Write(XGL3_MAGIC, 4);
 
-  PutZVertices(lump);
-  PutZSubsecs(lump);
-  PutXGL3Segs(lump);
-  PutZNodes(lump, root_node, true);
+  PutXnodVertices(lump);
+  PutXnodSubsecs(lump);
+  PutXgl2Segs(lump);
+  PutXgl3Nodes(lump, root_node);
 
   lump->Finish();
   lump = nullptr;
@@ -2525,7 +2536,7 @@ build_result_e SaveLevel(node_t *root_node)
     if (config.ssect_xgl3)
     {
       Lump_c *lump = CreateLevelLump("SSECTORS");
-      SaveXGL3Format(lump, root_node);
+      SaveXgl3Format(lump, root_node);
     }
     else
     {
@@ -2537,7 +2548,7 @@ build_result_e SaveLevel(node_t *root_node)
       // remove all the mini-segs from subsectors
       NormaliseBspTree();
 
-      SaveZDFormat(root_node);
+      SaveXnodFormat(root_node);
     }
     else
     {
@@ -2598,7 +2609,7 @@ build_result_e SaveUDMF(node_t *root_node)
   }
   else
   {
-    SaveXGL3Format(lump, root_node);
+    SaveXgl3Format(lump, root_node);
   }
 
   // -Elf-

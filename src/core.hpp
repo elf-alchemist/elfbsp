@@ -621,7 +621,7 @@ using raw_wad_entry_t = struct raw_wad_entry_s
 // LEVEL STRUCTURES
 //------------------------------------------------------------------------
 
-using map_format_e = enum
+using map_format_t = enum map_format_e
 {
   MAPF_INVALID = 0,
 
@@ -630,9 +630,10 @@ using map_format_e = enum
   MAPF_UDMF
 
 };
+
 // Lump order in a map WAD: each map needs a couple of lumps
 // to provide a complete scene geometry description.
-using lump_order_e = enum
+using lump_order_t = enum lump_order_e
 {
   LL_LABEL = 0, // A separator name, ExMx or MAPxx
   LL_THINGS,    // Monsters, items..
@@ -816,6 +817,14 @@ using raw_xnod_vertex_t = struct raw_xnod_vertex_s
   int32_t y;
 } PACKEDATTR;
 
+using raw_xnod_seg_t = struct raw_xnod_seg_s
+{
+  uint32_t start;   // from this vertex...
+  uint32_t end;     // ... to this vertex
+  uint16_t linedef; // linedef that this seg goes along, or NO_INDEX
+  uint8_t side;     // 0 if on right of linedef, 1 if on left
+} PACKEDATTR;
+
 using raw_xnod_node_t = struct raw_xnod_node_s
 {
   int16_t x, y;         // starting point
@@ -833,10 +842,13 @@ using raw_xnod_subsec_t = struct raw_xnod_subsec_s
   //        all segs of the first subsector.
 } PACKEDATTR;
 
+// XGLN segs use the same type definition as XNOD segs, with slightly
+// different semantics for mini-segs
+
 using raw_xgln_seg_t = struct raw_xgln_seg_s
 {
-  uint32_t start;   // from this vertex...
-  uint32_t end;     // ... to this vertex
+  uint32_t vertex;  // from this vertex...
+  uint32_t partner; // ... to this vertex
   uint16_t linedef; // linedef that this seg goes along, or NO_INDEX
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;

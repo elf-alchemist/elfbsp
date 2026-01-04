@@ -182,7 +182,7 @@ struct Wad_file
   // returns a lump index, -1 if not found
   size_t LevelLookupLump(size_t lev_num, const char *name);
 
-  map_format_e LevelFormat(size_t lev_num);
+  map_format_t LevelFormat(size_t lev_num);
 
   void SortLevels(void);
 
