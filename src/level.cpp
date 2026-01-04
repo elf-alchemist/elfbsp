@@ -2116,7 +2116,7 @@ void PutZVertices(Lump_c *lump)
   size_t count = 0;
   for (size_t i = 0; i < lev_vertices.size(); i++)
   {
-    raw_zdoom_vertex_t raw;
+    raw_xnod_vertex_t raw;
 
     const vertex_t *vert = lev_vertices[i];
 
@@ -2190,7 +2190,7 @@ void PutZSegs(Lump_c *lump)
       FatalError("PutZSegs: seg index mismatch (%zu != %zu)\n", seg->index, i);
     }
 
-    raw_zdoom_seg_t raw = {};
+    raw_xgln_seg_t raw = {};
 
     raw.start = GetLittleEndian(VertexIndex_XNOD(seg->start));
     raw.end = GetLittleEndian(VertexIndex_XNOD(seg->end));
@@ -2239,7 +2239,7 @@ void PutXGL3Segs(Lump_c *lump)
 
 static void PutOneZNode(Lump_c *lump, node_t *node, bool xgl3)
 {
-  raw_zdoom_node_t raw;
+  raw_xgl3_node_t raw;
 
   if (node->r.node)
   {
@@ -2356,7 +2356,7 @@ static size_t CalcZDoomNodesSize(void)
   size += 8 + lev_vertices.size() * 8;
   size += 4 + lev_subsecs.size() * 4;
   size += 4 + lev_segs.size() * 11;
-  size += 4 + lev_nodes.size() * sizeof(raw_zdoom_node_t);
+  size += 4 + lev_nodes.size() * sizeof(raw_xgl3_node_t);
 
   return size;
 }

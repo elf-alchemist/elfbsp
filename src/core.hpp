@@ -660,12 +660,6 @@ typedef struct raw_vertex_s
   int16_t y;
 } PACKEDATTR raw_vertex_t;
 
-typedef struct raw_zdoom_vertex_s
-{
-  int32_t x;
-  int32_t y;
-} PACKEDATTR raw_zdoom_vertex_t;
-
 typedef struct raw_linedef_s
 {
   uint16_t start;   // from this vertex...
@@ -746,6 +740,24 @@ static constexpr const char *ZGL2_MAGIC = "ZGL2";
 static constexpr const char *XGL3_MAGIC = "XGL3";
 static constexpr const char *ZGL3_MAGIC = "ZGL3";
 
+// Vanilla blockmap
+typedef struct raw_bbox_s
+{
+  int16_t maxy;
+  int16_t miny;
+  int16_t minx;
+  int16_t maxx;
+} PACKEDATTR raw_bbox_t;
+
+typedef struct raw_blockmap_header_s
+{
+  int16_t x_origin, y_origin;
+  int16_t x_blocks, y_blocks;
+} PACKEDATTR raw_blockmap_header_t;
+
+//
+// Vanilla BSP
+//
 typedef struct raw_seg_s
 {
   uint16_t start;   // from this vertex...
@@ -755,30 +767,6 @@ typedef struct raw_seg_s
   uint16_t flip;    // true if not the same direction as linedef
   uint16_t dist;    // distance from starting point
 } PACKEDATTR raw_seg_t;
-
-typedef struct raw_zdoom_seg_s
-{
-  uint32_t start;   // from this vertex...
-  uint32_t end;     // ... to this vertex
-  uint16_t linedef; // linedef that this seg goes along, or NO_INDEX
-  uint8_t side;     // 0 if on right of linedef, 1 if on left
-} PACKEDATTR raw_zdoom_seg_t;
-
-typedef struct raw_xgl2_seg_s
-{
-  uint32_t vertex;  // from this vertex...
-  uint32_t partner; // ... to this vertex
-  uint32_t linedef; // linedef that this seg goes along, or NO_INDEX
-  uint8_t side;     // 0 if on right of linedef, 1 if on left
-} PACKEDATTR raw_xgl2_seg_t;
-
-typedef struct raw_bbox_s
-{
-  int16_t maxy;
-  int16_t miny;
-  int16_t minx;
-  int16_t maxx;
-} PACKEDATTR raw_bbox_t;
 
 typedef struct raw_node_s
 {
@@ -794,29 +782,86 @@ typedef struct raw_subsec_s
   uint16_t first; // first Seg
 } PACKEDATTR raw_subsec_t;
 
-typedef struct raw_zdoom_subsec_s
+//
+// DeepSea BSP
+// * compared to vanilla, some types were raise to 32bit
+//
+typedef struct raw_seg_deep_s
+{
+  uint32_t start;   // from this vertex...
+  uint32_t end;     // ... to this vertex
+  uint16_t angle;   // angle (0 = east, 16384 = north, ...)
+  uint16_t linedef; // linedef that this seg goes along
+  uint16_t flip;    // true if not the same direction as linedef
+  uint16_t dist;    // distance from starting point
+} PACKEDATTR raw_seg_deep_t;
+
+typedef struct raw_node_deep_s
+{
+  int16_t x, y;         // starting point
+  int16_t dx, dy;       // offset to ending point
+  raw_bbox_t b1, b2;    // bounding rectangles
+  uint32_t right, left; // children: Node or SSector (if high bit is set)
+} PACKEDATTR raw_node_deep_t;
+
+typedef struct raw_subsec_deep_s
+{
+  uint16_t num;   // number of Segs in this Sub-Sector
+  uint32_t first; // first Seg
+} PACKEDATTR raw_subsec_deep_t;
+
+//
+// ZDoom BSP
+// * compared to vanilla, some types were raise to 32bit
+// * each version (XNOD->XGLN->XGL2->XGL3) builds on top of the previous
+//
+typedef struct raw_xnod_vertex_s
+{
+  int32_t x;
+  int32_t y;
+} PACKEDATTR raw_xnod_vertex_t;
+
+typedef struct raw_xnod_node_s
+{
+  int16_t x, y;         // starting point
+  int16_t dx, dy;       // offset to ending point
+  raw_bbox_t b1, b2;    // bounding rectangles
+  uint32_t right, left; // children: Node or SSector (if high bit is set)
+} PACKEDATTR raw_xnod_node_t;
+
+typedef struct raw_xnod_subsec_s
 {
   uint32_t segnum;
   // NOTE : no "first" value, segs must be contiguous and appear
   //        in an order dictated by the subsector list, e.g. all
   //        segs of the second subsector must appear directly after
   //        all segs of the first subsector.
-} PACKEDATTR raw_zdoom_subsec_t;
+} PACKEDATTR raw_xnod_subsec_t;
 
-typedef struct raw_zdoom_node_s
+typedef struct raw_xgln_seg_s
 {
-  // this structure used by ZDoom nodes too
-  int16_t x, y;         // starting point
-  int16_t dx, dy;       // offset to ending point
+  uint32_t start;   // from this vertex...
+  uint32_t end;     // ... to this vertex
+  uint16_t linedef; // linedef that this seg goes along, or NO_INDEX
+  uint8_t side;     // 0 if on right of linedef, 1 if on left
+} PACKEDATTR raw_xgln_seg_t;
+
+typedef struct raw_xgl2_seg_s
+{
+  uint32_t vertex;  // from this vertex...
+  uint32_t partner; // ... to this vertex
+  uint32_t linedef; // linedef that this seg goes along, or NO_INDEX
+  uint8_t side;     // 0 if on right of linedef, 1 if on left
+} PACKEDATTR raw_xgl2_seg_t;
+
+typedef struct raw_xgl3_node_s
+{
+  int32_t x, y;         // starting point
+  int32_t dx, dy;       // offset to ending point
   raw_bbox_t b1, b2;    // bounding rectangles
   uint32_t right, left; // children: Node or SSector (if high bit is set)
-} PACKEDATTR raw_zdoom_node_t;
+} PACKEDATTR raw_xgl3_node_t;
 
-typedef struct raw_blockmap_header_s
-{
-  int16_t x_origin, y_origin;
-  int16_t x_blocks, y_blocks;
-} PACKEDATTR raw_blockmap_header_t;
 
 /* ----- Graphical structures ---------------------- */
 
