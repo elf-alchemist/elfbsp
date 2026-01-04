@@ -170,13 +170,12 @@ typedef uint8_t args_t[5];
 typedef int32_t fixed32_t;
 typedef uint32_t long_angle_t;
 typedef uint16_t short_angle_t;
-typedef _Float64 float64_t; // No C++23 yet, so a hack it is
 
 // misc constants
 static constexpr uint32_t ANG45 = 0x20000000;
 static constexpr uint32_t FRACBITS = 16;
 static constexpr fixed32_t FRACUNIT = (1 << FRACBITS);
-static constexpr float64_t FRACFACTOR = static_cast<float64_t>(FRACUNIT);
+static constexpr double FRACFACTOR = static_cast<double>(FRACUNIT);
 
 static constexpr size_t NO_INDEX = static_cast<size_t>(-1);
 static constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
@@ -206,12 +205,12 @@ static inline constexpr int32_t FixedToInt(fixed32_t x)
   return x >> FRACBITS;
 }
 
-static inline constexpr float64_t FixedToFloat(fixed32_t x)
+static inline constexpr double FixedToFloat(fixed32_t x)
 {
-  return (float64_t(x) / FRACFACTOR);
+  return (double(x) / FRACFACTOR);
 }
 
-static inline constexpr fixed32_t FloatToFixed(float64_t x)
+static inline constexpr fixed32_t FloatToFixed(double x)
 {
   return fixed32_t(x * FRACFACTOR);
 }
