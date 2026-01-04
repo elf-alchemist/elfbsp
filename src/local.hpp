@@ -57,8 +57,6 @@ void InitBlockmap(void);
 void PutBlockmap(void);
 
 // utility routines...
-void GetBlockmapBounds(int *x, int *y, int *w, int *h);
-
 int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2);
 
 //------------------------------------------------------------------------
@@ -115,7 +113,6 @@ struct vertex_t
   // list of wall-tips
   walltip_t *tip_set;
 };
-
 
 // check whether a line with the given delta coordinates from this
 // vertex is open or closed.  If there exists a walltip at same
@@ -349,7 +346,6 @@ struct node_t
   // node index.  Only valid once the NODES or GL_NODES lump has been
   // created.
   size_t index;
-
 };
 
 void SetPartition(node_t *node, const seg_t *part);

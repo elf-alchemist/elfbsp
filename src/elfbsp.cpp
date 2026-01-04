@@ -21,8 +21,8 @@
 //
 //------------------------------------------------------------------------------
 
-#include "core.hpp"
 #include "elfbsp.hpp"
+#include "core.hpp"
 
 #include <string>
 #include <vector>
@@ -791,7 +791,7 @@ int main(int argc, char *argv[])
   if (total_failed_files > 0)
   {
     Print("FAILURES occurred on %zu map%s in %zu file%s.\n", total_failed_maps, total_failed_maps == 1 ? "" : "s",
-                 total_failed_files, total_failed_files == 1 ? "" : "s");
+          total_failed_files, total_failed_files == 1 ? "" : "s");
 
     if (!config.verbose)
     {
@@ -815,8 +815,7 @@ int main(int argc, char *argv[])
     size_t built = total_files - total_empty_files;
     size_t empty = total_empty_files;
 
-    Print("Ok, built %zu file%s, %zu file%s empty.\n", built, (built == 1 ? "" : "s"), empty,
-                 (empty == 1 ? " was" : "s were"));
+    Print("Ok, built %zu file%s, %zu file%s empty.\n", built, (built == 1 ? "" : "s"), empty, (empty == 1 ? " was" : "s were"));
   }
 
   // that's all folks!

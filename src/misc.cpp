@@ -21,8 +21,8 @@
 //
 //------------------------------------------------------------------------------
 
-#include "local.hpp"
 #include "core.hpp"
+#include "local.hpp"
 
 #include <algorithm>
 
@@ -345,7 +345,7 @@ void DetectPolyobjSectors(bool is_udmf)
 
 /* ----- analysis routines ----------------------------- */
 
-bool Overlaps(const vertex_t * vertex, const vertex_t *other)
+bool Overlaps(const vertex_t *vertex, const vertex_t *other)
 {
   double dx = fabs(other->x - vertex->x);
   double dy = fabs(other->y - vertex->y);

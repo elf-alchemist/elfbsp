@@ -568,7 +568,7 @@ double EvalPartition(quadtree_c *tree, seg_t *part, double best_cost)
   if constexpr (DEBUG_PICKNODE)
   {
     Debug("Eval %p: splits=%d iffy=%d near=%d left=%d+%d right=%d+%d cost=%1.4f\n", part, info.splits, info.iffy,
-                    info.near_miss, info.real_left, info.mini_left, info.real_right, info.mini_right, info.cost);
+          info.near_miss, info.real_left, info.mini_left, info.real_right, info.mini_right, info.cost);
   }
 
   return info.cost;
@@ -690,8 +690,8 @@ bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, doubl
 
     if constexpr (DEBUG_PICKNODE)
     {
-      Debug("PickNode:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", part->linedef ? "" : "MINI", part,
-                      part->start->x, part->start->y, part->end->x, part->end->y);
+      Debug("PickNode:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", part->linedef ? "" : "MINI", part, part->start->x,
+            part->start->y, part->end->x, part->end->y);
     }
 
     /* ignore minisegs as partition candidates */
@@ -761,8 +761,8 @@ seg_t *PickNode(quadtree_c *tree, int depth)
     {
       if constexpr (DEBUG_PICKNODE)
       {
-        Debug("PickNode: Using Fast node (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", best->start->x, best->start->y,
-                        best->end->x, best->end->y);
+        Debug("PickNode: Using Fast node (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", best->start->x, best->start->y, best->end->x,
+              best->end->y);
       }
       return best;
     }
@@ -782,8 +782,8 @@ seg_t *PickNode(quadtree_c *tree, int depth)
     }
     else
     {
-      Debug("PickNode: Best has score %1.4f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", best_cost, best->start->x,
-                      best->start->y, best->end->x, best->end->y);
+      Debug("PickNode: Best has score %1.4f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", best_cost, best->start->x, best->start->y,
+            best->end->x, best->end->y);
     }
   }
 
@@ -965,9 +965,8 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
 
     for (cut = cut_list; cut; cut = cut->next)
     {
-      Debug("  Vertex %zu (%1.1f,%1.1f)  Along %1.2f  [%d/%d]  %s\n", cut->vertex->index, cut->vertex->x,
-                      cut->vertex->y, cut->along_dist, cut->open_before ? 1 : 0, cut->open_after ? 1 : 0,
-                      cut->self_ref ? "SELFREF" : "");
+      Debug("  Vertex %zu (%1.1f,%1.1f)  Along %1.2f  [%d/%d]  %s\n", cut->vertex->index, cut->vertex->x, cut->vertex->y,
+            cut->along_dist, cut->open_before ? 1 : 0, cut->open_after ? 1 : 0, cut->self_ref ? "SELFREF" : "");
     }
   }
 
@@ -1032,10 +1031,10 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
     {
 
       Debug("AddMiniseg: %p RIGHT  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, seg->start->x, seg->start->y, seg->end->x,
-                      seg->end->y);
+            seg->end->y);
 
       Debug("AddMiniseg: %p LEFT   (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, buddy->start->x, buddy->start->y, buddy->end->x,
-                      buddy->end->y);
+            buddy->end->y);
     }
   }
 }
@@ -1060,7 +1059,7 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
 // Rewritten by Andrew Apted (-AJA-), 1999-2000.
 //
 
-void SetPartition(node_t* node, const seg_t *part)
+void SetPartition(node_t *node, const seg_t *part)
 {
   SYS_ASSERT(part->linedef);
 
@@ -1531,8 +1530,8 @@ void ClockwiseOrder(subsec_t *subsec)
 
     for (seg = subsec->seg_list; seg; seg = seg->next)
     {
-      Debug("  Seg %p: Angle %1.6f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, seg->cmp_angle, seg->start->x,
-                      seg->start->y, seg->end->x, seg->end->y);
+      Debug("  Seg %p: Angle %1.6f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, seg->cmp_angle, seg->start->x, seg->start->y,
+            seg->end->x, seg->end->y);
     }
   }
 }
@@ -1561,15 +1560,14 @@ void SanityCheckClosed(subsec_t *subsec)
 
   if (gaps > 0)
   {
-    MinorIssue("Subsector #%zu near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)\n", subsec->index, subsec->mid_x, subsec->mid_y, gaps,
-               total);
+    MinorIssue("Subsector #%zu near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)\n", subsec->index, subsec->mid_x,
+               subsec->mid_y, gaps, total);
 
     if constexpr (DEBUG_SUBSEC)
     {
       for (seg = subsec->seg_list; seg; seg = seg->next)
       {
-        Debug("  SEG %p  (%1.1f,%1.1f) --> (%1.1f,%1.1f)\n", seg, seg->start->x, seg->start->y, seg->end->x,
-                        seg->end->y);
+        Debug("  SEG %p  (%1.1f,%1.1f) --> (%1.1f,%1.1f)\n", seg, seg->start->x, seg->start->y, seg->end->x, seg->end->y);
       }
     }
   }
@@ -1588,7 +1586,7 @@ void SanityCheckHasRealSeg(subsec_t *subsec)
   FatalError("Subsector #%zu near (%1.1f,%1.1f) has no real seg!\n", subsec->index, subsec->mid_x, subsec->mid_y);
 }
 
-void RenumberSegs(subsec_t * subsec, size_t &cur_seg_index)
+void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index)
 {
   if constexpr (DEBUG_SUBSEC)
   {
@@ -1651,8 +1649,8 @@ void DebugShowSegs(const seg_t *list)
 {
   for (const seg_t *seg = list; seg; seg = seg->next)
   {
-    Debug("Build:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->linedef ? "" : "MINI", seg, seg->start->x,
-                    seg->start->y, seg->end->x, seg->end->y);
+    Debug("Build:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->linedef ? "" : "MINI", seg, seg->start->x, seg->start->y,
+          seg->end->x, seg->end->y);
   }
 }
 
@@ -1701,7 +1699,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
   if constexpr (DEBUG_BUILDER)
   {
     Debug("Build: PARTITION %p (%1.0f,%1.0f) -> (%1.0f,%1.0f)\n", part, part->start->x, part->start->y, part->end->x,
-                    part->end->y);
+          part->end->y);
   }
 
   node_t *node = NewNode();
@@ -1931,8 +1929,8 @@ void RoundOff(subsec_t *subsec)
 
     if constexpr (DEBUG_SUBSEC)
     {
-      Debug("Degenerate before: (%1.2f,%1.2f) -> (%1.2f,%1.2f)\n", last_real_degen->start->x,
-                      last_real_degen->start->y, last_real_degen->end->x, last_real_degen->end->y);
+      Debug("Degenerate before: (%1.2f,%1.2f) -> (%1.2f,%1.2f)\n", last_real_degen->start->x, last_real_degen->start->y,
+            last_real_degen->end->x, last_real_degen->end->y);
     }
 
     // create a new vertex for this baby
@@ -1941,8 +1939,8 @@ void RoundOff(subsec_t *subsec)
     if constexpr (DEBUG_SUBSEC)
     {
       Debug("Degenerate after:  (%d,%d) -> (%d,%d)\n", (int32_t)floor(last_real_degen->start->x),
-                      (int32_t)floor(last_real_degen->start->y), (int32_t)floor(last_real_degen->end->x),
-                      (int32_t)floor(last_real_degen->end->y));
+            (int32_t)floor(last_real_degen->start->y), (int32_t)floor(last_real_degen->end->x),
+            (int32_t)floor(last_real_degen->end->y));
     }
 
     last_real_degen->is_degenerate = false;

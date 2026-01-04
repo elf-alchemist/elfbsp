@@ -33,7 +33,7 @@ static constexpr std::uint32_t DUMMY_DUP = 0xFFFF;
 Wad_file *cur_wad;
 
 static int block_x, block_y;
-static int block_w, block_h;
+static size_t block_w, block_h;
 static size_t block_count;
 
 static int block_mid_x = 0;
@@ -46,14 +46,6 @@ static uint16_t *block_dups;
 
 static int32_t block_compression;
 static bool block_overflowed;
-
-void GetBlockmapBounds(int *x, int *y, int *w, int *h)
-{
-  *x = block_x;
-  *y = block_y;
-  *w = block_w;
-  *h = block_h;
-}
 
 int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2)
 {
@@ -205,10 +197,10 @@ static void BlockAddLine(const linedef_t *L)
   int32_t by2_temp = (std::max(y1, y2) - block_y) / 128;
 
   // handle truncated blockmaps
-  int32_t bx1 = std::max(bx1_temp, 0);
-  int32_t by1 = std::max(by1_temp, 0);
-  int32_t bx2 = std::min(bx2_temp, block_w - 1);
-  int32_t by2 = std::min(by2_temp, block_h - 1);
+  size_t bx1 = static_cast<size_t>(std::max(bx1_temp, 0));
+  size_t by1 = static_cast<size_t>(std::max(by1_temp, 0));
+  size_t bx2 = static_cast<size_t>(std::min(bx2_temp, (int32_t)block_w - 1));
+  size_t by2 = static_cast<size_t>(std::min(by2_temp, (int32_t)block_h - 1));
 
   if (bx2 < bx1 || by2 < by1)
   {
@@ -218,7 +210,7 @@ static void BlockAddLine(const linedef_t *L)
   // handle simple case #1: completely horizontal
   if (by1 == by2)
   {
-    for (int32_t bx = bx1; bx <= bx2; bx++)
+    for (size_t bx = bx1; bx <= bx2; bx++)
     {
       size_t blk_num = static_cast<size_t>(by1 * block_w + bx);
       BlockAdd(blk_num, line_index);
@@ -229,7 +221,7 @@ static void BlockAddLine(const linedef_t *L)
   // handle simple case #2: completely vertical
   if (bx1 == bx2)
   {
-    for (int32_t by = by1; by <= by2; by++)
+    for (size_t by = by1; by <= by2; by++)
     {
       size_t blk_num = static_cast<size_t>(by * block_w + bx1);
       BlockAdd(blk_num, line_index);
@@ -239,14 +231,14 @@ static void BlockAddLine(const linedef_t *L)
 
   // handle the rest (diagonals)
 
-  for (int32_t by = by1; by <= by2; by++)
+  for (size_t by = by1; by <= by2; by++)
   {
-    for (int32_t bx = bx1; bx <= bx2; bx++)
+    for (size_t bx = bx1; bx <= bx2; bx++)
     {
       size_t blk_num = static_cast<size_t>(bx + by * block_w);
 
-      int32_t minx = block_x + 128 * bx;
-      int32_t miny = block_y + 128 * by;
+      int32_t minx = block_x + 128 * (int32_t)bx;
+      int32_t miny = block_y + 128 * (int32_t)by;
       int32_t maxx = minx + 127;
       int32_t maxy = miny + 127;
 
@@ -587,10 +579,10 @@ void InitBlockmap(void)
   block_x = map_bbox.minx - (map_bbox.minx & 0x7);
   block_y = map_bbox.miny - (map_bbox.miny & 0x7);
 
-  block_w = ((map_bbox.maxx - block_x) / 128) + 1;
-  block_h = ((map_bbox.maxy - block_y) / 128) + 1;
+  block_w = static_cast<size_t>((map_bbox.maxx - block_x) / 128) + 1;
+  block_h = static_cast<size_t>((map_bbox.maxy - block_y) / 128) + 1;
 
-  block_count = static_cast<size_t>(block_w * block_h);
+  block_count = block_w * block_h;
 }
 
 void PutBlockmap(void)
@@ -1448,11 +1440,11 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
   // 1083 => Set to BAM stored in tag
   if (seg->linedef->special == Special_RotateDegrees)
   {
-    result += DegreesToShortBAM(uint32_t(seg->linedef->tag));
+    result += DegreesToShortBAM(uint16_t(seg->linedef->tag));
   }
   else if (seg->linedef->special == Special_RotateDegreesHard)
   {
-    result = DegreesToShortBAM(uint32_t(seg->linedef->tag));
+    result = DegreesToShortBAM(uint16_t(seg->linedef->tag));
   }
   else if (seg->linedef->special == Special_RotateAngleT)
   {
@@ -1909,8 +1901,8 @@ void PutSegs(void)
     if constexpr (DEBUG_BSP)
     {
       Debug("PUT SEG: %zu  Vert %04X->%04X  Line %04X %s  Angle %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->index,
-                      GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef), seg->side ? "L" : "R",
-                      GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
+            GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef), seg->side ? "L" : "R",
+            GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
     }
   }
 
@@ -1942,8 +1934,7 @@ void PutSubsecs(void)
 
     if constexpr (DEBUG_BSP)
     {
-      Debug("PUT SUBSEC %zu  First %04X  Num %04X\n", sub->index, GetLittleEndian(raw.first),
-                      GetLittleEndian(raw.num));
+      Debug("PUT SUBSEC %zu  First %04X  Num %04X\n", sub->index, GetLittleEndian(raw.first), GetLittleEndian(raw.num));
     }
   }
 
@@ -2021,7 +2012,7 @@ static void PutOneNode(node_t *node, Lump_c *lump)
   if constexpr (DEBUG_BSP)
   {
     Debug("PUT NODE %zu  Left %04X  Right %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", node->index, GetLittleEndian(raw.left),
-                    GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
+          GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
   }
 }
 
@@ -2332,7 +2323,7 @@ static void PutOneZNode(Lump_c *lump, node_t *node, bool xgl3)
   if constexpr (DEBUG_BSP)
   {
     Debug("PUT Z NODE %zu  Left %08X  Right %08X  (%f,%f) -> (%f,%f)\n", node->index, GetLittleEndian(raw.left),
-                    GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
+          GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
   }
 }
 

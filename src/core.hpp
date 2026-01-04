@@ -37,10 +37,7 @@
 #include <cstdio>
 #include <cstring>
 
-
-#if !defined(WIN32)
-  #include <unistd.h>
-#endif
+#include <bit>
 
 //
 //  OS support
@@ -90,16 +87,6 @@ static constexpr bool DEBUG_SORTER = false;
 static constexpr bool DEBUG_SUBSEC = false;
 static constexpr bool DEBUG_WAD = false;
 
-// sized types
-typedef uint8_t byte;
-typedef uint8_t args_t[5];
-
-// misc constants
-static constexpr size_t MSG_BUFFER_LENGTH = 1024;
-static constexpr size_t NO_INDEX = static_cast<size_t>(-1);
-static constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
-static constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
-
 //
 // The packed attribute forces structures to be packed into the minimum
 // space necessary.  If this is not done, the compiler may align structure
@@ -134,7 +121,7 @@ static constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
 static constexpr bool ENDIAN_BIG = (std::endian::native == std::endian::big);
 static constexpr bool ENDIAN_LITTLE = !ENDIAN_BIG;
 
-template <typename T> inline constexpr T byteswap(T value) noexcept
+template <typename T> static inline constexpr T byteswap(T value) noexcept
 {
   static_assert(std::is_integral_v<T>, "byteswap: integral required");
   static_assert(sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "byteswap: only 16/32/64-bit supported");
@@ -177,13 +164,76 @@ template <typename T> static inline constexpr T GetBigEndian(T value)
   }
 }
 
+// sized types
+typedef uint8_t byte;
+typedef uint8_t args_t[5];
+typedef int32_t fixed32_t;
+typedef uint32_t long_angle_t;
+typedef uint16_t short_angle_t;
+typedef _Float64 float64_t; // No C++23 yet, so a hack it is
+
+// misc constants
+static constexpr uint32_t ANG45 = 0x20000000;
+static constexpr uint32_t FRACBITS = 16;
+static constexpr fixed32_t FRACUNIT = (1 << FRACBITS);
+static constexpr float64_t FRACFACTOR = static_cast<float64_t>(FRACUNIT);
+
+static constexpr size_t NO_INDEX = static_cast<size_t>(-1);
+static constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
+static constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
+
+static constexpr size_t MSG_BUFFER_LENGTH = 1024;
+
+// bitflags
+static inline constexpr uint32_t BIT(uint32_t x)
+{
+  return (1u << x);
+}
+
+static inline constexpr bool HAS_BIT(uint32_t x, uint32_t y)
+{
+  return (x & y) != 0;
+}
+
+// doom's 32bit 16.16 fixed point
+static inline constexpr fixed32_t IntToFixed(int32_t x)
+{
+  return x << FRACBITS;
+}
+
+static inline constexpr int32_t FixedToInt(fixed32_t x)
+{
+  return x >> FRACBITS;
+}
+
+static inline constexpr float64_t FixedToFloat(fixed32_t x)
+{
+  return (float64_t(x) / FRACFACTOR);
+}
+
+static inline constexpr fixed32_t FloatToFixed(float64_t x)
+{
+  return fixed32_t(x * FRACFACTOR);
+}
+
+// binary angular measurement, BAM!
+template <typename T> static inline constexpr long_angle_t DegreesToLongBAM(T x)
+{
+  return ANG45 * (x / 45);
+}
+
+template <typename T> static inline constexpr short_angle_t DegreesToShortBAM(T x)
+{
+  return (ANG45 * (x / 45)) >> FRACBITS;
+}
+
 //------------------------------------------------------------------------
 // STRING STUFF
 //------------------------------------------------------------------------
 
 // this is > 0 when ShowMap() is used and the current line
 // has not been terminated with a new-line ('\n') character.
-static inline int32_t hanging_pos = 0;
+static inline size_t hanging_pos = 0;
 
 static inline void StopHanging()
 {
@@ -199,8 +249,6 @@ static inline void StopHanging()
 // Safe, portable vsnprintf().
 static inline int32_t PRINTF_ATTR(3, 0) M_vsnprintf(char *buf, size_t buf_len, const char *s, va_list args)
 {
-  int32_t result;
-
   if (buf_len < 1)
   {
     return 0;
@@ -209,7 +257,7 @@ static inline int32_t PRINTF_ATTR(3, 0) M_vsnprintf(char *buf, size_t buf_len, c
   // Windows (and other OSes?) has a vsnprintf() that doesn't always
   // append a trailing \0. So we must do it, and write into a buffer
   // that is one byte shorter; otherwise this function is unsafe.
-  result = vsnprintf(buf, buf_len, s, args);
+  int32_t result = vsnprintf(buf, buf_len, s, args);
 
   // If truncated, change the final char in the buffer to a \0.
   // A negative resultindicates a truncated buffer on Windows.
@@ -288,8 +336,10 @@ static inline void PRINTF_ATTR(1, 2) FatalError(const char *fmt, ...)
 
 // Assertion macros
 
-#define SYS_ASSERT(cond) \
-  ((cond) ? (void)0 : FatalError("Assertion (%s) failed\nIn function %s (%s:%d)\n", #cond, __func__, __FILE__, __LINE__))
+template <typename T> static inline constexpr void SYS_ASSERT(T cond)
+{
+  return (cond) ? (void)0 : FatalError("Assertion failed\nIn function %s (%s:%d)\n", __func__, __FILE__, __LINE__);
+}
 
 //------------------------------------------------------------------------
 // MEMORY ALLOCATION
@@ -298,8 +348,7 @@ static inline void PRINTF_ATTR(1, 2) FatalError(const char *fmt, ...)
 //
 // Allocate memory with error checking.  Zeros the memory.
 //
-template <typename T>
-static inline constexpr T *UtilCalloc(size_t size)
+template <typename T> static inline constexpr T *UtilCalloc(size_t size)
 {
   T *ret = (T *)calloc(1, size);
 
@@ -314,8 +363,7 @@ static inline constexpr T *UtilCalloc(size_t size)
 //
 // Reallocate memory with error checking.
 //
-template <typename T>
-static inline constexpr T *UtilRealloc(T *old, size_t size)
+template <typename T> static inline constexpr T *UtilRealloc(T *old, size_t size)
 {
   T *ret = (T *)realloc(old, size);
 
@@ -330,8 +378,7 @@ static inline constexpr T *UtilRealloc(T *old, size_t size)
 //
 // Free the memory with error checking.
 //
-template <typename T>
-static inline constexpr void UtilFree(T *data)
+template <typename T> static inline constexpr void UtilFree(T *data)
 {
   if (data == nullptr)
   {
@@ -563,16 +610,6 @@ static inline double ComputeAngle(double dx, double dy)
   return (angle < 0) ? angle + 360.0 : angle;
 }
 
-inline static constexpr uint32_t BIT(uint32_t x)
-{
-  return (1u << x);
-}
-
-inline static constexpr bool HAS_BIT(uint32_t x, uint32_t y)
-{
-  return bool(x & y);
-}
-
 //------------------------------------------------------------------------
 // WAD STRUCTURES
 //------------------------------------------------------------------------
@@ -700,15 +737,15 @@ typedef struct raw_hexen_thing_s
 // BSP TREE STRUCTURES
 //------------------------------------------------------------------------
 
-static constexpr const char * DEEP_MAGIC = "xNd4\0\0\0\0";
-static constexpr const char * XNOD_MAGIC = "XNOD";
-static constexpr const char * ZNOD_MAGIC = "ZNOD";
-static constexpr const char * XGLN_MAGIC = "XGLN";
-static constexpr const char * ZGLN_MAGIC = "ZGLN";
-static constexpr const char * XGL2_MAGIC = "XGL2";
-static constexpr const char * ZGL2_MAGIC = "ZGL2";
-static constexpr const char * XGL3_MAGIC = "XGL3";
-static constexpr const char * ZGL3_MAGIC = "ZGL3";
+static constexpr const char *DEEP_MAGIC = "xNd4\0\0\0\0";
+static constexpr const char *XNOD_MAGIC = "XNOD";
+static constexpr const char *ZNOD_MAGIC = "ZNOD";
+static constexpr const char *XGLN_MAGIC = "XGLN";
+static constexpr const char *ZGLN_MAGIC = "ZGLN";
+static constexpr const char *XGL2_MAGIC = "XGL2";
+static constexpr const char *ZGL2_MAGIC = "ZGL2";
+static constexpr const char *XGL3_MAGIC = "XGL3";
+static constexpr const char *ZGL3_MAGIC = "ZGL3";
 
 typedef struct raw_seg_s
 {
@@ -836,7 +873,7 @@ typedef struct
 typedef struct patch_s
 {
   int16_t width;         // bounding box size
-  int16_t height;
+  int16_t height;        //
   int16_t leftoffset;    // pixels to the left of origin
   int16_t topoffset;     // pixels below the origin
   uint32_t columnofs[1]; // only [width] used
@@ -933,20 +970,6 @@ typedef enum bsp_specials_e : uint32_t
   Special_Unknown1, // related to splitting?
   Special_Unknown2, // line tag value becomes seg's associated line index? why?
 } bsp_specials_t;
-
-typedef uint32_t long_angle_t;
-typedef uint16_t short_angle_t;
-constexpr uint32_t ANG45 = 0x20000000;
-
-template <typename T> static inline constexpr long_angle_t DegreesToLongBAM(T x)
-{
-  return ANG45 * (x / 45);
-}
-
-template <typename T> static inline constexpr short_angle_t DegreesToShortBAM(T x)
-{
-  return (ANG45 * (x / 45)) >> 16;
-}
 
 //
 // Sector attributes.
