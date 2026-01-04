@@ -282,7 +282,7 @@ static inline int32_t PRINTF_ATTR(3, 4) M_snprintf(char *buf, size_t buf_len, co
 
 static inline void PRINTF_ATTR(1, 2) Debug(const char *fmt, ...)
 {
-  static char buffer[MSG_BUFFER_LENGTH];
+  char buffer[MSG_BUFFER_LENGTH];
 
   va_list args;
 
@@ -298,7 +298,7 @@ static inline void PRINTF_ATTR(1, 2) Debug(const char *fmt, ...)
 //
 static inline void PRINTF_ATTR(1, 2) Print(const char *fmt, ...)
 {
-  static char buffer[MSG_BUFFER_LENGTH];
+  char buffer[MSG_BUFFER_LENGTH];
 
   va_list arg_ptr;
 
@@ -318,7 +318,7 @@ static inline void PRINTF_ATTR(1, 2) Print(const char *fmt, ...)
 //
 static inline void PRINTF_ATTR(1, 2) FatalError(const char *fmt, ...)
 {
-  static char buffer[MSG_BUFFER_LENGTH];
+  char buffer[MSG_BUFFER_LENGTH];
 
   va_list arg_ptr;
 
@@ -335,7 +335,7 @@ static inline void PRINTF_ATTR(1, 2) FatalError(const char *fmt, ...)
 
 // Assertion macros
 
-template <typename T> static inline constexpr void SYS_ASSERT(T cond)
+static inline constexpr void SYS_ASSERT(bool cond)
 {
   return (cond) ? (void)0 : FatalError("Assertion failed\nIn function %s (%s:%d)\n", __func__, __FILE__, __LINE__);
 }
@@ -472,28 +472,35 @@ static inline int32_t StringCaseCmpMax(const char *s1, const char *s2, size_t le
 
 static inline bool HasExtension(const char *filename)
 {
-  size_t A = strlen(filename);
-
-  if (A > 1 && filename[A] == '.')
+  const size_t len = strlen(filename);
+  if (len == 0)
   {
     return false;
   }
 
-  while (A--)
+  // Trailing dot → no extension
+  if (filename[len - 1] == '.')
   {
-    if (filename[A] == '.')
+    return false;
+  }
+
+  for (size_t i = len; i-- > 0;)
+  {
+    const char ch = filename[i];
+
+    if (ch == '.')
     {
       return true;
     }
 
-    if (filename[A] == DIR_SEP_CH)
+    if (ch == DIR_SEP_CH)
     {
       break;
     }
 
     if constexpr (WINDOWS)
     {
-      if (filename[A] == DIR_SEP_CH || filename[A] == ':')
+      if (ch == ':')
       {
         break;
       }
@@ -510,7 +517,7 @@ static inline bool HasExtension(const char *filename)
 //
 static inline bool MatchExtension(const char *filename, const char *ext)
 {
-  if (!ext)
+  if (!ext || !*ext)
   {
     return !HasExtension(filename);
   }
@@ -518,15 +525,15 @@ static inline bool MatchExtension(const char *filename, const char *ext)
   size_t A = strlen(filename);
   size_t B = strlen(ext);
 
-  while (A-- && B--)
+  while (A-- > 0 && B-- > 0)
   {
-    if (toupper(filename[A]) != toupper(ext[B]))
+    if (toupper((unsigned char)filename[A]) != toupper((unsigned char)ext[B]))
     {
       return false;
     }
   }
 
-  return filename[A] == '.';
+  return (B == (size_t)-1) && filename[A] == '.';
 }
 
 //
@@ -536,16 +543,20 @@ static inline bool MatchExtension(const char *filename, const char *ext)
 //
 static inline size_t FindExtension(const char *filename)
 {
-  if (filename[0] == 0)
+  const size_t len = strlen(filename);
+  if (len == 0)
   {
     return NO_INDEX;
   }
 
-  size_t pos = strlen(filename) - 1;
-
-  for (; filename[pos] != '.'; pos--)
+  for (size_t pos = len; pos-- > 0;)
   {
     char ch = filename[pos];
+
+    if (ch == '.')
+    {
+      return pos;
+    }
 
     if (ch == DIR_SEP_CH)
     {
@@ -554,44 +565,19 @@ static inline size_t FindExtension(const char *filename)
 
     if constexpr (WINDOWS)
     {
-      if (ch == DIR_SEP_CH || ch == ':')
+      if (ch == ':')
       {
         break;
       }
     }
   }
 
-  if (filename[pos] != '.')
-  {
-    return NO_INDEX;
-  }
-
-  return pos;
+  return NO_INDEX;
 }
 
 //------------------------------------------------------------------------
 // MATH STUFF
 //------------------------------------------------------------------------
-
-//
-// rounds the value _up_ to the nearest power of two.
-//
-static inline int RoundPOW2(int x)
-{
-  if (x <= 2)
-  {
-    return x;
-  }
-
-  x--;
-
-  for (int tmp = x >> 1; tmp; tmp >>= 1)
-  {
-    x |= tmp;
-  }
-
-  return x + 1;
-}
 
 //
 // Compute angle of line from (0,0) to (dx,dy).
