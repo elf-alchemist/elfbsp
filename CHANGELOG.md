@@ -2,6 +2,7 @@ Changes since previous release: AJBSP 1.07
 ==========================================
 
 New features:
+* Added REJECT and BLOCKMAP building for UDMF maps.
 * Added initial, experimental support for build-time line specials from ZokumBSP
 * These line specials are only supported in Doom-format maps
 * Special 999, which prevents a line from being added to the BlockMap building process, is known to work correctly.
