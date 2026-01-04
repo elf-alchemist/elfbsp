@@ -27,7 +27,6 @@
 #include <string>
 #include <vector>
 
-bool opt_backup = false;
 bool opt_help = false;
 bool opt_doc = false;
 bool opt_version = false;
@@ -49,55 +48,7 @@ struct map_range_t
 
 std::vector<map_range_t> map_list;
 
-class mybuildinfo_t : public buildinfo_t
-{
-public:
-  void Print_Verbose(const char *fmt, ...)
-  {
-    if (!verbose)
-    {
-      return;
-    }
-
-    va_list arg_ptr;
-
-    static char buffer[MSG_BUFFER_LENGTH];
-
-    va_start(arg_ptr, fmt);
-    vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
-    va_end(arg_ptr);
-
-    buffer[MSG_BUFFER_LENGTH - 1] = 0;
-
-    StopHanging();
-
-    printf("%s", buffer);
-    fflush(stdout);
-  }
-
-  void ShowMap(const char *name)
-  {
-    if (verbose)
-    {
-      Print("  %s\n", name);
-      return;
-    }
-
-    // display the map names across the terminal
-
-    if (hanging_pos >= 68)
-    {
-      StopHanging();
-    }
-
-    printf("  %s", name);
-    fflush(stdout);
-
-    hanging_pos += strlen(name) + 2;
-  }
-};
-
-class mybuildinfo_t config;
+buildinfo_t config;
 
 //------------------------------------------------------------------------
 
@@ -142,7 +93,7 @@ bool CheckMapInMaplist(size_t lev_idx)
   return false;
 }
 
-build_result_e BuildFile(void)
+static void BuildFile(void)
 {
   config.total_warnings = 0;
   config.total_minor_issues = 0;
@@ -153,7 +104,7 @@ build_result_e BuildFile(void)
   {
     Print("  No levels in wad\n");
     total_empty_files += 1;
-    return BUILD_OK;
+    return;
   }
 
   size_t visited = 0;
@@ -196,16 +147,11 @@ build_result_e BuildFile(void)
 
   StopHanging();
 
-  if (res == BUILD_Cancelled)
-  {
-    return res;
-  }
-
   if (visited == 0)
   {
     Print("  No matching levels\n");
     total_empty_files += 1;
-    return BUILD_OK;
+    return;
   }
 
   Print("\n");
@@ -220,17 +166,12 @@ build_result_e BuildFile(void)
     total_failed_files += 1;
   }
 
-  if (true)
-  {
-    Print("  Serious warnings: %d\n", config.total_warnings);
-  }
+  Print("  Serious warnings: %zu\n", config.total_warnings);
 
   if (config.verbose)
   {
-    Print("  Minor issues: %d\n", config.total_minor_issues);
+    Print("  Minor issues: %zu\n", config.total_minor_issues);
   }
-
-  return BUILD_OK;
 }
 
 void ValidateInputFilename(const char *filename)
@@ -299,7 +240,7 @@ void VisitFile(unsigned int idx, const char *filename)
     filename = opt_output.c_str();
   }
 
-  if (opt_backup)
+  if (config.backup)
   {
     BackupFile(filename);
   }
@@ -310,14 +251,9 @@ void VisitFile(unsigned int idx, const char *filename)
   // this will fatal error if it fails
   OpenWad(filename);
 
-  build_result_e res = BuildFile();
+  BuildFile();
 
   CloseWad();
-
-  if (res == BUILD_Cancelled)
-  {
-    FatalError("CANCELLED\n");
-  }
 }
 
 // ----- user information -----------------------------
@@ -489,7 +425,7 @@ void ParseShortArgument(const char *arg)
         opt_doc = true;
         continue;
       case 'b':
-        opt_backup = true;
+        config.backup = true;
         continue;
 
       case 'v':
@@ -532,7 +468,7 @@ void ParseShortArgument(const char *arg)
           FatalError("illegal value for '-c' option\n");
         }
 
-        config.split_cost = val;
+        config.split_cost = static_cast<size_t>(val);
         continue;
 
       default:
@@ -571,7 +507,7 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
   }
   else if (strcmp(name, "--backup") == 0 || strcmp(name, "--backups") == 0)
   {
-    opt_backup = true;
+    config.backup = true;
   }
   else if (strcmp(name, "--fast") == 0)
   {
@@ -610,7 +546,7 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
       FatalError("illegal value for '--cost' option\n");
     }
 
-    config.split_cost = val;
+    config.split_cost = static_cast<size_t>(val);
     used = 1;
   }
   else if (strcmp(name, "--output") == 0)
@@ -715,9 +651,6 @@ void ParseCommandLine(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-  // need this early, especially for fatal errors in utility/wad code
-  SetInfo(&config);
-
   ParseCommandLine(argc, argv);
 
   if (opt_version)
@@ -750,7 +683,7 @@ int main(int argc, char *argv[])
 
   if (opt_output.size() > 0)
   {
-    if (opt_backup)
+    if (config.backup)
     {
       FatalError("cannot use --backup with --output\n");
     }

@@ -574,7 +574,7 @@ void InitBlockmap(void)
   // find limits of linedefs, and store as map limits
   FindBlockmapLimits(&map_bbox);
 
-  cur_info->Print_Verbose("    Map limits: (%d,%d) to (%d,%d)\n", map_bbox.minx, map_bbox.miny, map_bbox.maxx, map_bbox.maxy);
+  config.Print_Verbose("    Map limits: (%d,%d) to (%d,%d)\n", map_bbox.minx, map_bbox.miny, map_bbox.maxx, map_bbox.maxy);
 
   block_x = map_bbox.minx - (map_bbox.minx & 0x7);
   block_y = map_bbox.miny - (map_bbox.miny & 0x7);
@@ -587,7 +587,7 @@ void InitBlockmap(void)
 
 void PutBlockmap(void)
 {
-  if (!cur_info->do_blockmap || lev_linedefs.size() == 0)
+  if (lev_linedefs.size() == 0)
   {
     // just create an empty blockmap lump
     CreateLevelLump("BLOCKMAP")->Finish();
@@ -615,7 +615,7 @@ void PutBlockmap(void)
   else
   {
     WriteBlockmap();
-    cur_info->Print_Verbose("    Blockmap size: %dx%d (compression: %d%%)\n", block_w, block_h, block_compression);
+    config.Print_Verbose("    Blockmap size: %dx%d (compression: %d%%)\n", block_w, block_h, block_compression);
   }
 
   FreeBlockmap();
@@ -782,7 +782,7 @@ static void Reject_WriteLump(void)
 //
 void PutReject(void)
 {
-  if (!cur_info->do_reject || lev_sectors.size() == 0)
+  if (lev_sectors.size() == 0)
   {
     // just create an empty reject lump
     CreateLevelLump("REJECT")->Finish();
@@ -800,7 +800,7 @@ void PutReject(void)
 
   Reject_WriteLump();
   Reject_Free();
-  cur_info->Print_Verbose("    Reject size: %zu\n", rej_total_size);
+  config.Print_Verbose("    Reject size: %zu\n", rej_total_size);
 }
 
 //------------------------------------------------------------------------
@@ -2072,7 +2072,7 @@ void CheckLimits(void)
     MarkOverflow(LIMIT_LINEDEFS);
   }
 
-  if (!(cur_info->force_xnod || cur_info->ssect_xgl3))
+  if (!(config.force_xnod || config.ssect_xgl3))
   {
     if (num_old_vert > 32767 || num_new_vert > 32767 || lev_segs.size() > 32767 || lev_nodes.size() > 32767)
     {
@@ -2407,7 +2407,7 @@ void LoadLevel(void)
   lev_long_name = false;
   lev_overflows = false;
 
-  cur_info->ShowMap(lev_current_name);
+  config.ShowMap(lev_current_name);
 
   num_new_vert = 0;
   num_real_lines = 0;
@@ -2438,7 +2438,7 @@ void LoadLevel(void)
     PruneVerticesAtEnd();
   }
 
-  cur_info->Print_Verbose("    Loaded %zu vertices, %zu sectors, %zu sides, %zu lines, %zu things\n", lev_vertices.size(),
+  config.Print_Verbose("    Loaded %zu vertices, %zu sectors, %zu sides, %zu lines, %zu things\n", lev_vertices.size(),
                           lev_sectors.size(), lev_sidedefs.size(), lev_linedefs.size(), lev_things.size());
 
   DetectOverlappingVertices();
@@ -2510,19 +2510,19 @@ build_result_e SaveLevel(node_t *root_node)
   AddMissingLump("BLOCKMAP", "REJECT");
 
   // user preferences
-  lev_force_xnod = cur_info->force_xnod;
+  lev_force_xnod = config.force_xnod;
 
   // check for overflows...
   // this sets the force_xxx vars if certain limits are breached
   CheckLimits();
 
   /* --- Normal nodes --- */
-  if ((lev_force_xnod || cur_info->ssect_xgl3) && num_real_lines > 0)
+  if ((lev_force_xnod || config.ssect_xgl3) && num_real_lines > 0)
   {
     // leave SEGS empty
     CreateLevelLump("SEGS")->Finish();
 
-    if (cur_info->ssect_xgl3)
+    if (config.ssect_xgl3)
     {
       Lump_c *lump = CreateLevelLump("SSECTORS");
       SaveXGL3Format(lump, root_node);
@@ -2650,13 +2650,6 @@ Lump_c *CreateLevelLump(const char *name, size_t max_size)
 // MAIN STUFF
 //------------------------------------------------------------------------
 
-buildinfo_t *cur_info = nullptr;
-
-void SetInfo(buildinfo_t *info)
-{
-  cur_info = info;
-}
-
 void OpenWad(const char *filename)
 {
   cur_wad = Wad_file::Open(filename, 'a');
@@ -2706,11 +2699,6 @@ const char *GetLevelName(size_t lev_idx)
 
 build_result_e BuildLevel(size_t lev_idx)
 {
-  if (cur_info->cancelled)
-  {
-    return BUILD_Cancelled;
-  }
-
   node_t *root_node = nullptr;
   subsec_t *root_sub = nullptr;
 
@@ -2737,12 +2725,12 @@ build_result_e BuildLevel(size_t lev_idx)
 
   if (ret == BUILD_OK)
   {
-    cur_info->Print_Verbose("    Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES\n", lev_nodes.size(), lev_subsecs.size(),
+    config.Print_Verbose("    Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES\n", lev_nodes.size(), lev_subsecs.size(),
                             lev_segs.size(), num_old_vert + num_new_vert);
 
     if (root_node != nullptr)
     {
-      cur_info->Print_Verbose("    Heights of subtrees: %d / %d\n", ComputeBspHeight(root_node->r.node),
+      config.Print_Verbose("    Heights of subtrees: %d / %d\n", ComputeBspHeight(root_node->r.node),
                               ComputeBspHeight(root_node->l.node));
     }
 

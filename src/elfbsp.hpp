@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "core.hpp"
 #include <cstddef>
 #include <cstdint>
 
@@ -34,53 +35,70 @@ static constexpr int32_t SPLIT_COST_MIN = 1;
 static constexpr int32_t SPLIT_COST_DEFAULT = 11;
 static constexpr int32_t SPLIT_COST_MAX = 32;
 
-class buildinfo_t
+typedef struct buildinfo_s buildinfo_t;
+
+extern buildinfo_t config;
+
+struct buildinfo_s
 {
-public:
   // use a faster method to pick nodes
-  bool fast;
-  // when these two are false, they create an empty lump
-  bool do_blockmap;
-  bool do_reject;
+  bool fast = false;
+  bool backup = false;
+  bool force_xnod = false;
+  bool ssect_xgl3 = false;
 
-  bool force_xnod;
-  bool ssect_xgl3;
-
-  // the GUI can set this to tell the node builder to stop
-  bool cancelled;
-
-  int split_cost;
+  size_t split_cost = SPLIT_COST_DEFAULT;
 
   // this affects how some messages are shown
-  bool verbose;
+  bool verbose = false;
 
   // from here on, various bits of internal state
-  int total_warnings;
-  int total_minor_issues;
+  size_t total_warnings = 0;
+  size_t total_minor_issues = 0;
 
-public:
-  buildinfo_t(void)
-      : fast(false),
-
-        do_blockmap(true), do_reject(true),
-
-        force_xnod(false),
-
-        cancelled(false),
-
-        split_cost(SPLIT_COST_DEFAULT), verbose(false),
-
-        total_warnings(0), total_minor_issues(0)
+  inline void Print_Verbose(const char *fmt, ...)
   {
+    if (!verbose)
+    {
+      return;
+    }
+
+    va_list arg_ptr;
+
+    static char buffer[MSG_BUFFER_LENGTH];
+
+    va_start(arg_ptr, fmt);
+    vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
+    va_end(arg_ptr);
+
+    buffer[MSG_BUFFER_LENGTH - 1] = 0;
+
+    StopHanging();
+
+    printf("%s", buffer);
+    fflush(stdout);
   }
 
-  ~buildinfo_t(void)
+  inline void ShowMap(const char *name)
   {
-  }
+    if (verbose)
+    {
+      Print("  %s\n", name);
+      return;
+    }
 
-public:
-  virtual void Print_Verbose(const char *fmt, ...) = 0;
-  virtual void ShowMap(const char *name) = 0;
+    // display the map names across the terminal
+
+    if (hanging_pos >= 68)
+    {
+      StopHanging();
+    }
+
+    printf("  %s", name);
+    fflush(stdout);
+
+    hanging_pos += strlen(name) + 2;
+  }
 };
 
 constexpr const char PRINT_USAGE[] = "\n";
@@ -187,15 +205,9 @@ typedef enum
   // everything went peachy keen
   BUILD_OK = 0,
 
-  // building was cancelled
-  BUILD_Cancelled,
-
   // when saving the map, one or more lumps overflowed
   BUILD_LumpOverflow
 } build_result_e;
-
-// set the build information.  must be done before anything else.
-void SetInfo(buildinfo_t *info);
 
 // attempt to open a wad.  on failure, the FatalError method in the
 // buildinfo_t interface is called.

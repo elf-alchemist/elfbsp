@@ -38,7 +38,7 @@ void Failure(const char *fmt, ...)
   vsnprintf(message_buf, sizeof(message_buf), fmt, args);
   va_end(args);
 
-  cur_info->Print_Verbose("    FAILURE: %s", message_buf);
+  config.Print_Verbose("    FAILURE: %s", message_buf);
 }
 
 void Warning(const char *fmt, ...)
@@ -49,14 +49,14 @@ void Warning(const char *fmt, ...)
   vsnprintf(message_buf, sizeof(message_buf), fmt, args);
   va_end(args);
 
-  cur_info->Print_Verbose("    WARNING: %s", message_buf);
+  config.Print_Verbose("    WARNING: %s", message_buf);
 
-  cur_info->total_warnings++;
+  config.total_warnings++;
 }
 
 void MinorIssue(const char *fmt, ...)
 {
-  if (cur_info->verbose)
+  if (config.verbose)
   {
     va_list args;
 
@@ -64,10 +64,10 @@ void MinorIssue(const char *fmt, ...)
     vsnprintf(message_buf, sizeof(message_buf), fmt, args);
     va_end(args);
 
-    cur_info->Print_Verbose("    ISSUE: %s", message_buf);
+    config.Print_Verbose("    ISSUE: %s", message_buf);
   }
 
-  cur_info->total_minor_issues++;
+  config.total_minor_issues++;
 }
 
 //------------------------------------------------------------------------
@@ -444,7 +444,7 @@ void PruneVerticesAtEnd(void)
 
   if (unused > 0)
   {
-    cur_info->Print_Verbose("    Pruned %zu unused vertices at end\n", unused);
+    config.Print_Verbose("    Pruned %zu unused vertices at end\n", unused);
   }
 
   num_old_vert = lev_vertices.size();
@@ -510,7 +510,7 @@ void DetectOverlappingLines(void)
 
   if (count > 0)
   {
-    cur_info->Print_Verbose("    Detected %zu overlapped linedefs\n", count);
+    config.Print_Verbose("    Detected %zu overlapped linedefs\n", count);
   }
 }
 

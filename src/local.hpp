@@ -31,9 +31,6 @@
 struct Lump_c;
 struct Wad_file;
 
-// storage of node building parameters
-extern buildinfo_t *cur_info;
-
 // current WAD file
 extern Wad_file *cur_wad;
 

@@ -318,7 +318,7 @@ void AddIntersection(intersection_t **cut_list, vertex_t *vert, seg_t *part, boo
 //
 bool EvalPartitionWorker(quadtree_c *tree, seg_t *part, double best_cost, eval_info_t *info)
 {
-  double split_cost = cur_info->split_cost;
+  double split_cost = static_cast<double>(config.split_cost);
 
   // -AJA- this is the heart of the superblock idea, it tests the
   //       *whole* quad against the partition line to quickly handle
@@ -683,11 +683,6 @@ bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, doubl
   /* try each Seg as partition */
   for (seg_t *part = part_list->list; part; part = part->next)
   {
-    if (cur_info->cancelled)
-    {
-      return false;
-    }
-
     if constexpr (DEBUG_PICKNODE)
     {
       Debug("PickNode:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", part->linedef ? "" : "MINI", part, part->start->x,
@@ -748,7 +743,7 @@ seg_t *PickNode(quadtree_c *tree, int depth)
    *       are axis-aligned and roughly divide the current group into
    *       two halves.  This can save *heaps* of times on large levels.
    */
-  if (cur_info->fast && tree->real_num >= SEG_FAST_THRESHHOLD)
+  if (config.fast && tree->real_num >= SEG_FAST_THRESHHOLD)
   {
     if constexpr (DEBUG_PICKNODE)
     {
@@ -1659,11 +1654,6 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
   *N = nullptr;
   *S = nullptr;
 
-  if (cur_info->cancelled)
-  {
-    return BUILD_Cancelled;
-  }
-
   if constexpr (DEBUG_BUILDER)
   {
     Debug("Build: BEGUN @ %d\n", depth);
@@ -1677,11 +1667,6 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
 
   /* pick partition line, NONE indicates convexicity */
   seg_t *part = PickNode(tree, depth);
-
-  if (cur_info->cancelled)
-  {
-    return BUILD_Cancelled;
-  }
 
   if (part == nullptr)
   {
