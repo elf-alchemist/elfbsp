@@ -132,11 +132,11 @@ int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1
 
 /* ----- create blockmap ------------------------------------ */
 
-static constexpr std::uint32_t BK_NUM = 0;
-static constexpr std::uint32_t BK_MAX = 1;
-static constexpr std::uint32_t BK_XOR = 2;
-static constexpr std::uint32_t BK_FIRST = 3;
-static constexpr std::uint32_t BK_QUANTUM = 32;
+static constexpr uint32_t BK_NUM = 0;
+static constexpr uint32_t BK_MAX = 1;
+static constexpr uint32_t BK_XOR = 2;
+static constexpr uint32_t BK_FIRST = 3;
+static constexpr uint32_t BK_QUANTUM = 32;
 
 static void BlockAdd(size_t blk_num, size_t line_index)
 {
@@ -1460,11 +1460,11 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
 
 /* ----- UDMF reading routines ------------------------- */
 
-static constexpr std::uint32_t UDMF_THING = 1;
-static constexpr std::uint32_t UDMF_VERTEX = 2;
-static constexpr std::uint32_t UDMF_SECTOR = 3;
-static constexpr std::uint32_t UDMF_SIDEDEF = 4;
-static constexpr std::uint32_t UDMF_LINEDEF = 5;
+static constexpr uint32_t UDMF_THING = 1;
+static constexpr uint32_t UDMF_VERTEX = 2;
+static constexpr uint32_t UDMF_SECTOR = 3;
+static constexpr uint32_t UDMF_SIDEDEF = 4;
+static constexpr uint32_t UDMF_LINEDEF = 5;
 
 void ParseThingField(thing_t *thing, const std::string &key, token_kind_e kind, const std::string &value)
 {

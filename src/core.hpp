@@ -165,11 +165,11 @@ template <typename T> static inline constexpr T GetBigEndian(T value)
 }
 
 // sized types
-typedef uint8_t byte;
-typedef uint8_t args_t[5];
-typedef int32_t fixed32_t;
-typedef uint32_t long_angle_t;
-typedef uint16_t short_angle_t;
+using byte = uint8_t;
+using args_t = uint8_t[5];
+using fixed32_t = int32_t;
+using long_angle_t = uint32_t;
+using short_angle_t = uint16_t;
 
 // misc constants
 static constexpr uint32_t ANG45 = 0x20000000;
@@ -602,28 +602,37 @@ static inline double ComputeAngle(double dx, double dy)
 static constexpr size_t WAD_LUMP_NAME = 8;
 
 // wad header
-typedef struct raw_wad_header_s
+using raw_wad_header_t = struct raw_wad_header_s
 {
   char ident[4];
   uint32_t num_entries;
   uint32_t dir_start;
-} PACKEDATTR raw_wad_header_t;
+} PACKEDATTR;
 
 // directory entry
-typedef struct raw_wad_entry_s
+using raw_wad_entry_t = struct raw_wad_entry_s
 {
   uint32_t pos;
   uint32_t size;
   char name[8];
-} PACKEDATTR raw_wad_entry_t;
+} PACKEDATTR ;
 
 //------------------------------------------------------------------------
 // LEVEL STRUCTURES
 //------------------------------------------------------------------------
 
+using map_format_e = enum
+{
+  MAPF_INVALID = 0,
+
+  MAPF_Doom,
+  MAPF_Hexen,
+  MAPF_UDMF
+
+};
 // Lump order in a map WAD: each map needs a couple of lumps
 // to provide a complete scene geometry description.
-typedef enum
+using lump_order_e = enum
 {
   LL_LABEL = 0, // A separator name, ExMx or MAPxx
   LL_THINGS,    // Monsters, items..
@@ -638,15 +647,15 @@ typedef enum
   LL_BLOCKMAP,  // LUT, motion clipping, walls/grid element
   LL_BEHAVIOR,  // ACS bytecode
   LL_SCRIPTS,   // ACS source code
-} lump_order_e;
+};
 
-typedef struct raw_vertex_s
+using raw_vertex_t = struct raw_vertex_s
 {
   int16_t x;
   int16_t y;
-} PACKEDATTR raw_vertex_t;
+} PACKEDATTR;
 
-typedef struct raw_linedef_s
+using raw_linedef_t = struct raw_linedef_s
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
@@ -655,9 +664,9 @@ typedef struct raw_linedef_s
   int16_t tag;      // this linedef activates the sector with same tag
   uint16_t right;   // right sidedef
   uint16_t left;    // left sidedef (only if this line adjoins 2 sectors)
-} PACKEDATTR raw_linedef_t;
+} PACKEDATTR;
 
-typedef struct raw_hexen_linedef_s
+using raw_hexen_linedef_t = struct raw_hexen_linedef_s
 {
   uint16_t start;  // from this vertex...
   uint16_t end;    // ... to this vertex
@@ -666,9 +675,9 @@ typedef struct raw_hexen_linedef_s
   uint8_t args[5]; // special arguments
   uint16_t right;  // right sidedef
   uint16_t left;   // left sidedef
-} PACKEDATTR raw_hexen_linedef_t;
+} PACKEDATTR;
 
-typedef struct raw_sidedef_s
+using raw_sidedef_t = struct raw_sidedef_s
 {
   int16_t x_offset;  // X offset for texture
   int16_t y_offset;  // Y offset for texture
@@ -676,9 +685,9 @@ typedef struct raw_sidedef_s
   char lower_tex[8]; // texture name for the part below
   char mid_tex[8];   // texture name for the regular part
   uint16_t sector;   // adjacent sector
-} PACKEDATTR raw_sidedef_t;
+} PACKEDATTR;
 
-typedef struct raw_sector_s
+using raw_sector_t = struct raw_sector_s
 {
   int16_t floorh;    // floor height
   int16_t ceilh;     // ceiling height
@@ -687,19 +696,19 @@ typedef struct raw_sector_s
   uint16_t light;    // light level (0-255)
   uint16_t type;     // special type (0 = normal, 9 = secret, ...)
   int16_t tag;       // sector activated by a linedef with same tag
-} PACKEDATTR raw_sector_t;
+} PACKEDATTR;
 
-typedef struct raw_thing_s
+using raw_thing_t = struct raw_thing_s
 {
   int16_t x;        // x position of thing
   int16_t y;        // y position of thing
   int16_t angle;    // angle thing faces (degrees)
   uint16_t type;    // type of thing
   uint16_t options; // when appears, deaf, etc..
-} PACKEDATTR raw_thing_t;
+} PACKEDATTR;
 
 // -JL- Hexen thing definition
-typedef struct raw_hexen_thing_s
+using raw_hexen_thing_t = struct raw_hexen_thing_s
 {
   int16_t tid;      // tag id (for scripts/specials)
   int16_t x;        // x position
@@ -710,7 +719,7 @@ typedef struct raw_hexen_thing_s
   uint16_t options; // when appears, deaf, dormant, etc..
   uint8_t special;  // special type
   uint8_t args[5];  // special arguments
-} PACKEDATTR raw_hexen_thing_t;
+} PACKEDATTR;
 
 //------------------------------------------------------------------------
 // BSP TREE STRUCTURES
@@ -727,24 +736,24 @@ static constexpr const char *XGL3_MAGIC = "XGL3";
 static constexpr const char *ZGL3_MAGIC = "ZGL3";
 
 // Vanilla blockmap
-typedef struct raw_bbox_s
+using raw_bbox_t = struct raw_bbox_s
 {
   int16_t maxy;
   int16_t miny;
   int16_t minx;
   int16_t maxx;
-} PACKEDATTR raw_bbox_t;
+} PACKEDATTR;
 
-typedef struct raw_blockmap_header_s
+using raw_blockmap_header_t = struct raw_blockmap_header_s
 {
   int16_t x_origin, y_origin;
   int16_t x_blocks, y_blocks;
-} PACKEDATTR raw_blockmap_header_t;
+} PACKEDATTR;
 
 //
 // Vanilla BSP
 //
-typedef struct raw_seg_s
+using raw_seg_t = struct raw_seg_s
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
@@ -752,27 +761,27 @@ typedef struct raw_seg_s
   uint16_t linedef; // linedef that this seg goes along
   uint16_t flip;    // true if not the same direction as linedef
   uint16_t dist;    // distance from starting point
-} PACKEDATTR raw_seg_t;
+} PACKEDATTR;
 
-typedef struct raw_node_s
+using raw_node_t = struct raw_node_s
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
   raw_bbox_t b1, b2;    // bounding rectangles
   uint16_t right, left; // children: Node or SSector (if high bit is set)
-} PACKEDATTR raw_node_t;
+} PACKEDATTR;
 
-typedef struct raw_subsec_s
+using raw_subsec_t = struct raw_subsec_s
 {
   uint16_t num;   // number of Segs in this Sub-Sector
   uint16_t first; // first Seg
-} PACKEDATTR raw_subsec_t;
+} PACKEDATTR;
 
 //
 // DeepSea BSP
 // * compared to vanilla, some types were raise to 32bit
 //
-typedef struct raw_seg_deep_s
+using raw_seg_deep_t = struct raw_seg_deep_s
 {
   uint32_t start;   // from this vertex...
   uint32_t end;     // ... to this vertex
@@ -780,99 +789,99 @@ typedef struct raw_seg_deep_s
   uint16_t linedef; // linedef that this seg goes along
   uint16_t flip;    // true if not the same direction as linedef
   uint16_t dist;    // distance from starting point
-} PACKEDATTR raw_seg_deep_t;
+} PACKEDATTR;
 
-typedef struct raw_node_deep_s
+using raw_node_deep_t = struct raw_node_deep_s
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
   raw_bbox_t b1, b2;    // bounding rectangles
   uint32_t right, left; // children: Node or SSector (if high bit is set)
-} PACKEDATTR raw_node_deep_t;
+} PACKEDATTR;
 
-typedef struct raw_subsec_deep_s
+using raw_subsec_deep_t = struct raw_subsec_deep_s
 {
   uint16_t num;   // number of Segs in this Sub-Sector
   uint32_t first; // first Seg
-} PACKEDATTR raw_subsec_deep_t;
+} PACKEDATTR;
 
 //
 // ZDoom BSP
 // * compared to vanilla, some types were raise to 32bit
 // * each version (XNOD->XGLN->XGL2->XGL3) builds on top of the previous
 //
-typedef struct raw_xnod_vertex_s
+using raw_xnod_vertex_t = struct raw_xnod_vertex_s
 {
   int32_t x;
   int32_t y;
-} PACKEDATTR raw_xnod_vertex_t;
+} PACKEDATTR;
 
-typedef struct raw_xnod_node_s
+using raw_xnod_node_t = struct raw_xnod_node_s
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
   raw_bbox_t b1, b2;    // bounding rectangles
   uint32_t right, left; // children: Node or SSector (if high bit is set)
-} PACKEDATTR raw_xnod_node_t;
+} PACKEDATTR;
 
-typedef struct raw_xnod_subsec_s
+using raw_xnod_subsec_t = struct raw_xnod_subsec_s
 {
   uint32_t segnum;
   // NOTE : no "first" value, segs must be contiguous and appear
   //        in an order dictated by the subsector list, e.g. all
   //        segs of the second subsector must appear directly after
   //        all segs of the first subsector.
-} PACKEDATTR raw_xnod_subsec_t;
+} PACKEDATTR;
 
-typedef struct raw_xgln_seg_s
+using raw_xgln_seg_t = struct raw_xgln_seg_s
 {
   uint32_t start;   // from this vertex...
   uint32_t end;     // ... to this vertex
   uint16_t linedef; // linedef that this seg goes along, or NO_INDEX
   uint8_t side;     // 0 if on right of linedef, 1 if on left
-} PACKEDATTR raw_xgln_seg_t;
+} PACKEDATTR;
 
-typedef struct raw_xgl2_seg_s
+using raw_xgl2_seg_t = struct raw_xgl2_seg_s
 {
   uint32_t vertex;  // from this vertex...
   uint32_t partner; // ... to this vertex
   uint32_t linedef; // linedef that this seg goes along, or NO_INDEX
   uint8_t side;     // 0 if on right of linedef, 1 if on left
-} PACKEDATTR raw_xgl2_seg_t;
+} PACKEDATTR;
 
-typedef struct raw_xgl3_node_s
+using raw_xgl3_node_t = struct raw_xgl3_node_s
 {
   int32_t x, y;         // starting point
   int32_t dx, dy;       // offset to ending point
   raw_bbox_t b1, b2;    // bounding rectangles
   uint32_t right, left; // children: Node or SSector (if high bit is set)
-} PACKEDATTR raw_xgl3_node_t;
+} PACKEDATTR;
 
 
 /* ----- Graphical structures ---------------------- */
 
-typedef struct
+using raw_patchdef_t = struct raw_patchdef_s
 {
   int16_t x_origin;
   int16_t y_origin;
   uint16_t pname;    // index into PNAMES
   uint16_t stepdir;  // NOT USED
   uint16_t colormap; // NOT USED
-} PACKEDATTR raw_patchdef_t;
+} PACKEDATTR;
 
-typedef struct
+using raw_strife_patchdef_t = struct raw_strife_patchdef_s
 {
   int16_t x_origin;
   int16_t y_origin;
   uint16_t pname; // index into PNAMES
-} PACKEDATTR raw_strife_patchdef_t;
+} PACKEDATTR;
 
 // Texture definition.
 //
 // Each texture is composed of one or more patches,
 // with patches being lumps stored in the WAD.
 //
-typedef struct
+using raw_texture_t = struct raw_texture_s
 {
   char name[8];
   uint32_t masked; // NOT USED
@@ -881,9 +890,9 @@ typedef struct
   uint16_t column_dir[2]; // NOT USED
   uint16_t patch_count;
   raw_patchdef_t patches[1];
-} PACKEDATTR raw_texture_t;
+} PACKEDATTR;
 
-typedef struct
+using raw_strife_texture_t = struct raw_strife_texture_s
 {
   char name[8];
   uint32_t masked; // NOT USED
@@ -891,7 +900,7 @@ typedef struct
   uint16_t height;
   uint16_t patch_count;
   raw_strife_patchdef_t patches[1];
-} PACKEDATTR raw_strife_texture_t;
+} PACKEDATTR;
 
 // Patches.
 //
@@ -900,20 +909,20 @@ typedef struct
 // and we compose textures from the TEXTURE1/2 lists
 // of patches.
 //
-typedef struct patch_s
+using patch_t = struct patch_s
 {
   int16_t width;         // bounding box size
   int16_t height;        //
   int16_t leftoffset;    // pixels to the left of origin
   int16_t topoffset;     // pixels below the origin
   uint32_t columnofs[1]; // only [width] used
-} PACKEDATTR patch_t;
+} PACKEDATTR;
 
 //
 // LineDef attributes.
 //
 
-typedef enum : uint16_t
+using compatible_lineflag_t = enum compatible_lineflag_e : uint16_t
 {
   MLF_Blocking = BIT(0),      // Solid, is an obstacle
   MLF_BlockMonsters = BIT(1), // Blocks monsters only
@@ -940,22 +949,22 @@ typedef enum : uint16_t
   MLF_Reserved = BIT(11),     // comp_reservedlineflag
   MLF_BlockGround = BIT(12),  // Block Grounded Monster
   MLF_BlockPlayers = BIT(13), // Block Players Only
-} compatible_lineflag_e;
+};
 
 // first few flags are same as DOOM above
-typedef enum : uint16_t
+using hexen_lineflag_e = enum : uint16_t
 {
   MLF_Hexen_Repeatable = BIT(9),
   MLF_Hexen_Activation = BIT(10) | BIT(11) | BIT(12),
-} hexen_lineflag_e;
+};
 
 // these are supported by ZDoom (and derived ports)
-typedef enum : uint16_t
+using zdoom_lineflag_t = enum zdoom_lineflag_e : uint16_t
 {
   MLF_ZDoom_MonCanActivate = BIT(13),
   MLF_ZDoom_BlockPlayers = BIT(14),
   MLF_ZDoom_BlockEverything = BIT(15),
-} zdoom_lineflag_e;
+};
 
 static constexpr uint32_t BOOM_GENLINE_FIRST = 0x2f80;
 static constexpr uint32_t BOOM_GENLINE_LAST = 0x7fff;
@@ -965,7 +974,7 @@ static inline constexpr bool IsGeneralizedSpecial(uint32_t special)
   return special >= BOOM_GENLINE_FIRST && special <= BOOM_GENLINE_LAST;
 }
 
-typedef enum
+using hexen_activation_t = enum hexen_activation_e
 {
   SPAC_Cross = 0,   // when line is crossed (W1 / WR)
   SPAC_Use = 1,     // when line is used    (S1 / SR)
@@ -973,10 +982,10 @@ typedef enum
   SPAC_Impact = 3,  // when bullet/projectile hits line (G1 / GR)
   SPAC_Push = 4,    // when line is bumped (player is stopped)
   SPAC_PCross = 5,  // when projectile crosses the line
-} hexen_activation_e;
+};
 
 // The power of node building manipulation!
-typedef enum bsp_specials_e : uint32_t
+using bsp_specials_t = enum bsp_specials_e : uint32_t
 {
   Special_VanillaScroll = 48,
 
@@ -999,13 +1008,13 @@ typedef enum bsp_specials_e : uint32_t
 
   Special_Unknown1, // related to splitting?
   Special_Unknown2, // line tag value becomes seg's associated line index? why?
-} bsp_specials_t;
+};
 
 //
 // Sector attributes.
 //
 
-typedef enum : uint16_t
+using compatible_sectorflag_t = enum compatible_sectorflag_e : uint16_t
 {
   SF_TypeMask = 31,
   SF_DamageMask = BIT(5) | BIT(6),
@@ -1018,7 +1027,7 @@ typedef enum : uint16_t
 
   SF_AltDeathMode = BIT(12),
   SF_MonsterDeath = BIT(13),
-} compatible_sectorflag_e;
+};
 
 static constexpr uint32_t SF_BoomFlags = SF_DamageMask | SF_Secret | SF_Friction | SF_Wind;
 static constexpr uint32_t SF_MBF21Flags = SF_DamageMask | SF_Secret | SF_Friction | SF_Wind | SF_AltDeathMode | SF_MonsterDeath;
@@ -1027,7 +1036,7 @@ static constexpr uint32_t SF_MBF21Flags = SF_DamageMask | SF_Secret | SF_Frictio
 // Thing attributes.
 //
 
-typedef enum : uint16_t
+using thing_option_t = enum thing_option_e : uint16_t
 {
   MTF_Easy = BIT(0),
   MTF_Medium = BIT(1),
@@ -1038,12 +1047,12 @@ typedef enum : uint16_t
   MTF_Not_DM = BIT(5),
   MTF_Not_COOP = BIT(6),
   MTF_Friend = BIT(7),
-} thing_option_e;
+};
 
 static constexpr uint32_t MTF_EXFLOOR_MASK = 0x3C00;
 static constexpr uint32_t MTF_EXFLOOR_SHIFT = 10;
 
-typedef enum : uint16_t
+using hexen_option_t = enum hexen_option_e : uint16_t
 {
   MTF_Hexen_Easy = BIT(0),
   MTF_Hexen_Medium = BIT(1),
@@ -1058,7 +1067,7 @@ typedef enum : uint16_t
   MTF_Hexen_SP = BIT(8),
   MTF_Hexen_COOP = BIT(9),
   MTF_Hexen_DM = BIT(10),
-} hexen_option_e;
+};
 
 //
 // Polyobject stuff

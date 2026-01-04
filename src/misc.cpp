@@ -26,7 +26,7 @@
 
 #include <algorithm>
 
-static constexpr std::uint32_t SYS_MSG_BUFLEN = 4000;
+static constexpr uint32_t SYS_MSG_BUFLEN = 4000;
 
 static char message_buf[SYS_MSG_BUFLEN];
 
@@ -74,7 +74,7 @@ void MinorIssue(const char *fmt, ...)
 // ANALYZE : Analyzing level structures
 //------------------------------------------------------------------------
 
-static constexpr std::uint32_t POLY_BOX_SZ = 10;
+static constexpr uint32_t POLY_BOX_SZ = 10;
 
 /* ----- polyobj handling ----------------------------- */
 

@@ -42,8 +42,8 @@
 // Rewritten again by Andrew Apted (-AJA-), 1999-2000.
 //
 
-static constexpr std::uint32_t PRECIOUS_MULTIPLY = 100;
-static constexpr std::uint32_t SEG_FAST_THRESHHOLD = 200;
+static constexpr uint32_t PRECIOUS_MULTIPLY = 100;
+static constexpr uint32_t SEG_FAST_THRESHHOLD = 200;
 
 class eval_info_t
 {

@@ -35,7 +35,7 @@ static constexpr int32_t SPLIT_COST_MIN = 1;
 static constexpr int32_t SPLIT_COST_DEFAULT = 11;
 static constexpr int32_t SPLIT_COST_MAX = 32;
 
-typedef struct buildinfo_s buildinfo_t;
+using buildinfo_t = struct buildinfo_s;
 
 extern buildinfo_t config;
 
@@ -200,14 +200,14 @@ constexpr const char PRINT_DOC[] = "\n"
                                    "Displays the version of ELFBSP, then exits.\n"
                                    "\n";
 
-typedef enum
+using build_result_t = enum build_result_e
 {
   // everything went peachy keen
   BUILD_OK = 0,
 
   // when saving the map, one or more lumps overflowed
   BUILD_LumpOverflow
-} build_result_e;
+};
 
 // attempt to open a wad.  on failure, the FatalError method in the
 // buildinfo_t interface is called.

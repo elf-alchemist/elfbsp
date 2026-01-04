@@ -280,7 +280,7 @@ int PointOnLineSide(seg_t *seg, double x, double y);
 
 // a seg with this index is removed by SortSegs().
 // it must be a very high value.
-static constexpr std::uint32_t SEG_IS_GARBAGE = (1 << 29);
+static constexpr uint32_t SEG_IS_GARBAGE = (1 << 29);
 
 struct subsec_t
 {
@@ -423,13 +423,13 @@ Lump_c *CreateLevelLump(const char *name, size_t max_size = NO_INDEX);
 Lump_c *FindLevelLump(const char *name);
 
 /* limit flags, to show what went wrong */
-static constexpr std::uint32_t LIMIT_VERTEXES = BIT(0);
-static constexpr std::uint32_t LIMIT_SECTORS = BIT(1);
-static constexpr std::uint32_t LIMIT_SIDEDEFS = BIT(2);
-static constexpr std::uint32_t LIMIT_LINEDEFS = BIT(3);
-static constexpr std::uint32_t LIMIT_SEGS = BIT(4);
-static constexpr std::uint32_t LIMIT_SSECTORS = BIT(5);
-static constexpr std::uint32_t LIMIT_NODES = BIT(6);
+static constexpr uint32_t LIMIT_VERTEXES = BIT(0);
+static constexpr uint32_t LIMIT_SECTORS = BIT(1);
+static constexpr uint32_t LIMIT_SIDEDEFS = BIT(2);
+static constexpr uint32_t LIMIT_LINEDEFS = BIT(3);
+static constexpr uint32_t LIMIT_SEGS = BIT(4);
+static constexpr uint32_t LIMIT_SSECTORS = BIT(5);
+static constexpr uint32_t LIMIT_NODES = BIT(6);
 
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures

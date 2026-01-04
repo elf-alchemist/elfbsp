@@ -371,7 +371,7 @@ size_t Wad_file::FindLumpNum(const char *name)
   return NO_INDEX; // not found
 }
 
-static constexpr std::uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
+static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
 
 size_t Wad_file::LevelLookupLump(size_t lev_num, const char *name)
 {
