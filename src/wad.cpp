@@ -277,7 +277,7 @@ bool Wad_file::Validate(const char *filename)
   return true; // OK
 }
 
-static int WhatLevelPart(const char *name)
+static size_t WhatLevelPart(const char *name)
 {
   if (StringCaseCmp(name, "THINGS") == 0)
   {
@@ -614,8 +614,15 @@ void Wad_file::DetectLevels(void)
   // ordering of level lumps.
   for (size_t k = 0; k + 1 < NumLumps(); k++)
   {
-    int part_mask = 0;
-    int part_count = 0;
+    size_t part_mask = 0;
+    size_t part_count = 0;
+
+    // Ignore non-header map lumps
+    // Fixes sliding window bug on single-level WADs
+    if (WhatLevelPart(directory[k]->Name()) != 0)
+    {
+      continue;
+    }
 
     // check for UDMF levels
     if (directory[k + 1]->Match("TEXTMAP"))
@@ -637,7 +644,7 @@ void Wad_file::DetectLevels(void)
         break;
       }
 
-      int part = WhatLevelPart(directory[k + i]->Name());
+      size_t part = WhatLevelPart(directory[k + i]->Name());
 
       if (part == 0)
       {
