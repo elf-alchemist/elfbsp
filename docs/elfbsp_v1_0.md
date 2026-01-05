@@ -1,5 +1,5 @@
 Changes since AJBSP 1.07
-==========================================
+========================
 
 New features:
 * Added REJECT and BLOCKMAP building for UDMF maps.
