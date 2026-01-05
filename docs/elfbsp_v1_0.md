@@ -1,4 +1,4 @@
-Changes since previous release: AJBSP 1.07
+Changes since AJBSP 1.07
 ==========================================
 
 New features:
