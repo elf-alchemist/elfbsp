@@ -567,7 +567,7 @@ static void FindBlockmapLimits(bbox_t *bbox)
   }
 }
 
-void InitBlockmap(void)
+static void InitBlockmap(void)
 {
   bbox_t map_bbox;
 
@@ -585,7 +585,7 @@ void InitBlockmap(void)
   block_count = block_w * block_h;
 }
 
-void PutBlockmap(void)
+static void PutBlockmap(void)
 {
   if (lev_linedefs.size() == 0)
   {
@@ -714,7 +714,7 @@ static void Reject_GroupSectors(void)
   }
 }
 
-void Reject_DebugGroups(void)
+static void Reject_DebugGroups(void)
 {
   // Note: this routine is destructive to the group numbers
   for (size_t i = 0; i < lev_sectors.size(); i++)
@@ -780,7 +780,7 @@ static void Reject_WriteLump(void)
 // determining all isolated groups of sectors (islands that are
 // surrounded by void space).
 //
-void PutReject(void)
+static void PutReject(void)
 {
   if (lev_sectors.size() == 0)
   {
@@ -910,7 +910,7 @@ walltip_t *NewWallTip(void)
 
 /* ----- free routines ---------------------------- */
 
-void FreeVertices(void)
+static void FreeVertices(void)
 {
   for (size_t i = 0; i < lev_vertices.size(); i++)
   {
@@ -920,7 +920,7 @@ void FreeVertices(void)
   lev_vertices.clear();
 }
 
-void FreeLinedefs(void)
+static void FreeLinedefs(void)
 {
   for (size_t i = 0; i < lev_linedefs.size(); i++)
   {
@@ -930,7 +930,7 @@ void FreeLinedefs(void)
   lev_linedefs.clear();
 }
 
-void FreeSidedefs(void)
+static void FreeSidedefs(void)
 {
   for (size_t i = 0; i < lev_sidedefs.size(); i++)
   {
@@ -940,7 +940,7 @@ void FreeSidedefs(void)
   lev_sidedefs.clear();
 }
 
-void FreeSectors(void)
+static void FreeSectors(void)
 {
   for (size_t i = 0; i < lev_sectors.size(); i++)
   {
@@ -950,7 +950,7 @@ void FreeSectors(void)
   lev_sectors.clear();
 }
 
-void FreeThings(void)
+static void FreeThings(void)
 {
   for (size_t i = 0; i < lev_things.size(); i++)
   {
@@ -960,7 +960,7 @@ void FreeThings(void)
   lev_things.clear();
 }
 
-void FreeSegs(void)
+static void FreeSegs(void)
 {
   for (size_t i = 0; i < lev_segs.size(); i++)
   {
@@ -970,7 +970,7 @@ void FreeSegs(void)
   lev_segs.clear();
 }
 
-void FreeSubsecs(void)
+static void FreeSubsecs(void)
 {
   for (size_t i = 0; i < lev_subsecs.size(); i++)
   {
@@ -980,7 +980,7 @@ void FreeSubsecs(void)
   lev_subsecs.clear();
 }
 
-void FreeNodes(void)
+static void FreeNodes(void)
 {
   for (size_t i = 0; i < lev_nodes.size(); i++)
   {
@@ -990,7 +990,7 @@ void FreeNodes(void)
   lev_nodes.clear();
 }
 
-void FreeWallTips(void)
+static void FreeWallTips(void)
 {
   for (size_t i = 0; i < lev_walltips.size(); i++)
   {
@@ -1043,7 +1043,7 @@ static inline sidedef_t *SafeLookupSidedef(uint16_t num)
   return lev_sidedefs[num];
 }
 
-void GetVertices(void)
+static void GetVertices(void)
 {
   size_t count = 0;
 
@@ -1087,7 +1087,7 @@ void GetVertices(void)
   num_old_vert = lev_vertices.size();
 }
 
-void GetSectors(void)
+static void GetSectors(void)
 {
   size_t count = 0;
 
@@ -1128,7 +1128,7 @@ void GetSectors(void)
   }
 }
 
-void GetThings(void)
+static void GetThings(void)
 {
   size_t count = 0;
 
@@ -1171,7 +1171,7 @@ void GetThings(void)
   }
 }
 
-void GetThingsHexen(void)
+static void GetThingsHexen(void)
 {
   size_t count = 0;
 
@@ -1214,7 +1214,7 @@ void GetThingsHexen(void)
   }
 }
 
-void GetSidedefs(void)
+static void GetSidedefs(void)
 {
   size_t count = 0;
 
@@ -1255,7 +1255,7 @@ void GetSidedefs(void)
   }
 }
 
-void GetLinedefs(void)
+static void GetLinedefs(void)
 {
   size_t count = 0;
 
@@ -1332,7 +1332,7 @@ void GetLinedefs(void)
   }
 }
 
-void GetLinedefsHexen(void)
+static void GetLinedefsHexen(void)
 {
   size_t count = 0;
 
@@ -1466,7 +1466,7 @@ static constexpr uint32_t UDMF_SECTOR = 3;
 static constexpr uint32_t UDMF_SIDEDEF = 4;
 static constexpr uint32_t UDMF_LINEDEF = 5;
 
-void ParseThingField(thing_t *thing, const std::string &key, token_kind_e kind, const std::string &value)
+static void ParseThingField(thing_t *thing, const std::string &key, token_kind_e kind, const std::string &value)
 {
   if (key == "x")
   {
@@ -1484,7 +1484,7 @@ void ParseThingField(thing_t *thing, const std::string &key, token_kind_e kind, 
   }
 }
 
-void ParseVertexField(vertex_t *vertex, const std::string &key, token_kind_e kind, const std::string &value)
+static void ParseVertexField(vertex_t *vertex, const std::string &key, token_kind_e kind, const std::string &value)
 {
   if (key == "x")
   {
@@ -1497,12 +1497,12 @@ void ParseVertexField(vertex_t *vertex, const std::string &key, token_kind_e kin
   }
 }
 
-void ParseSectorField(sector_t *sector, const std::string &key, token_kind_e kind, const std::string &value)
+static void ParseSectorField(sector_t *sector, const std::string &key, token_kind_e kind, const std::string &value)
 {
   // nothing actually needed
 }
 
-void ParseSidedefField(sidedef_t *side, const std::string &key, token_kind_e kind, const std::string &value)
+static void ParseSidedefField(sidedef_t *side, const std::string &key, token_kind_e kind, const std::string &value)
 {
   if (key == "sector")
   {
@@ -1517,7 +1517,7 @@ void ParseSidedefField(sidedef_t *side, const std::string &key, token_kind_e kin
   }
 }
 
-void ParseLinedefField(linedef_t *line, const std::string &key, token_kind_e kind, const std::string &value)
+static void ParseLinedefField(linedef_t *line, const std::string &key, token_kind_e kind, const std::string &value)
 {
   if (key == "v1")
   {
@@ -1568,7 +1568,7 @@ void ParseLinedefField(linedef_t *line, const std::string &key, token_kind_e kin
   }
 }
 
-void ParseUDMF_Block(lexer_c &lex, int cur_type)
+static void ParseUDMF_Block(lexer_c &lex, int cur_type)
 {
   vertex_t *vertex = nullptr;
   thing_t *thing = nullptr;
@@ -1677,7 +1677,7 @@ void ParseUDMF_Block(lexer_c &lex, int cur_type)
   }
 }
 
-void ParseUDMF_Pass(const std::string &data, int pass)
+static void ParseUDMF_Pass(const std::string &data, int pass)
 {
   // pass = 1 : vertices, sectors, things
   // pass = 2 : sidedefs
@@ -1804,13 +1804,13 @@ void ParseUDMF(void)
 
 /* ----- writing routines ------------------------------ */
 
-void MarkOverflow(int flags)
+static void MarkOverflow(int flags)
 {
   // flags are ignored
   lev_overflows = true;
 }
 
-void PutVertices(void)
+static void PutVertices(void)
 {
   // this size is worst-case scenario
   size_t size = lev_vertices.size() * sizeof(raw_vertex_t);
@@ -1870,7 +1870,7 @@ static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
   return (uint32_t)v->index;
 }
 
-void PutSegs(void)
+static void PutSegs(void)
 {
   // this size is worst-case scenario
   size_t size = lev_segs.size() * sizeof(raw_seg_t);
@@ -1915,7 +1915,7 @@ void PutSegs(void)
   }
 }
 
-void PutSubsecs(void)
+static void PutSubsecs(void)
 {
   size_t size = lev_subsecs.size() * sizeof(raw_subsec_t);
 
@@ -2016,7 +2016,7 @@ static void PutOneNode(node_t *node, Lump_c *lump)
   }
 }
 
-void PutNodes(node_t *root)
+static void PutNodes(node_t *root)
 {
   size_t struct_size = sizeof(raw_node_t);
 
@@ -2046,7 +2046,7 @@ void PutNodes(node_t *root)
   }
 }
 
-void CheckLimits(void)
+static void CheckLimits(void)
 {
   // this could potentially be 65536, since there are no reserved values
   // for sectors, but there may be source ports or tools treating 0xFFFF
@@ -2517,6 +2517,7 @@ build_result_e SaveLevel(node_t *root_node)
   AddMissingLump("SEGS", "VERTEXES");
   AddMissingLump("SSECTORS", "SEGS");
   AddMissingLump("NODES", "SSECTORS");
+  AddMissingLump("SECTORS", "NODES");
   AddMissingLump("REJECT", "SECTORS");
   AddMissingLump("BLOCKMAP", "REJECT");
 
@@ -2528,32 +2529,22 @@ build_result_e SaveLevel(node_t *root_node)
   CheckLimits();
 
   /* --- Normal nodes --- */
-  if ((lev_force_xnod || config.ssect_xgl3) && num_real_lines > 0)
+  if (config.ssect_xgl3 && num_real_lines > 0)
   {
     // leave SEGS empty
     CreateLevelLump("SEGS")->Finish();
+    Lump_c *lump = CreateLevelLump("SSECTORS");
+    SaveXgl3Format(lump, root_node);
+    CreateLevelLump("NODES")->Finish();
 
-    if (config.ssect_xgl3)
-    {
-      Lump_c *lump = CreateLevelLump("SSECTORS");
-      SaveXgl3Format(lump, root_node);
-    }
-    else
-    {
-      CreateLevelLump("SSECTORS")->Finish();
-    }
-
-    if (lev_force_xnod)
-    {
-      // remove all the mini-segs from subsectors
-      NormaliseBspTree();
-
-      SaveXnodFormat(root_node);
-    }
-    else
-    {
-      CreateLevelLump("NODES")->Finish();
-    }
+  }
+  else if (lev_force_xnod && num_real_lines > 0)
+  {
+    CreateLevelLump("SEGS")->Finish();
+    CreateLevelLump("SSECTORS")->Finish();
+    // remove all the mini-segs from subsectors
+    NormaliseBspTree();
+    SaveXnodFormat(root_node);
   }
   else
   {

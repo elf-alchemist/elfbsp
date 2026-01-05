@@ -46,22 +46,8 @@ void MinorIssue(const char *fmt, ...);
 // BLOCKMAP : Generate the blockmap
 //------------------------------------------------------------------------
 
-// compute blockmap origin & size (the block_x/y/w/h variables)
-// based on the set of loaded linedefs.
-void InitBlockmap(void);
-
-// build the blockmap and write the data into the BLOCKMAP lump
-void PutBlockmap(void);
-
 // utility routines...
 int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2);
-
-//------------------------------------------------------------------------
-// REJECT : Generate the reject table
-//------------------------------------------------------------------------
-
-// build the reject table and write it into the REJECT lump
-void PutReject(void);
 
 //------------------------------------------------------------------------
 // LEVEL : Level structures & read/write functions.

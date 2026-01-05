@@ -170,6 +170,7 @@ using args_t = uint8_t[5];
 using fixed32_t = int32_t;
 using long_angle_t = uint32_t;
 using short_angle_t = uint16_t;
+using lump_t = char[8];
 
 // misc constants
 static constexpr uint32_t ANG45 = 0x20000000;
@@ -182,6 +183,7 @@ static constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
 static constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
 
 static constexpr size_t MSG_BUFFER_LENGTH = 1024;
+static constexpr size_t WAD_LUMP_NAME = 8;
 
 // bitflags
 static inline constexpr uint32_t BIT(uint32_t x)
@@ -599,8 +601,6 @@ static inline double ComputeAngle(double dx, double dy)
 // WAD STRUCTURES
 //------------------------------------------------------------------------
 
-static constexpr size_t WAD_LUMP_NAME = 8;
-
 // wad header
 using raw_wad_header_t = struct raw_wad_header_s
 {
@@ -669,13 +669,13 @@ using raw_linedef_t = struct raw_linedef_s
 
 using raw_hexen_linedef_t = struct raw_hexen_linedef_s
 {
-  uint16_t start;  // from this vertex...
-  uint16_t end;    // ... to this vertex
-  uint16_t flags;  // linedef flags (impassible, etc)
-  uint8_t special; // special type
-  uint8_t args[5]; // special arguments
-  uint16_t right;  // right sidedef
-  uint16_t left;   // left sidedef
+  uint16_t start;   // from this vertex...
+  uint16_t end;     // ... to this vertex
+  uint16_t flags;   // linedef flags (impassible, etc)
+  uint8_t  special; // special type
+  args_t   args;    // special arguments
+  uint16_t right;   // right sidedef
+  uint16_t left;    // left sidedef
 } PACKEDATTR;
 
 using raw_sidedef_t = struct raw_sidedef_s
