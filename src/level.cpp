@@ -2495,7 +2495,7 @@ static void AddMissingLump(const char *name, const char *after)
   size_t exist = cur_wad->LevelLookupLump(lev_current_idx, after);
 
   // if this happens, the level structure is very broken
-  if (exist != NO_INDEX)
+  if (exist == NO_INDEX)
   {
     Warning("Missing %s lump -- level structure is broken\n", after);
 
