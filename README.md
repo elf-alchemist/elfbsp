@@ -18,27 +18,14 @@ by Guilherme Miranda, 2025 -- based on AJBSP, by Andrew Apted, 2022.
 About
 -----
 
-ELFBSP is a simple nodes builder for modern DOOM source ports.
-It can build standard DOOM nodes and Extended ZDoom format nodes,
-and since version 1.5 supports the UDMF map format.  The code is
-based on the BSP code in Eureka DOOM Editor, which was based on the
-code from glBSP but with significant changes.
+ELFBSP is a general purpose nodes builder for modern DOOM source ports.
+It can build standard DOOM nodes and Extended ZDoom format nodes, as well as levels in the Doom, Hexen and UDMF formats.
+The code is based on the BSP code in Eureka DOOM Editor, which was based on the code from glBSP but with significant changes. 
 
-ELFBSP is a command-line tool.  It can handle multiple wad files,
-and modifies each file in-place.  There is an option to backup each
-file first.  The output to the terminal is fairly terse, but greater
-verbosity can be enabled.  Generally all the maps in a wad will
-processed, but this can be limited to a specific set.
-
-
-Exit Codes
-----------
-
-- 0 if OK.
-- 1 if nothing was built (no matching maps).
-- 2 if one or more maps failed to build properly.
-- 3 if a fatal error occurred.
-
+ELFBSP is a command-line tool.
+It can handle multiple wad files, and while it modifies each file in-place, there is an option to backup each file first.
+The output to the terminal is fairly terse, but greater verbosity can be enabled.
+Generally all the maps in a wad will processed, but this can be limited to a specific set.
 
 Usage
 -----
@@ -70,6 +57,14 @@ For a complete options list, and documentation for each one, type:
 ```bash
 elfbsp --doc
 ```
+
+Exit Codes
+----------
+
+- 0 if OK.
+- 1 if nothing was built (no matching maps).
+- 2 if one or more maps failed to build properly.
+- 3 if a fatal error occurred.
 
 Compiling
 ---------
