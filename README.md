@@ -69,22 +69,21 @@ Exit Codes
 Compiling
 ---------
 
-The ELFBSP code is fairly portable C++, and does not depend
-on any third-party libraries. It requires at least C++17.
-Both GNU g++ and clang++ are known to work.
+The ELFBSP code is fairly portable C++, and does not depend on any third-party libraries, sa e for .
+It requires at least C++20. Both GNU g++ and LLVM clang++ are known to work.
 
-Building should be fairly straight-forward on any Unix-like
-system, such as Linux, the BSDs, and even MacOS X. With the
-main development dependency being CMake
+Building should be fairly straight-forward on any Unix-like system, such as Linux, the BSDs, and even MacOS X.
+With the main development dependency being CMake, the C/C++ GNU/LLVM toolchains and library standard.
+To build on Windows, it is recomended to use MinGW, as that is the preferred compiler oolchian for automated CI builds.
 
-On Debian Linux, you will need the following packages:
+On Debian Linux, for example, you will need the following packages:
 
 - g++
 - binutils
 - cmake
 - make
 
-To build the program, type the following:
+Make may be optionally replaced with Ninja. To build the program, type the following:
 
 ```bash
 cmake -B build && make all -C build
@@ -99,12 +98,18 @@ cmake -B build && sudo make install -C build
 Legalese
 --------
 
-ELFBSP is Copyright &copy; 2025 Guilherme Miranda, Andrew Apted,
-Colin Reed, and Lee Killough, et al.
+ELFBSP is Copyright &copy; 1997-2025 Guilherme Miranda, Andrew Apted, Colin Reed, and Lee Killough, et al.
 
-ELFBSP is Free Software, under the terms of the GNU General Public
-License, version 2 or (at your option) any later version.
-See the [LICENSE.txt](LICENSE.txt) file for the complete text.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-ELFBSP comes with NO WARRANTY of any kind, express or implied.
-Please read the license for full details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
