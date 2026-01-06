@@ -447,7 +447,7 @@ static void WriteBlockmap(void)
   header.x_blocks = GetLittleEndian((int16_t)block_w);
   header.y_blocks = GetLittleEndian((int16_t)block_h);
 
-  lump->Write(&header, sizeof(header));
+  lump->Write(&header, raw_blockmap_header_size);
 
   // handle pointers
   for (size_t i = 0; i < block_count; i++)
@@ -1051,7 +1051,7 @@ static void GetVertices(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_vertex_t);
+    count = lump->Length() / raw_vertex_size;
   }
 
   if constexpr (DEBUG_LOAD)
@@ -1073,7 +1073,7 @@ static void GetVertices(void)
   {
     raw_vertex_t raw;
 
-    if (!lump->Read(&raw, sizeof(raw)))
+    if (!lump->Read(&raw, raw_vertex_size))
     {
       FatalError("Error reading vertices.\n");
     }
@@ -1095,7 +1095,7 @@ static void GetSectors(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_sector_t);
+    count = lump->Length() / raw_sector_size;
   }
 
   if (lump == nullptr || count == 0)
@@ -1117,7 +1117,7 @@ static void GetSectors(void)
   {
     raw_sector_t raw;
 
-    if (!lump->Read(&raw, sizeof(raw)))
+    if (!lump->Read(&raw, raw_sector_size))
     {
       FatalError("Error reading sectors.\n");
     }
@@ -1136,7 +1136,7 @@ static void GetThings(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_thing_t);
+    count = lump->Length() / raw_thing_size;
   }
 
   if (lump == nullptr || count == 0)
@@ -1158,7 +1158,7 @@ static void GetThings(void)
   {
     raw_thing_t raw;
 
-    if (!lump->Read(&raw, sizeof(raw)))
+    if (!lump->Read(&raw, raw_thing_size))
     {
       FatalError("Error reading things.\n");
     }
@@ -1179,7 +1179,7 @@ static void GetThingsHexen(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_hexen_thing_t);
+    count = lump->Length() / raw_hexen_thing_size;
   }
 
   if (lump == nullptr || count == 0)
@@ -1201,7 +1201,7 @@ static void GetThingsHexen(void)
   {
     raw_hexen_thing_t raw;
 
-    if (!lump->Read(&raw, sizeof(raw)))
+    if (!lump->Read(&raw, raw_hexen_thing_size))
     {
       FatalError("Error reading things.\n");
     }
@@ -1222,7 +1222,7 @@ static void GetSidedefs(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_sidedef_t);
+    count = lump->Length() / raw_sidedef_size;
   }
 
   if (lump == nullptr || count == 0)
@@ -1244,7 +1244,7 @@ static void GetSidedefs(void)
   {
     raw_sidedef_t raw;
 
-    if (!lump->Read(&raw, sizeof(raw)))
+    if (!lump->Read(&raw, raw_sidedef_size))
     {
       FatalError("Error reading sidedefs.\n");
     }
@@ -1263,7 +1263,7 @@ static void GetLinedefs(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_linedef_t);
+    count = lump->Length() / raw_linedef_size;
   }
 
   if (lump == nullptr || count == 0)
@@ -1285,7 +1285,7 @@ static void GetLinedefs(void)
   {
     raw_linedef_t raw;
 
-    if (!lump->Read(&raw, sizeof(raw)))
+    if (!lump->Read(&raw, raw_linedef_size))
     {
       FatalError("Error reading linedefs.\n");
     }
@@ -1340,7 +1340,7 @@ static void GetLinedefsHexen(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_hexen_linedef_t);
+    count = lump->Length() / raw_hexen_linedef_size;
   }
 
   if (lump == nullptr || count == 0)
@@ -1362,7 +1362,7 @@ static void GetLinedefsHexen(void)
   {
     raw_hexen_linedef_t raw;
 
-    if (!lump->Read(&raw, sizeof(raw)))
+    if (!lump->Read(&raw, raw_hexen_linedef_size))
     {
       FatalError("Error reading linedefs.\n");
     }
@@ -1813,7 +1813,7 @@ static void MarkOverflow(int flags)
 static void PutVertices(void)
 {
   // this size is worst-case scenario
-  size_t size = lev_vertices.size() * sizeof(raw_vertex_t);
+  size_t size = lev_vertices.size() * raw_vertex_size;
   Lump_c *lump = CreateLevelLump("VERTEXES", size);
 
   size_t count = 0;
@@ -1831,7 +1831,7 @@ static void PutVertices(void)
     raw.x = GetLittleEndian((int16_t)floor(vert->x));
     raw.y = GetLittleEndian((int16_t)floor(vert->y));
 
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, raw_vertex_size);
 
     count++;
   }
@@ -1873,7 +1873,7 @@ static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
 static void PutSegs(void)
 {
   // this size is worst-case scenario
-  size_t size = lev_segs.size() * sizeof(raw_seg_t);
+  size_t size = lev_segs.size() * raw_seg_size;
 
   Lump_c *lump = CreateLevelLump("SEGS", size);
 
@@ -1896,7 +1896,7 @@ static void PutSegs(void)
       raw = {};
     }
 
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, raw_seg_size);
 
     if constexpr (DEBUG_BSP)
     {
@@ -1917,7 +1917,7 @@ static void PutSegs(void)
 
 static void PutSubsecs(void)
 {
-  size_t size = lev_subsecs.size() * sizeof(raw_subsec_t);
+  size_t size = lev_subsecs.size() * raw_subsec_size;
 
   Lump_c *lump = CreateLevelLump("SSECTORS", size);
 
@@ -1930,7 +1930,7 @@ static void PutSubsecs(void)
     raw.first = GetLittleEndian((uint16_t)sub->seg_list->index);
     raw.num = GetLittleEndian((uint16_t)sub->seg_count);
 
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, raw_subsec_size);
 
     if constexpr (DEBUG_BSP)
     {
@@ -2007,7 +2007,7 @@ static void PutOneNode(node_t *node, Lump_c *lump)
     FatalError("Bad left child in node %zu\n", node->index);
   }
 
-  lump->Write(&raw, sizeof(raw));
+  lump->Write(&raw, raw_node_size);
 
   if constexpr (DEBUG_BSP)
   {
@@ -2018,7 +2018,7 @@ static void PutOneNode(node_t *node, Lump_c *lump)
 
 static void PutNodes(node_t *root)
 {
-  size_t struct_size = sizeof(raw_node_t);
+  size_t struct_size = raw_node_size;
 
   // this can be bigger than the actual size, but never smaller
   size_t max_size = (lev_nodes.size() + 1) * struct_size;
@@ -2128,7 +2128,7 @@ static void PutXnodVertices(Lump_c *lump)
     raw.x = GetLittleEndian((int32_t)floor(vert->x * 65536.0));
     raw.y = GetLittleEndian((int32_t)floor(vert->y * 65536.0));
 
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, raw_xnod_vertex_size);
 
     count++;
   }
@@ -2196,7 +2196,7 @@ static void PutXnodSegs(Lump_c *lump)
     raw.end = GetLittleEndian(VertexIndex_XNOD(seg->end));
     raw.linedef = GetLittleEndian((uint16_t)seg->linedef->index);
     raw.side = seg->side;
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, raw_xnod_seg_size);
   }
 }
 
@@ -2221,7 +2221,7 @@ static void PutXgl2Segs(Lump_c *lump)
     raw.linedef = GetLittleEndian((uint16_t)(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, raw_xgl2_seg_size);
 
     if constexpr (DEBUG_BSP)
     {
@@ -2281,8 +2281,8 @@ static void PutOneXnodNode(Lump_c *lump, node_t *node, bool xgl3)
   raw.b2.maxx = GetLittleEndian((int16_t)node->l.bounds.maxx);
   raw.b2.maxy = GetLittleEndian((int16_t)node->l.bounds.maxy);
 
-  lump->Write(&raw.b1, sizeof(raw.b1));
-  lump->Write(&raw.b2, sizeof(raw.b2));
+  lump->Write(&raw.b1, raw_bbox_size);
+  lump->Write(&raw.b2, raw_bbox_size);
 
   if (node->r.node)
   {
@@ -2364,10 +2364,10 @@ static size_t CalcXnodNodesSize(void)
 
   size_t size = 32; // header + a bit extra
 
-  size += 8 + lev_vertices.size() * sizeof(raw_xnod_vertex_t);
-  size += 4 + lev_subsecs.size() * sizeof(raw_xnod_subsec_t);
-  size += 4 + lev_segs.size() * sizeof(raw_xnod_seg_t);
-  size += 4 + lev_nodes.size() * sizeof(raw_xnod_node_t);
+  size += 8 + lev_vertices.size() * raw_xnod_vertex_size;
+  size += 4 + lev_subsecs.size() * raw_xnod_subsec_size;
+  size += 4 + lev_segs.size() * raw_xnod_seg_size;
+  size += 4 + lev_nodes.size() * raw_xnod_node_size;
 
   return size;
 }

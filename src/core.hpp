@@ -617,6 +617,9 @@ using raw_wad_entry_t = struct raw_wad_entry_s
   char name[8];
 } PACKEDATTR ;
 
+static constexpr size_t raw_wad_header_size = sizeof(raw_wad_header_t);
+static constexpr size_t raw_wad_entry_size = sizeof(raw_wad_entry_t);
+
 //------------------------------------------------------------------------
 // LEVEL STRUCTURES
 //------------------------------------------------------------------------
@@ -722,6 +725,14 @@ using raw_hexen_thing_t = struct raw_hexen_thing_s
   uint8_t args[5];  // special arguments
 } PACKEDATTR;
 
+static constexpr size_t raw_vertex_size = sizeof(raw_vertex_t);
+static constexpr size_t raw_linedef_size = sizeof(raw_linedef_t);
+static constexpr size_t raw_hexen_linedef_size = sizeof(raw_hexen_linedef_t);
+static constexpr size_t raw_sidedef_size = sizeof(raw_sidedef_t);
+static constexpr size_t raw_sector_size = sizeof(raw_sector_t);
+static constexpr size_t raw_thing_size = sizeof(raw_thing_t);
+static constexpr size_t raw_hexen_thing_size = sizeof(raw_hexen_thing_t);
+
 //------------------------------------------------------------------------
 // BSP TREE STRUCTURES
 //------------------------------------------------------------------------
@@ -736,7 +747,9 @@ static constexpr const char *ZGL2_MAGIC = "ZGL2";
 static constexpr const char *XGL3_MAGIC = "XGL3";
 static constexpr const char *ZGL3_MAGIC = "ZGL3";
 
+//
 // Vanilla blockmap
+//
 using raw_bbox_t = struct raw_bbox_s
 {
   int16_t maxy;
@@ -751,19 +764,12 @@ using raw_blockmap_header_t = struct raw_blockmap_header_s
   int16_t x_blocks, y_blocks;
 } PACKEDATTR;
 
+static constexpr size_t raw_bbox_size = sizeof(raw_bbox_t);
+static constexpr size_t raw_blockmap_header_size = sizeof(raw_blockmap_header_t);
+
 //
 // Vanilla BSP
 //
-using raw_seg_t = struct raw_seg_s
-{
-  uint16_t start;   // from this vertex...
-  uint16_t end;     // ... to this vertex
-  uint16_t angle;   // angle (0 = east, 16384 = north, ...)
-  uint16_t linedef; // linedef that this seg goes along
-  uint16_t flip;    // true if not the same direction as linedef
-  uint16_t dist;    // distance from starting point
-} PACKEDATTR;
-
 using raw_node_t = struct raw_node_s
 {
   int16_t x, y;         // starting point
@@ -778,20 +784,24 @@ using raw_subsec_t = struct raw_subsec_s
   uint16_t first; // first Seg
 } PACKEDATTR;
 
-//
-// DeepSea BSP
-// * compared to vanilla, some types were raise to 32bit
-//
-using raw_seg_deep_t = struct raw_seg_deep_s
+using raw_seg_t = struct raw_seg_s
 {
-  uint32_t start;   // from this vertex...
-  uint32_t end;     // ... to this vertex
+  uint16_t start;   // from this vertex...
+  uint16_t end;     // ... to this vertex
   uint16_t angle;   // angle (0 = east, 16384 = north, ...)
   uint16_t linedef; // linedef that this seg goes along
   uint16_t flip;    // true if not the same direction as linedef
   uint16_t dist;    // distance from starting point
 } PACKEDATTR;
 
+static constexpr size_t raw_node_size = sizeof(raw_node_t);
+static constexpr size_t raw_subsec_size = sizeof(raw_subsec_t);
+static constexpr size_t raw_seg_size = sizeof(raw_seg_t);
+
+//
+// DeepSea BSP
+// * compared to vanilla, some types were raise to 32bit
+//
 using raw_node_deep_t = struct raw_node_deep_s
 {
   int16_t x, y;         // starting point
@@ -806,6 +816,20 @@ using raw_subsec_deep_t = struct raw_subsec_deep_s
   uint32_t first; // first Seg
 } PACKEDATTR;
 
+using raw_seg_deep_t = struct raw_seg_deep_s
+{
+  uint32_t start;   // from this vertex...
+  uint32_t end;     // ... to this vertex
+  uint16_t angle;   // angle (0 = east, 16384 = north, ...)
+  uint16_t linedef; // linedef that this seg goes along
+  uint16_t flip;    // true if not the same direction as linedef
+  uint16_t dist;    // distance from starting point
+} PACKEDATTR;
+
+static constexpr size_t raw_node_deep_size = sizeof(raw_node_deep_t);
+static constexpr size_t raw_subsec_deep_size = sizeof(raw_subsec_deep_t);
+static constexpr size_t raw_seg_deep_size = sizeof(raw_seg_deep_t);
+
 //
 // ZDoom BSP
 // * compared to vanilla, some types were raise to 32bit
@@ -815,14 +839,6 @@ using raw_xnod_vertex_t = struct raw_xnod_vertex_s
 {
   int32_t x;
   int32_t y;
-} PACKEDATTR;
-
-using raw_xnod_seg_t = struct raw_xnod_seg_s
-{
-  uint32_t start;   // from this vertex...
-  uint32_t end;     // ... to this vertex
-  uint16_t linedef; // linedef that this seg goes along, or NO_INDEX
-  uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
 using raw_xnod_node_t = struct raw_xnod_node_s
@@ -841,6 +857,19 @@ using raw_xnod_subsec_t = struct raw_xnod_subsec_s
   //        segs of the second subsector must appear directly after
   //        all segs of the first subsector.
 } PACKEDATTR;
+
+using raw_xnod_seg_t = struct raw_xnod_seg_s
+{
+  uint32_t start;   // from this vertex...
+  uint32_t end;     // ... to this vertex
+  uint16_t linedef; // linedef that this seg goes along, or NO_INDEX
+  uint8_t side;     // 0 if on right of linedef, 1 if on left
+} PACKEDATTR;
+
+static constexpr size_t raw_xnod_vertex_size = sizeof(raw_xnod_vertex_t);
+static constexpr size_t raw_xnod_node_size = sizeof(raw_xnod_node_t);
+static constexpr size_t raw_xnod_subsec_size = sizeof(raw_xnod_subsec_t);
+static constexpr size_t raw_xnod_seg_size = sizeof(raw_xnod_seg_t);
 
 // XGLN segs use the same type definition as XNOD segs, with slightly
 // different semantics for mini-segs
@@ -869,6 +898,9 @@ using raw_xgl3_node_t = struct raw_xgl3_node_s
   uint32_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
+static constexpr size_t raw_xgln_seg_size = sizeof(raw_xgln_seg_t);
+static constexpr size_t raw_xgl2_seg_size = sizeof(raw_xgl2_seg_t);
+static constexpr size_t raw_xgl3_node_size = sizeof(raw_xgl3_node_t);
 
 /* ----- Graphical structures ---------------------- */
 
