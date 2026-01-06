@@ -12,6 +12,7 @@ It is comprised of Nodes, SubSectors and Segments -- the renderer recursively tr
 | XGL2          | ZGL2                   | "`XGL2`"            | "`ZGL2`"              |
 | XGL3          | ZGL3                   | "`XGL3`"            | "`ZGL3`"              |
 
+Despite the confusing nomenclture, the XGL/ZGL types have nothing to do with OpenGL rendering -- hardware rendering data follows a difference structure entirely.
 
 ## Type definitions
 For development purposes, all of these following are assumed to be "packed structs", as opposed to "memory-aligned structs".
