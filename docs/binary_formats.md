@@ -23,7 +23,7 @@ Assume standard C99 fixed-width integer types:
 * `int16_t`
 * `int32_t`
 
-Doom uses "-1" (either 16bit 0xFFFF or 32bit 0xFFFFFFFF) to represent the lack of an index in index types -- henceforth `NO_INDEX`.
+Doom uses "-1" (either 16bit `0xFFFF` or 32bit `0xFFFFFFFF`) to represent the lack of an index in index types -- henceforth `NO_INDEX`.
 
 ## Vanilla types
 

@@ -716,7 +716,7 @@ static void Reject_GroupSectors(void)
 
 static void Reject_DebugGroups(void)
 {
-  if constexpr (DEBUG_REJECT)
+  if constexpr (!DEBUG_REJECT)
   {
     return;
   }
@@ -2522,7 +2522,7 @@ build_result_e SaveLevel(node_t *root_node)
   AddMissingLump("BLOCKMAP", "REJECT");
 
   // user preferences
-  lev_force_xnod = config.force_xnod;
+  lev_force_xnod |= config.force_xnod;
 
   // check for overflows...
   // this sets the force_xxx vars if certain limits are breached
