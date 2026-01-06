@@ -238,13 +238,13 @@ Wad_file *Wad_file::Create(const char *filename, char mode)
   // write out base header
   raw_wad_header_t header;
 
-  memset(&header, 0, raw_wad_header_size);
+  memset(&header, 0, sizeof(header));
   memcpy(header.ident, "PWAD", 4);
 
-  fwrite(&header, raw_wad_header_size, 1, fp);
+  fwrite(&header, sizeof(header), 1, fp);
   fflush(fp);
 
-  w->total_size = raw_wad_header_size;
+  w->total_size = sizeof(header);
 
   return w;
 }
@@ -260,7 +260,7 @@ bool Wad_file::Validate(const char *filename)
 
   raw_wad_header_t header;
 
-  if (fread(&header, raw_wad_header_size, 1, fp) != 1)
+  if (fread(&header, sizeof(header), 1, fp) != 1)
   {
     fclose(fp);
     return false;
@@ -567,7 +567,7 @@ void Wad_file::ReadDirectory(void)
 
   raw_wad_header_t header;
 
-  if (fread(&header, raw_wad_header_size, 1, fp) != 1)
+  if (fread(&header, sizeof(header), 1, fp) != 1)
   {
     FatalError("Error reading WAD header.\n");
   }
@@ -593,7 +593,7 @@ void Wad_file::ReadDirectory(void)
   {
     raw_wad_entry_t entry;
 
-    if (fread(&entry, raw_wad_entry_size, 1, fp) != 1)
+    if (fread(&entry, sizeof(entry), 1, fp) != 1)
     {
       FatalError("Error reading WAD directory.\n");
     }
@@ -1095,7 +1095,7 @@ void Wad_file::InsertPoint(size_t index)
 
 size_t Wad_file::HighWaterMark(void)
 {
-  size_t offset = raw_wad_header_size;
+  size_t offset = sizeof(raw_wad_header_t);
 
   for (size_t k = 0; k < NumLumps(); k++)
   {
@@ -1139,7 +1139,7 @@ size_t Wad_file::FindFreeSpace(size_t length)
 
   std::sort(sorted_dir.begin(), sorted_dir.end(), Lump_c::offset_CMP_pred());
 
-  size_t offset = raw_wad_header_size;
+  size_t offset = sizeof(raw_wad_header_t);
 
   for (size_t k = 0; k < sorted_dir.size(); k++)
   {
@@ -1291,7 +1291,7 @@ void Wad_file::WriteDirectory(void)
 
     lump->MakeEntry(&entry);
 
-    if (fwrite(&entry, raw_wad_entry_size, 1, fp) != 1)
+    if (fwrite(&entry, sizeof(entry), 1, fp) != 1)
     {
       FatalError("Error writing WAD directory.\n");
     }
@@ -1322,7 +1322,7 @@ void Wad_file::WriteDirectory(void)
   header.dir_start = GetLittleEndian((uint32_t)dir_start);
   header.num_entries = GetLittleEndian((uint32_t)dir_count);
 
-  if (fwrite(&header, raw_wad_entry_size, 1, fp) != 1)
+  if (fwrite(&header, sizeof(header), 1, fp) != 1)
   {
     FatalError("Error writing WAD header.\n");
   }
