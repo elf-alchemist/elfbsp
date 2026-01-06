@@ -716,6 +716,11 @@ static void Reject_GroupSectors(void)
 
 static void Reject_DebugGroups(void)
 {
+  if constexpr (DEBUG_REJECT)
+  {
+    return;
+  }
+
   // Note: this routine is destructive to the group numbers
   for (size_t i = 0; i < lev_sectors.size(); i++)
   {
@@ -792,12 +797,7 @@ static void PutReject(void)
   Reject_Init();
   Reject_GroupSectors();
   Reject_ProcessSectors();
-
-  if constexpr (DEBUG_REJECT)
-  {
-    Reject_DebugGroups();
-  }
-
+  Reject_DebugGroups();
   Reject_WriteLump();
   Reject_Free();
   config.Print_Verbose("    Reject size: %zu\n", rej_total_size);
