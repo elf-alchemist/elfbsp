@@ -1,5 +1,10 @@
-Changes since AJBSP 1.07
-========================
+# ELFBSP 1.1
+
+Bugfixes:
+* Fixed a bug where freshly created Doom/Hexen maps would be built with incorrect lump orders
+* i.e. SECTORS would not be placed between NODES and REJECT, but would remain placed right after VERTEXES
+
+# ELFBSP 1.0
 
 New features:
 * Added REJECT and BLOCKMAP building for UDMF maps.
