@@ -27,6 +27,8 @@
 #include "wad.hpp"
 
 #include <algorithm>
+#include <utility>
+#include <vector>
 
 static constexpr std::uint32_t DUMMY_DUP = 0xFFFF;
 
@@ -627,6 +629,7 @@ static void PutBlockmap(void)
 
 static uint8_t *rej_matrix;
 static size_t rej_total_size; // in bytes
+static std::vector<size_t> rej_sector_groups;
 
 //
 // Allocate the matrix, init sectors into individual groups.
@@ -638,12 +641,11 @@ static void Reject_Init(void)
   rej_matrix = new uint8_t[rej_total_size];
   memset(rej_matrix, 0, rej_total_size);
 
+  rej_sector_groups.resize(lev_sectors.size());
+
   for (size_t i = 0; i < lev_sectors.size(); i++)
   {
-    sector_t *sec = lev_sectors[i];
-
-    sec->rej_group = i;
-    sec->rej_next = sec->rej_prev = sec;
+    rej_sector_groups[i] = i;
   }
 }
 
@@ -651,6 +653,7 @@ static void Reject_Free(void)
 {
   delete[] rej_matrix;
   rej_matrix = nullptr;
+  rej_sector_groups.clear();
 }
 
 //
@@ -671,7 +674,6 @@ static void Reject_GroupSectors(void)
 
     sector_t *sec1 = line->right->sector;
     sector_t *sec2 = line->left->sector;
-    sector_t *tmp;
 
     if (!sec1 || !sec2 || sec1 == sec2)
     {
@@ -679,38 +681,28 @@ static void Reject_GroupSectors(void)
     }
 
     // already in the same group ?
-    if (sec1->rej_group == sec2->rej_group)
+    size_t group1 = rej_sector_groups[sec1->index];
+    size_t group2 = rej_sector_groups[sec2->index];
+
+    if (group1 == group2)
     {
       continue;
     }
 
-    // swap sectors so that the smallest group is added to the biggest
-    // group.  This is based on the assumption that sector numbers in
-    // wads will generally increase over the set of linedefs, and so
-    // (by swapping) we'll tend to add small groups into larger groups,
-    // thereby minimising the updates to 'rej_group' fields when merging.
-    if (sec1->rej_group > sec2->rej_group)
+    // prefer the group numbers to become lower
+    if (group1 > group2)
     {
-      tmp = sec1;
-      sec1 = sec2;
-      sec2 = tmp;
+      std::swap(group1, group2);
     }
 
-    // update the group numbers in the second group
-    sec2->rej_group = sec1->rej_group;
-
-    for (tmp = sec2->rej_next; tmp != sec2; tmp = tmp->rej_next)
+		// merge the groups
+    for (size_t s = 0; s < lev_sectors.size(); s++)
     {
-      tmp->rej_group = sec1->rej_group;
+      if (rej_sector_groups[s] == group2)
+      {
+        rej_sector_groups[s] = group1;
+      }
     }
-
-    // merge 'em baby...
-    sec1->rej_next->rej_prev = sec2;
-    sec2->rej_next->rej_prev = sec1;
-
-    tmp = sec1->rej_next;
-    sec1->rej_next = sec2->rej_next;
-    sec2->rej_next = tmp;
   }
 }
 
@@ -725,7 +717,6 @@ static void Reject_DebugGroups(void)
   for (size_t i = 0; i < lev_sectors.size(); i++)
   {
     sector_t *sec = lev_sectors[i];
-    sector_t *tmp;
 
     size_t group = sec->rej_group;
     int num = 0;
@@ -736,15 +727,14 @@ static void Reject_DebugGroups(void)
     }
 
     sec->rej_group = NO_INDEX;
-    num++;
 
-    for (tmp = sec->rej_next; tmp != sec; tmp = tmp->rej_next)
+    for (size_t s = i; s < lev_sectors.size(); s++)
     {
-      tmp->rej_group = NO_INDEX;
+      lev_sectors.at(s)->rej_group = NO_INDEX;
       num++;
     }
 
-    Debug("Group %zu  Sectors %d\n", group, num);
+    Debug("Group %zu : Sectors %d\n", group, num);
   }
 }
 
@@ -754,10 +744,7 @@ static void Reject_ProcessSectors(void)
   {
     for (size_t target = 0; target < view; target++)
     {
-      sector_t *view_sec = lev_sectors[view];
-      sector_t *targ_sec = lev_sectors[target];
-
-      if (view_sec->rej_group == targ_sec->rej_group)
+      if (rej_sector_groups[view] == rej_sector_groups[target])
       {
         continue;
       }
@@ -787,7 +774,7 @@ static void Reject_WriteLump(void)
 //
 static void PutReject(void)
 {
-  if (lev_sectors.size() == 0)
+  if (config.no_reject || lev_sectors.size() == 0)
   {
     // just create an empty reject lump
     CreateLevelLump("REJECT")->Finish();

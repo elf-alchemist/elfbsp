@@ -98,3 +98,4 @@ CMakeUserPresets.json
 # Build artifacts
 build/
 .cache/
+*.bak
