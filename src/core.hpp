@@ -736,7 +736,9 @@ static constexpr const char *ZGL2_MAGIC = "ZGL2";
 static constexpr const char *XGL3_MAGIC = "XGL3";
 static constexpr const char *ZGL3_MAGIC = "ZGL3";
 
+//
 // Vanilla blockmap
+//
 using raw_bbox_t = struct raw_bbox_s
 {
   int16_t maxy;
@@ -754,16 +756,6 @@ using raw_blockmap_header_t = struct raw_blockmap_header_s
 //
 // Vanilla BSP
 //
-using raw_seg_t = struct raw_seg_s
-{
-  uint16_t start;   // from this vertex...
-  uint16_t end;     // ... to this vertex
-  uint16_t angle;   // angle (0 = east, 16384 = north, ...)
-  uint16_t linedef; // linedef that this seg goes along
-  uint16_t flip;    // true if not the same direction as linedef
-  uint16_t dist;    // distance from starting point
-} PACKEDATTR;
-
 using raw_node_t = struct raw_node_s
 {
   int16_t x, y;         // starting point
@@ -778,20 +770,20 @@ using raw_subsec_t = struct raw_subsec_s
   uint16_t first; // first Seg
 } PACKEDATTR;
 
-//
-// DeepSea BSP
-// * compared to vanilla, some types were raise to 32bit
-//
-using raw_seg_deep_t = struct raw_seg_deep_s
+using raw_seg_t = struct raw_seg_s
 {
-  uint32_t start;   // from this vertex...
-  uint32_t end;     // ... to this vertex
+  uint16_t start;   // from this vertex...
+  uint16_t end;     // ... to this vertex
   uint16_t angle;   // angle (0 = east, 16384 = north, ...)
   uint16_t linedef; // linedef that this seg goes along
   uint16_t flip;    // true if not the same direction as linedef
   uint16_t dist;    // distance from starting point
 } PACKEDATTR;
 
+//
+// DeepSea BSP
+// * compared to vanilla, some types were raise to 32bit
+//
 using raw_node_deep_t = struct raw_node_deep_s
 {
   int16_t x, y;         // starting point
@@ -806,6 +798,16 @@ using raw_subsec_deep_t = struct raw_subsec_deep_s
   uint32_t first; // first Seg
 } PACKEDATTR;
 
+using raw_seg_deep_t = struct raw_seg_deep_s
+{
+  uint32_t start;   // from this vertex...
+  uint32_t end;     // ... to this vertex
+  uint16_t angle;   // angle (0 = east, 16384 = north, ...)
+  uint16_t linedef; // linedef that this seg goes along
+  uint16_t flip;    // true if not the same direction as linedef
+  uint16_t dist;    // distance from starting point
+} PACKEDATTR;
+
 //
 // ZDoom BSP
 // * compared to vanilla, some types were raise to 32bit
@@ -815,14 +817,6 @@ using raw_xnod_vertex_t = struct raw_xnod_vertex_s
 {
   int32_t x;
   int32_t y;
-} PACKEDATTR;
-
-using raw_xnod_seg_t = struct raw_xnod_seg_s
-{
-  uint32_t start;   // from this vertex...
-  uint32_t end;     // ... to this vertex
-  uint16_t linedef; // linedef that this seg goes along, or NO_INDEX
-  uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
 using raw_xnod_node_t = struct raw_xnod_node_s
@@ -840,6 +834,14 @@ using raw_xnod_subsec_t = struct raw_xnod_subsec_s
   //        in an order dictated by the subsector list, e.g. all
   //        segs of the second subsector must appear directly after
   //        all segs of the first subsector.
+} PACKEDATTR;
+
+using raw_xnod_seg_t = struct raw_xnod_seg_s
+{
+  uint32_t start;   // from this vertex...
+  uint32_t end;     // ... to this vertex
+  uint16_t linedef; // linedef that this seg goes along, or NO_INDEX
+  uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
 // XGLN segs use the same type definition as XNOD segs, with slightly
