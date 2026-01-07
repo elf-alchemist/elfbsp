@@ -784,7 +784,6 @@ static void PutReject(void)
   Reject_Init();
   Reject_GroupSectors();
   Reject_ProcessSectors();
-  Reject_DebugGroups();
   Reject_WriteLump();
   Reject_Free();
   config.Print_Verbose("    Reject size: %zu\n", rej_total_size);
@@ -1111,6 +1110,9 @@ static void GetSectors(void)
 
     sector_t *sector = NewSector();
 
+    sector->height_floor = (double)GetLittleEndian(raw.floorh);
+    sector->height_ceiling = (double)GetLittleEndian(raw.ceilh);
+
     (void)sector;
   }
 }
@@ -1297,7 +1299,7 @@ static void GetLinedefs(void)
     line->tag = GetLittleEndian(raw.tag);
     line->flags = GetLittleEndian(raw.flags);
 
-    line->two_sided = (line->flags & MLF_TwoSided) != 0;
+    line->two_sided = (line->flags & MLF_TWOSIDED) != 0;
     line->is_precious = (line->tag >= 900 && line->tag < 1000);
 
     // The following three are only valid in MAPF_Doom
@@ -1374,7 +1376,7 @@ static void GetLinedefsHexen(void)
     uint16_t flags = GetLittleEndian(raw.flags);
 
     // -JL- Added missing twosided flag handling that caused a broken reject
-    line->two_sided = (flags & MLF_TwoSided) != 0;
+    line->two_sided = (flags & MLF_TWOSIDED) != 0;
 
     line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
     line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
@@ -2437,7 +2439,7 @@ void LoadLevel(void)
   }
 
   config.Print_Verbose("    Loaded %zu vertices, %zu sectors, %zu sides, %zu lines, %zu things\n", lev_vertices.size(),
-                          lev_sectors.size(), lev_sidedefs.size(), lev_linedefs.size(), lev_things.size());
+                       lev_sectors.size(), lev_sidedefs.size(), lev_linedefs.size(), lev_things.size());
 
   DetectOverlappingVertices();
   DetectOverlappingLines();
@@ -2523,7 +2525,6 @@ build_result_e SaveLevel(node_t *root_node)
     Lump_c *lump = CreateLevelLump("SSECTORS");
     SaveXgl3Format(lump, root_node);
     CreateLevelLump("NODES")->Finish();
-
   }
   else if (lev_force_xnod && num_real_lines > 0)
   {
@@ -2715,12 +2716,12 @@ build_result_e BuildLevel(size_t lev_idx)
   if (ret == BUILD_OK)
   {
     config.Print_Verbose("    Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES\n", lev_nodes.size(), lev_subsecs.size(),
-                            lev_segs.size(), num_old_vert + num_new_vert);
+                         lev_segs.size(), num_old_vert + num_new_vert);
 
     if (root_node != nullptr)
     {
       config.Print_Verbose("    Heights of subtrees: %d / %d\n", ComputeBspHeight(root_node->r.node),
-                              ComputeBspHeight(root_node->l.node));
+                           ComputeBspHeight(root_node->l.node));
     }
 
     ClockwiseBspTree();

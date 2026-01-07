@@ -123,6 +123,9 @@ struct sector_t
   // in the same group.  The rej_next, rej_prev fields are a link in a
   // RING, containing all sectors of the same group.
   size_t rej_group;
+
+  double height_floor;
+  double height_ceiling;
 };
 
 struct sidedef_t

@@ -938,9 +938,9 @@ using patch_t = struct patch_s
 
 using compatible_lineflag_t = enum compatible_lineflag_e : uint16_t
 {
-  MLF_Blocking = BIT(0),      // Solid, is an obstacle
-  MLF_BlockMonsters = BIT(1), // Blocks monsters only
-  MLF_TwoSided = BIT(2),      // Backside will not be present at all if not two sided
+  MLF_BLOCKING = BIT(0),      // Solid, is an obstacle
+  MLF_BLOCKMONSTERS = BIT(1), // Blocks monsters only
+  MLF_TWOSIDED = BIT(2),      // Backside will not be present at all if not two sided
 
   // If a texture is pegged, the texture will have
   // the end exposed to air held constant at the
@@ -952,32 +952,32 @@ using compatible_lineflag_t = enum compatible_lineflag_e : uint16_t
   // the texture at the top pixel of the line for both
   // top and bottom textures (use next to windows).
 
-  MLF_UpperUnpegged = BIT(3), // Upper texture unpegged
-  MLF_LowerUnpegged = BIT(4), // Lower texture unpegged
-  MLF_Secret = BIT(5),        // In AutoMap: don't map as two sided: IT'S A SECRET!
-  MLF_SoundBlock = BIT(6),    // Sound rendering: don't let sound cross two of these
-  MLF_DontDraw = BIT(7),      // Don't draw on the automap at all
-  MLF_Mapped = BIT(8),        // Set as if already seen, thus drawn in automap
-  MLF_PassUse = BIT(9),       // Allow multiple lines to be pushed simultaneously.
-  MLF_3DMidTex = BIT(10),     // Solid middle texture
-  MLF_Reserved = BIT(11),     // comp_reservedlineflag
-  MLF_BlockGround = BIT(12),  // Block Grounded Monster
-  MLF_BlockPlayers = BIT(13), // Block Players Only
+  MLF_UPPERUNPEGGED = BIT(3), // Upper texture unpegged
+  MLF_LOWERUNPEGGED = BIT(4), // Lower texture unpegged
+  MLF_SECRET = BIT(5),        // In AutoMap: don't map as two sided: IT'S A SECRET!
+  MLF_SOUNDBLOCK = BIT(6),    // Sound rendering: don't let sound cross two of these
+  MLF_DONTDRAW = BIT(7),      // Don't draw on the automap at all
+  MLF_MAPPED = BIT(8),        // Set as if already seen, thus drawn in automap
+  MLF_PASSUSE = BIT(9),       // Allow multiple lines to be pushed simultaneously.
+  MLF_3DMIDTEX = BIT(10),     // Solid middle texture
+  MLF_RESERVED = BIT(11),     // comp_reservedlineflag
+  MLF_BLOCKGROUND = BIT(12),  // Block Grounded Monster
+  MLF_BLOCKPLAYERS = BIT(13), // Block Players Only
 };
 
 // first few flags are same as DOOM above
 using hexen_lineflag_e = enum : uint16_t
 {
-  MLF_Hexen_Repeatable = BIT(9),
-  MLF_Hexen_Activation = BIT(10) | BIT(11) | BIT(12),
+  MLF_HEXEN_REPEATABLE = BIT(9),
+  MLF_HEXEN_ACTIVATION = BIT(10) | BIT(11) | BIT(12),
 };
 
 // these are supported by ZDoom (and derived ports)
 using zdoom_lineflag_t = enum zdoom_lineflag_e : uint16_t
 {
-  MLF_ZDoom_MonCanActivate = BIT(13),
-  MLF_ZDoom_BlockPlayers = BIT(14),
-  MLF_ZDoom_BlockEverything = BIT(15),
+  MLF_ZDOOM_MONCANACTIVATE = BIT(13),
+  MLF_ZDOOM_BLOCKPLAYERS = BIT(14),
+  MLF_ZDOOM_BLOCKEVERYTHING = BIT(15),
 };
 
 static constexpr uint32_t BOOM_GENLINE_FIRST = 0x2f80;
