@@ -706,38 +706,6 @@ static void Reject_GroupSectors(void)
   }
 }
 
-static void Reject_DebugGroups(void)
-{
-  if constexpr (!DEBUG_REJECT)
-  {
-    return;
-  }
-
-  // Note: this routine is destructive to the group numbers
-  for (size_t i = 0; i < lev_sectors.size(); i++)
-  {
-    sector_t *sec = lev_sectors[i];
-
-    size_t group = sec->rej_group;
-    int num = 0;
-
-    if (group == NO_INDEX)
-    {
-      continue;
-    }
-
-    sec->rej_group = NO_INDEX;
-
-    for (size_t s = i; s < lev_sectors.size(); s++)
-    {
-      lev_sectors.at(s)->rej_group = NO_INDEX;
-      num++;
-    }
-
-    Debug("Group %zu : Sectors %d\n", group, num);
-  }
-}
-
 static void Reject_ProcessSectors(void)
 {
   for (size_t view = 0; view < lev_sectors.size(); view++)
