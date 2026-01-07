@@ -145,6 +145,9 @@ struct linedef_t
   vertex_t *start; // from this vertex...
   vertex_t *end;   // ... to this vertex
 
+  size_t start_id;
+  size_t end_id;
+
   sidedef_t *right; // right sidedef
   sidedef_t *left;  // left sidede, or nullptr if none
 

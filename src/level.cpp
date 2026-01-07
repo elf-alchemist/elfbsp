@@ -761,7 +761,7 @@ static void PutReject(void)
 // LEVEL : Level structure read/write functions.
 //------------------------------------------------------------------------
 
-// Note: ZDoom format support based on code (C) 2002,2003 Randy Heit
+// Note: ZDoom format support based on code (C) 2002,2003 Marisa "Randi" Heit
 
 // per-level variables
 
@@ -1248,9 +1248,11 @@ static void GetLinedefs(void)
     }
 
     linedef_t *line;
+    size_t start_id = GetLittleEndian(raw.start);
+    size_t end_id = GetLittleEndian(raw.end);
 
-    vertex_t *start = SafeLookupVertex(GetLittleEndian(raw.start));
-    vertex_t *end = SafeLookupVertex(GetLittleEndian(raw.end));
+    vertex_t *start = SafeLookupVertex(start_id);
+    vertex_t *end = SafeLookupVertex(end_id);
 
     start->is_used = true;
     end->is_used = true;
@@ -1259,6 +1261,8 @@ static void GetLinedefs(void)
 
     line->start = start;
     line->end = end;
+    line->start_id = start_id;
+    line->end_id = end_id;
 
     // check for zero-length line
     line->zero_len = (fabs(start->x - end->x) < DIST_EPSILON) && (fabs(start->y - end->y) < DIST_EPSILON);

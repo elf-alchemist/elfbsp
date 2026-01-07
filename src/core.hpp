@@ -167,15 +167,17 @@ template <typename T> static inline constexpr T GetBigEndian(T value)
 // sized types
 using byte = uint8_t;
 using args_t = uint8_t[5];
-using fixed32_t = int32_t;
+using fixed_t = int32_t;
 using long_angle_t = uint32_t;
 using short_angle_t = uint16_t;
 using lump_t = char[8];
 
+using vec2_fixed_t = struct { fixed_t x, y; };
+
 // misc constants
 static constexpr uint32_t ANG45 = 0x20000000;
 static constexpr uint32_t FRACBITS = 16;
-static constexpr fixed32_t FRACUNIT = (1 << FRACBITS);
+static constexpr fixed_t FRACUNIT = (1 << FRACBITS);
 static constexpr double FRACFACTOR = static_cast<double>(FRACUNIT);
 
 static constexpr size_t NO_INDEX = static_cast<size_t>(-1);
@@ -197,24 +199,24 @@ static inline constexpr bool HAS_BIT(uint32_t x, uint32_t y)
 }
 
 // doom's 32bit 16.16 fixed point
-static inline constexpr fixed32_t IntToFixed(int32_t x)
+static inline constexpr fixed_t IntToFixed(int32_t x)
 {
   return x << FRACBITS;
 }
 
-static inline constexpr int32_t FixedToInt(fixed32_t x)
+static inline constexpr int32_t FixedToInt(fixed_t x)
 {
   return x >> FRACBITS;
 }
 
-static inline constexpr double FixedToFloat(fixed32_t x)
+static inline constexpr double FixedToFloat(fixed_t x)
 {
   return (double(x) / FRACFACTOR);
 }
 
-static inline constexpr fixed32_t FloatToFixed(double x)
+static inline constexpr fixed_t FloatToFixed(double x)
 {
-  return fixed32_t(x * FRACFACTOR);
+  return fixed_t(x * FRACFACTOR);
 }
 
 // binary angular measurement, BAM!
