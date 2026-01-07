@@ -66,6 +66,7 @@ add_executable(elfbsp
     src/node.cpp
     src/misc.cpp
     src/parse.cpp
+    src/reject.cpp
     src/wad.cpp
 )
 
