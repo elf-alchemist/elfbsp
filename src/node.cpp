@@ -45,20 +45,18 @@
 static constexpr uint32_t PRECIOUS_MULTIPLY = 100;
 static constexpr uint32_t SEG_FAST_THRESHHOLD = 200;
 
-class eval_info_t
+struct eval_info_t
 {
-public:
   double cost;
-  int splits;
-  int iffy;
-  int near_miss;
+  size_t splits;
+  size_t iffy;
+  size_t near_miss;
 
-  int real_left;
-  int real_right;
-  int mini_left;
-  int mini_right;
+  size_t real_left;
+  size_t real_right;
+  size_t mini_left;
+  size_t mini_right;
 
-public:
   void BumpLeft(const linedef_t *linedef)
   {
     if (linedef != nullptr)
@@ -551,11 +549,11 @@ double EvalPartition(quadtree_c *tree, seg_t *part, double best_cost)
   }
 
   /* increase cost by the difference between left & right */
-  info.cost += 100.0 * abs(info.real_left - info.real_right);
+  info.cost += 100.0 * abs(int32_t(info.real_left) - int32_t(info.real_right));
 
   // -AJA- allow miniseg counts to affect the outcome, but to a
   //       lesser degree than real segs.
-  info.cost += 50.0 * abs(info.mini_left - info.mini_right);
+  info.cost += 50.0 * abs(int32_t(info.mini_left) - int32_t(info.mini_right));
 
   // -AJA- Another little twist, here we show a slight preference for
   //       partition lines that lie either purely horizontally or
@@ -567,7 +565,7 @@ double EvalPartition(quadtree_c *tree, seg_t *part, double best_cost)
 
   if constexpr (DEBUG_PICKNODE)
   {
-    Debug("Eval %p: splits=%d iffy=%d near=%d left=%d+%d right=%d+%d cost=%1.4f\n", part, info.splits, info.iffy,
+    Debug("Eval %p: splits=%zu iffy=%zu near=%zu left=%zu+%zu right=%zu+%zu cost=%1.4f\n", part, info.splits, info.iffy,
           info.near_miss, info.real_left, info.mini_left, info.real_right, info.mini_right, info.cost);
   }
 
