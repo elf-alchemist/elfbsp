@@ -172,7 +172,10 @@ using long_angle_t = uint32_t;
 using short_angle_t = uint16_t;
 using lump_t = char[8];
 
-using vec2_fixed_t = struct { fixed_t x, y; };
+using vec2_fixed_t = struct
+{
+  fixed_t x, y;
+};
 
 // misc constants
 static constexpr uint32_t ANG45 = 0x20000000;
@@ -211,12 +214,12 @@ static inline constexpr int32_t FixedToInt(fixed_t x)
 
 static inline constexpr double FixedToFloat(fixed_t x)
 {
-  return (double(x) / FRACFACTOR);
+  return (static_cast<double>(x) / FRACFACTOR);
 }
 
 static inline constexpr fixed_t FloatToFixed(double x)
 {
-  return fixed_t(x * FRACFACTOR);
+  return static_cast<fixed_t>(x * FRACFACTOR);
 }
 
 // binary angular measurement, BAM!
@@ -264,10 +267,10 @@ static inline int32_t PRINTF_ATTR(3, 0) M_vsnprintf(char *buf, size_t buf_len, c
 
   // If truncated, change the final char in the buffer to a \0.
   // A negative resultindicates a truncated buffer on Windows.
-  if (result < 0 || result >= (int32_t)buf_len)
+  if (result < 0 || result >= static_cast<int32_t>(buf_len))
   {
     buf[buf_len - 1] = '\0';
-    result = (int32_t)buf_len - 1;
+    result = static_cast<int32_t>(buf_len) - 1;
   }
 
   return result;
@@ -353,7 +356,7 @@ static inline constexpr void SYS_ASSERT(bool cond)
 //
 template <typename T> static inline constexpr T *UtilCalloc(size_t size)
 {
-  T *ret = (T *)calloc(1, size);
+  T *ret = static_cast<T *>(calloc(1, size));
 
   if (!ret)
   {
@@ -368,7 +371,7 @@ template <typename T> static inline constexpr T *UtilCalloc(size_t size)
 //
 template <typename T> static inline constexpr T *UtilRealloc(T *old, size_t size)
 {
-  T *ret = (T *)realloc(old, size);
+  T *ret = static_cast<T *>(realloc(old, size));
 
   if (!ret)
   {
@@ -531,13 +534,13 @@ static inline bool MatchExtension(const char *filename, const char *ext)
 
   while (A-- > 0 && B-- > 0)
   {
-    if (toupper((unsigned char)filename[A]) != toupper((unsigned char)ext[B]))
+    if (toupper(static_cast<unsigned char>(filename[A])) != toupper(static_cast<unsigned char>(ext[B])))
     {
       return false;
     }
   }
 
-  return (B == (size_t)-1) && filename[A] == '.';
+  return (B == NO_INDEX) && filename[A] == '.';
 }
 
 //
@@ -617,7 +620,7 @@ using raw_wad_entry_t = struct raw_wad_entry_s
   uint32_t pos;
   uint32_t size;
   char name[8];
-} PACKEDATTR ;
+} PACKEDATTR;
 
 //------------------------------------------------------------------------
 // LEVEL STRUCTURES
@@ -630,7 +633,6 @@ using map_format_t = enum map_format_e
   MAPF_Doom,
   MAPF_Hexen,
   MAPF_UDMF
-
 };
 
 // Lump order in a map WAD: each map needs a couple of lumps
@@ -671,13 +673,13 @@ using raw_linedef_t = struct raw_linedef_s
 
 using raw_hexen_linedef_t = struct raw_hexen_linedef_s
 {
-  uint16_t start;   // from this vertex...
-  uint16_t end;     // ... to this vertex
-  uint16_t flags;   // linedef flags (impassible, etc)
-  uint8_t  special; // special type
-  args_t   args;    // special arguments
-  uint16_t right;   // right sidedef
-  uint16_t left;    // left sidedef
+  uint16_t start;  // from this vertex...
+  uint16_t end;    // ... to this vertex
+  uint16_t flags;  // linedef flags (impassible, etc)
+  uint8_t special; // special type
+  args_t args;     // special arguments
+  uint16_t right;  // right sidedef
+  uint16_t left;   // left sidedef
 } PACKEDATTR;
 
 using raw_sidedef_t = struct raw_sidedef_s
@@ -706,7 +708,7 @@ using raw_thing_t = struct raw_thing_s
   int16_t x;        // x position of thing
   int16_t y;        // y position of thing
   int16_t angle;    // angle thing faces (degrees)
-  uint16_t type;    // type of thing
+  int16_t type;     // type of thing
   uint16_t options; // when appears, deaf, etc..
 } PACKEDATTR;
 
@@ -718,7 +720,7 @@ using raw_hexen_thing_t = struct raw_hexen_thing_s
   int16_t y;        // y position
   int16_t height;   // start height above floor
   int16_t angle;    // angle thing faces
-  uint16_t type;    // type of thing
+  int16_t type;     // type of thing
   uint16_t options; // when appears, deaf, dormant, etc..
   uint8_t special;  // special type
   uint8_t args[5];  // special arguments
@@ -872,7 +874,6 @@ using raw_xgl3_node_t = struct raw_xgl3_node_s
   raw_bbox_t b1, b2;    // bounding rectangles
   uint32_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
-
 
 /* ----- Graphical structures ---------------------- */
 

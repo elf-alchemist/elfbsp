@@ -23,6 +23,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstdio>
 
 //------------------------------------------------------------------------
 //  LUMP Handling
@@ -65,8 +66,8 @@ void Lump_c::MakeEntry(raw_wad_entry_t *entry)
   memset(entry->name, 0, 8);
   memcpy(entry->name, lumpname.c_str(), lumpname.size());
 
-  entry->pos = GetLittleEndian((uint32_t)l_start);
-  entry->size = GetLittleEndian((uint32_t)l_length);
+  entry->pos = GetLittleEndian(static_cast<uint32_t>(l_start));
+  entry->size = GetLittleEndian(static_cast<uint32_t>(l_length));
 }
 
 bool Lump_c::Match(const char *s) const
@@ -85,11 +86,9 @@ void Lump_c::Rename(const char *new_name)
   }
 }
 
-bool Lump_c::Seek(int offset)
+bool Lump_c::Seek(size_t offset)
 {
-  SYS_ASSERT(offset >= 0);
-
-  return (fseek(parent->fp, (int32_t)l_start + offset, SEEK_SET) == 0);
+  return (fseeko(parent->fp, static_cast<off_t>(l_start + offset), SEEK_SET) == 0);
 }
 
 bool Lump_c::Read(void *data, size_t len)
@@ -185,10 +184,9 @@ retry:
       goto retry;
     }
 
-    int what = errno;
     if constexpr (DEBUG_WAD)
     {
-      Debug("Open file failed: %s\n", strerror(what));
+      Debug("Open file failed: %s\n", strerror(errno));
     }
     return nullptr;
   }
@@ -196,19 +194,19 @@ retry:
   Wad_file *w = new Wad_file(filename, mode, fp);
 
   // determine total size (seek to end)
-  if (fseek(fp, 0, SEEK_END) != 0)
+  if (fseeko(fp, 0, SEEK_END) != 0)
   {
     FatalError("Error determining WAD size.\n");
   }
 
-  w->total_size = (size_t)ftell(fp);
+  w->total_size = ftello(fp);
 
   if constexpr (DEBUG_WAD)
   {
     Debug("total_size = %zu\n", w->total_size);
   }
 
-  if ((int64_t)w->total_size < 0)
+  if (w->total_size < 0)
   {
     FatalError("Error determining WAD size.\n");
   }
@@ -584,7 +582,7 @@ void Wad_file::ReadDirectory(void)
     FatalError("Bad WAD header, too many entries (%zu)\n", dir_count);
   }
 
-  if (fseek(fp, (int32_t)dir_start, SEEK_SET) != 0)
+  if (fseeko(fp, static_cast<off_t>(dir_start), SEEK_SET) != 0)
   {
     FatalError("Error seeking to WAD directory.\n");
   }
@@ -861,7 +859,7 @@ void Wad_file::ProcessNamespaces(void)
           break;
 
         default:
-          FatalError("ProcessNamespaces: active = 0x%02x\n", (int)active);
+          FatalError("ProcessNamespaces: active = 0x%02x\n", active);
       }
     }
   }
@@ -944,7 +942,7 @@ void Wad_file::RemoveLumps(size_t index, size_t count)
     directory[i] = directory[i + count];
   }
 
-  directory.resize(directory.size() - (size_t)count);
+  directory.resize(directory.size() - count);
 
   // fix various arrays containing lump indices
   FixGroup(levels, index, 0, count);
@@ -1042,7 +1040,7 @@ Lump_c *Wad_file::AddLump(const char *name, size_t max_size)
     FixGroup(flats, insert_point, 1, 0);
     FixGroup(tx_tex, insert_point, 1, 0);
 
-    directory.insert(directory.begin() + (int32_t)insert_point, lump);
+    directory.insert(directory.begin() + static_cast<int32_t>(insert_point), lump);
 
     insert_point++;
   }
@@ -1068,12 +1066,7 @@ void Wad_file::RecreateLump(Lump_c *lump, size_t max_size)
 
 Lump_c *Wad_file::AddLevel(const char *name, size_t max_size, size_t *lev_num)
 {
-  size_t actual_point = insert_point;
-
-  if (actual_point > NumLumps())
-  {
-    actual_point = NumLumps();
-  }
+  size_t actual_point = std::min(insert_point, NumLumps());
 
   Lump_c *lump = AddLump(name, max_size);
 
@@ -1170,16 +1163,7 @@ size_t Wad_file::FindFreeSpace(size_t length)
 
 size_t Wad_file::PositionForWrite(size_t max_size)
 {
-  size_t want_pos;
-
-  if (max_size == NO_INDEX)
-  {
-    want_pos = HighWaterMark();
-  }
-  else
-  {
-    want_pos = FindFreeSpace(max_size);
-  }
+  off_t want_pos = static_cast<off_t>(max_size == NO_INDEX ? HighWaterMark() : FindFreeSpace(max_size));
 
   // determine if position is past end of file
   // (difference should only be a few bytes)
@@ -1188,14 +1172,14 @@ size_t Wad_file::PositionForWrite(size_t max_size)
   //       but trying to optimise it away will just make the code
   //       needlessly complex and hard to follow.
 
-  if (fseek(fp, 0, SEEK_END) < 0)
+  if (fseeko(fp, 0, SEEK_END) < 0)
   {
     FatalError("Error seeking to new write position.\n");
   }
 
-  total_size = (size_t)ftell(fp);
+  total_size = ftello(fp);
 
-  if ((int32_t)total_size < 0)
+  if (total_size < 0)
   {
     FatalError("Error seeking to new write position.\n");
   }
@@ -1204,7 +1188,7 @@ size_t Wad_file::PositionForWrite(size_t max_size)
   {
     SYS_ASSERT(want_pos < total_size + 8);
 
-    WritePadding(want_pos - total_size);
+    WritePadding(static_cast<size_t>(want_pos - total_size));
   }
   else if (want_pos == total_size)
   {
@@ -1212,7 +1196,7 @@ size_t Wad_file::PositionForWrite(size_t max_size)
   }
   else
   {
-    if (fseek(fp, (int32_t)want_pos, SEEK_SET) < 0)
+    if (fseeko(fp, want_pos, SEEK_SET) < 0)
     {
       FatalError("Error seeking to new write position.\n");
     }
@@ -1223,7 +1207,7 @@ size_t Wad_file::PositionForWrite(size_t max_size)
     Debug("POSITION FOR WRITE: %zu  (total_size %zu)\n", want_pos, total_size);
   }
 
-  return want_pos;
+  return static_cast<size_t>(want_pos);
 }
 
 bool Wad_file::FinishLump(size_t final_size)
@@ -1236,7 +1220,7 @@ bool Wad_file::FinishLump(size_t final_size)
     FatalError("Internal Error: wrote too much in lump (%zu > %zu)\n", final_size, begun_max_size);
   }
 
-  size_t pos = (size_t)ftell(fp);
+  off_t pos = ftello(fp);
 
   if (pos & 3)
   {
@@ -1299,14 +1283,14 @@ void Wad_file::WriteDirectory(void)
 
   fflush(fp);
 
-  total_size = (size_t)ftell(fp);
+  total_size = ftello(fp);
 
   if constexpr (DEBUG_WAD)
   {
     Debug("total_size: %zu\n", total_size);
   }
 
-  if ((int32_t)total_size < 0)
+  if (total_size < 0)
   {
     FatalError("Error determining WAD size.\n");
   }
@@ -1319,8 +1303,8 @@ void Wad_file::WriteDirectory(void)
 
   memcpy(header.ident, (kind == 'I') ? "IWAD" : "PWAD", 4);
 
-  header.dir_start = GetLittleEndian((uint32_t)dir_start);
-  header.num_entries = GetLittleEndian((uint32_t)dir_count);
+  header.dir_start = GetLittleEndian(static_cast<uint32_t>(dir_start));
+  header.num_entries = GetLittleEndian(static_cast<uint32_t>(dir_count));
 
   if (fwrite(&header, sizeof(header), 1, fp) != 1)
   {

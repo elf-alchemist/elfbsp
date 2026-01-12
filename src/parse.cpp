@@ -19,10 +19,11 @@
 //
 //------------------------------------------------------------------------------
 
-#include "core.hpp"
 #include "parse.hpp"
+#include "core.hpp"
 
 #include <cinttypes>
+#include <cstdlib>
 
 token_kind_e lexer_c::Next(std::string &s)
 {
@@ -35,7 +36,7 @@ token_kind_e lexer_c::Next(std::string &s)
     return TOK_EOF;
   }
 
-  byte ch = (byte)data[pos];
+  byte ch = static_cast<byte>(data[pos]);
 
   if (ch == '"')
   {
@@ -76,17 +77,17 @@ bool lexer_c::Match(const char *s)
       return false;
     }
 
-    byte A = (byte)data[pos + ofs];
-    byte B = (byte)s[0];
+    byte A = static_cast<byte>(data[pos + ofs]);
+    byte B = static_cast<byte>(s[0]);
 
     // don't change a char when high-bit is set (for UTF-8)
     if (A < 128)
     {
-      A = (byte)std::tolower(A);
+      A = static_cast<byte>(std::tolower(A));
     }
     if (B < 128)
     {
-      B = (byte)std::tolower(B);
+      B = static_cast<byte>(std::tolower(B));
     }
 
     if (A != B)
@@ -100,7 +101,7 @@ bool lexer_c::Match(const char *s)
   // for a keyword, require a non-alphanumeric char after it.
   if (is_keyword && pos < data.size())
   {
-    byte ch = (byte)data[pos];
+    byte ch = static_cast<byte>(data[pos]);
 
     if (std::isalnum(ch) || ch >= 128)
     {
@@ -122,15 +123,21 @@ size_t LEX_Index(const std::string &s)
   return std::strtoumax(s.c_str(), nullptr, 0);
 }
 
+int16_t LEX_Int16(const std::string &s)
+{
+  // strtol handles all the integer sequences of the UDMF spec
+  return static_cast<int16_t>(std::strtol(s.c_str(), nullptr, 0));
+}
+
 int32_t LEX_Int(const std::string &s)
 {
   // strtol handles all the integer sequences of the UDMF spec
-  return (int32_t)std::strtol(s.c_str(), nullptr, 0);
+  return static_cast<int32_t>(std::strtol(s.c_str(), nullptr, 0));
 }
 
 uint32_t LEX_UInt(const std::string &s)
 {
-  return (uint32_t)std::strtoul(s.c_str(), nullptr, 0);
+  return static_cast<uint32_t>(std::strtoul(s.c_str(), nullptr, 0));
 }
 
 double LEX_Double(const std::string &s)
@@ -155,7 +162,7 @@ void lexer_c::SkipToNext(void)
 {
   while (pos < data.size())
   {
-    byte ch = (byte)data[pos];
+    byte ch = static_cast<byte>(data[pos]);
 
     // bump line number at end of a line
     if (ch == '\n')
@@ -221,12 +228,12 @@ token_kind_e lexer_c::ParseIdentifier(std::string &s)
 
   for (;;)
   {
-    byte ch = (byte)data[pos];
+    byte ch = static_cast<byte>(data[pos]);
 
     // don't change a char when high-bit is set (for UTF-8)
     if (ch < 128)
     {
-      ch = (byte)std::tolower(ch);
+      ch = static_cast<byte>(std::tolower(ch));
     }
 
     if (!(std::isalnum(ch) || ch == '_' || ch >= 128))
@@ -234,7 +241,7 @@ token_kind_e lexer_c::ParseIdentifier(std::string &s)
       break;
     }
 
-    s.push_back((char)ch);
+    s.push_back(static_cast<char>(ch));
     pos++;
   }
 
@@ -264,7 +271,7 @@ token_kind_e lexer_c::ParseNumber(std::string &s)
       break;
     }
 
-    byte ch = (byte)data[pos];
+    byte ch = static_cast<byte>(data[pos]);
 
     // this is fairly lax, but adequate for our purposes
     if (!(std::isalnum(ch) || ch == '+' || ch == '-' || ch == '.'))
@@ -285,7 +292,7 @@ token_kind_e lexer_c::ParseString(std::string &s)
 
   while (pos < data.size())
   {
-    byte ch = (byte)data[pos++];
+    byte ch = static_cast<byte>(data[pos++]);
 
     if (ch == '"')
     {
@@ -315,7 +322,7 @@ token_kind_e lexer_c::ParseString(std::string &s)
       continue;
     }
 
-    s.push_back((char)ch);
+    s.push_back(static_cast<char>(ch));
   }
 
   return TOK_String;
@@ -343,23 +350,23 @@ void lexer_c::ParseEscape(std::string &s)
   // octal sequence?  1 to 3 digits.
   if ('0' <= ch && ch <= '7')
   {
-    int val = (int)(ch - '0');
+    int val = static_cast<int32_t>(ch - '0');
 
     ch = data[pos];
     if ('0' <= ch && ch <= '7')
     {
-      val = val * 8 + (int)(ch - '0');
+      val = val * 8 + static_cast<int32_t>(ch - '0');
       pos++;
     }
 
     ch = data[pos];
     if ('0' <= ch && ch <= '7')
     {
-      val = val * 8 + (int)(ch - '0');
+      val = val * 8 + static_cast<int32_t>(ch - '0');
       pos++;
     }
 
-    s.push_back((char)val);
+    s.push_back(static_cast<char>(val));
     return;
   }
 
@@ -389,8 +396,8 @@ void lexer_c::ParseEscape(std::string &s)
 
     *p = 0;
 
-    int val = (int)std::strtol(buffer, nullptr, 0);
-    s.push_back((char)val);
+    long val = std::strtol(buffer, nullptr, 0);
+    s.push_back(static_cast<char>(val));
     return;
   }
 

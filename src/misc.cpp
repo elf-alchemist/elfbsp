@@ -123,16 +123,17 @@ void MarkPolyobjPoint(double x, double y)
   //       directly on a linedef or even a vertex.  We check all lines
   //       that intersect a small box around the spawn point.
 
-  int bminx = (int)(x - POLY_BOX_SZ);
-  int bminy = (int)(y - POLY_BOX_SZ);
-  int bmaxx = (int)(x + POLY_BOX_SZ);
-  int bmaxy = (int)(y + POLY_BOX_SZ);
+  int32_t bminx = static_cast<int32_t>(x - POLY_BOX_SZ);
+  int32_t bminy = static_cast<int32_t>(y - POLY_BOX_SZ);
+  int32_t bmaxx = static_cast<int32_t>(x + POLY_BOX_SZ);
+  int32_t bmaxy = static_cast<int32_t>(y + POLY_BOX_SZ);
 
   for (size_t i = 0; i < lev_linedefs.size(); i++)
   {
     const linedef_t *L = lev_linedefs[i];
 
-    if (CheckLinedefInsideBox(bminx, bminy, bmaxx, bmaxy, (int)L->start->x, (int)L->start->y, (int)L->end->x, (int)L->end->y))
+    if (CheckLinedefInsideBox(bminx, bminy, bmaxx, bmaxy, static_cast<int32_t>(L->start->x), static_cast<int32_t>(L->start->y),
+                              static_cast<int32_t>(L->end->x), static_cast<int32_t>(L->end->y)))
     {
       if constexpr (DEBUG_POLYOBJ)
       {
@@ -313,8 +314,8 @@ void DetectPolyobjSectors(bool is_udmf)
   {
     thing_t *T = lev_things[j];
 
-    double x = (double)T->x;
-    double y = (double)T->y;
+    double x = T->x;
+    double y = T->y;
 
     // ignore everything except polyobj start spots
     if (hexen_style)
@@ -667,7 +668,8 @@ vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end)
   dx /= dlen;
   dy /= dlen;
 
-  while ((int32_t)floor(vert->x) == (int32_t)floor(start->x) && (int32_t)floor(vert->y) == (int32_t)floor(start->y))
+  while (static_cast<int32_t>(floor(vert->x)) == static_cast<int32_t>(floor(start->x))
+         && static_cast<int32_t>(floor(vert->y)) == static_cast<int32_t>(floor(start->y)))
   {
     vert->x += dx;
     vert->y += dy;

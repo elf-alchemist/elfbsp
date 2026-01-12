@@ -63,7 +63,7 @@ struct Lump_c
 
   // attempt to seek to a position within the lump (default is
   // the beginning).  Returns true if OK, false on error.
-  bool Seek(int offset);
+  bool Seek(size_t offset);
 
   // read some data from the lump, returning true if OK.
   bool Read(void *data, size_t len);
@@ -101,7 +101,7 @@ struct Wad_file
   // zero means "currently unknown", which only occurs after a
   // call to BeginWrite() and before any call to AddLump() or
   // the finalizing EndWrite().
-  size_t total_size;
+  off_t total_size;
 
   std::vector<Lump_c *> directory;
 
@@ -150,7 +150,7 @@ struct Wad_file
     return mode == 'r';
   }
 
-  size_t TotalSize(void) const
+  off_t TotalSize(void) const
   {
     return total_size;
   }

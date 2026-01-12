@@ -63,7 +63,8 @@ int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1
         return false;
       }
 
-      x1 = x1 + (int)((x2 - x1) * (double)(ymax - y1) / (double)(y2 - y1));
+      x1 = x1
+           + static_cast<int32_t>(static_cast<double>(x2 - x1) * static_cast<double>(ymax - y1) / static_cast<double>(y2 - y1));
       y1 = ymax;
 
       count = 2;
@@ -77,7 +78,8 @@ int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1
         return false;
       }
 
-      x1 = x1 + (int)((x2 - x1) * (double)(ymin - y1) / (double)(y2 - y1));
+      x1 = x1
+           + static_cast<int32_t>(static_cast<double>(x2 - x1) * static_cast<double>(ymin - y1) / static_cast<double>(y2 - y1));
       y1 = ymin;
 
       count = 2;
@@ -91,7 +93,8 @@ int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1
         return false;
       }
 
-      y1 = y1 + (int)((y2 - y1) * (double)(xmax - x1) / (double)(x2 - x1));
+      y1 = y1
+           + static_cast<int32_t>(static_cast<double>(y2 - y1) * static_cast<double>(xmax - x1) / static_cast<double>(x2 - x1));
       x1 = xmax;
 
       count = 2;
@@ -105,7 +108,8 @@ int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1
         return false;
       }
 
-      y1 = y1 + (int)((y2 - y1) * (double)(xmin - x1) / (double)(x2 - x1));
+      y1 = y1
+           + static_cast<int32_t>(static_cast<double>(y2 - y1) * static_cast<double>(xmin - x1) / static_cast<double>(x2 - x1));
       x1 = xmin;
 
       count = 2;
@@ -175,16 +179,16 @@ static void BlockAdd(size_t blk_num, size_t line_index)
   cur[BK_XOR] = static_cast<uint16_t>(cur[BK_XOR] << 4) | (cur[BK_XOR] >> 12);
   cur[BK_XOR] ^= line_index;
 
-  cur[BK_FIRST + cur[BK_NUM]] = GetLittleEndian((uint16_t)line_index);
+  cur[BK_FIRST + cur[BK_NUM]] = GetLittleEndian(static_cast<uint16_t>(line_index));
   cur[BK_NUM]++;
 }
 
 static void BlockAddLine(const linedef_t *L)
 {
-  int x1 = (int)L->start->x;
-  int y1 = (int)L->start->y;
-  int x2 = (int)L->end->x;
-  int y2 = (int)L->end->y;
+  int32_t x1 = static_cast<int32_t>(L->start->x);
+  int32_t y1 = static_cast<int32_t>(L->start->y);
+  int32_t x2 = static_cast<int32_t>(L->end->x);
+  int32_t y2 = static_cast<int32_t>(L->end->y);
 
   size_t line_index = L->index;
 
@@ -201,8 +205,8 @@ static void BlockAddLine(const linedef_t *L)
   // handle truncated blockmaps
   size_t bx1 = static_cast<size_t>(std::max(bx1_temp, 0));
   size_t by1 = static_cast<size_t>(std::max(by1_temp, 0));
-  size_t bx2 = static_cast<size_t>(std::min(bx2_temp, (int32_t)block_w - 1));
-  size_t by2 = static_cast<size_t>(std::min(by2_temp, (int32_t)block_h - 1));
+  size_t bx2 = static_cast<size_t>(std::min(bx2_temp, static_cast<int32_t>(block_w - 1)));
+  size_t by2 = static_cast<size_t>(std::min(by2_temp, static_cast<int32_t>(block_h - 1)));
 
   if (bx2 < bx1 || by2 < by1)
   {
@@ -239,8 +243,8 @@ static void BlockAddLine(const linedef_t *L)
     {
       size_t blk_num = static_cast<size_t>(bx + by * block_w);
 
-      int32_t minx = block_x + 128 * (int32_t)bx;
-      int32_t miny = block_y + 128 * (int32_t)by;
+      int32_t minx = block_x + 128 * static_cast<int32_t>(bx);
+      int32_t miny = block_y + 128 * static_cast<int32_t>(by);
       int32_t maxx = minx + 127;
       int32_t maxy = miny + 127;
 
@@ -279,8 +283,8 @@ static void CreateBlockmap(void)
 
 static int BlockCompare(const void *p1, const void *p2)
 {
-  int blk_num1 = ((const uint16_t *)p1)[0];
-  int blk_num2 = ((const uint16_t *)p2)[0];
+  int blk_num1 = (static_cast<const uint16_t *>(p1))[0];
+  int blk_num2 = (static_cast<const uint16_t *>(p2))[0];
 
   const uint16_t *A = block_lines[blk_num1];
   const uint16_t *B = block_lines[blk_num2];
@@ -326,7 +330,7 @@ static void CompressBlockmap(void)
   // of the blocklists in the BLOCKMAP lump.
   for (size_t i = 0; i < block_count; i++)
   {
-    block_dups[i] = (uint16_t)i;
+    block_dups[i] = static_cast<uint16_t>(i);
   }
 
   qsort(block_dups, block_count, sizeof(uint16_t), BlockCompare);
@@ -343,7 +347,7 @@ static void CompressBlockmap(void)
     // empty block ?
     if (block_lines[blk_num] == nullptr)
     {
-      block_ptrs[blk_num] = (uint16_t)(4 + block_count);
+      block_ptrs[blk_num] = static_cast<uint16_t>(4 + block_count);
       block_dups[i] = DUMMY_DUP;
 
       orig_size += 2;
@@ -356,7 +360,7 @@ static void CompressBlockmap(void)
     // will update the current offset value.
     if (i + 1 < block_count && BlockCompare(block_dups + i, block_dups + i + 1) == 0)
     {
-      block_ptrs[blk_num] = (uint16_t)cur_offset;
+      block_ptrs[blk_num] = static_cast<uint16_t>(cur_offset);
       block_dups[i] = DUMMY_DUP;
 
       // free the memory of the duplicated block
@@ -374,7 +378,7 @@ static void CompressBlockmap(void)
 
     // OK, this block is either the last of a series of duplicates, or
     // just a singleton.
-    block_ptrs[blk_num] = (uint16_t)cur_offset;
+    block_ptrs[blk_num] = static_cast<uint16_t>(cur_offset);
     cur_offset += count;
     orig_size += count;
     new_size += count;
@@ -444,10 +448,10 @@ static void WriteBlockmap(void)
   // fill in header
   raw_blockmap_header_t header;
 
-  header.x_origin = GetLittleEndian((int16_t)block_x);
-  header.y_origin = GetLittleEndian((int16_t)block_y);
-  header.x_blocks = GetLittleEndian((int16_t)block_w);
-  header.y_blocks = GetLittleEndian((int16_t)block_h);
+  header.x_origin = GetLittleEndian(static_cast<int16_t>(block_x));
+  header.y_origin = GetLittleEndian(static_cast<int16_t>(block_y));
+  header.x_blocks = GetLittleEndian(static_cast<int16_t>(block_w));
+  header.y_blocks = GetLittleEndian(static_cast<int16_t>(block_h));
 
   lump->Write(&header, sizeof(header));
 
@@ -529,10 +533,10 @@ static void FindBlockmapLimits(bbox_t *bbox)
       double x2 = L->end->x;
       double y2 = L->end->y;
 
-      int lx = (int)floor(std::min(x1, x2));
-      int ly = (int)floor(std::min(y1, y2));
-      int hx = (int)ceil(std::max(x1, x2));
-      int hy = (int)ceil(std::max(y1, y2));
+      int32_t lx = static_cast<int32_t>(floor(std::min(x1, x2)));
+      int32_t ly = static_cast<int32_t>(floor(std::min(y1, y2)));
+      int32_t hx = static_cast<int32_t>(ceil(std::max(x1, x2)));
+      int32_t hy = static_cast<int32_t>(ceil(std::max(y1, y2)));
 
       if (lx < bbox->minx)
       {
@@ -559,8 +563,8 @@ static void FindBlockmapLimits(bbox_t *bbox)
 
   if (lev_linedefs.size() > 0)
   {
-    block_mid_x = (int32_t)floor(mid_x / (double)lev_linedefs.size());
-    block_mid_y = (int32_t)floor(mid_y / (double)lev_linedefs.size());
+    block_mid_x = static_cast<int32_t>(floor(mid_x / static_cast<double>(lev_linedefs.size())));
+    block_mid_y = static_cast<int32_t>(floor(mid_y / static_cast<double>(lev_linedefs.size())));
   }
 
   if constexpr (DEBUG_BLOCKMAP)
@@ -695,7 +699,7 @@ static void Reject_GroupSectors(void)
       std::swap(group1, group2);
     }
 
-		// merge the groups
+    // merge the groups
     for (size_t s = 0; s < lev_sectors.size(); s++)
     {
       if (rej_sector_groups[s] == group2)
@@ -975,7 +979,7 @@ static sector_t *SafeLookupSector(uint16_t num)
 
   if (num >= lev_sectors.size())
   {
-    FatalError("illegal sector number #%zu\n", (size_t)num);
+    FatalError("illegal sector number #%zu\n", static_cast<size_t>(num));
   }
 
   return lev_sectors[num];
@@ -1034,8 +1038,8 @@ static void GetVertices(void)
 
     vertex_t *vert = NewVertex();
 
-    vert->x = (double)GetLittleEndian(raw.x);
-    vert->y = (double)GetLittleEndian(raw.y);
+    vert->x = static_cast<double>(GetLittleEndian(raw.x));
+    vert->y = static_cast<double>(GetLittleEndian(raw.y));
   }
 
   num_old_vert = lev_vertices.size();
@@ -1078,10 +1082,8 @@ static void GetSectors(void)
 
     sector_t *sector = NewSector();
 
-    sector->height_floor = (double)GetLittleEndian(raw.floorh);
-    sector->height_ceiling = (double)GetLittleEndian(raw.ceilh);
-
-    (void)sector;
+    sector->height_floor = static_cast<double>(GetLittleEndian(raw.floorh));
+    sector->height_ceiling = static_cast<double>(GetLittleEndian(raw.ceilh));
   }
 }
 
@@ -1344,7 +1346,7 @@ static void GetLinedefsHexen(void)
     // check for zero-length line
     line->zero_len = (fabs(start->x - end->x) < DIST_EPSILON) && (fabs(start->y - end->y) < DIST_EPSILON);
 
-    line->special = (uint8_t)raw.special;
+    line->special = static_cast<uint8_t>(raw.special);
     uint16_t flags = GetLittleEndian(raw.flags);
 
     // -JL- Added missing twosided flag handling that caused a broken reject
@@ -1371,7 +1373,7 @@ static inline uint16_t VanillaSegDist(const seg_t *seg)
   double sx = round(seg->start->x);
   double sy = round(seg->start->y);
 
-  return (uint16_t)floor(hypot(sx - lx, sy - ly) + 0.5);
+  return static_cast<uint16_t>(floor(hypot(sx - lx, sy - ly) + 0.5));
 }
 
 static inline short_angle_t VanillaSegAngle(const seg_t *seg)
@@ -1431,17 +1433,17 @@ static void ParseThingField(thing_t *thing, const std::string &key, token_kind_e
 {
   if (key == "x")
   {
-    thing->x = (int32_t)(LEX_Double(value) * 65536.0);
+    thing->x = LEX_Double(value);
   }
 
   if (key == "y")
   {
-    thing->y = (int32_t)(LEX_Double(value) * 65536.0);
+    thing->y = LEX_Double(value);
   }
 
   if (key == "type")
   {
-    thing->type = LEX_Int(value);
+    thing->type = LEX_Int16(value);
   }
 }
 
@@ -1471,7 +1473,7 @@ static void ParseSidedefField(sidedef_t *side, const std::string &key, token_kin
 
     if (num >= lev_sectors.size())
     {
-      FatalError("illegal sector number #%zu\n", (size_t)num);
+      FatalError("illegal sector number #%zu\n", static_cast<size_t>(num));
     }
 
     side->sector = lev_sectors[num];
@@ -1789,8 +1791,8 @@ static void PutVertices(void)
       continue;
     }
 
-    raw.x = GetLittleEndian((int16_t)floor(vert->x));
-    raw.y = GetLittleEndian((int16_t)floor(vert->y));
+    raw.x = GetLittleEndian(static_cast<int16_t>(floor(vert->x)));
+    raw.y = GetLittleEndian(static_cast<int16_t>(floor(vert->y)));
 
     lump->Write(&raw, sizeof(raw));
 
@@ -1815,20 +1817,20 @@ static inline uint16_t VertexIndex16Bit(const vertex_t *v)
 {
   if (v->is_new)
   {
-    return (uint16_t)(v->index | 0x8000U);
+    return static_cast<uint16_t>(v->index | 0x8000U);
   }
 
-  return (uint16_t)v->index;
+  return static_cast<uint16_t>(v->index);
 }
 
 static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
 {
   if (v->is_new)
   {
-    return (uint32_t)(num_old_vert + v->index);
+    return static_cast<uint32_t>(num_old_vert + v->index);
   }
 
-  return (uint32_t)v->index;
+  return static_cast<uint32_t>(v->index);
 }
 
 static void PutSegs(void)
@@ -1847,7 +1849,7 @@ static void PutSegs(void)
     raw.start = GetLittleEndian(VertexIndex16Bit(seg->start));
     raw.end = GetLittleEndian(VertexIndex16Bit(seg->end));
     raw.angle = GetLittleEndian(VanillaSegAngle(seg));
-    raw.linedef = GetLittleEndian((uint16_t)seg->linedef->index);
+    raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef->index));
     raw.flip = GetLittleEndian(seg->side);
     raw.dist = GetLittleEndian(VanillaSegDist(seg));
 
@@ -1888,8 +1890,8 @@ static void PutSubsecs(void)
 
     const subsec_t *sub = lev_subsecs[i];
 
-    raw.first = GetLittleEndian((uint16_t)sub->seg_list->index);
-    raw.num = GetLittleEndian((uint16_t)sub->seg_count);
+    raw.first = GetLittleEndian(static_cast<uint16_t>(sub->seg_list->index));
+    raw.num = GetLittleEndian(static_cast<uint16_t>(sub->seg_count));
 
     lump->Write(&raw, sizeof(raw));
 
@@ -1927,28 +1929,28 @@ static void PutOneNode(node_t *node, Lump_c *lump)
   raw_node_t raw;
 
   // note that x/y/dx/dy are always integral in non-UDMF maps
-  raw.x = GetLittleEndian((int16_t)floor(node->x));
-  raw.y = GetLittleEndian((int16_t)floor(node->y));
-  raw.dx = GetLittleEndian((int16_t)floor(node->dx));
-  raw.dy = GetLittleEndian((int16_t)floor(node->dy));
+  raw.x = GetLittleEndian(static_cast<int16_t>(floor(node->x)));
+  raw.y = GetLittleEndian(static_cast<int16_t>(floor(node->y)));
+  raw.dx = GetLittleEndian(static_cast<int16_t>(floor(node->dx)));
+  raw.dy = GetLittleEndian(static_cast<int16_t>(floor(node->dy)));
 
-  raw.b1.minx = GetLittleEndian((int16_t)node->r.bounds.minx);
-  raw.b1.miny = GetLittleEndian((int16_t)node->r.bounds.miny);
-  raw.b1.maxx = GetLittleEndian((int16_t)node->r.bounds.maxx);
-  raw.b1.maxy = GetLittleEndian((int16_t)node->r.bounds.maxy);
+  raw.b1.minx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.minx));
+  raw.b1.miny = GetLittleEndian(static_cast<int16_t>(node->r.bounds.miny));
+  raw.b1.maxx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxx));
+  raw.b1.maxy = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxy));
 
-  raw.b2.minx = GetLittleEndian((int16_t)node->l.bounds.minx);
-  raw.b2.miny = GetLittleEndian((int16_t)node->l.bounds.miny);
-  raw.b2.maxx = GetLittleEndian((int16_t)node->l.bounds.maxx);
-  raw.b2.maxy = GetLittleEndian((int16_t)node->l.bounds.maxy);
+  raw.b2.minx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.minx));
+  raw.b2.miny = GetLittleEndian(static_cast<int16_t>(node->l.bounds.miny));
+  raw.b2.maxx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxx));
+  raw.b2.maxy = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxy));
 
   if (node->r.node)
   {
-    raw.right = GetLittleEndian((uint16_t)node->r.node->index);
+    raw.right = GetLittleEndian(static_cast<uint16_t>(node->r.node->index));
   }
   else if (node->r.subsec)
   {
-    raw.right = GetLittleEndian((uint16_t)(node->r.subsec->index | 0x8000));
+    raw.right = GetLittleEndian(static_cast<uint16_t>(node->r.subsec->index | 0x8000));
   }
   else
   {
@@ -1957,11 +1959,11 @@ static void PutOneNode(node_t *node, Lump_c *lump)
 
   if (node->l.node)
   {
-    raw.left = GetLittleEndian((uint16_t)node->l.node->index);
+    raw.left = GetLittleEndian(static_cast<uint16_t>(node->l.node->index));
   }
   else if (node->l.subsec)
   {
-    raw.left = GetLittleEndian((uint16_t)(node->l.subsec->index | 0x8000));
+    raw.left = GetLittleEndian(static_cast<uint16_t>(node->l.subsec->index | 0x8000));
   }
   else
   {
@@ -2086,8 +2088,8 @@ static void PutXnodVertices(Lump_c *lump)
       continue;
     }
 
-    raw.x = GetLittleEndian((int32_t)floor(vert->x * 65536.0));
-    raw.y = GetLittleEndian((int32_t)floor(vert->y * 65536.0));
+    raw.x = GetLittleEndian(static_cast<int32_t>(floor(vert->x * 65536.0)));
+    raw.y = GetLittleEndian(static_cast<int32_t>(floor(vert->y * 65536.0)));
 
     lump->Write(&raw, sizeof(raw));
 
@@ -2155,7 +2157,7 @@ static void PutXnodSegs(Lump_c *lump)
 
     raw.start = GetLittleEndian(VertexIndex_XNOD(seg->start));
     raw.end = GetLittleEndian(VertexIndex_XNOD(seg->end));
-    raw.linedef = GetLittleEndian((uint16_t)seg->linedef->index);
+    raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef->index));
     raw.side = seg->side;
     lump->Write(&raw, sizeof(raw));
   }
@@ -2178,8 +2180,8 @@ static void PutXgl2Segs(Lump_c *lump)
     raw_xgl2_seg_t raw = {};
 
     raw.vertex = GetLittleEndian(VertexIndex_XNOD(seg->start));
-    raw.partner = GetLittleEndian((uint16_t)(seg->partner ? seg->partner->index : NO_INDEX));
-    raw.linedef = GetLittleEndian((uint16_t)(seg->linedef ? seg->linedef->index : NO_INDEX));
+    raw.partner = GetLittleEndian(static_cast<uint16_t>(seg->partner ? seg->partner->index : NO_INDEX));
+    raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
     lump->Write(&raw, sizeof(raw));
@@ -2209,10 +2211,10 @@ static void PutOneXnodNode(Lump_c *lump, node_t *node, bool xgl3)
 
   if (xgl3)
   {
-    int32_t x = GetLittleEndian((int32_t)floor(node->x * 65536.0));
-    int32_t y = GetLittleEndian((int32_t)floor(node->y * 65536.0));
-    int32_t dx = GetLittleEndian((int32_t)floor(node->dx * 65536.0));
-    int32_t dy = GetLittleEndian((int32_t)floor(node->dy * 65536.0));
+    int32_t x = GetLittleEndian(static_cast<int32_t>(floor(node->x * 65536.0)));
+    int32_t y = GetLittleEndian(static_cast<int32_t>(floor(node->y * 65536.0)));
+    int32_t dx = GetLittleEndian(static_cast<int32_t>(floor(node->dx * 65536.0)));
+    int32_t dy = GetLittleEndian(static_cast<int32_t>(floor(node->dy * 65536.0)));
 
     lump->Write(&x, 4);
     lump->Write(&y, 4);
@@ -2221,10 +2223,10 @@ static void PutOneXnodNode(Lump_c *lump, node_t *node, bool xgl3)
   }
   else
   {
-    raw.x = GetLittleEndian((int16_t)floor(node->x));
-    raw.y = GetLittleEndian((int16_t)floor(node->y));
-    raw.dx = GetLittleEndian((int16_t)floor(node->dx));
-    raw.dy = GetLittleEndian((int16_t)floor(node->dy));
+    raw.x = GetLittleEndian(static_cast<int16_t>(floor(node->x)));
+    raw.y = GetLittleEndian(static_cast<int16_t>(floor(node->y)));
+    raw.dx = GetLittleEndian(static_cast<int16_t>(floor(node->dx)));
+    raw.dy = GetLittleEndian(static_cast<int16_t>(floor(node->dy)));
 
     lump->Write(&raw.x, 2);
     lump->Write(&raw.y, 2);
@@ -2232,26 +2234,26 @@ static void PutOneXnodNode(Lump_c *lump, node_t *node, bool xgl3)
     lump->Write(&raw.dy, 2);
   }
 
-  raw.b1.minx = GetLittleEndian((int16_t)node->r.bounds.minx);
-  raw.b1.miny = GetLittleEndian((int16_t)node->r.bounds.miny);
-  raw.b1.maxx = GetLittleEndian((int16_t)node->r.bounds.maxx);
-  raw.b1.maxy = GetLittleEndian((int16_t)node->r.bounds.maxy);
+  raw.b1.minx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.minx));
+  raw.b1.miny = GetLittleEndian(static_cast<int16_t>(node->r.bounds.miny));
+  raw.b1.maxx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxx));
+  raw.b1.maxy = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxy));
 
-  raw.b2.minx = GetLittleEndian((int16_t)node->l.bounds.minx);
-  raw.b2.miny = GetLittleEndian((int16_t)node->l.bounds.miny);
-  raw.b2.maxx = GetLittleEndian((int16_t)node->l.bounds.maxx);
-  raw.b2.maxy = GetLittleEndian((int16_t)node->l.bounds.maxy);
+  raw.b2.minx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.minx));
+  raw.b2.miny = GetLittleEndian(static_cast<int16_t>(node->l.bounds.miny));
+  raw.b2.maxx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxx));
+  raw.b2.maxy = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxy));
 
   lump->Write(&raw.b1, sizeof(raw.b1));
   lump->Write(&raw.b2, sizeof(raw.b2));
 
   if (node->r.node)
   {
-    raw.right = GetLittleEndian((uint32_t)(node->r.node->index));
+    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.node->index));
   }
   else if (node->r.subsec)
   {
-    raw.right = GetLittleEndian((uint32_t)(node->r.subsec->index | 0x80000000U));
+    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.subsec->index | 0x80000000U));
   }
   else
   {
@@ -2260,11 +2262,11 @@ static void PutOneXnodNode(Lump_c *lump, node_t *node, bool xgl3)
 
   if (node->l.node)
   {
-    raw.left = GetLittleEndian((uint32_t)(node->l.node->index));
+    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.node->index));
   }
   else if (node->l.subsec)
   {
-    raw.left = GetLittleEndian((uint32_t)(node->l.subsec->index | 0x80000000U));
+    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.subsec->index | 0x80000000U));
   }
   else
   {

@@ -75,6 +75,7 @@ struct lexer_c
 
 // helpers for converting numeric tokens.
 size_t LEX_Index(const std::string &s);
+int16_t LEX_Int16(const std::string &s);
 int32_t LEX_Int(const std::string &s);
 uint32_t LEX_UInt(const std::string &s);
 double LEX_Double(const std::string &s);

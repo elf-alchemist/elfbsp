@@ -188,8 +188,8 @@ struct linedef_t
 
 struct thing_t
 {
-  int x, y;
-  int type;
+  double x, y;
+  int16_t type;
 
   // other info (angle, and hexen stuff) omitted.  We don't need to
   // write the THINGS lump, only read it.

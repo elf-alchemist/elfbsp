@@ -479,7 +479,7 @@ void ParseShortArgument(const char *arg)
         }
         else
         {
-          FatalError("illegal short option (ascii code %d)\n", (int)(unsigned char)c);
+          FatalError("illegal short option (ascii code %d)\n", static_cast<unsigned char>(c));
         }
         return;
     }

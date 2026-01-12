@@ -923,10 +923,10 @@ void FindLimits2(seg_t *list, bbox_t *bbox)
     double x2 = list->end->x;
     double y2 = list->end->y;
 
-    int lx = (int)floor(std::min(x1, x2) - 0.2);
-    int ly = (int)floor(std::min(y1, y2) - 0.2);
-    int hx = (int)ceil(std::max(x1, x2) + 0.2);
-    int hy = (int)ceil(std::max(y1, y2) + 0.2);
+    int32_t lx = static_cast<int32_t>(floor(std::min(x1, x2) - 0.2));
+    int32_t ly = static_cast<int32_t>(floor(std::min(y1, y2) - 0.2));
+    int32_t hx = static_cast<int32_t>(ceil(std::max(x1, x2) + 0.2));
+    int32_t hy = static_cast<int32_t>(ceil(std::max(y1, y2) + 0.2));
 
     if (lx < bbox->minx)
     {
@@ -1223,10 +1223,10 @@ void ConvertToList(quadtree_c *quadtree, seg_t **_list)
 int OnLineSide(quadtree_c *quadtree, const seg_t *part)
 {
   // expand bounds a bit, adds some safety and loses nothing
-  double tx1 = (double)quadtree->x1 - 0.4;
-  double ty1 = (double)quadtree->y1 - 0.4;
-  double tx2 = (double)quadtree->x2 + 0.4;
-  double ty2 = (double)quadtree->y2 + 0.4;
+  double tx1 = static_cast<double>(quadtree->x1) - 0.4;
+  double ty1 = static_cast<double>(quadtree->y1) - 0.4;
+  double tx2 = static_cast<double>(quadtree->x2) + 0.4;
+  double ty2 = static_cast<double>(quadtree->y2) + 0.4;
 
   int p1, p2;
 
@@ -1872,8 +1872,8 @@ void RoundOff(subsec_t *subsec)
   for (seg = subsec->seg_list; seg; seg = seg->next)
   {
     // is the seg degenerate ?
-    if ((int32_t)floor(seg->start->x) == (int32_t)floor(seg->end->x)
-        && (int32_t)floor(seg->start->y) == (int32_t)floor(seg->end->y))
+    if (static_cast<int32_t>(floor(seg->start->x)) == static_cast<int32_t>(floor(seg->end->x))
+        && static_cast<int32_t>(floor(seg->start->y)) == static_cast<int32_t>(floor(seg->end->y)))
     {
       seg->is_degenerate = true;
 
@@ -1921,9 +1921,9 @@ void RoundOff(subsec_t *subsec)
 
     if constexpr (DEBUG_SUBSEC)
     {
-      Debug("Degenerate after:  (%d,%d) -> (%d,%d)\n", (int32_t)floor(last_real_degen->start->x),
-            (int32_t)floor(last_real_degen->start->y), (int32_t)floor(last_real_degen->end->x),
-            (int32_t)floor(last_real_degen->end->y));
+      Debug("Degenerate after:  (%d,%d) -> (%d,%d)\n", static_cast<int32_t>(floor(last_real_degen->start->x)),
+            static_cast<int32_t>(floor(last_real_degen->start->y)), static_cast<int32_t>(floor(last_real_degen->end->x)),
+            static_cast<int32_t>(floor(last_real_degen->end->y)));
     }
 
     last_real_degen->is_degenerate = false;
