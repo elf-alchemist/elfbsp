@@ -111,11 +111,6 @@ bool lexer_c::Match(const char *s)
   return true;
 }
 
-int lexer_c::LastLine(void)
-{
-  return line;
-}
-
 void lexer_c::Rewind(void)
 {
   pos = 0;

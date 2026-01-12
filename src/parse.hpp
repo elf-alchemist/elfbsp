@@ -35,10 +35,9 @@ enum token_kind_e
   TOK_String
 };
 
-class lexer_c
+struct lexer_c
 {
-public:
-  lexer_c(const std::string &_data) : data(_data), pos(0), line(1)
+  lexer_c(const std::string &_data) : data(_data)
   {
   }
 
@@ -57,19 +56,13 @@ public:
   // returned and the position is unchanged.
   bool Match(const char *s);
 
-  // give the line number for the last token returned by Next() or
-  // the token implicitly checked by Match().  can be used to show
-  // where in the file an error occurred.
-  int LastLine(void);
-
   // rewind to the very beginning.
   void Rewind(void);
 
-private:
   const std::string &data;
 
-  size_t pos;
-  int line;
+  size_t pos = 0;
+  size_t line = 1;
 
   void SkipToNext();
 
