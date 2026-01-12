@@ -28,6 +28,7 @@
 // REJECT : Generate the reject matrix
 //-----------------------------------------------------------------------------
 
+static size_t sector_num;
 static uint8_t *rej_matrix;
 static size_t rej_total_size; // in bytes
 static std::vector<size_t> rej_sector_groups;
@@ -37,14 +38,14 @@ static std::vector<size_t> rej_sector_groups;
 //
 static inline void Reject_Init(void)
 {
-  rej_total_size = (lev_sectors.size() * lev_sectors.size() + 7) / 8;
+  rej_total_size = (sector_num * sector_num + 7) / 8;
 
   rej_matrix = new uint8_t[rej_total_size];
   memset(rej_matrix, 0, rej_total_size);
 
-  rej_sector_groups.resize(lev_sectors.size());
+  rej_sector_groups.resize(sector_num);
 
-  for (size_t i = 0; i < lev_sectors.size(); i++)
+  for (size_t i = 0; i < sector_num; i++)
   {
     rej_sector_groups[i] = i;
   }
@@ -96,8 +97,8 @@ static inline void Reject_GroupSectors(void)
       std::swap(group1, group2);
     }
 
-		// merge the groups
-    for (size_t s = 0; s < lev_sectors.size(); s++)
+    // merge the groups
+    for (size_t s = 0; s < sector_num; s++)
     {
       if (rej_sector_groups[s] == group2)
       {
@@ -109,7 +110,7 @@ static inline void Reject_GroupSectors(void)
 
 static inline void Reject_ProcessSectors(void)
 {
-  for (size_t view = 0; view < lev_sectors.size(); view++)
+  for (size_t view = 0; view < sector_num; view++)
   {
     for (size_t target = 0; target < view; target++)
     {
@@ -120,8 +121,8 @@ static inline void Reject_ProcessSectors(void)
 
       // for symmetry, do both sides at same time
 
-      size_t p1 = view * lev_sectors.size() + target;
-      size_t p2 = target * lev_sectors.size() + view;
+      size_t p1 = view * sector_num + target;
+      size_t p2 = target * sector_num + view;
 
       rej_matrix[p1 >> 3] |= (1 << (p1 & 7));
       rej_matrix[p2 >> 3] |= (1 << (p2 & 7));
@@ -143,7 +144,8 @@ static inline void Reject_WriteLump(void)
 //
 void PutReject(void)
 {
-  if (config.no_reject || lev_sectors.size() == 0)
+  sector_num = lev_sectors.size();
+  if (config.no_reject || sector_num == 0)
   {
     // just create an empty reject lump
     CreateLevelLump("REJECT")->Finish();
