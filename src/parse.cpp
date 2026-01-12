@@ -19,8 +19,8 @@
 //
 //------------------------------------------------------------------------------
 
-#include "core.hpp"
 #include "parse.hpp"
+#include "core.hpp"
 
 #include <cinttypes>
 
