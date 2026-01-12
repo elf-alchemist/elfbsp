@@ -96,20 +96,34 @@ static constexpr bool DEBUG_WAD = false;
 // to disk.
 //
 
-// -Elf- updated, pulled from Chocolate Doom
+#if defined(__has_attribute)
+  #define HAS_ATTR(x) __has_attribute(x)
+#else
+  #define HAS_ATTR(x) 0
+#endif
 
-#if defined(__GNUC__)
-
-  #if defined(_WIN32) && !defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
+  #if defined(__MINGW32__) && !defined(__clang__)
     #define PACKEDATTR __attribute__((packed, gcc_struct))
-  #else
+  #elif HAS_ATTR(packed)
     #define PACKEDATTR __attribute__((packed))
+  #else
+    #define PACKEDATTR
   #endif
 
-  #define PRINTF_ATTR(fmt, first) __attribute__((format(printf, fmt, first)))
-  #define PRINTF_ARG_ATTR(x)      __attribute__((format_arg(x)))
-  #define NORETURN                __attribute__((noreturn))
+  #if HAS_ATTR(format)
+    #define PRINTF_ATTR(fmt, first) __attribute__((format(printf, fmt, first)))
+    #define PRINTF_ARG_ATTR(x)      __attribute__((format_arg(x)))
+  #else
+    #define PRINTF_ATTR(fmt, first)
+    #define PRINTF_ARG_ATTR(x)
+  #endif
 
+  #if HAS_ATTR(noreturn)
+    #define NORETURN __attribute__((noreturn))
+  #else
+    #define NORETURN
+  #endif
 #else
   #define PACKEDATTR
   #define PRINTF_ATTR(fmt, first)
@@ -172,7 +186,11 @@ using long_angle_t = uint32_t;
 using short_angle_t = uint16_t;
 using lump_t = char[8];
 
-using vec2_fixed_t = struct { fixed_t x, y; };
+using vec2_fixed_t = struct
+{
+  fixed_t x;
+  fixed_t y;
+};
 
 // misc constants
 static constexpr uint32_t ANG45 = 0x20000000;
@@ -616,8 +634,8 @@ using raw_wad_entry_t = struct raw_wad_entry_s
 {
   uint32_t pos;
   uint32_t size;
-  char name[8];
-} PACKEDATTR ;
+  lump_t name;
+} PACKEDATTR;
 
 //------------------------------------------------------------------------
 // LEVEL STRUCTURES
@@ -630,7 +648,6 @@ using map_format_t = enum map_format_e
   MAPF_Doom,
   MAPF_Hexen,
   MAPF_UDMF
-
 };
 
 // Lump order in a map WAD: each map needs a couple of lumps
@@ -671,13 +688,13 @@ using raw_linedef_t = struct raw_linedef_s
 
 using raw_hexen_linedef_t = struct raw_hexen_linedef_s
 {
-  uint16_t start;   // from this vertex...
-  uint16_t end;     // ... to this vertex
-  uint16_t flags;   // linedef flags (impassible, etc)
-  uint8_t  special; // special type
-  args_t   args;    // special arguments
-  uint16_t right;   // right sidedef
-  uint16_t left;    // left sidedef
+  uint16_t start;  // from this vertex...
+  uint16_t end;    // ... to this vertex
+  uint16_t flags;  // linedef flags (impassible, etc)
+  uint8_t special; // special type
+  args_t args;     // special arguments
+  uint16_t right;  // right sidedef
+  uint16_t left;   // left sidedef
 } PACKEDATTR;
 
 using raw_sidedef_t = struct raw_sidedef_s
@@ -872,7 +889,6 @@ using raw_xgl3_node_t = struct raw_xgl3_node_s
   raw_bbox_t b1, b2;    // bounding rectangles
   uint32_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
-
 
 /* ----- Graphical structures ---------------------- */
 
