@@ -82,6 +82,7 @@ target_compile_options(elfbsp PRIVATE
     -Wconversion
     -Wsign-conversion
     -Wno-unused-parameter
+    -Wold-style-cast
 )
 
 target_compile_options(elfbsp PRIVATE
