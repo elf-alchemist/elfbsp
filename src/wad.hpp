@@ -30,8 +30,6 @@ struct Lump_c;
 
 struct Wad_file
 {
-  std::string filename;
-
   char mode; // mode value passed to ::Open()
 
   FILE *fp;
@@ -77,22 +75,9 @@ struct Wad_file
   //
   static Wad_file *Open(const char *filename, char mode = 'a');
 
-  // check the given wad file exists and is a WAD file
-  static bool Validate(const char *filename);
-
-  const char *PathName(void) const
-  {
-    return filename.c_str();
-  }
-
   bool IsReadOnly(void) const
   {
     return mode == 'r';
-  }
-
-  off_t TotalSize(void) const
-  {
-    return total_size;
   }
 
   size_t NumLumps(void) const
@@ -101,10 +86,6 @@ struct Wad_file
   }
 
   Lump_c *GetLump(size_t index);
-  Lump_c *FindLump(const char *name);
-  size_t FindLumpNum(const char *name);
-
-  Lump_c *FindLumpInNamespace(const char *name, char group);
 
   size_t LevelCount(void) const
   {
@@ -114,11 +95,6 @@ struct Wad_file
   size_t LevelHeader(size_t lev_num);
   size_t LevelLastLump(size_t lev_num);
 
-  // these return a level number (0 .. count-1)
-  size_t LevelFind(const char *name);
-  size_t LevelFindByNumber(int32_t number);
-  size_t LevelFindFirst(void);
-
   // returns a lump index, -1 if not found
   size_t LevelLookupLump(size_t lev_num, const char *name);
 
@@ -126,33 +102,16 @@ struct Wad_file
 
   void SortLevels(void);
 
-  // check whether another program has modified this WAD, and return
-  // either true or false.  We test for change in file size, change
-  // in directory size or location, and directory contents (CRC).
-  // [ NOT USED YET.... ]
-  bool WasExternallyModified(void);
-
-  // backup the current wad into the given filename.
-  // returns true if successful, false on error.
-  bool Backup(const char *new_filename);
-
   // all changes to the wad must occur between calls to BeginWrite()
   // and EndWrite() methods.  the on-disk wad directory may be trashed
   // during this period, it will be re-written by EndWrite().
   void BeginWrite(void);
   void EndWrite(void);
 
-  // change name of a lump (can be a level marker too)
-  void RenameLump(size_t index, const char *new_name);
-
   // remove the given lump(s)
   // this will change index numbers on existing lumps
   // (previous results of FindLumpNum or LevelHeader are invalidated).
   void RemoveLumps(size_t index, size_t count = 1);
-
-  // this removes the level marker PLUS all associated level lumps
-  // which follow it.
-  void RemoveLevel(size_t lev_num);
 
   // removes any ZNODES lump from a UDMF level.
   void RemoveZNodes(size_t lev_num);
@@ -163,7 +122,6 @@ struct Wad_file
   // you will write into the lump -- writing more will corrupt
   // something else in the WAD.
   Lump_c *AddLump(const char *name, size_t max_size = NO_INDEX);
-  Lump_c *AddLevel(const char *name, size_t max_size = NO_INDEX, size_t *lev_num = nullptr);
 
   // setup lump to write new data to it.
   // the old contents are lost.
@@ -215,7 +173,6 @@ struct Wad_file
 struct Lump_c
 {
   struct Wad_file *parent;
-  FILE *parent_fp;
 
   std::string lumpname;
 
@@ -262,14 +219,14 @@ struct Lump_c
   // the beginning).  Returns true if OK, false on error.
   inline bool Seek(size_t offset)
   {
-    return (fseeko(parent_fp, static_cast<off_t>(l_start + offset), SEEK_SET) == 0);
+    return (fseeko(parent->fp, static_cast<off_t>(l_start + offset), SEEK_SET) == 0);
   }
 
   // read some data from the lump, returning true if OK.
   inline bool Read(void *data, size_t len)
   {
     SYS_ASSERT(data && len > 0);
-    return (fread(data, len, 1, parent_fp) == 1);
+    return (fread(data, len, 1, parent->fp) == 1);
   }
 
   // write some data to the lump.  Only the lump which had just
@@ -279,7 +236,7 @@ struct Lump_c
   {
     SYS_ASSERT(data && len > 0);
     l_length += len;
-    return (fwrite(data, len, 1, parent_fp) == 1);
+    return (fwrite(data, len, 1, parent->fp) == 1);
   }
 
   // mark the lump as finished (after writing data to it).

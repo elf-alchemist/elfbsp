@@ -75,7 +75,7 @@ void Lump_c::MakeEntry(raw_wad_entry_t *entry)
 //------------------------------------------------------------------------
 
 Wad_file::Wad_file(const char *_name, char _mode, FILE *_fp)
-    : filename(_name), mode(_mode), fp(_fp), kind('P'), total_size(0), directory(), dir_start(0), dir_count(0), levels(),
+    : mode(_mode), fp(_fp), kind('P'), total_size(0), directory(), dir_start(0), dir_count(0), levels(),
       patches(), sprites(), flats(), tx_tex(), begun_write(false), insert_point(NO_INDEX)
 {
   // nothing needed
@@ -83,11 +83,6 @@ Wad_file::Wad_file(const char *_name, char _mode, FILE *_fp)
 
 Wad_file::~Wad_file(void)
 {
-  if constexpr (DEBUG_WAD)
-  {
-    Debug("Closing WAD file: %s\n", filename.c_str());
-  }
-
   fclose(fp);
 
   // free the directory
@@ -200,34 +195,6 @@ Wad_file *Wad_file::Create(const char *filename, char mode)
   return w;
 }
 
-bool Wad_file::Validate(const char *filename)
-{
-  FILE *fp = fopen(filename, "rb");
-
-  if (!fp)
-  {
-    return false;
-  }
-
-  raw_wad_header_t header;
-
-  if (fread(&header, sizeof(header), 1, fp) != 1)
-  {
-    fclose(fp);
-    return false;
-  }
-
-  if (!(header.ident[1] == 'W' && header.ident[2] == 'A' && header.ident[3] == 'D'))
-  {
-    fclose(fp);
-    return false;
-  }
-
-  fclose(fp);
-
-  return true; // OK
-}
-
 static size_t WhatLevelPart(const char *name)
 {
   if (StringCaseCmp(name, "THINGS") == 0)
@@ -296,32 +263,6 @@ Lump_c *Wad_file::GetLump(size_t index)
   return directory[index];
 }
 
-Lump_c *Wad_file::FindLump(const char *name)
-{
-  for (size_t k = 0; k < NumLumps(); k++)
-  {
-    if (directory[k]->Match(name))
-    {
-      return directory[k];
-    }
-  }
-
-  return nullptr; // not found
-}
-
-size_t Wad_file::FindLumpNum(const char *name)
-{
-  for (size_t k = 0; k < NumLumps(); k++)
-  {
-    if (directory[k]->Match(name))
-    {
-      return k;
-    }
-  }
-
-  return NO_INDEX; // not found
-}
-
 static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
 
 size_t Wad_file::LevelLookupLump(size_t lev_num, const char *name)
@@ -334,24 +275,6 @@ size_t Wad_file::LevelLookupLump(size_t lev_num, const char *name)
     SYS_ASSERT(k < NumLumps());
 
     if (directory[k]->Match(name))
-    {
-      return k;
-    }
-  }
-
-  return NO_INDEX; // not found
-}
-
-size_t Wad_file::LevelFind(const char *name)
-{
-  for (size_t k = 0; k < levels.size(); k++)
-  {
-    size_t index = levels[k];
-
-    SYS_ASSERT(index < NumLumps());
-    SYS_ASSERT(directory[index]);
-
-    if (directory[index]->Match(name))
     {
       return k;
     }
@@ -390,51 +313,6 @@ size_t Wad_file::LevelLastLump(size_t lev_num)
   return start + count - 1;
 }
 
-size_t Wad_file::LevelFindByNumber(int32_t number)
-{
-  // sanity check
-  if (number <= 0 || number > 99)
-  {
-    return NO_INDEX;
-  }
-
-  char buffer[10];
-  size_t index;
-
-  // try MAP## first
-  M_snprintf(buffer, sizeof(buffer), "MAP%02d", number);
-
-  index = LevelFind(buffer);
-  if (index != NO_INDEX)
-  {
-    return index;
-  }
-
-  // otherwise try E#M#
-  div_t exmy = div(number, 10);
-  M_snprintf(buffer, sizeof(buffer), "E%dM%d", std::max(1, exmy.quot), exmy.rem);
-
-  index = LevelFind(buffer);
-  if (index != NO_INDEX)
-  {
-    return index;
-  }
-
-  return NO_INDEX; // not found
-}
-
-size_t Wad_file::LevelFindFirst(void)
-{
-  if (levels.size() > 0)
-  {
-    return 0;
-  }
-  else
-  {
-    return NO_INDEX; // none
-  }
-}
-
 size_t Wad_file::LevelHeader(size_t lev_num)
 {
   SYS_ASSERT(lev_num < LevelCount());
@@ -467,47 +345,6 @@ map_format_e Wad_file::LevelFormat(size_t lev_num)
   }
 
   return MAPF_Doom;
-}
-
-Lump_c *Wad_file::FindLumpInNamespace(const char *name, char group)
-{
-  switch (group)
-  {
-    case 'P':
-      for (size_t k = 0; k < patches.size(); k++)
-      {
-        if (directory[patches[k]]->Match(name))
-        {
-          return directory[patches[k]];
-        }
-      }
-      break;
-
-    case 'S':
-      for (size_t k = 0; k < sprites.size(); k++)
-      {
-        if (directory[sprites[k]]->Match(name))
-        {
-          return directory[sprites[k]];
-        }
-      }
-      break;
-
-    case 'F':
-      for (size_t k = 0; k < flats.size(); k++)
-      {
-        if (directory[flats[k]]->Match(name))
-        {
-          return directory[flats[k]];
-        }
-      }
-      break;
-
-    default:
-      FatalError("FindLumpInNamespace: bad group '%c'\n", group);
-  }
-
-  return nullptr; // not found!
 }
 
 void Wad_file::ReadDirectory(void)
@@ -844,12 +681,6 @@ void Wad_file::ProcessNamespaces(void)
   }
 }
 
-bool Wad_file::WasExternallyModified(void)
-{
-  // this method is an unused stub
-  return false;
-}
-
 //------------------------------------------------------------------------
 //  WAD Writing Interface
 //------------------------------------------------------------------------
@@ -886,17 +717,6 @@ void Wad_file::EndWrite(void)
   insert_point = NO_INDEX;
 }
 
-void Wad_file::RenameLump(size_t index, const char *new_name)
-{
-  SYS_ASSERT(begun_write);
-  SYS_ASSERT(index < NumLumps());
-
-  Lump_c *lump = directory[index];
-  SYS_ASSERT(lump);
-
-  lump->Rename(new_name);
-}
-
 void Wad_file::RemoveLumps(size_t index, size_t count)
 {
   SYS_ASSERT(begun_write);
@@ -924,18 +744,6 @@ void Wad_file::RemoveLumps(size_t index, size_t count)
 
   // reset the insertion point
   insert_point = NO_INDEX;
-}
-
-void Wad_file::RemoveLevel(size_t lev_num)
-{
-  SYS_ASSERT(begun_write);
-  SYS_ASSERT(lev_num < LevelCount());
-
-  size_t start = LevelHeader(lev_num);
-  size_t finish = LevelLastLump(lev_num);
-
-  // NOTE: FixGroup() will remove the entry in levels[]
-  RemoveLumps(start, finish - start + 1);
 }
 
 void Wad_file::RemoveZNodes(size_t lev_num)
@@ -1033,22 +841,6 @@ void Wad_file::RecreateLump(Lump_c *lump, size_t max_size)
 
   lump->l_start = start;
   lump->l_length = 0;
-}
-
-Lump_c *Wad_file::AddLevel(const char *name, size_t max_size, size_t *lev_num)
-{
-  size_t actual_point = std::min(insert_point, NumLumps());
-
-  Lump_c *lump = AddLump(name, max_size);
-
-  if (lev_num)
-  {
-    *lev_num = levels.size();
-  }
-
-  levels.push_back(actual_point);
-
-  return lump;
 }
 
 void Wad_file::InsertPoint(size_t index)
@@ -1291,11 +1083,4 @@ void Wad_file::WriteDirectory(void)
   }
 
   fflush(fp);
-}
-
-bool Wad_file::Backup(const char *new_filename)
-{
-  fflush(fp);
-
-  return FileCopy(PathName(), new_filename);
 }
