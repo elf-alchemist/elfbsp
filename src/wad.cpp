@@ -70,53 +70,6 @@ void Lump_c::MakeEntry(raw_wad_entry_t *entry)
   entry->size = GetLittleEndian(static_cast<uint32_t>(l_length));
 }
 
-bool Lump_c::Match(const char *s) const
-{
-  return (0 == StringCaseCmp(lumpname.c_str(), s));
-}
-
-void Lump_c::Rename(const char *new_name)
-{
-  // ensure lump name is uppercase
-  lumpname.clear();
-
-  for (const char *s = new_name; *s != 0; s++)
-  {
-    lumpname.push_back(static_cast<char>(toupper(*s)));
-  }
-}
-
-bool Lump_c::Seek(size_t offset)
-{
-  return (fseeko(parent->fp, static_cast<off_t>(l_start + offset), SEEK_SET) == 0);
-}
-
-bool Lump_c::Read(void *data, size_t len)
-{
-  SYS_ASSERT(data && len > 0);
-
-  return (fread(data, len, 1, parent->fp) == 1);
-}
-
-bool Lump_c::Write(const void *data, size_t len)
-{
-  SYS_ASSERT(data && len > 0);
-
-  l_length += len;
-
-  return (fwrite(data, len, 1, parent->fp) == 1);
-}
-
-bool Lump_c::Finish(void)
-{
-  if (l_length == 0)
-  {
-    l_start = 0;
-  }
-
-  return parent->FinishLump(l_length);
-}
-
 //------------------------------------------------------------------------
 //  WAD Reading Interface
 //------------------------------------------------------------------------
@@ -676,6 +629,24 @@ void Wad_file::DetectLevels(void)
 
 void Wad_file::SortLevels(void)
 {
+  // predicate for sorting the levels[] vector
+  struct level_name_CMP_pred
+  {
+    Wad_file *wad;
+
+    level_name_CMP_pred(Wad_file *_w) : wad(_w)
+    {
+    }
+
+    inline bool operator()(const size_t A, const size_t B) const
+    {
+      const Lump_c *L1 = wad->directory[A];
+      const Lump_c *L2 = wad->directory[B];
+
+      return (strcmp(L1->Name(), L2->Name()) < 0);
+    }
+  };
+
   std::sort(levels.begin(), levels.end(), level_name_CMP_pred(this));
 }
 
@@ -1130,7 +1101,15 @@ size_t Wad_file::FindFreeSpace(size_t length)
     }
   }
 
-  std::sort(sorted_dir.begin(), sorted_dir.end(), Lump_c::offset_CMP_pred());
+  struct offset_CMP_pred
+  {
+    inline bool operator()(const Lump_c *A, const Lump_c *B) const
+    {
+      return A->l_start < B->l_start;
+    }
+  };
+
+  std::sort(sorted_dir.begin(), sorted_dir.end(), offset_CMP_pred());
 
   size_t offset = sizeof(raw_wad_header_t);
 

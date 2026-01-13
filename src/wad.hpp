@@ -26,67 +26,7 @@
 #include <string>
 #include <vector>
 
-struct Wad_file;
-
-struct Lump_c
-{
-  Wad_file *parent;
-
-  std::string lumpname;
-
-  size_t l_start;
-  size_t l_length;
-
-  // constructor is private
-  Lump_c(Wad_file *_par, const char *_name, size_t _start, size_t _len);
-  Lump_c(Wad_file *_par, const raw_wad_entry_t *entry);
-
-  void MakeEntry(raw_wad_entry_t *entry);
-
-  ~Lump_c(void);
-
-  const char *Name(void) const
-  {
-    return lumpname.c_str();
-  }
-
-  size_t Length(void) const
-  {
-    return l_length;
-  }
-
-  // case insensitive match on the lump name
-  bool Match(const char *s) const;
-
-  // do not call this directly, use Wad_file::RenameLump()
-  void Rename(const char *new_name);
-
-  // attempt to seek to a position within the lump (default is
-  // the beginning).  Returns true if OK, false on error.
-  bool Seek(size_t offset);
-
-  // read some data from the lump, returning true if OK.
-  bool Read(void *data, size_t len);
-
-  // write some data to the lump.  Only the lump which had just
-  // been created with Wad_file::AddLump() or RecreateLump() can be
-  // written to.
-  bool Write(const void *data, size_t len);
-
-  // mark the lump as finished (after writing data to it).
-  bool Finish(void);
-
-  // predicate for std::sort()
-  struct offset_CMP_pred
-  {
-    inline bool operator()(const Lump_c *A, const Lump_c *B) const
-    {
-      return A->l_start < B->l_start;
-    }
-  };
-};
-
-//------------------------------------------------------------------------
+struct Lump_c;
 
 struct Wad_file
 {
@@ -270,22 +210,86 @@ struct Wad_file
   void WriteDirectory(void);
 
   void FixGroup(std::vector<size_t> &group, size_t index, size_t num_added, size_t num_removed);
+};
 
-  // predicate for sorting the levels[] vector
-  struct level_name_CMP_pred
+struct Lump_c
+{
+  struct Wad_file *parent;
+  FILE *parent_fp;
+
+  std::string lumpname;
+
+  size_t l_start;
+  size_t l_length;
+
+  // constructor is private
+  Lump_c(Wad_file *_par, const char *_name, size_t _start, size_t _len);
+  Lump_c(Wad_file *_par, const raw_wad_entry_t *entry);
+
+  void MakeEntry(raw_wad_entry_t *entry);
+
+  ~Lump_c(void);
+
+  inline const char *Name(void) const
   {
-    Wad_file *wad;
+    return lumpname.c_str();
+  }
 
-    level_name_CMP_pred(Wad_file *_w) : wad(_w)
+  inline size_t Length(void) const
+  {
+    return l_length;
+  }
+
+  // case insensitive match on the lump name
+  inline bool Match(const char *s) const
+  {
+    return (0 == StringCaseCmp(lumpname.c_str(), s));
+  }
+
+  // do not call this directly, use Wad_file::RenameLump()
+  inline void Rename(const char *new_name)
+  {
+    // ensure lump name is uppercase
+    lumpname.clear();
+
+    for (const char *s = new_name; *s != 0; s++)
     {
+      lumpname.push_back(static_cast<char>(toupper(*s)));
+    }
+  }
+
+  // attempt to seek to a position within the lump (default is
+  // the beginning).  Returns true if OK, false on error.
+  inline bool Seek(size_t offset)
+  {
+    return (fseeko(parent_fp, static_cast<off_t>(l_start + offset), SEEK_SET) == 0);
+  }
+
+  // read some data from the lump, returning true if OK.
+  inline bool Read(void *data, size_t len)
+  {
+    SYS_ASSERT(data && len > 0);
+    return (fread(data, len, 1, parent_fp) == 1);
+  }
+
+  // write some data to the lump.  Only the lump which had just
+  // been created with Wad_file::AddLump() or RecreateLump() can be
+  // written to.
+  inline bool Write(const void *data, size_t len)
+  {
+    SYS_ASSERT(data && len > 0);
+    l_length += len;
+    return (fwrite(data, len, 1, parent_fp) == 1);
+  }
+
+  // mark the lump as finished (after writing data to it).
+  inline bool Finish(void)
+  {
+    if (l_length == 0)
+    {
+      l_start = 0;
     }
 
-    inline bool operator()(const size_t A, const size_t B) const
-    {
-      const Lump_c *L1 = wad->directory[A];
-      const Lump_c *L2 = wad->directory[B];
-
-      return (strcmp(L1->Name(), L2->Name()) < 0);
-    }
-  };
+    return parent->FinishLump(l_length);
+  }
 };
