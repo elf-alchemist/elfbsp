@@ -395,7 +395,8 @@ static void CompressBlockmap(void)
     Debug("Blockmap: Last ptr = %zu  duplicates = %zu\n", cur_offset, dup_count);
   }
 
-  block_compression = int32_t((orig_size - new_size) * 100 / orig_size);
+  block_compression = static_cast<int32_t>((static_cast<int32_t>(orig_size) - static_cast<int32_t>(new_size)) * 100
+                                           / static_cast<int32_t>(orig_size));
 
   // there's a tiny chance of new_size > orig_size
   if (block_compression < 0)
