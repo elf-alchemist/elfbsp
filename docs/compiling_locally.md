@@ -1,7 +1,6 @@
-Compiling
----------
+# Compiling Locally
 
-The ELFBSP code is fairly portable C++, and does not depend on any third-party libraries, sa e for .
+The ELFBSP code is fairly portable C++, and does not depend on any third-party libraries, save for standard libraries.
 It requires at least C++20. Both GNU g++ and LLVM clang++ are known to work.
 
 Building should be fairly straight-forward on any Unix-like system, such as Linux, the BSDs, and even MacOS X.
