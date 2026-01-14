@@ -12,15 +12,11 @@
 [![Last Commit](https://img.shields.io/github/last-commit/elf-alchemist/elfbsp.svg)](https://github.com/elf-alchemist/elfbsp/commits/main)
 [![Build Status](https://github.com/elf-alchemist/elfbsp/actions/workflows/main.yml/badge.svg)](https://github.com/elf-alchemist/elfbsp/actions/workflows/main.yml)
 
-by Guilherme Miranda, 2025 -- based on AJBSP, by Andrew Apted, 2022.
-
-## About
-
 ELFBSP is a general purpose nodes builder for modern DOOM source ports.
 It can build standard DOOM nodes and Extended ZDoom format nodes, as well as levels in the Doom, Hexen and UDMF formats.
-The code is based on the code from AJBSP.
+The code is based on Andrew Apted's AJBSP, itself based on the Eureka level editor's internal BSP code.
 
-Check the docs for command line usage, local compilation instructions and internal development formats.
+Check the docs for [command line](https://github.com/elf-alchemist/elfbsp/blob/main/docs/command_line.md) usage, local [compilation instructions](https://github.com/elf-alchemist/elfbsp/blob/main/docs/compiling_locally.md) and internal [formats](https://github.com/elf-alchemist/elfbsp/blob/main/docs/binary_formats.md).
 
 ## Legalese
 
