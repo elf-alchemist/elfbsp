@@ -171,6 +171,9 @@ struct linedef_t
   // sector is the same on both sides
   bool self_ref;
 
+  // do not add line to blockmap
+  bool no_blockmap;
+
   // normally nullptr, except when this linedef directly overlaps an earlier
   // one (a rarely-used trick to create higher mid-masked textures).
   // No segs should be created for these overlapping linedefs.

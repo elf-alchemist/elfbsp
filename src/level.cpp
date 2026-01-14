@@ -258,8 +258,6 @@ static void BlockAddLine(const linedef_t *L)
 
 static void CreateBlockmap(void)
 {
-  extern map_format_e lev_format;
-
   block_lines = UtilCalloc<uint16_t *>(block_count * sizeof(uint16_t *));
 
   for (size_t i = 0; i < lev_linedefs.size(); i++)
@@ -272,7 +270,7 @@ static void CreateBlockmap(void)
       continue;
     }
 
-    if (lev_format == MAPF_Doom && L->special == Special_NoBlockmap)
+    if (L->no_blockmap)
     {
       continue;
     }
@@ -511,7 +509,6 @@ static void FreeBlockmap(void)
 
 static void FindBlockmapLimits(bbox_t *bbox)
 {
-  extern map_format_e lev_format;
   double mid_x = 0;
   double mid_y = 0;
 
@@ -522,7 +519,7 @@ static void FindBlockmapLimits(bbox_t *bbox)
   {
     const linedef_t *L = lev_linedefs[i];
 
-    if (lev_format == MAPF_Doom && L->special == Special_NoBlockmap)
+    if (L->no_blockmap)
     {
       continue;
     }
@@ -1277,8 +1274,9 @@ static void GetLinedefs(void)
     line->two_sided = (line->flags & MLF_TWOSIDED) != 0;
     line->is_precious = (line->tag >= 900 && line->tag < 1000);
 
-    // The following three are only valid in MAPF_Doom
-    line->dont_render = (line->special == Special_DoNotRender);
+    line->dont_render = (line->tag == Tag_DoNotRender);
+
+    line->no_blockmap = (line->tag == Tag_NoBlockmap);
 
     line->dont_render_front = (line->special == Special_DoNotRenderFrontSeg || line->special == Special_DoNotRenderAnySeg);
 

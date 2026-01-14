@@ -1006,9 +1006,6 @@ using bsp_specials_t = enum bsp_specials_e : uint32_t
 {
   Special_VanillaScroll = 48,
 
-  Special_DoNotRender = 998, // in ZokumBSP, originally a tag :/ not gonna deal with that :v
-  Special_NoBlockmap = 999,  //
-
   Special_RemoteScroll = 1048, // potentialy lossy? -- i.e alters user-provided lumps?
 
   Special_ChangeStartVertex = 1078,
@@ -1025,6 +1022,12 @@ using bsp_specials_t = enum bsp_specials_e : uint32_t
 
   Special_Unknown1, // related to splitting?
   Special_Unknown2, // line tag value becomes seg's associated line index? why?
+};
+
+using bsp_tags_t = enum bsp_tags_e
+{
+  Tag_DoNotRender = 998,
+  Tag_NoBlockmap = 999,
 };
 
 //
