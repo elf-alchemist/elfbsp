@@ -1,5 +1,10 @@
 # Command Line Interface
 
+ELFBSP is a command-line tool.
+It can handle multiple wad files, and while it modifies each file in-place, there is an option to backup each file first.
+The output to the terminal is fairly terse, but greater verbosity can be enabled.
+Generally all the maps in a wad will processed, but this can be limited to a specific set.
+
 ## Basic Usage
 
 The simplest possible operation will rebuild nodes in all of the maps in a provided WAD:

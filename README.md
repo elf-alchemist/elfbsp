@@ -1,6 +1,5 @@
 
-ELFBSP 1.0
-==========
+# ELFBSP
 
 [![Top Language](https://img.shields.io/github/languages/top/elf-alchemist/elfbsp.svg)](https://github.com/elf-alchemist/elfbsp)
 [![Code Size](https://img.shields.io/github/languages/code-size/elf-alchemist/elfbsp.svg)](https://github.com/elf-alchemist/elfbsp)
@@ -15,20 +14,15 @@ ELFBSP 1.0
 
 by Guilherme Miranda, 2025 -- based on AJBSP, by Andrew Apted, 2022.
 
-About
------
+## About
 
 ELFBSP is a general purpose nodes builder for modern DOOM source ports.
 It can build standard DOOM nodes and Extended ZDoom format nodes, as well as levels in the Doom, Hexen and UDMF formats.
-The code is based on the BSP code in Eureka DOOM Editor, which was based on the code from glBSP but with significant changes. 
+The code is based on the code from AJBSP.
 
-ELFBSP is a command-line tool.
-It can handle multiple wad files, and while it modifies each file in-place, there is an option to backup each file first.
-The output to the terminal is fairly terse, but greater verbosity can be enabled.
-Generally all the maps in a wad will processed, but this can be limited to a specific set.
+Check the docs for command line usage, local compilation instructions and internal development formats.
 
-Legalese
---------
+## Legalese
 
 ELFBSP is Copyright &copy; 1997-2025 Guilherme Miranda, Andrew Apted, Colin Reed, and Lee Killough, et al.
 
