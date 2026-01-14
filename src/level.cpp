@@ -177,7 +177,7 @@ static void BlockAdd(size_t blk_num, size_t line_index)
 
   // compute new checksum
   cur[BK_XOR] = static_cast<uint16_t>(cur[BK_XOR] << 4) | (cur[BK_XOR] >> 12);
-  cur[BK_XOR] ^= line_index;
+  cur[BK_XOR] ^= static_cast<uint16_t>(line_index & 0xFFFF);
 
   cur[BK_FIRST + cur[BK_NUM]] = GetLittleEndian(static_cast<uint16_t>(line_index));
   cur[BK_NUM]++;
@@ -431,7 +431,7 @@ static size_t CalcBlockmapSize(void)
     uint16_t *blk = block_lines[blk_num];
     SYS_ASSERT(blk);
 
-    size += ((blk[BK_NUM]) + 1 + 1) * 2;
+    size += static_cast<size_t>(((blk[BK_NUM]) + 1 + 1) * 2);
   }
 
   return size;
@@ -1404,19 +1404,19 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
   // 1083 => Set to BAM stored in tag
   if (seg->linedef->special == Special_RotateDegrees)
   {
-    result += DegreesToShortBAM(uint16_t(seg->linedef->tag));
+    result += DegreesToShortBAM(static_cast<uint16_t>(seg->linedef->tag));
   }
   else if (seg->linedef->special == Special_RotateDegreesHard)
   {
-    result = DegreesToShortBAM(uint16_t(seg->linedef->tag));
+    result = DegreesToShortBAM(static_cast<uint16_t>(seg->linedef->tag));
   }
   else if (seg->linedef->special == Special_RotateAngleT)
   {
-    result += short_angle_t(seg->linedef->tag);
+    result += static_cast<short_angle_t>(seg->linedef->tag);
   }
   else if (seg->linedef->special == Special_RotateAngleTHard)
   {
-    result = short_angle_t(seg->linedef->tag);
+    result = static_cast<short_angle_t>(seg->linedef->tag);
   }
 
   return result;

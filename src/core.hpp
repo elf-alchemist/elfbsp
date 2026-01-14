@@ -223,14 +223,14 @@ static inline constexpr fixed_t FloatToFixed(double x)
 }
 
 // binary angular measurement, BAM!
-template <typename T> static inline constexpr long_angle_t DegreesToLongBAM(T x)
+static inline constexpr long_angle_t DegreesToLongBAM(uint16_t x)
 {
-  return ANG45 * (x / 45);
+  return static_cast<long_angle_t>(ANG45 * (x / 45));
 }
 
-template <typename T> static inline constexpr short_angle_t DegreesToShortBAM(T x)
+static inline constexpr short_angle_t DegreesToShortBAM(uint16_t x)
 {
-  return (ANG45 * (x / 45)) >> FRACBITS;
+  return static_cast<short_angle_t>((ANG45 * (x / 45)) >> FRACBITS);
 }
 
 //------------------------------------------------------------------------
@@ -666,7 +666,7 @@ using raw_linedef_t = struct raw_linedef_s
   uint16_t end;     // ... to this vertex
   uint16_t flags;   // linedef flags (impassible, etc)
   uint16_t special; // special type (0 for none, 97 for teleporter, etc)
-  int16_t tag;      // this linedef activates the sector with same tag
+  uint16_t tag;     // this linedef activates the sector with same tag
   uint16_t right;   // right sidedef
   uint16_t left;    // left sidedef (only if this line adjoins 2 sectors)
 } PACKEDATTR;
@@ -700,7 +700,7 @@ using raw_sector_t = struct raw_sector_s
   char ceil_tex[8];  // ceiling texture
   uint16_t light;    // light level (0-255)
   uint16_t type;     // special type (0 = normal, 9 = secret, ...)
-  int16_t tag;       // sector activated by a linedef with same tag
+  uint16_t tag;      // sector activated by a linedef with same tag
 } PACKEDATTR;
 
 using raw_thing_t = struct raw_thing_s
