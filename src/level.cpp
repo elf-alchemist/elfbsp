@@ -775,7 +775,6 @@ size_t lev_current_start;
 map_format_e lev_format;
 bool lev_force_xnod;
 
-bool lev_long_name;
 bool lev_overflows;
 
 // objects of loaded level, and stuff we've built
@@ -2377,7 +2376,6 @@ void LoadLevel(void)
   Lump_c *LEV = cur_wad->GetLump(lev_current_start);
 
   lev_current_name = LEV->Name();
-  lev_long_name = false;
   lev_overflows = false;
 
   config.ShowMap(lev_current_name);
