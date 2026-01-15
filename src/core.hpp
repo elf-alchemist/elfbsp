@@ -730,15 +730,24 @@ using raw_hexen_thing_t = struct raw_hexen_thing_s
 // BSP TREE STRUCTURES
 //------------------------------------------------------------------------
 
+//
+// We do not write ZIP-compressed ZDoom nodes
+//
+using bsp_type_t = enum bsp_type_e : uint8_t
+{
+  BSP_VANILLA,
+  BSP_DEEPBSPV4,
+  BSP_XNOD,
+  BSP_XGLN,
+  BSP_XGL2,
+  BSP_XGL3,
+};
+
 static constexpr const char *DEEP_MAGIC = "xNd4\0\0\0\0";
 static constexpr const char *XNOD_MAGIC = "XNOD";
-static constexpr const char *ZNOD_MAGIC = "ZNOD";
 static constexpr const char *XGLN_MAGIC = "XGLN";
-static constexpr const char *ZGLN_MAGIC = "ZGLN";
 static constexpr const char *XGL2_MAGIC = "XGL2";
-static constexpr const char *ZGL2_MAGIC = "ZGL2";
 static constexpr const char *XGL3_MAGIC = "XGL3";
-static constexpr const char *ZGL3_MAGIC = "ZGL3";
 
 //
 // Vanilla blockmap

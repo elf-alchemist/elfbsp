@@ -436,10 +436,10 @@ void ParseShortArgument(const char *arg)
         config.fast = true;
         continue;
       case 'x':
-        config.force_xnod = true;
+        config.bsp_type = BSP_XNOD;
         continue;
       case 's':
-        config.ssect_xgl3 = true;
+        config.bsp_type = BSP_XGL3;
         continue;
 
       case 'm':
@@ -469,7 +469,7 @@ void ParseShortArgument(const char *arg)
           FatalError("illegal value for '-c' option\n");
         }
 
-        config.split_cost = static_cast<size_t>(val);
+        config.split_cost = static_cast<double>(val);
         continue;
 
       default:
@@ -531,11 +531,11 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
   }
   else if (strcmp(name, "--xnod") == 0)
   {
-    config.force_xnod = true;
+    config.bsp_type = BSP_XNOD;
   }
   else if (strcmp(name, "--ssect") == 0)
   {
-    config.ssect_xgl3 = true;
+    config.bsp_type = BSP_XGL3;
   }
   else if (strcmp(name, "--cost") == 0)
   {
@@ -551,7 +551,7 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
       FatalError("illegal value for '--cost' option\n");
     }
 
-    config.split_cost = static_cast<size_t>(val);
+    config.split_cost = static_cast<double>(val);
     used = 1;
   }
   else if (strcmp(name, "--output") == 0)

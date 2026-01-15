@@ -41,22 +41,17 @@ extern buildinfo_t config;
 
 struct buildinfo_s
 {
-  // use a faster method to pick nodes
+  size_t total_warnings = 0;
+  size_t total_minor_issues = 0;
+  double split_cost = static_cast<double>(SPLIT_COST_DEFAULT);
+
+  bsp_type_t bsp_type = BSP_VANILLA;
+
   bool fast = false;
   bool backup = false;
   bool no_reject = false;
 
-  bool force_xnod = false;
-  bool ssect_xgl3 = false;
-
-  size_t split_cost = SPLIT_COST_DEFAULT;
-
-  // this affects how some messages are shown
   bool verbose = false;
-
-  // from here on, various bits of internal state
-  size_t total_warnings = 0;
-  size_t total_minor_issues = 0;
 
   inline void Print_Verbose(const char *fmt, ...)
   {
