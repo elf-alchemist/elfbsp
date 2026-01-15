@@ -1831,16 +1831,16 @@ static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
   return static_cast<uint32_t>(v->index);
 }
 
-static void PutSegs(void)
+static void PutSegs_Vanilla(void)
 {
   // this size is worst-case scenario
-  size_t size = lev_segs.size() * sizeof(raw_seg_t);
+  size_t size = lev_segs.size() * sizeof(raw_seg_vanilla_t);
 
   Lump_c *lump = CreateLevelLump("SEGS", size);
 
   for (size_t i = 0; i < lev_segs.size(); i++)
   {
-    raw_seg_t raw;
+    raw_seg_vanilla_t raw;
 
     const seg_t *seg = lev_segs[i];
 
@@ -1876,15 +1876,15 @@ static void PutSegs(void)
   }
 }
 
-static void PutSubsecs(void)
+static void PutSubsecs_Vanilla(void)
 {
-  size_t size = lev_subsecs.size() * sizeof(raw_subsec_t);
+  size_t size = lev_subsecs.size() * sizeof(raw_subsec_vanilla_t);
 
   Lump_c *lump = CreateLevelLump("SSECTORS", size);
 
   for (size_t i = 0; i < lev_subsecs.size(); i++)
   {
-    raw_subsec_t raw;
+    raw_subsec_vanilla_t raw;
 
     const subsec_t *sub = lev_subsecs[i];
 
@@ -1910,21 +1910,21 @@ static void PutSubsecs(void)
 
 static size_t node_cur_index;
 
-static void PutOneNode(node_t *node, Lump_c *lump)
+static void PutOneNode_Vanilla(node_t *node, Lump_c *lump)
 {
   if (node->r.node)
   {
-    PutOneNode(node->r.node, lump);
+    PutOneNode_Vanilla(node->r.node, lump);
   }
 
   if (node->l.node)
   {
-    PutOneNode(node->l.node, lump);
+    PutOneNode_Vanilla(node->l.node, lump);
   }
 
   node->index = node_cur_index++;
 
-  raw_node_t raw;
+  raw_node_vanilla_t raw;
 
   // note that x/y/dx/dy are always integral in non-UDMF maps
   raw.x = GetLittleEndian(static_cast<int16_t>(floor(node->x)));
@@ -1977,12 +1977,10 @@ static void PutOneNode(node_t *node, Lump_c *lump)
   }
 }
 
-static void PutNodes(node_t *root)
+static void PutNodes_Vanilla(node_t *root)
 {
-  size_t struct_size = sizeof(raw_node_t);
-
   // this can be bigger than the actual size, but never smaller
-  size_t max_size = (lev_nodes.size() + 1) * struct_size;
+  size_t max_size = (lev_nodes.size() + 1) * sizeof(raw_node_vanilla_t);
 
   Lump_c *lump = CreateLevelLump("NODES", max_size);
 
@@ -1990,7 +1988,7 @@ static void PutNodes(node_t *root)
 
   if (root != nullptr)
   {
-    PutOneNode(root, lump);
+    PutOneNode_Vanilla(root, lump);
   }
 
   lump->Finish();
@@ -2066,7 +2064,7 @@ void SortSegs(void)
 
 /* ----- ZDoom format writing --------------------------- */
 
-static void PutXnodVertices(Lump_c *lump)
+static void PutVertices_Xnod(Lump_c *lump)
 {
   size_t orgverts = GetLittleEndian(num_old_vert);
   size_t newverts = GetLittleEndian(num_new_vert);
@@ -2100,7 +2098,7 @@ static void PutXnodVertices(Lump_c *lump)
   }
 }
 
-static void PutXnodSubsecs(Lump_c *lump)
+static void PutSubsecs_Xnod(Lump_c *lump)
 {
   size_t raw_num = GetLittleEndian(lev_subsecs.size());
   lump->Write(&raw_num, 4);
@@ -2137,7 +2135,7 @@ static void PutXnodSubsecs(Lump_c *lump)
   }
 }
 
-static void PutXnodSegs(Lump_c *lump)
+static void PutSegs_Xnod(Lump_c *lump)
 {
   size_t raw_num = GetLittleEndian(lev_segs.size());
   lump->Write(&raw_num, 4);
@@ -2161,7 +2159,7 @@ static void PutXnodSegs(Lump_c *lump)
   }
 }
 
-static void PutXgl2Segs(Lump_c *lump)
+static void PutSegs_Xgl2(Lump_c *lump)
 {
   size_t raw_num = GetLittleEndian(lev_segs.size());
   lump->Write(&raw_num, 4);
@@ -2191,18 +2189,18 @@ static void PutXgl2Segs(Lump_c *lump)
   }
 }
 
-static void PutOneXnodNode(Lump_c *lump, node_t *node, bool xgl3)
+static void PutOneNode_Xnod(Lump_c *lump, node_t *node, bool xgl3)
 {
   raw_xgl3_node_t raw;
 
   if (node->r.node)
   {
-    PutOneXnodNode(lump, node->r.node, xgl3);
+    PutOneNode_Xnod(lump, node->r.node, xgl3);
   }
 
   if (node->l.node)
   {
-    PutOneXnodNode(lump, node->l.node, xgl3);
+    PutOneNode_Xnod(lump, node->l.node, xgl3);
   }
 
   node->index = node_cur_index++;
@@ -2281,7 +2279,7 @@ static void PutOneXnodNode(Lump_c *lump, node_t *node, bool xgl3)
   }
 }
 
-static void PutXnodNodes(Lump_c *lump, node_t *root)
+static void PutNodes_Xnod(Lump_c *lump, node_t *root)
 {
   size_t raw_num = GetLittleEndian(lev_nodes.size());
   lump->Write(&raw_num, 4);
@@ -2290,7 +2288,7 @@ static void PutXnodNodes(Lump_c *lump, node_t *root)
 
   if (root)
   {
-    PutOneXnodNode(lump, root, false);
+    PutOneNode_Xnod(lump, root, false);
   }
 
   if (node_cur_index != lev_nodes.size())
@@ -2299,7 +2297,7 @@ static void PutXnodNodes(Lump_c *lump, node_t *root)
   }
 }
 
-static void PutXgl3Nodes(Lump_c *lump, node_t *root)
+static void PutNodes_Xgl3(Lump_c *lump, node_t *root)
 {
   size_t raw_num = GetLittleEndian(lev_nodes.size());
   lump->Write(&raw_num, 4);
@@ -2308,7 +2306,7 @@ static void PutXgl3Nodes(Lump_c *lump, node_t *root)
 
   if (root)
   {
-    PutOneXnodNode(lump, root, true);
+    PutOneNode_Xnod(lump, root, true);
   }
 
   if (node_cur_index != lev_nodes.size())
@@ -2333,7 +2331,7 @@ static size_t CalcXnodNodesSize(void)
   return size;
 }
 
-void SaveXnodFormat(node_t *root_node)
+void SaveFormat_Xnod(node_t *root_node)
 {
   SortSegs();
 
@@ -2343,16 +2341,16 @@ void SaveXnodFormat(node_t *root_node)
 
   lump->Write(XNOD_MAGIC, 4);
 
-  PutXnodVertices(lump);
-  PutXnodSubsecs(lump);
-  PutXnodSegs(lump);
-  PutXnodNodes(lump, root_node);
+  PutVertices_Xnod(lump);
+  PutSubsecs_Xnod(lump);
+  PutSegs_Xnod(lump);
+  PutNodes_Xnod(lump, root_node);
 
   lump->Finish();
   lump = nullptr;
 }
 
-static void SaveXgl3Format(Lump_c *lump, node_t *root_node)
+static void SaveFormat_Xgl3(Lump_c *lump, node_t *root_node)
 {
   SortSegs();
 
@@ -2360,10 +2358,10 @@ static void SaveXgl3Format(Lump_c *lump, node_t *root_node)
 
   lump->Write(XGL3_MAGIC, 4);
 
-  PutXnodVertices(lump);
-  PutXnodSubsecs(lump);
-  PutXgl2Segs(lump);
-  PutXgl3Nodes(lump, root_node);
+  PutVertices_Xnod(lump);
+  PutSubsecs_Xnod(lump);
+  PutSegs_Xgl2(lump);
+  PutNodes_Xgl3(lump, root_node);
 
   lump->Finish();
   lump = nullptr;
@@ -2494,7 +2492,7 @@ build_result_e SaveLevel(node_t *root_node)
     // leave SEGS empty
     CreateLevelLump("SEGS")->Finish();
     Lump_c *lump = CreateLevelLump("SSECTORS");
-    SaveXgl3Format(lump, root_node);
+    SaveFormat_Xgl3(lump, root_node);
     CreateLevelLump("NODES")->Finish();
   }
   else if (lev_force_xnod && num_real_lines > 0)
@@ -2503,7 +2501,7 @@ build_result_e SaveLevel(node_t *root_node)
     CreateLevelLump("SSECTORS")->Finish();
     // remove all the mini-segs from subsectors
     NormaliseBspTree();
-    SaveXnodFormat(root_node);
+    SaveFormat_Xnod(root_node);
   }
   else
   {
@@ -2519,9 +2517,9 @@ build_result_e SaveLevel(node_t *root_node)
 
     PutVertices();
 
-    PutSegs();
-    PutSubsecs();
-    PutNodes(root_node);
+    PutSegs_Vanilla();
+    PutSubsecs_Vanilla();
+    PutNodes_Vanilla(root_node);
   }
 
   PutBlockmap();
@@ -2559,7 +2557,7 @@ build_result_e SaveUDMF(node_t *root_node)
   }
   else
   {
-    SaveXgl3Format(lump, root_node);
+    SaveFormat_Xgl3(lump, root_node);
   }
 
   // -Elf-

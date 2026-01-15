@@ -760,7 +760,7 @@ using raw_blockmap_header_t = struct raw_blockmap_header_s
 //
 // Vanilla BSP
 //
-using raw_node_t = struct raw_node_s
+using raw_node_vanilla_t = struct raw_node_vanilla_s
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
@@ -768,13 +768,13 @@ using raw_node_t = struct raw_node_s
   uint16_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-using raw_subsec_t = struct raw_subsec_s
+using raw_subsec_vanilla_t = struct raw_subsec_vanilla_s
 {
   uint16_t num;   // number of Segs in this Sub-Sector
   uint16_t first; // first Seg
 } PACKEDATTR;
 
-using raw_seg_t = struct raw_seg_s
+using raw_seg_vanilla_t = struct raw_seg_vanilla_s
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
@@ -788,7 +788,7 @@ using raw_seg_t = struct raw_seg_s
 // DeepSea BSP
 // * compared to vanilla, some types were raise to 32bit
 //
-using raw_node_deep_t = struct raw_node_deep_s
+using raw_node_deepbspv4_t = struct raw_node_deepbspv4_s
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
@@ -796,13 +796,13 @@ using raw_node_deep_t = struct raw_node_deep_s
   uint32_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-using raw_subsec_deep_t = struct raw_subsec_deep_s
+using raw_subsec_deepbspv4_t = struct raw_subsec_deepbspv4_s
 {
   uint16_t num;   // number of Segs in this Sub-Sector
   uint32_t first; // first Seg
 } PACKEDATTR;
 
-using raw_seg_deep_t = struct raw_seg_deep_s
+using raw_seg_deepbspv4_t = struct raw_seg_deepbspv4_s
 {
   uint32_t start;   // from this vertex...
   uint32_t end;     // ... to this vertex
