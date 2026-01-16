@@ -93,7 +93,7 @@ jobs:
       - name: Extract Version Number (Release)
         if: contains(github.ref, 'tags')
         shell: bash
-        run: echo "VERSION=DEV_${GITHUB_REF##*_}" >> $GITHUB_ENV
+        run: echo "VERSION=${GITHUB_REF##*_}" >> $GITHUB_ENV
 
       - name: Extract Version Number (Development)
         if: "!contains(github.ref, 'tags')"
