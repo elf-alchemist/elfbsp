@@ -98,7 +98,7 @@ jobs:
       - name: Extract Version Number (Development)
         if: "!contains(github.ref, 'tags')"
         shell: bash
-        run: echo "VERSION=DEV_${GITHUB_SHA::7}" >> $GITHUB_ENV
+        run: echo "VERSION=dev-${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
