@@ -24,8 +24,8 @@ jobs:
           - name: Linux GCC
             os: ubuntu-latest
             shell: bash
-            artifact-name: linux_x86_64
-            artifact-path: build/*.zip
+            package_name: linux_x86_64
+            artifact_path: build/*.zip
             install: |
               sudo apt-get update
               sudo apt-get install -y ninja-build
@@ -35,8 +35,8 @@ jobs:
           - name: MacOS Clang
             os: macos-latest
             shell: bash
-            artifact-name: macos_universal
-            artifact-path: build/*.zip
+            package_name: macos_universal
+            artifact_path: build/*.zip
             install: |
               brew update
               brew install ninja
@@ -49,8 +49,8 @@ jobs:
             shell: 'msys2 {0}'
             msystem: mingw64
             msys-env: mingw-w64-x86_64
-            artifact-name: windows_x86_64
-            artifact-path: build/*.zip
+            package_name: windows_x86_64
+            artifact_path: build/*.zip
             install: |
               pacman -Syu --noconfirm
               pacman -S --noconfirm \
@@ -98,13 +98,13 @@ jobs:
       - name: Extract Version Number (Development)
         if: "!contains(github.ref, 'tags')"
         shell: bash
-        run: echo "VERSION=dev-${GITHUB_SHA::7}" >> $GITHUB_ENV
+        run: echo "VERSION=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: elfbsp_${{ env.VERSION }}_${{ matrix.config.artifact-name }}
-          path: ${{ matrix.config.artifact-path }}
+          name: elfbsp_${{ env.VERSION }}_${{ matrix.config.package_name }}
+          path: ${{ matrix.config.artifact_path }}
 
       - name: Release
         if: ${{ contains(github.ref, 'tags') }}
@@ -113,4 +113,4 @@ jobs:
           name: ELFBSP ${{ env.VERSION }}
           bodyFile: CHANGELOG.md
           allowUpdates: true
-          artifacts: ${{ matrix.config.artifact-path }}
+          artifacts: ${{ matrix.config.artifact_path }}
