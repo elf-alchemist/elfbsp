@@ -24,7 +24,7 @@ jobs:
           - name: Linux GCC
             os: ubuntu-latest
             shell: bash
-            package_name: Linux-x86_64
+            package_name: linux_x86_64
             artifact_path: build/*.zip
             install: |
               sudo apt-get update
@@ -35,7 +35,7 @@ jobs:
           - name: MacOS Clang
             os: macos-latest
             shell: bash
-            package_name: MacOS_Universal
+            package_name: macos_universal
             artifact_path: build/*.zip
             install: |
               brew update
@@ -49,7 +49,7 @@ jobs:
             shell: 'msys2 {0}'
             msystem: mingw64
             msys-env: mingw-w64-x86_64
-            package_name: Windows_x86_64
+            package_name: windows_x86_64
             artifact_path: build/*.zip
             install: |
               pacman -Syu --noconfirm
@@ -103,7 +103,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: "ELFBSP ${{ env.VERSION }} ${{ matrix.config.package_name }}"
+          name: elfbsp_${{ env.VERSION }}_${{ matrix.config.package_name }}
           path: ${{ matrix.config.artifact_path }}
 
       - name: Release
