@@ -179,13 +179,7 @@ struct Lump_c
   size_t l_start;
   size_t l_length;
 
-  // constructor is private
-  Lump_c(Wad_file *_par, const char *_name, size_t _start, size_t _len);
-  Lump_c(Wad_file *_par, const raw_wad_entry_t *entry);
-
   void MakeEntry(raw_wad_entry_t *entry);
-
-  ~Lump_c(void);
 
   inline const char *Name(void) const
   {
@@ -203,10 +197,9 @@ struct Lump_c
     return (0 == StringCaseCmp(lumpname.c_str(), s));
   }
 
-  // do not call this directly, use Wad_file::RenameLump()
+  // ensure lump name is uppercase
   inline void Rename(const char *new_name)
   {
-    // ensure lump name is uppercase
     lumpname.clear();
 
     for (const char *s = new_name; *s != 0; s++)
