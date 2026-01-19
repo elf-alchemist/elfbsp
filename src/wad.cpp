@@ -31,7 +31,7 @@
 
 Lump_c *MakeLump(Wad_file *wad, const char *lumpname, size_t l_start, size_t l_length)
 {
-  Lump_c *new_lump = UtilCalloc<Lump_c>(sizeof(Lump_c));
+  Lump_c *new_lump = new Lump_c;
   new_lump->parent = wad;
   new_lump->l_start = l_start;
   new_lump->l_length = l_length;
@@ -41,14 +41,14 @@ Lump_c *MakeLump(Wad_file *wad, const char *lumpname, size_t l_start, size_t l_l
 
 Lump_c *MakeLumpFromEntry(Wad_file *wad, const raw_wad_entry_t *entry)
 {
-  Lump_c *new_lump = UtilCalloc<Lump_c>(sizeof(Lump_c));
+  Lump_c *new_lump = new Lump_c;
 
   // handle the entry name, which can lack a terminating NUL
   char buffer[9];
   strncpy(buffer, entry->name, 8);
   buffer[8] = 0;
   new_lump->Rename(buffer);
-
+  new_lump->parent = wad;
   new_lump->l_start = GetLittleEndian(entry->pos);
   new_lump->l_length = GetLittleEndian(entry->size);
 
@@ -87,7 +87,7 @@ Wad_file::~Wad_file(void)
   // free the directory
   for (size_t k = 0; k < NumLumps(); k++)
   {
-    UtilFree(directory[k]);
+    delete directory[k];
   }
 
   directory.clear();
@@ -724,7 +724,7 @@ void Wad_file::RemoveLumps(size_t index, size_t count)
 
   for (size_t i = 0; i < count; i++)
   {
-    UtilFree(directory[index + i]);
+    delete directory[index + i];
   }
 
   for (size_t i = index; i + count < NumLumps(); i++)
