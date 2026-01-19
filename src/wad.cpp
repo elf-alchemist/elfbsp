@@ -32,10 +32,10 @@
 Lump_c *MakeLump(Wad_file *wad, const char *lumpname, size_t l_start, size_t l_length)
 {
   Lump_c *new_lump = new Lump_c;
+  new_lump->Rename(lumpname);
   new_lump->parent = wad;
   new_lump->l_start = l_start;
   new_lump->l_length = l_length;
-  new_lump->Rename(lumpname);
   return new_lump;
 }
 
