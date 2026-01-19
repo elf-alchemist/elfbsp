@@ -44,7 +44,6 @@ struct buildinfo_s
   // use a faster method to pick nodes
   bool fast = false;
   bool backup = false;
-  bool no_reject = false;
 
   bool force_xnod = false;
   bool ssect_xgl3 = false;

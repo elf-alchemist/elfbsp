@@ -525,10 +525,6 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
 
     used = 1;
   }
-  else if (strcmp(name, "--no-reject") == 0)
-  {
-    config.no_reject = true;
-  }
   else if (strcmp(name, "--xnod") == 0)
   {
     config.force_xnod = true;
