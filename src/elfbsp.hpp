@@ -49,7 +49,6 @@ struct buildinfo_s
 
   bool fast = false;
   bool backup = false;
-  bool no_reject = false;
 
   bool verbose = false;
 

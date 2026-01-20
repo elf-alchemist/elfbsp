@@ -744,7 +744,7 @@ static void Reject_WriteLump(void)
 //
 static void PutReject(void)
 {
-  if (config.no_reject || lev_sectors.size() == 0)
+  if (lev_sectors.size() == 0)
   {
     // just create an empty reject lump
     CreateLevelLump("REJECT")->Finish();

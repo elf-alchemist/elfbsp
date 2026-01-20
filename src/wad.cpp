@@ -29,35 +29,34 @@
 //  LUMP Handling
 //------------------------------------------------------------------------
 
-Lump_c::Lump_c(Wad_file *_par, const char *_name, size_t _start, size_t _len)
-    : parent(_par), lumpname(), l_start(_start), l_length(_len)
+Lump_c *MakeLump(Wad_file *wad, const char *lumpname, size_t l_start, size_t l_length)
 {
-  // ensure lump name is uppercase
-  Rename(_name);
+  Lump_c *new_lump = new Lump_c;
+  new_lump->Rename(lumpname);
+  new_lump->parent = wad;
+  new_lump->l_start = l_start;
+  new_lump->l_length = l_length;
+  return new_lump;
 }
 
-Lump_c::Lump_c(Wad_file *_par, const raw_wad_entry_t *entry) : parent(_par), lumpname()
+Lump_c *MakeLumpFromEntry(Wad_file *wad, const raw_wad_entry_t *entry)
 {
+  Lump_c *new_lump = new Lump_c;
+
   // handle the entry name, which can lack a terminating NUL
-  char buffer[10];
+  char buffer[9];
   strncpy(buffer, entry->name, 8);
   buffer[8] = 0;
-
-  // ensure lump name is uppercase
-  Rename(buffer);
-
-  l_start = GetLittleEndian(entry->pos);
-  l_length = GetLittleEndian(entry->size);
+  new_lump->Rename(buffer);
+  new_lump->parent = wad;
+  new_lump->l_start = GetLittleEndian(entry->pos);
+  new_lump->l_length = GetLittleEndian(entry->size);
 
   if constexpr (DEBUG_WAD)
   {
-    Debug("new lump '%s' @ %zu len:%zu\n", Name(), l_start, l_length);
+    Debug("new lump '%s' @ %zu len:%zu\n", new_lump->Name(), new_lump->l_start, new_lump->l_length);
   }
-}
-
-Lump_c::~Lump_c(void)
-{
-  // nothing needed
+  return new_lump;
 }
 
 void Lump_c::MakeEntry(raw_wad_entry_t *entry)
@@ -386,7 +385,7 @@ void Wad_file::ReadDirectory(void)
       FatalError("Error reading WAD directory.\n");
     }
 
-    Lump_c *lump = new Lump_c(this, &entry);
+    Lump_c *lump = MakeLumpFromEntry(this, &entry);
 
     // WISH: check if entry is valid
 
@@ -802,7 +801,7 @@ Lump_c *Wad_file::AddLump(const char *name, size_t max_size)
 
   size_t start = PositionForWrite(max_size);
 
-  Lump_c *lump = new Lump_c(this, name, start, 0);
+  Lump_c *lump = MakeLump(this, name, start, 0);
 
   // check if the insert_point is still valid
   if (insert_point >= NumLumps())

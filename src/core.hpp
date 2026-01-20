@@ -178,7 +178,9 @@ using vec2_fixed_t = struct
 };
 
 // misc constants
-static constexpr uint32_t ANG45 = 0x20000000;
+static constexpr long_angle_t LONG_ANGLE_45 = 0x20000000;
+static constexpr long_angle_t LONG_ANGLE_1 = (LONG_ANGLE_45 / 45);
+
 static constexpr uint32_t FRACBITS = 16;
 static constexpr fixed_t FRACUNIT = (1 << FRACBITS);
 static constexpr double FRACFACTOR = static_cast<double>(FRACUNIT);
@@ -225,12 +227,12 @@ static inline constexpr fixed_t FloatToFixed(double x)
 // binary angular measurement, BAM!
 static inline constexpr long_angle_t DegreesToLongBAM(uint16_t x)
 {
-  return static_cast<long_angle_t>(ANG45 * (x / 45));
+  return static_cast<long_angle_t>(LONG_ANGLE_1 * x);
 }
 
 static inline constexpr short_angle_t DegreesToShortBAM(uint16_t x)
 {
-  return static_cast<short_angle_t>((ANG45 * (x / 45)) >> FRACBITS);
+  return static_cast<short_angle_t>((LONG_ANGLE_1 * x) >> FRACBITS);
 }
 
 //------------------------------------------------------------------------
