@@ -172,11 +172,6 @@ using long_angle_t = uint32_t;
 using short_angle_t = uint16_t;
 using lump_t = char[8];
 
-using vec2_fixed_t = struct
-{
-  fixed_t x, y;
-};
-
 // misc constants
 static constexpr long_angle_t LONG_ANGLE_45 = 0x20000000;
 static constexpr long_angle_t LONG_ANGLE_1 = (LONG_ANGLE_45 / 45);
@@ -745,11 +740,18 @@ using bsp_type_t = enum bsp_type_e : uint8_t
   BSP_XGL3,
 };
 
-static constexpr const char *DEEP_MAGIC = "xNd4\0\0\0\0";
-static constexpr const char *XNOD_MAGIC = "XNOD";
-static constexpr const char *XGLN_MAGIC = "XGLN";
-static constexpr const char *XGL2_MAGIC = "XGL2";
-static constexpr const char *XGL3_MAGIC = "XGL3";
+// Obviously, vanilla did not include any magic headers
+static constexpr const char *BSP_MAGIC_DEEPBSPV4 = "xNd4\0\0\0\0";
+static constexpr const char *BSP_MAGIC_XNOD = "XNOD";
+static constexpr const char *BSP_MAGIC_XGLN = "XGLN";
+static constexpr const char *BSP_MAGIC_XGL2 = "XGL2";
+static constexpr const char *BSP_MAGIC_XGL3 = "XGL3";
+
+// Upper-most bit is used for distinguishing tree children as either nodes or sub-sectors
+// All known non-vanilla formats are know to use 32bit indexes
+static constexpr size_t LIMIT_VANILLA_NODE = INT16_MAX;
+static constexpr size_t LIMIT_VANILLA_SUBSEC = INT16_MAX;
+static constexpr size_t LIMIT_VANILLA_SEG = UINT16_MAX;
 
 //
 // Vanilla blockmap

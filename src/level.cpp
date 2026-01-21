@@ -773,7 +773,6 @@ size_t lev_current_idx;
 size_t lev_current_start;
 
 map_format_e lev_format;
-bool lev_force_xnod;
 
 bool lev_overflows;
 
@@ -2005,7 +2004,7 @@ static void PutNodes_Vanilla(node_t *root)
   }
 }
 
-static void CheckLimits(void)
+static void CheckBinaryFormatLimits(void)
 {
   // this could potentially be 65536, since there are no reserved values
   // for sectors, but there may be source ports or tools treating 0xFFFF
@@ -2031,12 +2030,12 @@ static void CheckLimits(void)
     MarkOverflow(LIMIT_LINEDEFS);
   }
 
-  if (!(config.force_xnod || config.ssect_xgl3))
+  if (config.bsp_type < BSP_XNOD)
   {
     if (num_old_vert > 32767 || num_new_vert > 32767 || lev_segs.size() > 32767 || lev_nodes.size() > 32767)
     {
+      config.bsp_type = BSP_XNOD;
       Warning("Forcing XNOD format nodes due to overflows.\n");
-      lev_force_xnod = true;
     }
   }
 }
@@ -2331,15 +2330,11 @@ static size_t CalcXnodNodesSize(void)
   return size;
 }
 
-void SaveFormat_Xnod(node_t *root_node)
+void SaveFormat_Xnod(Lump_c *lump, node_t *root_node)
 {
   SortSegs();
 
-  size_t max_size = CalcXnodNodesSize();
-
-  Lump_c *lump = CreateLevelLump("NODES", max_size);
-
-  lump->Write(XNOD_MAGIC, 4);
+  lump->Write(BSP_MAGIC_XNOD, 4);
 
   PutVertices_Xnod(lump);
   PutSubsecs_Xnod(lump);
@@ -2356,7 +2351,7 @@ static void SaveFormat_Xgl3(Lump_c *lump, node_t *root_node)
 
   // WISH : compute a max_size
 
-  lump->Write(XGL3_MAGIC, 4);
+  lump->Write(BSP_MAGIC_XGL3, 4);
 
   PutVertices_Xnod(lump);
   PutSubsecs_Xnod(lump);
@@ -2465,7 +2460,7 @@ static void AddMissingLump(const char *name, const char *after)
   cur_wad->AddLump(name)->Finish();
 }
 
-build_result_e SaveLevel(node_t *root_node)
+build_result_e SaveBinaryFormatLevel(node_t *root_node)
 {
   // Note: root_node may be nullptr
 
@@ -2479,15 +2474,12 @@ build_result_e SaveLevel(node_t *root_node)
   AddMissingLump("REJECT", "SECTORS");
   AddMissingLump("BLOCKMAP", "REJECT");
 
-  // user preferences
-  lev_force_xnod |= config.force_xnod;
-
   // check for overflows...
   // this sets the force_xxx vars if certain limits are breached
-  CheckLimits();
+  CheckBinaryFormatLimits();
 
   /* --- Normal nodes --- */
-  if (config.ssect_xgl3 && num_real_lines > 0)
+  if (config.bsp_type == BSP_XGL3 && num_real_lines > 0)
   {
     // leave SEGS empty
     CreateLevelLump("SEGS")->Finish();
@@ -2495,13 +2487,16 @@ build_result_e SaveLevel(node_t *root_node)
     SaveFormat_Xgl3(lump, root_node);
     CreateLevelLump("NODES")->Finish();
   }
-  else if (lev_force_xnod && num_real_lines > 0)
+  else if (config.bsp_type == BSP_XNOD && num_real_lines > 0)
   {
     CreateLevelLump("SEGS")->Finish();
     CreateLevelLump("SSECTORS")->Finish();
+
     // remove all the mini-segs from subsectors
     NormaliseBspTree();
-    SaveFormat_Xnod(root_node);
+
+    Lump_c *lump = CreateLevelLump("NODES", CalcXnodNodesSize());
+    SaveFormat_Xnod(lump, root_node);
   }
   else
   {
@@ -2538,7 +2533,7 @@ build_result_e SaveLevel(node_t *root_node)
   return BUILD_OK;
 }
 
-build_result_e SaveUDMF(node_t *root_node)
+build_result_e SaveTextMapLevel(node_t *root_node)
 {
   cur_wad->BeginWrite();
 
@@ -2699,10 +2694,10 @@ build_result_e BuildLevel(size_t lev_idx)
     {
       case MAPF_Doom:
       case MAPF_Hexen:
-        ret = SaveLevel(root_node);
+        ret = SaveBinaryFormatLevel(root_node);
         break;
       case MAPF_UDMF:
-        ret = SaveUDMF(root_node);
+        ret = SaveTextMapLevel(root_node);
         break;
       default:
         break;
