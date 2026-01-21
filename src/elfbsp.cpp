@@ -257,29 +257,6 @@ void VisitFile(unsigned int idx, const char *filename)
 
 // ----- user information -----------------------------
 
-void ShowHelp(void)
-{
-  printf(PRINT_HELP);
-
-  fflush(stdout);
-}
-
-void ShowVersion(void)
-{
-  printf("%s\n", PROJECT_STRING);
-
-  fflush(stdout);
-}
-
-void ShowBanner(void)
-{
-  printf("+---------------------------------------------------+\n");
-  printf("|   ELFBSP %s (C) 2025 Guilherme Miranda, et al   |\n", PROJECT_VERSION);
-  printf("+---------------------------------------------------+\n");
-
-  fflush(stdout);
-}
-
 bool ValidateMapName(char *name)
 {
   if (strlen(name) < 2 || strlen(name) > 8)
@@ -640,14 +617,13 @@ int main(int argc, char *argv[])
 
   if (opt_version)
   {
-    ShowVersion();
+    PrintLine(PROJECT_STRING);
     return 0;
   }
 
   if (opt_help || argc <= 1)
   {
-    ShowBanner();
-    ShowHelp();
+    PrintLine(PRINT_HELP);
     return 0;
   }
 
@@ -676,8 +652,6 @@ int main(int argc, char *argv[])
       FatalError("input and output files are the same\n");
     }
   }
-
-  ShowBanner();
 
   // validate all filenames before processing any of them
   for (unsigned int i = 0; i < wad_list.size(); i++)

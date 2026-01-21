@@ -122,13 +122,10 @@ struct buildinfo_s
   }
 };
 
-constexpr const char PRINT_USAGE[] = "\n";
-
 constexpr const char PRINT_HELP[] = "\n"
                                     "Usage: elfbsp [options...] FILE...\n"
                                     "\n"
                                     "Available options are:\n"
-                                    "    -d --doc           Documentation, shows all options\n"
                                     "    -v --verbose       Verbose output, show all warnings\n"
                                     "    -b --backup        Backup input files (.bak extension)\n"
                                     "    -f --fast          Faster partition selection\n"
@@ -142,8 +139,7 @@ constexpr const char PRINT_HELP[] = "\n"
                                     "Long options must always begin with a double hyphen\n"
                                     "\n"
                                     "Map names should be full, like E1M3 or MAP24, but a list\n"
-                                    "and/or ranges can be specified: MAP01,MAP04-MAP07,MAP12\n"
-                                    "\n";
+                                    "and/or ranges can be specified: MAP01,MAP04-MAP07,MAP12\n";
 
 using build_result_t = enum build_result_e
 {
