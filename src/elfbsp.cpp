@@ -652,8 +652,6 @@ int main(int argc, char *argv[])
     VisitFile(i, wad_list[i]);
   }
 
-  PrintLine(LOG_NORMAL, "");
-
   if (total_failed_files > 0)
   {
     PrintLine(LOG_NORMAL, "FAILURES occurred on %zu map%s in %zu file%s.", total_failed_maps, total_failed_maps == 1 ? "" : "s",
@@ -679,10 +677,9 @@ int main(int argc, char *argv[])
   else
   {
     size_t built = total_files - total_empty_files;
-    size_t empty = total_empty_files;
 
-    PrintLine(LOG_NORMAL, "Ok, built %zu file%s, %zu file%s empty.", built, (built == 1 ? "" : "s"), empty,
-              (empty == 1 ? " was" : "s were"));
+    PrintLine(LOG_NORMAL, "Ok, built %zu file%s, %zu file%s empty.", built, (built == 1 ? "" : "s"), total_empty_files,
+              (total_empty_files == 1 ? " was" : "s were"));
   }
 
   // that's all folks!
