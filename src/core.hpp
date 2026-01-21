@@ -24,6 +24,14 @@
 
 #pragma once
 
+static constexpr const char* PROJECT_COMPANY = "Guilherme Miranda, et al";
+static constexpr const char* PROJECT_COPYRIGHT = "Copyright (C) 1994-2026";
+static constexpr const char* PROJECT_LICENSE = "GNU General Public License, version 2";
+
+static constexpr const char* PROJECT_NAME = "ELFBSP";
+static constexpr const char* PROJECT_VERSION = "v1.1";
+static constexpr const char* PROJECT_STRING = "ELFBSP v1.1";
+
 /*
  *  Standard headers
  */
