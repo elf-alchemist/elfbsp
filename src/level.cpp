@@ -578,7 +578,10 @@ static void InitBlockmap(void)
   // find limits of linedefs, and store as map limits
   FindBlockmapLimits(&map_bbox);
 
-  config.Print_Verbose("    Map limits: (%d,%d) to (%d,%d)", map_bbox.minx, map_bbox.miny, map_bbox.maxx, map_bbox.maxy);
+  if (config.verbose)
+  {
+    PrintLine(LOG_NORMAL, "Map limits: (%d,%d) to (%d,%d)", map_bbox.minx, map_bbox.miny, map_bbox.maxx, map_bbox.maxy);
+  }
 
   block_x = map_bbox.minx - (map_bbox.minx & 0x7);
   block_y = map_bbox.miny - (map_bbox.miny & 0x7);
@@ -614,12 +617,16 @@ static void PutBlockmap(void)
   {
     // leave an empty blockmap lump
     CreateLevelLump("BLOCKMAP")->Finish();
-    config.Warning("Blockmap overflowed (lump will be empty)");
+    PrintLine(LOG_NORMAL, "WARNING: Blockmap overflowed (lump will be empty)");
+    config.total_warnings++;
   }
   else
   {
     WriteBlockmap();
-    config.Print_Verbose("    Blockmap size: %dx%d (compression: %d%%)", block_w, block_h, block_compression);
+    if (config.verbose)
+    {
+      PrintLine(LOG_NORMAL, "Blockmap size: %zux%zu (compression: %d%%)", block_w, block_h, block_compression);
+    }
   }
 
   FreeBlockmap();
@@ -756,7 +763,10 @@ static void PutReject(void)
   Reject_ProcessSectors();
   Reject_WriteLump();
   Reject_Free();
-  config.Print_Verbose("    Reject size: %zu", rej_total_size);
+  if (config.verbose)
+  {
+    PrintLine(LOG_NORMAL, "Reject size: %zu", rej_total_size);
+  }
 }
 
 //------------------------------------------------------------------------
@@ -1804,7 +1814,7 @@ static void PutVertices(void)
 
   if (count > 65534)
   {
-    config.Failure("Number of vertices has overflowed.");
+    PrintLine(LOG_NORMAL, "FAILURE: Number of vertices has overflowed.");
     MarkOverflow(LIMIT_VERTEXES);
   }
 }
@@ -1869,7 +1879,7 @@ static void PutSegs(void)
 
   if (lev_segs.size() > 65534)
   {
-    config.Failure("Number of segs has overflowed.");
+    PrintLine(LOG_NORMAL, "FAILURE: Number of segs has overflowed.");
     MarkOverflow(LIMIT_SEGS);
   }
 }
@@ -1900,7 +1910,7 @@ static void PutSubsecs(void)
 
   if (lev_subsecs.size() > 32767)
   {
-    config.Failure("Number of subsectors has overflowed.");
+    PrintLine(LOG_NORMAL, "FAILURE: Number of subsectors has overflowed.");
     MarkOverflow(LIMIT_SSECTORS);
   }
 
@@ -2001,7 +2011,7 @@ static void PutNodes(node_t *root)
 
   if (node_cur_index > 32767)
   {
-    config.Failure("Number of nodes has overflowed.");
+    PrintLine(LOG_NORMAL, "FAILURE: Number of nodes has overflowed.");
     MarkOverflow(LIMIT_NODES);
   }
 }
@@ -2014,21 +2024,21 @@ static void CheckLimits(void)
   // the other checks below, like the vertex counts).
   if (lev_sectors.size() > 65535)
   {
-    config.Failure("Map has too many sectors.");
+    PrintLine(LOG_NORMAL, "FAILURE: Map has too many sectors.");
     MarkOverflow(LIMIT_SECTORS);
   }
 
   // the sidedef 0xFFFF is reserved to mean "no side" in DOOM map format
   if (lev_sidedefs.size() > 65535)
   {
-    config.Failure("Map has too many sidedefs.");
+    PrintLine(LOG_NORMAL, "FAILURE: Map has too many sidedefs.");
     MarkOverflow(LIMIT_SIDEDEFS);
   }
 
   // the linedef 0xFFFF is reserved for minisegs in GL nodes
   if (lev_linedefs.size() > 65535)
   {
-    config.Failure("Map has too many linedefs.");
+    PrintLine(LOG_NORMAL, "FAILURE: Map has too many linedefs.");
     MarkOverflow(LIMIT_LINEDEFS);
   }
 
@@ -2036,7 +2046,8 @@ static void CheckLimits(void)
   {
     if (num_old_vert > 32767 || num_new_vert > 32767 || lev_segs.size() > 32767 || lev_nodes.size() > 32767)
     {
-      config.Warning("Forcing XNOD format nodes due to overflows.");
+      PrintLine(LOG_NORMAL, "WARNING: Forcing XNOD format nodes due to overflows.");
+      config.total_warnings++;
       lev_force_xnod = true;
     }
   }
@@ -2407,8 +2418,11 @@ void LoadLevel(void)
     PruneVerticesAtEnd();
   }
 
-  config.Print_Verbose("    Loaded %zu vertices, %zu sectors, %zu sides, %zu lines, %zu things", lev_vertices.size(),
-                       lev_sectors.size(), lev_sidedefs.size(), lev_linedefs.size(), lev_things.size());
+  if (config.verbose)
+  {
+    PrintLine(LOG_NORMAL, "Loaded %zu vertices, %zu sectors, %zu sides, %zu lines, %zu things", lev_vertices.size(),
+              lev_sectors.size(), lev_sidedefs.size(), lev_linedefs.size(), lev_things.size());
+  }
 
   DetectOverlappingVertices();
   DetectOverlappingLines();
@@ -2455,7 +2469,8 @@ static void AddMissingLump(const char *name, const char *after)
   // if this happens, the level structure is very broken
   if (exist == NO_INDEX)
   {
-    config.Warning("Missing %s lump -- level structure is broken", after);
+    PrintLine(LOG_NORMAL, "WARNING: Missing %s lump -- level structure is broken", after);
+    config.total_warnings++;
 
     exist = cur_wad->LevelLastLump(lev_current_idx);
   }
@@ -2684,13 +2699,19 @@ build_result_e BuildLevel(size_t lev_idx)
 
   if (ret == BUILD_OK)
   {
-    config.Print_Verbose("    Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES", lev_nodes.size(), lev_subsecs.size(),
-                         lev_segs.size(), num_old_vert + num_new_vert);
+    if (config.verbose)
+    {
+      PrintLine(LOG_NORMAL, "Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES", lev_nodes.size(), lev_subsecs.size(),
+                lev_segs.size(), num_old_vert + num_new_vert);
+    }
 
     if (root_node != nullptr)
     {
-      config.Print_Verbose("    Heights of subtrees: %d / %d", ComputeBspHeight(root_node->r.node),
-                           ComputeBspHeight(root_node->l.node));
+      if (config.verbose)
+      {
+        PrintLine(LOG_NORMAL, "Heights of subtrees: %d / %d", ComputeBspHeight(root_node->r.node),
+                  ComputeBspHeight(root_node->l.node));
+      }
     }
 
     ClockwiseBspTree();

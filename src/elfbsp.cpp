@@ -96,13 +96,12 @@ bool CheckMapInMaplist(size_t lev_idx)
 static void BuildFile(void)
 {
   config.total_warnings = 0;
-  config.total_minor_issues = 0;
 
   size_t num_levels = LevelsInWad();
 
   if (num_levels == 0)
   {
-    PrintLine(LOG_NORMAL, "  No levels in wad");
+    PrintLine(LOG_NORMAL, "No levels in wad");
     total_empty_files += 1;
     return;
   }
@@ -142,7 +141,7 @@ static void BuildFile(void)
 
   if (visited == 0)
   {
-    PrintLine(LOG_NORMAL, "  No matching levels");
+    PrintLine(LOG_NORMAL, "No matching levels");
     total_empty_files += 1;
     return;
   }
@@ -151,18 +150,13 @@ static void BuildFile(void)
 
   if (failures > 0)
   {
-    PrintLine(LOG_NORMAL, "  Failed maps: %zu (out of %zu)", failures, visited);
+    PrintLine(LOG_NORMAL, "Failed maps: %zu (out of %zu)", failures, visited);
 
     // allow building other files
     total_failed_files += 1;
   }
 
-  PrintLine(LOG_NORMAL, "  Serious warnings: %zu", config.total_warnings);
-
-  if (config.verbose)
-  {
-    PrintLine(LOG_NORMAL, "  Minor issues: %zu", config.total_minor_issues);
-  }
+  PrintLine(LOG_NORMAL, "Serious warnings: %zu", config.total_warnings);
 }
 
 void ValidateInputFilename(const char *filename)
@@ -184,7 +178,7 @@ void ValidateInputFilename(const char *filename)
   }
 
   // reject some very common formats
-  if (!MatchExtension(filename, "wad")
+  if (!MatchExtension(filename, "wad"))
   {
     PrintLine(LOG_ERROR, "not a wad file: %s", filename);
   }

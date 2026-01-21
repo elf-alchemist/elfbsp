@@ -43,7 +43,7 @@ void MarkPolyobjSector(sector_t *sector)
 
   if constexpr (DEBUG_POLYOBJ)
   {
-    PrintLine(LOG_DEBUG, "  Marking SECTOR %zu", sector->index);
+    PrintLine(LOG_DEBUG, "Marking Polyobj SECTOR %zu", sector->index);
   }
 
   /* already marked ? */
@@ -93,7 +93,7 @@ void MarkPolyobjPoint(double x, double y)
     {
       if constexpr (DEBUG_POLYOBJ)
       {
-        PrintLine(LOG_DEBUG, "  Touching line was %zu", L->index);
+        PrintLine(LOG_DEBUG, "Touching line was %zu", L->index);
       }
 
       if (L->left != nullptr)
@@ -154,7 +154,8 @@ void MarkPolyobjPoint(double x, double y)
 
   if (best_match == nullptr)
   {
-    config.Warning("Bad polyobj thing at (%1.0f,%1.0f).", x, y);
+    PrintLine(LOG_NORMAL, "WARNING: Bad polyobj thing at (%1.0f,%1.0f).", x, y);
+    config.total_warnings++;
     return;
   }
 
@@ -163,7 +164,7 @@ void MarkPolyobjPoint(double x, double y)
 
   if constexpr (DEBUG_POLYOBJ)
   {
-    PrintLine(LOG_DEBUG, "  Closest line was %zu Y=%1.0f..%1.0f (dist=%1.1f)", best_match->index, y1, y2, best_dist);
+    PrintLine(LOG_DEBUG, "Closest line was %zu Y=%1.0f..%1.0f (dist=%1.1f)", best_match->index, y1, y2, best_dist);
   }
 
   /* sanity check: shouldn't be directly on the line */
@@ -171,7 +172,7 @@ void MarkPolyobjPoint(double x, double y)
   {
     if (fabs(best_dist) < DIST_EPSILON)
     {
-      PrintLine(LOG_DEBUG, "  Polyobj FAILURE: directly on the line (%zu)", best_match->index);
+      PrintLine(LOG_DEBUG, "FAILURE: Polyobj directly on the line (%zu)", best_match->index);
     }
   }
 
@@ -189,12 +190,13 @@ void MarkPolyobjPoint(double x, double y)
 
   if constexpr (DEBUG_POLYOBJ)
   {
-    PrintLine(LOG_DEBUG, "  Sector %zu contains the polyobj.", sector ? sector->index : NO_INDEX);
+    PrintLine(LOG_DEBUG, "Sector %zu contains the polyobj.", sector ? sector->index : NO_INDEX);
   }
 
   if (sector == nullptr)
   {
-    config.Warning("Invalid Polyobj thing at (%1.0f,%1.0f).", x, y);
+    PrintLine(LOG_NORMAL, "WARNING: Invalid Polyobj thing at (%1.0f,%1.0f).", x, y);
+    config.total_warnings++;
     return;
   }
 
@@ -401,7 +403,10 @@ void PruneVerticesAtEnd(void)
 
   if (unused > 0)
   {
-    config.Print_Verbose("    Pruned %zu unused vertices at end", unused);
+    if (config.verbose)
+    {
+      PrintLine(LOG_NORMAL, "Pruned %zu unused vertices at end", unused);
+    }
   }
 
   num_old_vert = lev_vertices.size();
@@ -467,7 +472,10 @@ void DetectOverlappingLines(void)
 
   if (count > 0)
   {
-    config.Print_Verbose("    Detected %zu overlapped linedefs", count);
+    if (config.verbose)
+    {
+      PrintLine(LOG_NORMAL, "Detected %zu overlapped linedefs", count);
+    }
   }
 }
 
@@ -554,7 +562,7 @@ void CalculateWallTips(void)
 
       for (walltip_t *tip = V->tip_set; tip; tip = tip->next)
       {
-        PrintLine(LOG_DEBUG, "  Angle=%1.1f left=%d right=%d", tip->angle, tip->open_left ? 1 : 0, tip->open_right ? 1 : 0);
+        PrintLine(LOG_DEBUG, "Angle=%1.1f left=%d right=%d", tip->angle, tip->open_left ? 1 : 0, tip->open_right ? 1 : 0);
       }
     }
   }

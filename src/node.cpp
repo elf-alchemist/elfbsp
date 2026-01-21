@@ -958,7 +958,7 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
 
     for (cut = cut_list; cut; cut = cut->next)
     {
-      PrintLine(LOG_DEBUG, "  Vertex %zu (%1.1f,%1.1f)  Along %1.2f  [%d/%d]  %s", cut->vertex->index, cut->vertex->x,
+      PrintLine(LOG_DEBUG, "Vertex %zu (%1.1f,%1.1f)  Along %1.2f  [%d/%d]  %s", cut->vertex->index, cut->vertex->x,
                 cut->vertex->y, cut->along_dist, cut->open_before ? 1 : 0, cut->open_after ? 1 : 0,
                 cut->self_ref ? "SELFREF" : "");
     }
@@ -1282,7 +1282,8 @@ seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *
   // check for bad sidedef
   if (side->sector == nullptr)
   {
-    config.Warning("Bad sidedef on linedef #%zu (Z_CheckHeap error)", line->index);
+    PrintLine(LOG_NORMAL, "WARNING: Bad sidedef on linedef #%zu (Z_CheckHeap error)", line->index);
+    config.total_warnings++;
   }
 
   // handle overlapping vertices, pick a nominal one
@@ -1345,7 +1346,8 @@ seg_t *CreateSegs(void)
     // check for extremely long lines
     if (hypot(line->start->x - line->end->x, line->start->y - line->end->y) >= 32000)
     {
-      config.Warning("Linedef #%zu is VERY long, it may cause problems", line->index);
+      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is VERY long, it may cause problems", line->index);
+      config.total_warnings++;
     }
 
     if (line->right != nullptr)
@@ -1355,7 +1357,8 @@ seg_t *CreateSegs(void)
     }
     else
     {
-      config.Warning("Linedef #%zu has no right sidedef!", line->index);
+      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu has no right sidedef!", line->index);
+      config.total_warnings++;
     }
 
     if (line->left != nullptr)
@@ -1377,7 +1380,8 @@ seg_t *CreateSegs(void)
     {
       if (line->two_sided)
       {
-        config.Warning("Linedef #%zu is 2s but has no left sidedef", line->index);
+        PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is 2s but has no left sidedef", line->index);
+        config.total_warnings++;
         line->two_sided = false;
       }
     }
@@ -1524,7 +1528,7 @@ void ClockwiseOrder(subsec_t *subsec)
 
     for (seg = subsec->seg_list; seg; seg = seg->next)
     {
-      PrintLine(LOG_DEBUG, "  Seg %p: Angle %1.6f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", seg, seg->cmp_angle, seg->start->x,
+      PrintLine(LOG_DEBUG, "Seg %p: Angle %1.6f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", seg, seg->cmp_angle, seg->start->x,
                 seg->start->y, seg->end->x, seg->end->y);
     }
   }
@@ -1554,14 +1558,17 @@ void SanityCheckClosed(subsec_t *subsec)
 
   if (gaps > 0)
   {
-    PrintLine(LOG_WARN, "Subsector #%zu near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)", subsec->index, subsec->mid_x,
-              subsec->mid_y, gaps, total);
+    if (config.verbose)
+    {
+      PrintLine(LOG_WARN, "MINOR ISSUE: Subsector #%zu near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)", subsec->index,
+                subsec->mid_x, subsec->mid_y, gaps, total);
+    }
 
     if constexpr (DEBUG_SUBSEC)
     {
       for (seg = subsec->seg_list; seg; seg = seg->next)
       {
-        PrintLine(LOG_DEBUG, "  SEG %p  (%1.1f,%1.1f) --> (%1.1f,%1.1f)", seg, seg->start->x, seg->start->y, seg->end->x,
+        PrintLine(LOG_DEBUG, "SEG %p  (%1.1f,%1.1f) --> (%1.1f,%1.1f)", seg, seg->start->x, seg->start->y, seg->end->x,
                   seg->end->y);
       }
     }
