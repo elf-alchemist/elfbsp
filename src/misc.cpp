@@ -26,50 +26,6 @@
 
 #include <algorithm>
 
-static constexpr uint32_t SYS_MSG_BUFLEN = 4000;
-
-static char message_buf[SYS_MSG_BUFLEN];
-
-void Failure(const char *fmt, ...)
-{
-  va_list args;
-
-  va_start(args, fmt);
-  vsnprintf(message_buf, sizeof(message_buf), fmt, args);
-  va_end(args);
-
-  config.Print_Verbose("    FAILURE: %s", message_buf);
-}
-
-void Warning(const char *fmt, ...)
-{
-  va_list args;
-
-  va_start(args, fmt);
-  vsnprintf(message_buf, sizeof(message_buf), fmt, args);
-  va_end(args);
-
-  config.Print_Verbose("    WARNING: %s", message_buf);
-
-  config.total_warnings++;
-}
-
-void MinorIssue(const char *fmt, ...)
-{
-  if (config.verbose)
-  {
-    va_list args;
-
-    va_start(args, fmt);
-    vsnprintf(message_buf, sizeof(message_buf), fmt, args);
-    va_end(args);
-
-    config.Print_Verbose("    ISSUE: %s", message_buf);
-  }
-
-  config.total_minor_issues++;
-}
-
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
 //------------------------------------------------------------------------
@@ -198,7 +154,7 @@ void MarkPolyobjPoint(double x, double y)
 
   if (best_match == nullptr)
   {
-    Warning("Bad polyobj thing at (%1.0f,%1.0f).\n", x, y);
+    config.Warning("Bad polyobj thing at (%1.0f,%1.0f).\n", x, y);
     return;
   }
 
@@ -238,7 +194,7 @@ void MarkPolyobjPoint(double x, double y)
 
   if (sector == nullptr)
   {
-    Warning("Invalid Polyobj thing at (%1.0f,%1.0f).\n", x, y);
+    config.Warning("Invalid Polyobj thing at (%1.0f,%1.0f).\n", x, y);
     return;
   }
 
@@ -396,7 +352,7 @@ void DetectOverlappingVertices(void)
 
         if constexpr (DEBUG_OVERLAPS)
         {
-          Print("Overlap: #%zu + #%zu\n", array[i]->index, array[i + 1]->index);
+          PrintLine("Overlap: #%zu + #%zu\n", array[i]->index, array[i + 1]->index);
         }
       }
     }

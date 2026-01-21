@@ -189,8 +189,10 @@ static constexpr size_t NO_INDEX = static_cast<size_t>(-1);
 static constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
 static constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
 
-static constexpr size_t MSG_BUFFER_LENGTH = 1024;
 static constexpr size_t WAD_LUMP_NAME = 8;
+
+static constexpr size_t MSG_BUFFER_LENGTH = 1024;
+static constexpr size_t SYS_MSG_BUFFER_LENGTH = 4096;
 
 // bitflags
 static inline constexpr uint32_t BIT(uint32_t x)
@@ -239,21 +241,6 @@ static inline constexpr short_angle_t DegreesToShortBAM(uint16_t x)
 // STRING STUFF
 //------------------------------------------------------------------------
 
-// this is > 0 when ShowMap() is used and the current line
-// has not been terminated with a new-line ('\n') character.
-static inline size_t hanging_pos = 0;
-
-static inline void StopHanging()
-{
-  if (hanging_pos > 0)
-  {
-    hanging_pos = 0;
-
-    printf("\n");
-    fflush(stdout);
-  }
-}
-
 // Safe, portable vsnprintf().
 static inline int32_t PRINTF_ATTR(3, 0) M_vsnprintf(char *buf, size_t buf_len, const char *s, va_list args)
 {
@@ -296,7 +283,7 @@ static inline void PRINTF_ATTR(1, 2) Debug(const char *fmt, ...)
   va_list args;
 
   va_start(args, fmt);
-  vsnprintf(buffer, sizeof(buffer), fmt, args);
+  M_vsnprintf(buffer, sizeof(buffer), fmt, args);
   va_end(args);
 
   fprintf(stderr, "%s", buffer);
@@ -305,20 +292,19 @@ static inline void PRINTF_ATTR(1, 2) Debug(const char *fmt, ...)
 //
 //  show a message
 //
-static inline void PRINTF_ATTR(1, 2) Print(const char *fmt, ...)
+static inline void PRINTF_ATTR(1, 2) PrintLine(const char *fmt, ...)
 {
   char buffer[MSG_BUFFER_LENGTH];
 
   va_list arg_ptr;
 
   va_start(arg_ptr, fmt);
-  vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
+  M_vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
   va_end(arg_ptr);
 
   buffer[MSG_BUFFER_LENGTH - 1] = 0;
 
-  StopHanging();
-  printf("%s", buffer);
+  printf("%s\n", buffer);
   fflush(stdout);
 }
 
@@ -332,21 +318,29 @@ static inline void PRINTF_ATTR(1, 2) FatalError(const char *fmt, ...)
   va_list arg_ptr;
 
   va_start(arg_ptr, fmt);
-  vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
+  M_vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
   va_end(arg_ptr);
 
   buffer[MSG_BUFFER_LENGTH - 1] = 0;
 
-  StopHanging();
-  fprintf(stderr, "\nFATAL ERROR: %s", buffer);
+  fprintf(stderr, "FATAL ERROR: %s\n", buffer);
   exit(3);
 }
 
-// Assertion macros
+//
+//  just skip this line
+//
+static inline void NewLine(void)
+{
+  
+}
 
+//
+// Assertion macros
+//
 static inline constexpr void SYS_ASSERT(bool cond)
 {
-  return (cond) ? (void)0 : FatalError("Assertion failed\nIn function %s (%s:%d)\n", __func__, __FILE__, __LINE__);
+  return (cond) ? (void)0 : FatalError("Assertion failed! In function %s (%s:%d)", __func__, __FILE__, __LINE__);
 }
 
 //------------------------------------------------------------------------

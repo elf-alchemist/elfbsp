@@ -614,7 +614,7 @@ static void PutBlockmap(void)
   {
     // leave an empty blockmap lump
     CreateLevelLump("BLOCKMAP")->Finish();
-    Warning("Blockmap overflowed (lump will be empty)\n");
+    config.Warning("Blockmap overflowed (lump will be empty)\n");
   }
   else
   {
@@ -1806,7 +1806,7 @@ static void PutVertices(void)
 
   if (count > 65534)
   {
-    Failure("Number of vertices has overflowed.\n");
+    config.Failure("Number of vertices has overflowed.\n");
     MarkOverflow(LIMIT_VERTEXES);
   }
 }
@@ -1871,7 +1871,7 @@ static void PutSegs(void)
 
   if (lev_segs.size() > 65534)
   {
-    Failure("Number of segs has overflowed.\n");
+    config.Failure("Number of segs has overflowed.\n");
     MarkOverflow(LIMIT_SEGS);
   }
 }
@@ -1901,7 +1901,7 @@ static void PutSubsecs(void)
 
   if (lev_subsecs.size() > 32767)
   {
-    Failure("Number of subsectors has overflowed.\n");
+    config.Failure("Number of subsectors has overflowed.\n");
     MarkOverflow(LIMIT_SSECTORS);
   }
 
@@ -2002,7 +2002,7 @@ static void PutNodes(node_t *root)
 
   if (node_cur_index > 32767)
   {
-    Failure("Number of nodes has overflowed.\n");
+    config.Failure("Number of nodes has overflowed.\n");
     MarkOverflow(LIMIT_NODES);
   }
 }
@@ -2015,21 +2015,21 @@ static void CheckLimits(void)
   // the other checks below, like the vertex counts).
   if (lev_sectors.size() > 65535)
   {
-    Failure("Map has too many sectors.\n");
+    config.Failure("Map has too many sectors.\n");
     MarkOverflow(LIMIT_SECTORS);
   }
 
   // the sidedef 0xFFFF is reserved to mean "no side" in DOOM map format
   if (lev_sidedefs.size() > 65535)
   {
-    Failure("Map has too many sidedefs.\n");
+    config.Failure("Map has too many sidedefs.\n");
     MarkOverflow(LIMIT_SIDEDEFS);
   }
 
   // the linedef 0xFFFF is reserved for minisegs in GL nodes
   if (lev_linedefs.size() > 65535)
   {
-    Failure("Map has too many linedefs.\n");
+    config.Failure("Map has too many linedefs.\n");
     MarkOverflow(LIMIT_LINEDEFS);
   }
 
@@ -2037,7 +2037,7 @@ static void CheckLimits(void)
   {
     if (num_old_vert > 32767 || num_new_vert > 32767 || lev_segs.size() > 32767 || lev_nodes.size() > 32767)
     {
-      Warning("Forcing XNOD format nodes due to overflows.\n");
+      config.Warning("Forcing XNOD format nodes due to overflows.\n");
       lev_force_xnod = true;
     }
   }
@@ -2186,7 +2186,7 @@ static void PutXgl2Segs(Lump_c *lump)
 
     if constexpr (DEBUG_BSP)
     {
-      fprintf(stderr, "SEG[%zu] v1=%d partner=%d line=%d side=%d\n", i, raw.vertex, raw.partner, raw.linedef, raw.side);
+      Debug("SEG[%zu] v1=%d partner=%d line=%d side=%d\n", i, raw.vertex, raw.partner, raw.linedef, raw.side);
     }
   }
 }
@@ -2378,7 +2378,7 @@ void LoadLevel(void)
   lev_current_name = LEV->Name();
   lev_overflows = false;
 
-  config.ShowMap(lev_current_name);
+  PrintLine(lev_current_name);
 
   num_new_vert = 0;
   num_real_lines = 0;
@@ -2457,7 +2457,7 @@ static void AddMissingLump(const char *name, const char *after)
   // if this happens, the level structure is very broken
   if (exist == NO_INDEX)
   {
-    Warning("Missing %s lump -- level structure is broken\n", after);
+    config.Warning("Missing %s lump -- level structure is broken\n", after);
 
     exist = cur_wad->LevelLastLump(lev_current_idx);
   }

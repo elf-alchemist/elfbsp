@@ -1281,7 +1281,7 @@ seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *
   // check for bad sidedef
   if (side->sector == nullptr)
   {
-    Warning("Bad sidedef on linedef #%zu (Z_CheckHeap error)\n", line->index);
+    config.Warning("Bad sidedef on linedef #%zu (Z_CheckHeap error)\n", line->index);
   }
 
   // handle overlapping vertices, pick a nominal one
@@ -1344,7 +1344,7 @@ seg_t *CreateSegs(void)
     // check for extremely long lines
     if (hypot(line->start->x - line->end->x, line->start->y - line->end->y) >= 32000)
     {
-      Warning("Linedef #%zu is VERY long, it may cause problems\n", line->index);
+      config.Warning("Linedef #%zu is VERY long, it may cause problems\n", line->index);
     }
 
     if (line->right != nullptr)
@@ -1354,7 +1354,7 @@ seg_t *CreateSegs(void)
     }
     else
     {
-      Warning("Linedef #%zu has no right sidedef!\n", line->index);
+      config.Warning("Linedef #%zu has no right sidedef!\n", line->index);
     }
 
     if (line->left != nullptr)
@@ -1376,7 +1376,7 @@ seg_t *CreateSegs(void)
     {
       if (line->two_sided)
       {
-        Warning("Linedef #%zu is 2s but has no left sidedef\n", line->index);
+        config.Warning("Linedef #%zu is 2s but has no left sidedef\n", line->index);
         line->two_sided = false;
       }
     }
@@ -1553,8 +1553,8 @@ void SanityCheckClosed(subsec_t *subsec)
 
   if (gaps > 0)
   {
-    MinorIssue("Subsector #%zu near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)\n", subsec->index, subsec->mid_x,
-               subsec->mid_y, gaps, total);
+    config.MinorIssue("Subsector #%zu near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)\n", subsec->index, subsec->mid_x,
+                      subsec->mid_y, gaps, total);
 
     if constexpr (DEBUG_SUBSEC)
     {

@@ -46,7 +46,7 @@ struct map_range_t
   std::string high;
 };
 
-std::vector<map_range_t> map_list;
+static std::vector<map_range_t> map_list;
 
 buildinfo_t config;
 
@@ -102,7 +102,7 @@ static void BuildFile(void)
 
   if (num_levels == 0)
   {
-    Print("  No levels in wad\n");
+    PrintLine("  No levels in wad");
     total_empty_files += 1;
     return;
   }
@@ -124,7 +124,7 @@ static void BuildFile(void)
 
     if (n > 0)
     {
-      config.Print_Verbose("\n");
+      config.Print_Verbose("");
     }
 
     res = BuildLevel(n);
@@ -145,32 +145,30 @@ static void BuildFile(void)
     total_built_maps += 1;
   }
 
-  StopHanging();
-
   if (visited == 0)
   {
-    Print("  No matching levels\n");
+    PrintLine("  No matching levels");
     total_empty_files += 1;
     return;
   }
 
-  Print("\n");
+  NewLine();
 
   total_failed_maps += failures;
 
   if (failures > 0)
   {
-    Print("  Failed maps: %zu (out of %zu)\n", failures, visited);
+    PrintLine("  Failed maps: %zu (out of %zu)", failures, visited);
 
     // allow building other files
     total_failed_files += 1;
   }
 
-  Print("  Serious warnings: %zu\n", config.total_warnings);
+  PrintLine("  Serious warnings: %zu", config.total_warnings);
 
   if (config.verbose)
   {
-    Print("  Minor issues: %zu\n", config.total_minor_issues);
+    PrintLine("  Minor issues: %zu", config.total_minor_issues);
   }
 }
 
@@ -181,7 +179,7 @@ void ValidateInputFilename(const char *filename)
   // files with ".bak" extension cannot be backed up, so refuse them
   if (MatchExtension(filename, "bak"))
   {
-    FatalError("cannot process a backup file: %s\n", filename);
+    FatalError("cannot process a backup file: %s", filename);
   }
 
   // we do not support packages
@@ -189,7 +187,7 @@ void ValidateInputFilename(const char *filename)
       || MatchExtension(filename, "pk4") || MatchExtension(filename, "pk7") || MatchExtension(filename, "epk")
       || MatchExtension(filename, "pack") || MatchExtension(filename, "zip") || MatchExtension(filename, "rar"))
   {
-    FatalError("package files (like PK3) are not supported: %s\n", filename);
+    FatalError("package files (like PK3) are not supported: %s", filename);
   }
 
   // reject some very common formats
@@ -199,7 +197,7 @@ void ValidateInputFilename(const char *filename)
       || MatchExtension(filename, "cfg") || MatchExtension(filename, "gif") || MatchExtension(filename, "png")
       || MatchExtension(filename, "jpg") || MatchExtension(filename, "jpeg"))
   {
-    FatalError("not a wad file: %s\n", filename);
+    FatalError("not a wad file: %s", filename);
   }
 }
 
@@ -219,10 +217,10 @@ void BackupFile(const char *filename)
 
   if (!FileCopy(filename, dest_name.c_str()))
   {
-    FatalError("failed to create backup: %s\n", dest_name.c_str());
+    FatalError("failed to create backup: %s", dest_name.c_str());
   }
 
-  Print("\nCreated backup: %s\n", dest_name.c_str());
+  PrintLine("Created backup: %s", dest_name.c_str());
 }
 
 void VisitFile(unsigned int idx, const char *filename)
@@ -232,10 +230,11 @@ void VisitFile(unsigned int idx, const char *filename)
   {
     if (!FileCopy(filename, opt_output.c_str()))
     {
-      FatalError("failed to create output file: %s\n", opt_output.c_str());
+      FatalError("failed to create output file: %s", opt_output.c_str());
     }
 
-    Print("\nCopied input file: %s\n", filename);
+    NewLine();
+    PrintLine("Copied input file: %s", filename);
 
     filename = opt_output.c_str();
   }
@@ -245,8 +244,8 @@ void VisitFile(unsigned int idx, const char *filename)
     BackupFile(filename);
   }
 
-  Print("\n");
-  Print("Building %s\n", filename);
+  PrintLine("");
+  PrintLine("Building %s", filename);
 
   // this will fatal error if it fails
   OpenWad(filename);
@@ -698,36 +697,36 @@ int main(int argc, char *argv[])
     VisitFile(i, wad_list[i]);
   }
 
-  Print("\n");
+  PrintLine("\n");
 
   if (total_failed_files > 0)
   {
-    Print("FAILURES occurred on %zu map%s in %zu file%s.\n", total_failed_maps, total_failed_maps == 1 ? "" : "s",
+    PrintLine("FAILURES occurred on %zu map%s in %zu file%s.\n", total_failed_maps, total_failed_maps == 1 ? "" : "s",
           total_failed_files, total_failed_files == 1 ? "" : "s");
 
     if (!config.verbose)
     {
-      Print("Rerun with --verbose to see more details.\n");
+      PrintLine("Rerun with --verbose to see more details.\n");
     }
 
     return 2;
   }
   else if (total_built_maps == 0)
   {
-    Print("NOTHING was built!\n");
+    PrintLine("NOTHING was built!\n");
 
     return 1;
   }
   else if (total_empty_files == 0)
   {
-    Print("Ok, built all files.\n");
+    PrintLine("Ok, built all files.\n");
   }
   else
   {
     size_t built = total_files - total_empty_files;
     size_t empty = total_empty_files;
 
-    Print("Ok, built %zu file%s, %zu file%s empty.\n", built, (built == 1 ? "" : "s"), empty, (empty == 1 ? " was" : "s were"));
+    PrintLine("Ok, built %zu file%s, %zu file%s empty.\n", built, (built == 1 ? "" : "s"), empty, (empty == 1 ? " was" : "s were"));
   }
 
   // that's all folks!

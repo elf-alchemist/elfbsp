@@ -69,36 +69,56 @@ struct buildinfo_s
     static char buffer[MSG_BUFFER_LENGTH];
 
     va_start(arg_ptr, fmt);
-    vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
+    M_vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
     va_end(arg_ptr);
 
     buffer[MSG_BUFFER_LENGTH - 1] = 0;
 
-    StopHanging();
-
-    printf("%s", buffer);
+    printf("%s\n", buffer);
     fflush(stdout);
   }
 
-  inline void ShowMap(const char *name)
+  inline void Failure(const char *fmt, ...)
   {
-    if (verbose)
+    char message_buf[SYS_MSG_BUFFER_LENGTH];
+    va_list args;
+
+    va_start(args, fmt);
+    M_vsnprintf(message_buf, sizeof(message_buf), fmt, args);
+    va_end(args);
+
+    config.Print_Verbose("    FAILURE: %s", message_buf);
+  }
+
+  inline void Warning(const char *fmt, ...)
+  {
+    char message_buf[SYS_MSG_BUFFER_LENGTH];
+    va_list args;
+
+    va_start(args, fmt);
+    M_vsnprintf(message_buf, sizeof(message_buf), fmt, args);
+    va_end(args);
+
+    config.Print_Verbose("    WARNING: %s", message_buf);
+
+    config.total_warnings++;
+  }
+
+  inline void MinorIssue(const char *fmt, ...)
+  {
+    if (config.verbose)
     {
-      Print("  %s\n", name);
-      return;
+      char message_buf[SYS_MSG_BUFFER_LENGTH];
+      va_list args;
+
+      va_start(args, fmt);
+      M_vsnprintf(message_buf, sizeof(message_buf), fmt, args);
+      va_end(args);
+
+      config.Print_Verbose("    ISSUE: %s", message_buf);
     }
 
-    // display the map names across the terminal
-
-    if (hanging_pos >= 68)
-    {
-      StopHanging();
-    }
-
-    printf("  %s", name);
-    fflush(stdout);
-
-    hanging_pos += strlen(name) + 2;
+    config.total_minor_issues++;
   }
 };
 
