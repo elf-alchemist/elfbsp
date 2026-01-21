@@ -119,7 +119,7 @@ void Recompute(seg_t *seg)
 
   if (seg->p_length <= 0)
   {
-    FatalError("Seg %p has zero p_length.\n", seg);
+    PrintLine(LOG_ERROR, "Seg %p has zero p_length.", seg);
   }
 
   seg->p_perp = seg->psy * seg->pdx - seg->psx * seg->pdy;
@@ -145,11 +145,11 @@ seg_t *SplitSeg(seg_t *old_seg, double x, double y)
 
     if (old_seg->linedef)
     {
-      Debug("Splitting Linedef %zu (%p) at (%1.1f,%1.1f)\n", old_seg->linedef->index, old_seg, x, y);
+      PrintLine(LOG_DEBUG, "Splitting Linedef %zu (%p) at (%1.1f,%1.1f)", old_seg->linedef->index, old_seg, x, y);
     }
     else
     {
-      Debug("Splitting Miniseg %p at (%1.1f,%1.1f)\n", old_seg, x, y);
+      PrintLine(LOG_DEBUG, "Splitting Miniseg %p at (%1.1f,%1.1f)", old_seg, x, y);
     }
   }
 
@@ -168,7 +168,7 @@ seg_t *SplitSeg(seg_t *old_seg, double x, double y)
 
   if constexpr (DEBUG_SPLIT)
   {
-    Debug("Splitting Vertex is %zu at (%1.1f,%1.1f)\n", new_vert->index, new_vert->x, new_vert->y);
+    PrintLine(LOG_DEBUG, "Splitting Vertex is %zu at (%1.1f,%1.1f)", new_vert->index, new_vert->x, new_vert->y);
   }
 
   // handle partners
@@ -177,7 +177,7 @@ seg_t *SplitSeg(seg_t *old_seg, double x, double y)
   {
     if constexpr (DEBUG_SPLIT)
     {
-      Debug("Splitting Partner %p\n", old_seg->partner);
+      PrintLine(LOG_DEBUG, "Splitting Partner %p", old_seg->partner);
     }
 
     new_seg->partner = NewSeg();
@@ -542,7 +542,7 @@ double EvalPartition(quadtree_c *tree, seg_t *part, double best_cost)
   {
     if constexpr (DEBUG_PICKNODE)
     {
-      Debug("Eval : No real segs on %s%sside\n", info.real_left ? "" : "left ", info.real_right ? "" : "right ");
+      PrintLine(LOG_DEBUG, "Eval : No real segs on %s%sside", info.real_left ? "" : "left ", info.real_right ? "" : "right ");
     }
 
     return -1;
@@ -565,8 +565,8 @@ double EvalPartition(quadtree_c *tree, seg_t *part, double best_cost)
 
   if constexpr (DEBUG_PICKNODE)
   {
-    Debug("Eval %p: splits=%zu iffy=%zu near=%zu left=%zu+%zu right=%zu+%zu cost=%1.4f\n", part, info.splits, info.iffy,
-          info.near_miss, info.real_left, info.mini_left, info.real_right, info.mini_right, info.cost);
+    PrintLine(LOG_DEBUG, "Eval %p: splits=%zu iffy=%zu near=%zu left=%zu+%zu right=%zu+%zu cost=%1.4f", part, info.splits,
+              info.iffy, info.near_miss, info.real_left, info.mini_left, info.real_right, info.mini_right, info.cost);
   }
 
   return info.cost;
@@ -655,7 +655,7 @@ seg_t *FindFastSeg(quadtree_c *tree)
 
   if constexpr (DEBUG_PICKNODE)
   {
-    Debug("FindFastSeg: best_H=%p (cost %1.4f) | best_V=%p (cost %1.4f)\n", best_H, H_cost, best_V, V_cost);
+    PrintLine(LOG_DEBUG, "FindFastSeg: best_H=%p (cost %1.4f) | best_V=%p (cost %1.4f)", best_H, H_cost, best_V, V_cost);
   }
 
   if (H_cost < 0 && V_cost < 0)
@@ -683,8 +683,8 @@ bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, doubl
   {
     if constexpr (DEBUG_PICKNODE)
     {
-      Debug("PickNode:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", part->linedef ? "" : "MINI", part, part->start->x,
-            part->start->y, part->end->x, part->end->y);
+      PrintLine(LOG_DEBUG, "PickNode:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", part->linedef ? "" : "MINI", part,
+                part->start->x, part->start->y, part->end->x, part->end->y);
     }
 
     /* ignore minisegs as partition candidates */
@@ -734,7 +734,7 @@ seg_t *PickNode(quadtree_c *tree, int depth)
 
   if constexpr (DEBUG_PICKNODE)
   {
-    Debug("PickNode: BEGUN (depth %d)\n", depth);
+    PrintLine(LOG_DEBUG, "PickNode: BEGUN (depth %d)", depth);
   }
 
   /* -AJA- here is the logic for "fast mode".  We look for segs which
@@ -745,7 +745,7 @@ seg_t *PickNode(quadtree_c *tree, int depth)
   {
     if constexpr (DEBUG_PICKNODE)
     {
-      Debug("PickNode: Looking for Fast node...\n");
+      PrintLine(LOG_DEBUG, "PickNode: Looking for Fast node...");
     }
 
     best = FindFastSeg(tree);
@@ -754,8 +754,8 @@ seg_t *PickNode(quadtree_c *tree, int depth)
     {
       if constexpr (DEBUG_PICKNODE)
       {
-        Debug("PickNode: Using Fast node (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", best->start->x, best->start->y, best->end->x,
-              best->end->y);
+        PrintLine(LOG_DEBUG, "PickNode: Using Fast node (%1.1f,%1.1f) -> (%1.1f,%1.1f)", best->start->x, best->start->y,
+                  best->end->x, best->end->y);
       }
       return best;
     }
@@ -771,12 +771,12 @@ seg_t *PickNode(quadtree_c *tree, int depth)
   {
     if (!best)
     {
-      Debug("PickNode: NO BEST FOUND !\n");
+      PrintLine(LOG_DEBUG, "PickNode: NO BEST FOUND !");
     }
     else
     {
-      Debug("PickNode: Best has score %1.4f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", best_cost, best->start->x, best->start->y,
-            best->end->x, best->end->y);
+      PrintLine(LOG_DEBUG, "PickNode: Best has score %1.4f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", best_cost, best->start->x,
+                best->start->y, best->end->x, best->end->y);
     }
   }
 
@@ -953,13 +953,14 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
 
   if constexpr (DEBUG_CUTLIST)
   {
-    Debug("CUT LIST:\n");
-    Debug("PARTITION: (%1.1f,%1.1f) += (%1.1f,%1.1f)\n", part->psx, part->psy, part->pdx, part->pdy);
+    PrintLine(LOG_DEBUG, "CUT LIST:");
+    PrintLine(LOG_DEBUG, "PARTITION: (%1.1f,%1.1f) += (%1.1f,%1.1f)", part->psx, part->psy, part->pdx, part->pdy);
 
     for (cut = cut_list; cut; cut = cut->next)
     {
-      Debug("  Vertex %zu (%1.1f,%1.1f)  Along %1.2f  [%d/%d]  %s\n", cut->vertex->index, cut->vertex->x, cut->vertex->y,
-            cut->along_dist, cut->open_before ? 1 : 0, cut->open_after ? 1 : 0, cut->self_ref ? "SELFREF" : "");
+      PrintLine(LOG_DEBUG, "  Vertex %zu (%1.1f,%1.1f)  Along %1.2f  [%d/%d]  %s", cut->vertex->index, cut->vertex->x,
+                cut->vertex->y, cut->along_dist, cut->open_before ? 1 : 0, cut->open_after ? 1 : 0,
+                cut->self_ref ? "SELFREF" : "");
     }
   }
 
@@ -973,7 +974,7 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
     double len = next->along_dist - cut->along_dist;
     if (len < -0.001)
     {
-      FatalError("Bad order in intersect list: %1.3f > %1.3f\n", cut->along_dist, next->along_dist);
+      PrintLine(LOG_ERROR, "Bad order in intersect list: %1.3f > %1.3f", cut->along_dist, next->along_dist);
     }
 
     bool A = cut->open_after;
@@ -1023,11 +1024,11 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
     if constexpr (DEBUG_CUTLIST)
     {
 
-      Debug("AddMiniseg: %p RIGHT  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, seg->start->x, seg->start->y, seg->end->x,
-            seg->end->y);
+      PrintLine(LOG_DEBUG, "AddMiniseg: %p RIGHT  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", seg, seg->start->x, seg->start->y,
+                seg->end->x, seg->end->y);
 
-      Debug("AddMiniseg: %p LEFT   (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, buddy->start->x, buddy->start->y, buddy->end->x,
-            buddy->end->y);
+      PrintLine(LOG_DEBUG, "AddMiniseg: %p LEFT   (%1.1f,%1.1f) -> (%1.1f,%1.1f)", seg, buddy->start->x, buddy->start->y,
+                buddy->end->x, buddy->end->y);
     }
   }
 }
@@ -1281,7 +1282,7 @@ seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *
   // check for bad sidedef
   if (side->sector == nullptr)
   {
-    config.Warning("Bad sidedef on linedef #%zu (Z_CheckHeap error)\n", line->index);
+    config.Warning("Bad sidedef on linedef #%zu (Z_CheckHeap error)", line->index);
   }
 
   // handle overlapping vertices, pick a nominal one
@@ -1344,7 +1345,7 @@ seg_t *CreateSegs(void)
     // check for extremely long lines
     if (hypot(line->start->x - line->end->x, line->start->y - line->end->y) >= 32000)
     {
-      config.Warning("Linedef #%zu is VERY long, it may cause problems\n", line->index);
+      config.Warning("Linedef #%zu is VERY long, it may cause problems", line->index);
     }
 
     if (line->right != nullptr)
@@ -1354,7 +1355,7 @@ seg_t *CreateSegs(void)
     }
     else
     {
-      config.Warning("Linedef #%zu has no right sidedef!\n", line->index);
+      config.Warning("Linedef #%zu has no right sidedef!", line->index);
     }
 
     if (line->left != nullptr)
@@ -1376,7 +1377,7 @@ seg_t *CreateSegs(void)
     {
       if (line->two_sided)
       {
-        config.Warning("Linedef #%zu is 2s but has no left sidedef\n", line->index);
+        config.Warning("Linedef #%zu is 2s but has no left sidedef", line->index);
         line->two_sided = false;
       }
     }
@@ -1440,7 +1441,7 @@ void ClockwiseOrder(subsec_t *subsec)
 
   if constexpr (DEBUG_SUBSEC)
   {
-    Debug("Subsec: Clockwising %zu\n", subsec->index);
+    PrintLine(LOG_DEBUG, "Subsec: Clockwising %zu", subsec->index);
   }
 
   std::vector<seg_t *> array;
@@ -1519,12 +1520,12 @@ void ClockwiseOrder(subsec_t *subsec)
 
   if constexpr (DEBUG_SORTER)
   {
-    Debug("Sorted SEGS around (%1.1f,%1.1f)\n", subsec->mid_x, subsec->mid_y);
+    PrintLine(LOG_DEBUG, "Sorted SEGS around (%1.1f,%1.1f)", subsec->mid_x, subsec->mid_y);
 
     for (seg = subsec->seg_list; seg; seg = seg->next)
     {
-      Debug("  Seg %p: Angle %1.6f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, seg->cmp_angle, seg->start->x, seg->start->y,
-            seg->end->x, seg->end->y);
+      PrintLine(LOG_DEBUG, "  Seg %p: Angle %1.6f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", seg, seg->cmp_angle, seg->start->x,
+                seg->start->y, seg->end->x, seg->end->y);
     }
   }
 }
@@ -1553,14 +1554,15 @@ void SanityCheckClosed(subsec_t *subsec)
 
   if (gaps > 0)
   {
-    config.MinorIssue("Subsector #%zu near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)\n", subsec->index, subsec->mid_x,
-                      subsec->mid_y, gaps, total);
+    PrintLine(LOG_WARN, "Subsector #%zu near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)", subsec->index, subsec->mid_x,
+              subsec->mid_y, gaps, total);
 
     if constexpr (DEBUG_SUBSEC)
     {
       for (seg = subsec->seg_list; seg; seg = seg->next)
       {
-        Debug("  SEG %p  (%1.1f,%1.1f) --> (%1.1f,%1.1f)\n", seg, seg->start->x, seg->start->y, seg->end->x, seg->end->y);
+        PrintLine(LOG_DEBUG, "  SEG %p  (%1.1f,%1.1f) --> (%1.1f,%1.1f)", seg, seg->start->x, seg->start->y, seg->end->x,
+                  seg->end->y);
       }
     }
   }
@@ -1576,14 +1578,14 @@ void SanityCheckHasRealSeg(subsec_t *subsec)
     }
   }
 
-  FatalError("Subsector #%zu near (%1.1f,%1.1f) has no real seg!\n", subsec->index, subsec->mid_x, subsec->mid_y);
+  PrintLine(LOG_ERROR, "Subsector #%zu near (%1.1f,%1.1f) has no real seg!", subsec->index, subsec->mid_x, subsec->mid_y);
 }
 
 void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index)
 {
   if constexpr (DEBUG_SUBSEC)
   {
-    Debug("Subsec: Renumbering %zu\n", subsec->index);
+    PrintLine(LOG_DEBUG, "Subsec: Renumbering %zu", subsec->index);
   }
 
   subsec->seg_count = 0;
@@ -1597,7 +1599,7 @@ void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index)
 
     if constexpr (DEBUG_SUBSEC)
     {
-      Debug("Subsec:   %zu: Seg %p  Index %zu\n", subsec->seg_count, seg, seg->index);
+      PrintLine(LOG_DEBUG, "Subsec:   %zu: Seg %p  Index %zu", subsec->seg_count, seg, seg->index);
     }
   }
 }
@@ -1619,7 +1621,7 @@ subsec_t *CreateSubsec(quadtree_c *tree)
 
   if constexpr (DEBUG_SUBSEC)
   {
-    Debug("Subsec: Creating %zu\n", sub->index);
+    PrintLine(LOG_DEBUG, "Subsec: Creating %zu", sub->index);
   }
 
   return sub;
@@ -1642,8 +1644,8 @@ void DebugShowSegs(const seg_t *list)
 {
   for (const seg_t *seg = list; seg; seg = seg->next)
   {
-    Debug("Build:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->linedef ? "" : "MINI", seg, seg->start->x, seg->start->y,
-          seg->end->x, seg->end->y);
+    PrintLine(LOG_DEBUG, "Build:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", seg->linedef ? "" : "MINI", seg, seg->start->x,
+              seg->start->y, seg->end->x, seg->end->y);
   }
 }
 
@@ -1654,7 +1656,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
 
   if constexpr (DEBUG_BUILDER)
   {
-    Debug("Build: BEGUN @ %d\n", depth);
+    PrintLine(LOG_DEBUG, "Build: BEGUN @ %d", depth);
     DebugShowSegs(list);
   }
 
@@ -1670,7 +1672,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
   {
     if constexpr (DEBUG_BUILDER)
     {
-      Debug("Build: CONVEX\n");
+      PrintLine(LOG_DEBUG, "Build: CONVEX");
     }
 
     *S = CreateSubsec(tree);
@@ -1681,8 +1683,8 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
 
   if constexpr (DEBUG_BUILDER)
   {
-    Debug("Build: PARTITION %p (%1.0f,%1.0f) -> (%1.0f,%1.0f)\n", part, part->start->x, part->start->y, part->end->x,
-          part->end->y);
+    PrintLine(LOG_DEBUG, "Build: PARTITION %p (%1.0f,%1.0f) -> (%1.0f,%1.0f)", part, part->start->x, part->start->y,
+              part->end->x, part->end->y);
   }
 
   node_t *node = NewNode();
@@ -1701,12 +1703,12 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
   /* sanity checks... */
   if (rights == nullptr)
   {
-    FatalError("Separated seg-list has empty RIGHT side\n");
+    PrintLine(LOG_ERROR, "Separated seg-list has empty RIGHT side");
   }
 
   if (lefts == nullptr)
   {
-    FatalError("Separated seg-list has empty LEFT side\n");
+    PrintLine(LOG_ERROR, "Separated seg-list has empty LEFT side");
   }
 
   if (cut_list != nullptr)
@@ -1718,7 +1720,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
 
   if constexpr (DEBUG_BUILDER)
   {
-    Debug("Build: Going LEFT\n");
+    PrintLine(LOG_DEBUG, "Build: Going LEFT");
   }
 
   build_result_e ret;
@@ -1732,7 +1734,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
 
   if constexpr (DEBUG_BUILDER)
   {
-    Debug("Build: Going RIGHT\n");
+    PrintLine(LOG_DEBUG, "Build: Going RIGHT");
   }
 
   // recursively build the right side
@@ -1744,7 +1746,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
 
   if constexpr (DEBUG_BUILDER)
   {
-    Debug("Build: DONE\n");
+    PrintLine(LOG_DEBUG, "Build: DONE");
   }
 
   return BUILD_OK;
@@ -1775,7 +1777,7 @@ void Normalise(subsec_t *subsec)
 
   if constexpr (DEBUG_SUBSEC)
   {
-    Debug("Subsec: Normalising %zu\n", subsec->index);
+    PrintLine(LOG_DEBUG, "Subsec: Normalising %zu", subsec->index);
   }
 
   while (subsec->seg_list)
@@ -1789,7 +1791,7 @@ void Normalise(subsec_t *subsec)
     {
       if constexpr (DEBUG_SUBSEC)
       {
-        Debug("Subsec: Removing miniseg %p\n", seg);
+        PrintLine(LOG_DEBUG, "Subsec: Removing miniseg %p", seg);
       }
 
       // this causes SortSegs() to remove the seg
@@ -1817,7 +1819,7 @@ void Normalise(subsec_t *subsec)
 
   if (new_head == nullptr)
   {
-    FatalError("Subsector %zu normalised to being EMPTY\n", subsec->index);
+    PrintLine(LOG_ERROR, "Subsector %zu normalised to being EMPTY", subsec->index);
   }
 
   subsec->seg_list = new_head;
@@ -1865,7 +1867,7 @@ void RoundOff(subsec_t *subsec)
   int degen_total = 0;
   if constexpr (DEBUG_SUBSEC)
   {
-    Debug("Subsec: Rounding off %zu\n", subsec->index);
+    PrintLine(LOG_DEBUG, "Subsec: Rounding off %zu", subsec->index);
   }
 
   // do an initial pass, just counting the degenerates
@@ -1898,7 +1900,7 @@ void RoundOff(subsec_t *subsec)
 
   if constexpr (DEBUG_SUBSEC)
   {
-    Debug("Subsec: degen=%d real=%d\n", degen_total, real_total);
+    PrintLine(LOG_DEBUG, "Subsec: degen=%d real=%d", degen_total, real_total);
   }
 
   // handle the (hopefully rare) case where all of the real segs
@@ -1907,13 +1909,13 @@ void RoundOff(subsec_t *subsec)
   {
     if (last_real_degen == nullptr)
     {
-      FatalError("Subsector %zu rounded off with NO real segs\n", subsec->index);
+      PrintLine(LOG_ERROR, "Subsector %zu rounded off with NO real segs", subsec->index);
     }
 
     if constexpr (DEBUG_SUBSEC)
     {
-      Debug("Degenerate before: (%1.2f,%1.2f) -> (%1.2f,%1.2f)\n", last_real_degen->start->x, last_real_degen->start->y,
-            last_real_degen->end->x, last_real_degen->end->y);
+      PrintLine(LOG_DEBUG, "Degenerate before: (%1.2f,%1.2f) -> (%1.2f,%1.2f)", last_real_degen->start->x,
+                last_real_degen->start->y, last_real_degen->end->x, last_real_degen->end->y);
     }
 
     // create a new vertex for this baby
@@ -1921,9 +1923,9 @@ void RoundOff(subsec_t *subsec)
 
     if constexpr (DEBUG_SUBSEC)
     {
-      Debug("Degenerate after:  (%d,%d) -> (%d,%d)\n", static_cast<int32_t>(floor(last_real_degen->start->x)),
-            static_cast<int32_t>(floor(last_real_degen->start->y)), static_cast<int32_t>(floor(last_real_degen->end->x)),
-            static_cast<int32_t>(floor(last_real_degen->end->y)));
+      PrintLine(LOG_DEBUG, "Degenerate after:  (%d,%d) -> (%d,%d)", static_cast<int32_t>(floor(last_real_degen->start->x)),
+                static_cast<int32_t>(floor(last_real_degen->start->y)), static_cast<int32_t>(floor(last_real_degen->end->x)),
+                static_cast<int32_t>(floor(last_real_degen->end->y)));
     }
 
     last_real_degen->is_degenerate = false;
@@ -1940,7 +1942,7 @@ void RoundOff(subsec_t *subsec)
     {
       if constexpr (DEBUG_SUBSEC)
       {
-        Debug("Subsec: Removing degenerate %p\n", seg);
+        PrintLine(LOG_DEBUG, "Subsec: Removing degenerate %p", seg);
       }
       // this causes SortSegs() to remove the seg
       seg->index = SEG_IS_GARBAGE;
@@ -1967,7 +1969,7 @@ void RoundOff(subsec_t *subsec)
 
   if (new_head == nullptr)
   {
-    FatalError("Subsector %zu rounded off to being EMPTY\n", subsec->index);
+    PrintLine(LOG_ERROR, "Subsector %zu rounded off to being EMPTY", subsec->index);
   }
 
   subsec->seg_list = new_head;

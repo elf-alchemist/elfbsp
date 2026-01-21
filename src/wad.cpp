@@ -54,7 +54,7 @@ Lump_c *MakeLumpFromEntry(Wad_file *wad, const raw_wad_entry_t *entry)
 
   if constexpr (DEBUG_WAD)
   {
-    Debug("new lump '%s' @ %zu len:%zu\n", new_lump->Name(), new_lump->l_start, new_lump->l_length);
+    PrintLine(LOG_DEBUG, "new lump '%s' @ %zu len:%zu", new_lump->Name(), new_lump->l_start, new_lump->l_length);
   }
   return new_lump;
 }
@@ -74,8 +74,8 @@ void Lump_c::MakeEntry(raw_wad_entry_t *entry)
 //------------------------------------------------------------------------
 
 Wad_file::Wad_file(const char *_name, char _mode, FILE *_fp)
-    : mode(_mode), fp(_fp), kind('P'), total_size(0), directory(), dir_start(0), dir_count(0), levels(),
-      patches(), sprites(), flats(), tx_tex(), begun_write(false), insert_point(NO_INDEX)
+    : mode(_mode), fp(_fp), kind('P'), total_size(0), directory(), dir_start(0), dir_count(0), levels(), patches(), sprites(),
+      flats(), tx_tex(), begun_write(false), insert_point(NO_INDEX)
 {
   // nothing needed
 }
@@ -104,7 +104,7 @@ Wad_file *Wad_file::Open(const char *filename, char mode)
 
   if constexpr (DEBUG_WAD)
   {
-    Debug("Opening WAD file: %s\n", filename);
+    PrintLine(LOG_DEBUG, "Opening WAD file: %s", filename);
   }
 
   FILE *fp = nullptr;
@@ -125,7 +125,7 @@ retry:
     {
       if constexpr (DEBUG_WAD)
       {
-        Debug("Open r/w failed, trying again in read mode...\n");
+        PrintLine(LOG_DEBUG, "Open r/w failed, trying again in read mode...");
       }
       mode = 'r';
       goto retry;
@@ -133,7 +133,7 @@ retry:
 
     if constexpr (DEBUG_WAD)
     {
-      Debug("Open file failed: %s\n", strerror(errno));
+      PrintLine(LOG_DEBUG, "Open file failed: %s", strerror(errno));
     }
     return nullptr;
   }
@@ -143,19 +143,19 @@ retry:
   // determine total size (seek to end)
   if (fseeko(fp, 0, SEEK_END) != 0)
   {
-    FatalError("Error determining WAD size.\n");
+    PrintLine(LOG_ERROR, "Error determining WAD size.");
   }
 
   w->total_size = ftello(fp);
 
   if constexpr (DEBUG_WAD)
   {
-    Debug("total_size = %zu\n", w->total_size);
+    PrintLine(LOG_DEBUG, "total_size = %zu", w->total_size);
   }
 
   if (w->total_size < 0)
   {
-    FatalError("Error determining WAD size.\n");
+    PrintLine(LOG_ERROR, "Error determining WAD size.");
   }
 
   w->ReadDirectory();
@@ -169,7 +169,7 @@ Wad_file *Wad_file::Create(const char *filename, char mode)
 {
   if constexpr (DEBUG_WAD)
   {
-    Debug("Creating new WAD file: %s\n", filename);
+    PrintLine(LOG_DEBUG, "Creating new WAD file: %s", filename);
   }
 
   FILE *fp = fopen(filename, "w+b");
@@ -356,7 +356,7 @@ void Wad_file::ReadDirectory(void)
 
   if (fread(&header, sizeof(header), 1, fp) != 1)
   {
-    FatalError("Error reading WAD header.\n");
+    PrintLine(LOG_ERROR, "Error reading WAD header.");
   }
 
   // WISH: check ident for PWAD or IWAD
@@ -368,12 +368,12 @@ void Wad_file::ReadDirectory(void)
 
   if (dir_count > 32000)
   {
-    FatalError("Bad WAD header, too many entries (%zu)\n", dir_count);
+    PrintLine(LOG_ERROR, "Bad WAD header, too many entries (%zu)", dir_count);
   }
 
   if (fseeko(fp, static_cast<off_t>(dir_start), SEEK_SET) != 0)
   {
-    FatalError("Error seeking to WAD directory.\n");
+    PrintLine(LOG_ERROR, "Error seeking to WAD directory.");
   }
 
   for (size_t i = 0; i < dir_count; i++)
@@ -382,7 +382,7 @@ void Wad_file::ReadDirectory(void)
 
     if (fread(&entry, sizeof(entry), 1, fp) != 1)
     {
-      FatalError("Error reading WAD directory.\n");
+      PrintLine(LOG_ERROR, "Error reading WAD directory.");
     }
 
     Lump_c *lump = MakeLumpFromEntry(this, &entry);
@@ -417,7 +417,7 @@ void Wad_file::DetectLevels(void)
       levels.push_back(k);
       if constexpr (DEBUG_WAD)
       {
-        Debug("Detected level : %s (UDMF)\n", directory[k]->Name());
+        PrintLine(LOG_DEBUG, "Detected level : %s (UDMF)", directory[k]->Name());
       }
 
       continue;
@@ -454,7 +454,7 @@ void Wad_file::DetectLevels(void)
 
       if constexpr (DEBUG_WAD)
       {
-        Debug("Detected level : %s\n", directory[k]->Name());
+        PrintLine(LOG_DEBUG, "Detected level : %s", directory[k]->Name());
       }
     }
   }
@@ -532,7 +532,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if constexpr (DEBUG_WAD)
         {
-          Debug("missing %c_END marker.\n", active);
+          PrintLine(LOG_DEBUG, "missing %c_END marker.", active);
         }
       }
 
@@ -545,7 +545,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if constexpr (DEBUG_WAD)
         {
-          Debug("stray P_END marker found.\n");
+          PrintLine(LOG_DEBUG, "stray P_END marker found.");
         }
       }
 
@@ -559,7 +559,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if constexpr (DEBUG_WAD)
         {
-          Debug("missing %c_END marker.\n", active);
+          PrintLine(LOG_DEBUG, "missing %c_END marker.", active);
         }
       }
 
@@ -572,7 +572,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if constexpr (DEBUG_WAD)
         {
-          Debug("stray S_END marker found.\n");
+          PrintLine(LOG_DEBUG, "stray S_END marker found.");
         }
       }
 
@@ -586,7 +586,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if constexpr (DEBUG_WAD)
         {
-          Debug("missing %c_END marker.\n", active);
+          PrintLine(LOG_DEBUG, "missing %c_END marker.", active);
         }
       }
 
@@ -599,7 +599,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if constexpr (DEBUG_WAD)
         {
-          Debug("stray F_END marker found.\n");
+          PrintLine(LOG_DEBUG, "stray F_END marker found.");
         }
       }
 
@@ -613,7 +613,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if constexpr (DEBUG_WAD)
         {
-          Debug("missing %c_END marker.\n", active);
+          PrintLine(LOG_DEBUG, "missing %c_END marker.", active);
         }
       }
 
@@ -626,7 +626,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if constexpr (DEBUG_WAD)
         {
-          Debug("stray TX_END marker found.\n");
+          PrintLine(LOG_DEBUG, "stray TX_END marker found.");
         }
       }
 
@@ -640,14 +640,14 @@ void Wad_file::ProcessNamespaces(void)
       {
         if constexpr (DEBUG_WAD)
         {
-          Debug("skipping empty lump %s in %c_START\n", name, active);
+          PrintLine(LOG_DEBUG, "skipping empty lump %s in %c_START", name, active);
         }
         continue;
       }
 
       if constexpr (DEBUG_WAD)
       {
-        Debug("Namespace %c lump : %s\n", active, name);
+        PrintLine(LOG_DEBUG, "Namespace %c lump : %s", active, name);
       }
 
       switch (active)
@@ -666,7 +666,7 @@ void Wad_file::ProcessNamespaces(void)
           break;
 
         default:
-          FatalError("ProcessNamespaces: active = 0x%02x\n", active);
+          PrintLine(LOG_ERROR, "ProcessNamespaces: active = 0x%02x", active);
       }
     }
   }
@@ -675,7 +675,7 @@ void Wad_file::ProcessNamespaces(void)
   {
     if (active)
     {
-      Debug("Missing %c_END marker (at EOF)\n", active);
+      PrintLine(LOG_DEBUG, "Missing %c_END marker (at EOF)", active);
     }
   }
 }
@@ -688,12 +688,12 @@ void Wad_file::BeginWrite(void)
 {
   if (mode == 'r')
   {
-    FatalError("Wad_file::BeginWrite() called on read-only file\n");
+    PrintLine(LOG_ERROR, "Wad_file::BeginWrite() called on read-only file");
   }
 
   if (begun_write)
   {
-    FatalError("Wad_file::BeginWrite() called again without EndWrite()\n");
+    PrintLine(LOG_ERROR, "Wad_file::BeginWrite() called again without EndWrite()");
   }
 
   // put the size into a quantum state
@@ -705,7 +705,7 @@ void Wad_file::EndWrite(void)
 {
   if (!begun_write)
   {
-    FatalError("Wad_file::EndWrite() called without BeginWrite()\n");
+    PrintLine(LOG_ERROR, "Wad_file::EndWrite() called without BeginWrite()");
   }
 
   begun_write = false;
@@ -944,14 +944,14 @@ size_t Wad_file::PositionForWrite(size_t max_size)
 
   if (fseeko(fp, 0, SEEK_END) < 0)
   {
-    FatalError("Error seeking to new write position.\n");
+    PrintLine(LOG_ERROR, "Error seeking to new write position.");
   }
 
   total_size = ftello(fp);
 
   if (total_size < 0)
   {
-    FatalError("Error seeking to new write position.\n");
+    PrintLine(LOG_ERROR, "Error seeking to new write position.");
   }
 
   if (want_pos > total_size)
@@ -968,13 +968,13 @@ size_t Wad_file::PositionForWrite(size_t max_size)
   {
     if (fseeko(fp, want_pos, SEEK_SET) < 0)
     {
-      FatalError("Error seeking to new write position.\n");
+      PrintLine(LOG_ERROR, "Error seeking to new write position.");
     }
   }
 
   if constexpr (DEBUG_WAD)
   {
-    Debug("POSITION FOR WRITE: %zu  (total_size %zu)\n", want_pos, total_size);
+    PrintLine(LOG_DEBUG, "POSITION FOR WRITE: %zu  (total_size %zu)", want_pos, total_size);
   }
 
   return static_cast<size_t>(want_pos);
@@ -987,7 +987,7 @@ bool Wad_file::FinishLump(size_t final_size)
   // sanity check
   if (final_size > begun_max_size)
   {
-    FatalError("Internal Error: wrote too much in lump (%zu > %zu)\n", final_size, begun_max_size);
+    PrintLine(LOG_ERROR, "Internal Error: wrote too much in lump (%zu > %zu)", final_size, begun_max_size);
   }
 
   off_t pos = ftello(fp);
@@ -1032,8 +1032,8 @@ void Wad_file::WriteDirectory(void)
 
   if constexpr (DEBUG_WAD)
   {
-    Debug("WriteDirectory...\n");
-    Debug("dir_start:%zu  dir_count:%zu\n", dir_start, dir_count);
+    PrintLine(LOG_DEBUG, "WriteDirectory...");
+    PrintLine(LOG_DEBUG, "dir_start:%zu  dir_count:%zu", dir_start, dir_count);
   }
 
   for (size_t k = 0; k < dir_count; k++)
@@ -1047,7 +1047,7 @@ void Wad_file::WriteDirectory(void)
 
     if (fwrite(&entry, sizeof(entry), 1, fp) != 1)
     {
-      FatalError("Error writing WAD directory.\n");
+      PrintLine(LOG_ERROR, "Error writing WAD directory.");
     }
   }
 
@@ -1057,12 +1057,12 @@ void Wad_file::WriteDirectory(void)
 
   if constexpr (DEBUG_WAD)
   {
-    Debug("total_size: %zu\n", total_size);
+    PrintLine(LOG_DEBUG, "total_size: %zu", total_size);
   }
 
   if (total_size < 0)
   {
-    FatalError("Error determining WAD size.\n");
+    PrintLine(LOG_ERROR, "Error determining WAD size.");
   }
 
   // update header at start of file
@@ -1078,7 +1078,7 @@ void Wad_file::WriteDirectory(void)
 
   if (fwrite(&header, sizeof(header), 1, fp) != 1)
   {
-    FatalError("Error writing WAD header.\n");
+    PrintLine(LOG_ERROR, "Error writing WAD header.");
   }
 
   fflush(fp);

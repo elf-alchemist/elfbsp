@@ -24,13 +24,13 @@
 
 #pragma once
 
-static constexpr const char* PROJECT_COMPANY = "Guilherme Miranda, et al";
-static constexpr const char* PROJECT_COPYRIGHT = "Copyright (C) 1994-2026";
-static constexpr const char* PROJECT_LICENSE = "GNU General Public License, version 2";
+static constexpr const char *PROJECT_COMPANY = "Guilherme Miranda, et al";
+static constexpr const char *PROJECT_COPYRIGHT = "Copyright (C) 1994-2026";
+static constexpr const char *PROJECT_LICENSE = "GNU General Public License, version 2";
 
-static constexpr const char* PROJECT_NAME = "ELFBSP";
-static constexpr const char* PROJECT_VERSION = "v1.1";
-static constexpr const char* PROJECT_STRING = "ELFBSP v1.1";
+static constexpr const char *PROJECT_NAME = "ELFBSP";
+static constexpr const char *PROJECT_VERSION = "v1.1";
+static constexpr const char *PROJECT_STRING = "ELFBSP v1.1";
 
 /*
  *  Standard headers
@@ -200,7 +200,6 @@ static constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
 static constexpr size_t WAD_LUMP_NAME = 8;
 
 static constexpr size_t MSG_BUFFER_LENGTH = 1024;
-static constexpr size_t SYS_MSG_BUFFER_LENGTH = 4096;
 
 // bitflags
 static inline constexpr uint32_t BIT(uint32_t x)
@@ -249,6 +248,14 @@ static inline constexpr short_angle_t DegreesToShortBAM(uint16_t x)
 // STRING STUFF
 //------------------------------------------------------------------------
 
+using log_level_t = enum
+{
+  LOG_NORMAL,
+  LOG_ERROR,
+  LOG_WARN,
+  LOG_DEBUG,
+};
+
 // Safe, portable vsnprintf().
 static inline int32_t PRINTF_ATTR(3, 0) M_vsnprintf(char *buf, size_t buf_len, const char *s, va_list args)
 {
@@ -284,24 +291,12 @@ static inline int32_t PRINTF_ATTR(3, 4) M_snprintf(char *buf, size_t buf_len, co
   return result;
 }
 
-static inline void PRINTF_ATTR(1, 2) Debug(const char *fmt, ...)
-{
-  char buffer[MSG_BUFFER_LENGTH];
-
-  va_list args;
-
-  va_start(args, fmt);
-  M_vsnprintf(buffer, sizeof(buffer), fmt, args);
-  va_end(args);
-
-  fprintf(stderr, "%s", buffer);
-}
-
 //
 //  show a message
 //
-static inline void PRINTF_ATTR(1, 2) PrintLine(const char *fmt, ...)
+static inline void PRINTF_ATTR(2, 3) PrintLine(log_level_t level, const char *fmt, ...)
 {
+  FILE *const stream = (level == LOG_NORMAL) ? stdout : stderr;
   char buffer[MSG_BUFFER_LENGTH];
 
   va_list arg_ptr;
@@ -310,37 +305,15 @@ static inline void PRINTF_ATTR(1, 2) PrintLine(const char *fmt, ...)
   M_vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
   va_end(arg_ptr);
 
-  buffer[MSG_BUFFER_LENGTH - 1] = 0;
+  buffer[MSG_BUFFER_LENGTH - 1] = '\0';
 
-  printf("%s\n", buffer);
-  fflush(stdout);
-}
+  fprintf(stream, "%s\n", buffer);
+  fflush(stream);
 
-//
-//  show an error message and terminate the program
-//
-static inline void PRINTF_ATTR(1, 2) FatalError(const char *fmt, ...)
-{
-  char buffer[MSG_BUFFER_LENGTH];
-
-  va_list arg_ptr;
-
-  va_start(arg_ptr, fmt);
-  M_vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
-  va_end(arg_ptr);
-
-  buffer[MSG_BUFFER_LENGTH - 1] = 0;
-
-  fprintf(stderr, "FATAL ERROR: %s\n", buffer);
-  exit(3);
-}
-
-//
-//  just skip this line
-//
-static inline void NewLine(void)
-{
-  
+  if (level == LOG_ERROR)
+  {
+    exit(3);
+  }
 }
 
 //
@@ -348,7 +321,7 @@ static inline void NewLine(void)
 //
 static inline constexpr void SYS_ASSERT(bool cond)
 {
-  return (cond) ? (void)0 : FatalError("Assertion failed! In function %s (%s:%d)", __func__, __FILE__, __LINE__);
+  return (cond) ? (void)0 : PrintLine(LOG_ERROR, "Assertion failed! In function %s (%s:%d)", __func__, __FILE__, __LINE__);
 }
 
 //------------------------------------------------------------------------
@@ -364,7 +337,7 @@ template <typename T> static inline constexpr T *UtilCalloc(size_t size)
 
   if (!ret)
   {
-    FatalError("Out of memory (cannot allocate %zu bytes)", size);
+    PrintLine(LOG_ERROR, "Out of memory (cannot allocate %zu bytes)", size);
   }
 
   return ret;
@@ -379,7 +352,7 @@ template <typename T> static inline constexpr T *UtilRealloc(T *old, size_t size
 
   if (!ret)
   {
-    FatalError("Out of memory (cannot reallocate %zu bytes)", size);
+    PrintLine(LOG_ERROR, "Out of memory (cannot reallocate %zu bytes)", size);
   }
 
   return ret;
@@ -392,7 +365,7 @@ template <typename T> static inline constexpr void UtilFree(T *data)
 {
   if (data == nullptr)
   {
-    FatalError("Trying to free a nullptr");
+    PrintLine(LOG_ERROR, "Trying to free a nullptr");
   }
 
   free(data);

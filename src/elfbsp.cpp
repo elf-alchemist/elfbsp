@@ -102,7 +102,7 @@ static void BuildFile(void)
 
   if (num_levels == 0)
   {
-    PrintLine("  No levels in wad");
+    PrintLine(LOG_NORMAL, "  No levels in wad");
     total_empty_files += 1;
     return;
   }
@@ -121,11 +121,6 @@ static void BuildFile(void)
     }
 
     visited += 1;
-
-    if (n > 0)
-    {
-      config.Print_Verbose("");
-    }
 
     res = BuildLevel(n);
 
@@ -147,28 +142,26 @@ static void BuildFile(void)
 
   if (visited == 0)
   {
-    PrintLine("  No matching levels");
+    PrintLine(LOG_NORMAL, "  No matching levels");
     total_empty_files += 1;
     return;
   }
-
-  NewLine();
 
   total_failed_maps += failures;
 
   if (failures > 0)
   {
-    PrintLine("  Failed maps: %zu (out of %zu)", failures, visited);
+    PrintLine(LOG_NORMAL, "  Failed maps: %zu (out of %zu)", failures, visited);
 
     // allow building other files
     total_failed_files += 1;
   }
 
-  PrintLine("  Serious warnings: %zu", config.total_warnings);
+  PrintLine(LOG_NORMAL, "  Serious warnings: %zu", config.total_warnings);
 
   if (config.verbose)
   {
-    PrintLine("  Minor issues: %zu", config.total_minor_issues);
+    PrintLine(LOG_NORMAL, "  Minor issues: %zu", config.total_minor_issues);
   }
 }
 
@@ -179,7 +172,7 @@ void ValidateInputFilename(const char *filename)
   // files with ".bak" extension cannot be backed up, so refuse them
   if (MatchExtension(filename, "bak"))
   {
-    FatalError("cannot process a backup file: %s", filename);
+    PrintLine(LOG_ERROR, "cannot process a backup file: %s", filename);
   }
 
   // we do not support packages
@@ -187,17 +180,13 @@ void ValidateInputFilename(const char *filename)
       || MatchExtension(filename, "pk4") || MatchExtension(filename, "pk7") || MatchExtension(filename, "epk")
       || MatchExtension(filename, "pack") || MatchExtension(filename, "zip") || MatchExtension(filename, "rar"))
   {
-    FatalError("package files (like PK3) are not supported: %s", filename);
+    PrintLine(LOG_ERROR, "package files (like PK3) are not supported: %s", filename);
   }
 
   // reject some very common formats
-  if (MatchExtension(filename, "exe") || MatchExtension(filename, "dll") || MatchExtension(filename, "com")
-      || MatchExtension(filename, "bat") || MatchExtension(filename, "txt") || MatchExtension(filename, "doc")
-      || MatchExtension(filename, "deh") || MatchExtension(filename, "bex") || MatchExtension(filename, "lmp")
-      || MatchExtension(filename, "cfg") || MatchExtension(filename, "gif") || MatchExtension(filename, "png")
-      || MatchExtension(filename, "jpg") || MatchExtension(filename, "jpeg"))
+  if (!MatchExtension(filename, "wad")
   {
-    FatalError("not a wad file: %s", filename);
+    PrintLine(LOG_ERROR, "not a wad file: %s", filename);
   }
 }
 
@@ -217,10 +206,10 @@ void BackupFile(const char *filename)
 
   if (!FileCopy(filename, dest_name.c_str()))
   {
-    FatalError("failed to create backup: %s", dest_name.c_str());
+    PrintLine(LOG_ERROR, "failed to create backup: %s", dest_name.c_str());
   }
 
-  PrintLine("Created backup: %s", dest_name.c_str());
+  PrintLine(LOG_NORMAL, "Created backup: %s", dest_name.c_str());
 }
 
 void VisitFile(unsigned int idx, const char *filename)
@@ -230,11 +219,10 @@ void VisitFile(unsigned int idx, const char *filename)
   {
     if (!FileCopy(filename, opt_output.c_str()))
     {
-      FatalError("failed to create output file: %s", opt_output.c_str());
+      PrintLine(LOG_ERROR, "failed to create output file: %s", opt_output.c_str());
     }
 
-    NewLine();
-    PrintLine("Copied input file: %s", filename);
+    PrintLine(LOG_NORMAL, "Copied input file: %s", filename);
 
     filename = opt_output.c_str();
   }
@@ -244,8 +232,7 @@ void VisitFile(unsigned int idx, const char *filename)
     BackupFile(filename);
   }
 
-  PrintLine("");
-  PrintLine("Building %s", filename);
+  PrintLine(LOG_NORMAL, "Building %s", filename);
 
   // this will fatal error if it fails
   OpenWad(filename);
@@ -303,32 +290,32 @@ void ParseMapRange(char *tok)
 
   if (!ValidateMapName(low))
   {
-    FatalError("illegal map name: '%s'\n", low);
+    PrintLine(LOG_ERROR, "illegal map name: '%s'", low);
   }
 
   if (!ValidateMapName(high))
   {
-    FatalError("illegal map name: '%s'\n", high);
+    PrintLine(LOG_ERROR, "illegal map name: '%s'", high);
   }
 
   if (strlen(low) < strlen(high))
   {
-    FatalError("bad map range (%s shorter than %s)\n", low, high);
+    PrintLine(LOG_ERROR, "bad map range (%s shorter than %s)", low, high);
   }
 
   if (strlen(low) > strlen(high))
   {
-    FatalError("bad map range (%s longer than %s)\n", low, high);
+    PrintLine(LOG_ERROR, "bad map range (%s longer than %s)", low, high);
   }
 
   if (low[0] != high[0])
   {
-    FatalError("bad map range (%s and %s start with different letters)\n", low, high);
+    PrintLine(LOG_ERROR, "bad map range (%s and %s start with different letters)", low, high);
   }
 
   if (strcmp(low, high) > 0)
   {
-    FatalError("bad map range (wrong order, %s > %s)\n", low, high);
+    PrintLine(LOG_ERROR, "bad map range (wrong order, %s > %s)", low, high);
   }
 
   // Ok
@@ -347,7 +334,7 @@ void ParseMapList(const char *arg)
   {
     if (*arg == ',')
     {
-      FatalError("bad map list (empty element)\n");
+      PrintLine(LOG_ERROR, "bad map list (empty element)");
     }
 
     // copy characters up to next comma / end
@@ -358,7 +345,7 @@ void ParseMapList(const char *arg)
     {
       if (len > sizeof(buffer) - 4)
       {
-        FatalError("bad map list (very long element)\n");
+        PrintLine(LOG_ERROR, "bad map list (very long element)");
       }
 
       buffer[len++] = *arg++;
@@ -410,13 +397,13 @@ void ParseShortArgument(const char *arg)
       case 'm':
       case 'o':
       case 't':
-        FatalError("cannot use option '-%c' like that\n", c);
+        PrintLine(LOG_ERROR, "cannot use option '-%c' like that", c);
         return;
 
       case 'c':
         if (*arg == 0 || !isdigit(*arg))
         {
-          FatalError("missing value for '-c' option\n");
+          PrintLine(LOG_ERROR, "missing value for '-c' option");
         }
 
         // we only accept one or two digits here
@@ -431,7 +418,7 @@ void ParseShortArgument(const char *arg)
 
         if (val < SPLIT_COST_MIN || val > SPLIT_COST_MAX)
         {
-          FatalError("illegal value for '-c' option\n");
+          PrintLine(LOG_ERROR, "illegal value for '-c' option");
         }
 
         config.split_cost = static_cast<size_t>(val);
@@ -440,11 +427,11 @@ void ParseShortArgument(const char *arg)
       default:
         if (isprint(c) && !isspace(c))
         {
-          FatalError("unknown short option: '-%c'\n", c);
+          PrintLine(LOG_ERROR, "unknown short option: '-%c'", c);
         }
         else
         {
-          FatalError("illegal short option (ascii code %d)\n", static_cast<unsigned char>(c));
+          PrintLine(LOG_ERROR, "illegal short option (ascii code %d)", static_cast<unsigned char>(c));
         }
         return;
     }
@@ -479,7 +466,7 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
   {
     if (argc < 1 || argv[0][0] == '-')
     {
-      FatalError("missing value for '--map' option\n");
+      PrintLine(LOG_ERROR, "missing value for '--map' option");
     }
 
     ParseMapList(argv[0]);
@@ -498,14 +485,14 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
   {
     if (argc < 1 || !isdigit(argv[0][0]))
     {
-      FatalError("missing value for '--cost' option\n");
+      PrintLine(LOG_ERROR, "missing value for '--cost' option");
     }
 
     int32_t val = std::stoi(argv[0]);
 
     if (val < SPLIT_COST_MIN || val > SPLIT_COST_MAX)
     {
-      FatalError("illegal value for '--cost' option\n");
+      PrintLine(LOG_ERROR, "illegal value for '--cost' option");
     }
 
     config.split_cost = static_cast<size_t>(val);
@@ -517,12 +504,12 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
 
     if (argc < 1 || argv[0][0] == '-')
     {
-      FatalError("missing value for '--output' option\n");
+      PrintLine(LOG_ERROR, "missing value for '--output' option");
     }
 
     if (opt_output.size() > 0)
     {
-      FatalError("cannot use '--output' option twice\n");
+      PrintLine(LOG_ERROR, "cannot use '--output' option twice");
     }
 
     opt_output = argv[0];
@@ -530,7 +517,7 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
   }
   else
   {
-    FatalError("unknown long option: '%s'\n", name);
+    PrintLine(LOG_ERROR, "unknown long option: '%s'", name);
   }
 
   return used;
@@ -572,7 +559,7 @@ void ParseCommandLine(int argc, char *argv[])
 
     if (strcmp(arg, "-") == 0)
     {
-      FatalError("illegal option '-'\n");
+      PrintLine(LOG_ERROR, "illegal option '-'");
     }
 
     if (strcmp(arg, "--") == 0)
@@ -617,13 +604,13 @@ int main(int argc, char *argv[])
 
   if (opt_version)
   {
-    PrintLine(PROJECT_STRING);
+    PrintLine(LOG_NORMAL, PROJECT_STRING);
     return 0;
   }
 
   if (opt_help || argc <= 1)
   {
-    PrintLine(PRINT_HELP);
+    PrintLine(LOG_NORMAL, PRINT_HELP);
     return 0;
   }
 
@@ -631,7 +618,7 @@ int main(int argc, char *argv[])
 
   if (total_files == 0)
   {
-    FatalError("no files to process\n");
+    PrintLine(LOG_ERROR, "no files to process");
     return 0;
   }
 
@@ -639,17 +626,17 @@ int main(int argc, char *argv[])
   {
     if (config.backup)
     {
-      FatalError("cannot use --backup with --output\n");
+      PrintLine(LOG_ERROR, "cannot use --backup with --output");
     }
 
     if (total_files > 1)
     {
-      FatalError("cannot use multiple input files with --output\n");
+      PrintLine(LOG_ERROR, "cannot use multiple input files with --output");
     }
 
     if (StringCaseCmp(wad_list[0], opt_output.c_str()) == 0)
     {
-      FatalError("input and output files are the same\n");
+      PrintLine(LOG_ERROR, "input and output files are the same");
     }
   }
 
@@ -662,7 +649,7 @@ int main(int argc, char *argv[])
 
     if (!FileExists(filename))
     {
-      FatalError("no such file: %s\n", filename);
+      PrintLine(LOG_ERROR, "no such file: %s", filename);
     }
   }
 
@@ -671,36 +658,37 @@ int main(int argc, char *argv[])
     VisitFile(i, wad_list[i]);
   }
 
-  PrintLine("\n");
+  PrintLine(LOG_NORMAL, "");
 
   if (total_failed_files > 0)
   {
-    PrintLine("FAILURES occurred on %zu map%s in %zu file%s.\n", total_failed_maps, total_failed_maps == 1 ? "" : "s",
-          total_failed_files, total_failed_files == 1 ? "" : "s");
+    PrintLine(LOG_NORMAL, "FAILURES occurred on %zu map%s in %zu file%s.", total_failed_maps, total_failed_maps == 1 ? "" : "s",
+              total_failed_files, total_failed_files == 1 ? "" : "s");
 
     if (!config.verbose)
     {
-      PrintLine("Rerun with --verbose to see more details.\n");
+      PrintLine(LOG_NORMAL, "Rerun with --verbose to see more details.");
     }
 
     return 2;
   }
   else if (total_built_maps == 0)
   {
-    PrintLine("NOTHING was built!\n");
+    PrintLine(LOG_NORMAL, "NOTHING was built!");
 
     return 1;
   }
   else if (total_empty_files == 0)
   {
-    PrintLine("Ok, built all files.\n");
+    PrintLine(LOG_NORMAL, "Ok, built all files.");
   }
   else
   {
     size_t built = total_files - total_empty_files;
     size_t empty = total_empty_files;
 
-    PrintLine("Ok, built %zu file%s, %zu file%s empty.\n", built, (built == 1 ? "" : "s"), empty, (empty == 1 ? " was" : "s were"));
+    PrintLine(LOG_NORMAL, "Ok, built %zu file%s, %zu file%s empty.", built, (built == 1 ? "" : "s"), empty,
+              (empty == 1 ? " was" : "s were"));
   }
 
   // that's all folks!

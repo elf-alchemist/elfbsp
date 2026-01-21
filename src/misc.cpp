@@ -43,7 +43,7 @@ void MarkPolyobjSector(sector_t *sector)
 
   if constexpr (DEBUG_POLYOBJ)
   {
-    Debug("  Marking SECTOR %zu\n", sector->index);
+    PrintLine(LOG_DEBUG, "  Marking SECTOR %zu", sector->index);
   }
 
   /* already marked ? */
@@ -93,7 +93,7 @@ void MarkPolyobjPoint(double x, double y)
     {
       if constexpr (DEBUG_POLYOBJ)
       {
-        Debug("  Touching line was %zu\n", L->index);
+        PrintLine(LOG_DEBUG, "  Touching line was %zu", L->index);
       }
 
       if (L->left != nullptr)
@@ -154,7 +154,7 @@ void MarkPolyobjPoint(double x, double y)
 
   if (best_match == nullptr)
   {
-    config.Warning("Bad polyobj thing at (%1.0f,%1.0f).\n", x, y);
+    config.Warning("Bad polyobj thing at (%1.0f,%1.0f).", x, y);
     return;
   }
 
@@ -163,7 +163,7 @@ void MarkPolyobjPoint(double x, double y)
 
   if constexpr (DEBUG_POLYOBJ)
   {
-    Debug("  Closest line was %zu Y=%1.0f..%1.0f (dist=%1.1f)\n", best_match->index, y1, y2, best_dist);
+    PrintLine(LOG_DEBUG, "  Closest line was %zu Y=%1.0f..%1.0f (dist=%1.1f)", best_match->index, y1, y2, best_dist);
   }
 
   /* sanity check: shouldn't be directly on the line */
@@ -171,7 +171,7 @@ void MarkPolyobjPoint(double x, double y)
   {
     if (fabs(best_dist) < DIST_EPSILON)
     {
-      Debug("  Polyobj FAILURE: directly on the line (%zu)\n", best_match->index);
+      PrintLine(LOG_DEBUG, "  Polyobj FAILURE: directly on the line (%zu)", best_match->index);
     }
   }
 
@@ -189,12 +189,12 @@ void MarkPolyobjPoint(double x, double y)
 
   if constexpr (DEBUG_POLYOBJ)
   {
-    Debug("  Sector %zu contains the polyobj.\n", sector ? sector->index : NO_INDEX);
+    PrintLine(LOG_DEBUG, "  Sector %zu contains the polyobj.", sector ? sector->index : NO_INDEX);
   }
 
   if (sector == nullptr)
   {
-    config.Warning("Invalid Polyobj thing at (%1.0f,%1.0f).\n", x, y);
+    config.Warning("Invalid Polyobj thing at (%1.0f,%1.0f).", x, y);
     return;
   }
 
@@ -263,7 +263,7 @@ void DetectPolyobjSectors(bool is_udmf)
 
   if constexpr (DEBUG_POLYOBJ)
   {
-    Debug("Using %s style polyobj things\n", hexen_style ? "HEXEN" : "ZDOOM");
+    PrintLine(LOG_DEBUG, "Using %s style polyobj things", hexen_style ? "HEXEN" : "ZDOOM");
   }
 
   for (size_t j = 0; j < lev_things.size(); j++)
@@ -293,7 +293,7 @@ void DetectPolyobjSectors(bool is_udmf)
 
     if constexpr (DEBUG_POLYOBJ)
     {
-      Debug("Thing %zu at (%1.0f,%1.0f) is a polyobj spawner.\n", i, x, y);
+      PrintLine(LOG_DEBUG, "Thing %zu at (%1.0f,%1.0f) is a polyobj spawner.", i, x, y);
     }
 
     MarkPolyobjPoint(x, y);
@@ -352,7 +352,7 @@ void DetectOverlappingVertices(void)
 
         if constexpr (DEBUG_OVERLAPS)
         {
-          PrintLine("Overlap: #%zu + #%zu\n", array[i]->index, array[i + 1]->index);
+          PrintLine(LOG_DEBUG, "Overlap: #%zu + #%zu", array[i]->index, array[i + 1]->index);
         }
       }
     }
@@ -401,7 +401,7 @@ void PruneVerticesAtEnd(void)
 
   if (unused > 0)
   {
-    config.Print_Verbose("    Pruned %zu unused vertices at end\n", unused);
+    config.Print_Verbose("    Pruned %zu unused vertices at end", unused);
   }
 
   num_old_vert = lev_vertices.size();
@@ -467,7 +467,7 @@ void DetectOverlappingLines(void)
 
   if (count > 0)
   {
-    config.Print_Verbose("    Detected %zu overlapped linedefs\n", count);
+    config.Print_Verbose("    Detected %zu overlapped linedefs", count);
   }
 }
 
@@ -550,11 +550,11 @@ void CalculateWallTips(void)
     {
       vertex_t *V = lev_vertices[k];
 
-      Debug("WallTips for vertex %zu:\n", k);
+      PrintLine(LOG_DEBUG, "WallTips for vertex %zu:", k);
 
       for (walltip_t *tip = V->tip_set; tip; tip = tip->next)
       {
-        Debug("  Angle=%1.1f left=%d right=%d\n", tip->angle, tip->open_left ? 1 : 0, tip->open_right ? 1 : 0);
+        PrintLine(LOG_DEBUG, "  Angle=%1.1f left=%d right=%d", tip->angle, tip->open_left ? 1 : 0, tip->open_right ? 1 : 0);
       }
     }
   }
@@ -618,7 +618,7 @@ vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end)
 
   if (dlen == 0)
   {
-    FatalError("NewVertexDegenerate: bad delta!\n");
+    PrintLine(LOG_ERROR, "NewVertexDegenerate: bad delta!");
   }
 
   dx /= dlen;

@@ -74,13 +74,13 @@ struct buildinfo_s
 
     buffer[MSG_BUFFER_LENGTH - 1] = 0;
 
-    printf("%s\n", buffer);
+    printf("%s", buffer);
     fflush(stdout);
   }
 
   inline void Failure(const char *fmt, ...)
   {
-    char message_buf[SYS_MSG_BUFFER_LENGTH];
+    char message_buf[MSG_BUFFER_LENGTH];
     va_list args;
 
     va_start(args, fmt);
@@ -92,7 +92,7 @@ struct buildinfo_s
 
   inline void Warning(const char *fmt, ...)
   {
-    char message_buf[SYS_MSG_BUFFER_LENGTH];
+    char message_buf[MSG_BUFFER_LENGTH];
     va_list args;
 
     va_start(args, fmt);
@@ -108,7 +108,7 @@ struct buildinfo_s
   {
     if (config.verbose)
     {
-      char message_buf[SYS_MSG_BUFFER_LENGTH];
+      char message_buf[MSG_BUFFER_LENGTH];
       va_list args;
 
       va_start(args, fmt);
