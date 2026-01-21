@@ -28,18 +28,17 @@
 #include <string>
 #include <vector>
 
-bool opt_help = false;
-bool opt_doc = false;
-bool opt_version = false;
+static bool opt_help = false;
+static bool opt_version = false;
 
-std::string opt_output;
+static std::string opt_output;
 
-std::vector<const char *> wad_list;
+static std::vector<const char *> wad_list;
 
-size_t total_failed_files = 0;
-size_t total_empty_files = 0;
-size_t total_built_maps = 0;
-size_t total_failed_maps = 0;
+static size_t total_failed_files = 0;
+static size_t total_empty_files = 0;
+static size_t total_built_maps = 0;
+static size_t total_failed_maps = 0;
 
 struct map_range_t
 {
@@ -259,13 +258,6 @@ void VisitFile(unsigned int idx, const char *filename)
 
 // ----- user information -----------------------------
 
-void ShowDoc(void)
-{
-  printf(PRINT_DOC);
-
-  fflush(stdout);
-}
-
 void ShowHelp(void)
 {
   printf(PRINT_HELP);
@@ -422,9 +414,6 @@ void ParseShortArgument(const char *arg)
       case 'h':
         opt_help = true;
         continue;
-      case 'd':
-        opt_doc = true;
-        continue;
       case 'b':
         config.backup = true;
         continue;
@@ -493,10 +482,6 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
   if (strcmp(name, "--help") == 0)
   {
     opt_help = true;
-  }
-  else if (strcmp(name, "--doc") == 0)
-  {
-    opt_doc = true;
   }
   else if (strcmp(name, "--version") == 0)
   {
@@ -664,13 +649,6 @@ int main(int argc, char *argv[])
   {
     ShowBanner();
     ShowHelp();
-    return 0;
-  }
-
-  if (opt_doc)
-  {
-    ShowBanner();
-    ShowDoc();
     return 0;
   }
 
