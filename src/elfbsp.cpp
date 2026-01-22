@@ -432,6 +432,66 @@ void ParseShortArgument(const char *arg)
   }
 }
 
+void ProcessDebugParam(const char *param, uint32_t &debug)
+{
+  if (strcmp(param, "--debug-blockmap") == 0)
+  {
+    debug |= DEBUG_BLOCKMAP;
+  }
+  else if (strcmp(param, "--debug-reject") == 0)
+  {
+    debug |= DEBUG_REJECT;
+  }
+  else if (strcmp(param, "--debug-load") == 0)
+  {
+    debug |= DEBUG_LOAD;
+  }
+  else if (strcmp(param, "--debug-bsp") == 0)
+  {
+    debug |= DEBUG_BSP;
+  }
+  else if (strcmp(param, "--debug-walltips") == 0)
+  {
+    debug |= DEBUG_WALLTIPS;
+  }
+  else if (strcmp(param, "--debug-polyobj") == 0)
+  {
+    debug |= DEBUG_POLYOBJ;
+  }
+  else if (strcmp(param, "--debug-overlaps") == 0)
+  {
+    debug |= DEBUG_OVERLAPS;
+  }
+  else if (strcmp(param, "--debug-picknode") == 0)
+  {
+    debug |= DEBUG_PICKNODE;
+  }
+  else if (strcmp(param, "--debug-split") == 0)
+  {
+    debug |= DEBUG_SPLIT;
+  }
+  else if (strcmp(param, "--debug-cutlist") == 0)
+  {
+    debug |= DEBUG_CUTLIST;
+  }
+  else if (strcmp(param, "--debug-builder") == 0)
+  {
+    debug |= DEBUG_BUILDER;
+  }
+  else if (strcmp(param, "--debug-sorter") == 0)
+  {
+    debug |= DEBUG_SORTER;
+  }
+  else if (strcmp(param, "--debug-subsec") == 0)
+  {
+    debug |= DEBUG_SUBSEC;
+  }
+  else if (strcmp(param, "--debug-wad") == 0)
+  {
+    debug |= DEBUG_WAD;
+  }
+}
+
 int ParseLongArgument(const char *name, int argc, char *argv[])
 {
   int used = 0;
@@ -508,6 +568,10 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
 
     opt_output = argv[0];
     used = 1;
+  }
+  else if (strncmp(name, "--debug-", 8) == 0)
+  {
+    ProcessDebugParam(name, config.debug);
   }
   else
   {

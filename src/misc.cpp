@@ -41,7 +41,7 @@ void MarkPolyobjSector(sector_t *sector)
     return;
   }
 
-  if constexpr (DEBUG_POLYOBJ)
+  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
     PrintLine(LOG_DEBUG, "Marking Polyobj SECTOR %zu", sector->index);
   }
@@ -91,7 +91,7 @@ void MarkPolyobjPoint(double x, double y)
     if (CheckLinedefInsideBox(bminx, bminy, bmaxx, bmaxy, static_cast<int32_t>(L->start->x), static_cast<int32_t>(L->start->y),
                               static_cast<int32_t>(L->end->x), static_cast<int32_t>(L->end->y)))
     {
-      if constexpr (DEBUG_POLYOBJ)
+      if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
       {
         PrintLine(LOG_DEBUG, "Touching line was %zu", L->index);
       }
@@ -162,13 +162,13 @@ void MarkPolyobjPoint(double x, double y)
   double y1 = best_match->start->y;
   double y2 = best_match->end->y;
 
-  if constexpr (DEBUG_POLYOBJ)
+  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
     PrintLine(LOG_DEBUG, "Closest line was %zu Y=%1.0f..%1.0f (dist=%1.1f)", best_match->index, y1, y2, best_dist);
   }
 
   /* sanity check: shouldn't be directly on the line */
-  if constexpr (DEBUG_POLYOBJ)
+  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
     if (fabs(best_dist) < DIST_EPSILON)
     {
@@ -188,7 +188,7 @@ void MarkPolyobjPoint(double x, double y)
     sector = best_match->left ? best_match->left->sector : nullptr;
   }
 
-  if constexpr (DEBUG_POLYOBJ)
+  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
     PrintLine(LOG_DEBUG, "Sector %zu contains the polyobj.", sector ? sector->index : NO_INDEX);
   }
@@ -263,7 +263,7 @@ void DetectPolyobjSectors(bool is_udmf)
     }
   }
 
-  if constexpr (DEBUG_POLYOBJ)
+  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
     PrintLine(LOG_DEBUG, "Using %s style polyobj things", hexen_style ? "HEXEN" : "ZDOOM");
   }
@@ -293,7 +293,7 @@ void DetectPolyobjSectors(bool is_udmf)
       }
     }
 
-    if constexpr (DEBUG_POLYOBJ)
+    if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
     {
       PrintLine(LOG_DEBUG, "Thing %zu at (%1.0f,%1.0f) is a polyobj spawner.", i, x, y);
     }
@@ -352,7 +352,7 @@ void DetectOverlappingVertices(void)
         // found an overlap !
         B->overlap = A->overlap ? A->overlap : A;
 
-        if constexpr (DEBUG_OVERLAPS)
+        if (HAS_BIT(config.debug, DEBUG_OVERLAPS))
         {
           PrintLine(LOG_DEBUG, "Overlap: #%zu + #%zu", array[i]->index, array[i + 1]->index);
         }
@@ -552,7 +552,7 @@ void CalculateWallTips(void)
     AddWallTip(L->end, x1 - x2, y1 - y2, right, left);
   }
 
-  if constexpr (DEBUG_WALLTIPS)
+  if (HAS_BIT(config.debug, DEBUG_WALLTIPS))
   {
     for (size_t k = 0; k < lev_vertices.size(); k++)
     {

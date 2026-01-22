@@ -55,6 +55,8 @@ struct buildinfo_s
 
   // from here on, various bits of internal state
   size_t total_warnings = 0;
+
+  uint32_t debug = DEBUG_NONE;
 };
 
 constexpr const char PRINT_HELP[] = "\n"

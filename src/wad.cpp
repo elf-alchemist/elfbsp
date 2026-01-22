@@ -20,6 +20,7 @@
 //------------------------------------------------------------------------------
 
 #include "wad.hpp"
+#include "elfbsp.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -52,7 +53,7 @@ Lump_c *MakeLumpFromEntry(Wad_file *wad, const raw_wad_entry_t *entry)
   new_lump->l_start = GetLittleEndian(entry->pos);
   new_lump->l_length = GetLittleEndian(entry->size);
 
-  if constexpr (DEBUG_WAD)
+  if (HAS_BIT(config.debug, DEBUG_WAD))
   {
     PrintLine(LOG_DEBUG, "new lump '%s' @ %zu len:%zu", new_lump->Name(), new_lump->l_start, new_lump->l_length);
   }
@@ -102,7 +103,7 @@ Wad_file *Wad_file::Open(const char *filename, char mode)
     return Create(filename, mode);
   }
 
-  if constexpr (DEBUG_WAD)
+  if (HAS_BIT(config.debug, DEBUG_WAD))
   {
     PrintLine(LOG_DEBUG, "Opening WAD file: %s", filename);
   }
@@ -123,7 +124,7 @@ retry:
     // if file is read-only, open in 'r' mode instead
     if (mode == 'a' && (errno == EACCES || errno == EROFS))
     {
-      if constexpr (DEBUG_WAD)
+      if (HAS_BIT(config.debug, DEBUG_WAD))
       {
         PrintLine(LOG_DEBUG, "Open r/w failed, trying again in read mode...");
       }
@@ -131,7 +132,7 @@ retry:
       goto retry;
     }
 
-    if constexpr (DEBUG_WAD)
+    if (HAS_BIT(config.debug, DEBUG_WAD))
     {
       PrintLine(LOG_DEBUG, "Open file failed: %s", strerror(errno));
     }
@@ -148,7 +149,7 @@ retry:
 
   w->total_size = ftello(fp);
 
-  if constexpr (DEBUG_WAD)
+  if (HAS_BIT(config.debug, DEBUG_WAD))
   {
     PrintLine(LOG_DEBUG, "total_size = %zu", w->total_size);
   }
@@ -167,7 +168,7 @@ retry:
 
 Wad_file *Wad_file::Create(const char *filename, char mode)
 {
-  if constexpr (DEBUG_WAD)
+  if (HAS_BIT(config.debug, DEBUG_WAD))
   {
     PrintLine(LOG_DEBUG, "Creating new WAD file: %s", filename);
   }
@@ -415,7 +416,7 @@ void Wad_file::DetectLevels(void)
     if (directory[k + 1]->Match("TEXTMAP"))
     {
       levels.push_back(k);
-      if constexpr (DEBUG_WAD)
+      if (HAS_BIT(config.debug, DEBUG_WAD))
       {
         PrintLine(LOG_DEBUG, "Detected level : %s (UDMF)", directory[k]->Name());
       }
@@ -452,7 +453,7 @@ void Wad_file::DetectLevels(void)
     {
       levels.push_back(k);
 
-      if constexpr (DEBUG_WAD)
+      if (HAS_BIT(config.debug, DEBUG_WAD))
       {
         PrintLine(LOG_DEBUG, "Detected level : %s", directory[k]->Name());
       }
@@ -530,7 +531,7 @@ void Wad_file::ProcessNamespaces(void)
     {
       if (active && active != 'P')
       {
-        if constexpr (DEBUG_WAD)
+        if (HAS_BIT(config.debug, DEBUG_WAD))
         {
           PrintLine(LOG_DEBUG, "missing %c_END marker.", active);
         }
@@ -543,7 +544,7 @@ void Wad_file::ProcessNamespaces(void)
     {
       if (active != 'P')
       {
-        if constexpr (DEBUG_WAD)
+        if (HAS_BIT(config.debug, DEBUG_WAD))
         {
           PrintLine(LOG_DEBUG, "stray P_END marker found.");
         }
@@ -557,7 +558,7 @@ void Wad_file::ProcessNamespaces(void)
     {
       if (active && active != 'S')
       {
-        if constexpr (DEBUG_WAD)
+        if (HAS_BIT(config.debug, DEBUG_WAD))
         {
           PrintLine(LOG_DEBUG, "missing %c_END marker.", active);
         }
@@ -570,7 +571,7 @@ void Wad_file::ProcessNamespaces(void)
     {
       if (active != 'S')
       {
-        if constexpr (DEBUG_WAD)
+        if (HAS_BIT(config.debug, DEBUG_WAD))
         {
           PrintLine(LOG_DEBUG, "stray S_END marker found.");
         }
@@ -584,7 +585,7 @@ void Wad_file::ProcessNamespaces(void)
     {
       if (active && active != 'F')
       {
-        if constexpr (DEBUG_WAD)
+        if (HAS_BIT(config.debug, DEBUG_WAD))
         {
           PrintLine(LOG_DEBUG, "missing %c_END marker.", active);
         }
@@ -597,7 +598,7 @@ void Wad_file::ProcessNamespaces(void)
     {
       if (active != 'F')
       {
-        if constexpr (DEBUG_WAD)
+        if (HAS_BIT(config.debug, DEBUG_WAD))
         {
           PrintLine(LOG_DEBUG, "stray F_END marker found.");
         }
@@ -611,7 +612,7 @@ void Wad_file::ProcessNamespaces(void)
     {
       if (active && active != 'T')
       {
-        if constexpr (DEBUG_WAD)
+        if (HAS_BIT(config.debug, DEBUG_WAD))
         {
           PrintLine(LOG_DEBUG, "missing %c_END marker.", active);
         }
@@ -624,7 +625,7 @@ void Wad_file::ProcessNamespaces(void)
     {
       if (active != 'T')
       {
-        if constexpr (DEBUG_WAD)
+        if (HAS_BIT(config.debug, DEBUG_WAD))
         {
           PrintLine(LOG_DEBUG, "stray TX_END marker found.");
         }
@@ -638,14 +639,14 @@ void Wad_file::ProcessNamespaces(void)
     {
       if (directory[k]->Length() == 0)
       {
-        if constexpr (DEBUG_WAD)
+        if (HAS_BIT(config.debug, DEBUG_WAD))
         {
           PrintLine(LOG_DEBUG, "skipping empty lump %s in %c_START", name, active);
         }
         continue;
       }
 
-      if constexpr (DEBUG_WAD)
+      if (HAS_BIT(config.debug, DEBUG_WAD))
       {
         PrintLine(LOG_DEBUG, "Namespace %c lump : %s", active, name);
       }
@@ -671,7 +672,7 @@ void Wad_file::ProcessNamespaces(void)
     }
   }
 
-  if constexpr (DEBUG_WAD)
+  if (HAS_BIT(config.debug, DEBUG_WAD))
   {
     if (active)
     {
@@ -972,7 +973,7 @@ size_t Wad_file::PositionForWrite(size_t max_size)
     }
   }
 
-  if constexpr (DEBUG_WAD)
+  if (HAS_BIT(config.debug, DEBUG_WAD))
   {
     PrintLine(LOG_DEBUG, "POSITION FOR WRITE: %zu  (total_size %zu)", want_pos, total_size);
   }
@@ -1030,7 +1031,7 @@ void Wad_file::WriteDirectory(void)
   dir_start = PositionForWrite();
   dir_count = NumLumps();
 
-  if constexpr (DEBUG_WAD)
+  if (HAS_BIT(config.debug, DEBUG_WAD))
   {
     PrintLine(LOG_DEBUG, "WriteDirectory...");
     PrintLine(LOG_DEBUG, "dir_start:%zu  dir_count:%zu", dir_start, dir_count);
@@ -1055,7 +1056,7 @@ void Wad_file::WriteDirectory(void)
 
   total_size = ftello(fp);
 
-  if constexpr (DEBUG_WAD)
+  if (HAS_BIT(config.debug, DEBUG_WAD))
   {
     PrintLine(LOG_DEBUG, "total_size: %zu", total_size);
   }

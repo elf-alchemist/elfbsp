@@ -80,21 +80,6 @@ static constexpr bool LINUX = true;
 static constexpr char PATH_SEP_CH = (WINDOWS) ? ';' : ':';
 static constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
 
-static constexpr bool DEBUG_BLOCKMAP = false;
-static constexpr bool DEBUG_REJECT = false;
-static constexpr bool DEBUG_LOAD = false;
-static constexpr bool DEBUG_BSP = false;
-static constexpr bool DEBUG_WALLTIPS = false;
-static constexpr bool DEBUG_POLYOBJ = false;
-static constexpr bool DEBUG_OVERLAPS = false;
-static constexpr bool DEBUG_PICKNODE = false;
-static constexpr bool DEBUG_SPLIT = false;
-static constexpr bool DEBUG_CUTLIST = false;
-static constexpr bool DEBUG_BUILDER = false;
-static constexpr bool DEBUG_SORTER = false;
-static constexpr bool DEBUG_SUBSEC = false;
-static constexpr bool DEBUG_WAD = false;
-
 //
 // The packed attribute forces structures to be packed into the minimum
 // space necessary.  If this is not done, the compiler may align structure
@@ -254,6 +239,25 @@ using log_level_t = enum
   LOG_ERROR,
   LOG_WARN,
   LOG_DEBUG,
+};
+
+using debug_t = enum : uint32_t
+{
+  DEBUG_NONE = 0,
+  DEBUG_BLOCKMAP = BIT(0),
+  DEBUG_REJECT = BIT(1),
+  DEBUG_LOAD = BIT(2),
+  DEBUG_BSP = BIT(3),
+  DEBUG_WALLTIPS = BIT(4),
+  DEBUG_POLYOBJ = BIT(5),
+  DEBUG_OVERLAPS = BIT(6),
+  DEBUG_PICKNODE = BIT(7),
+  DEBUG_SPLIT = BIT(8),
+  DEBUG_CUTLIST = BIT(9),
+  DEBUG_BUILDER = BIT(10),
+  DEBUG_SORTER = BIT(11),
+  DEBUG_SUBSEC = BIT(12),
+  DEBUG_WAD = BIT(13),
 };
 
 // Safe, portable vsnprintf().
