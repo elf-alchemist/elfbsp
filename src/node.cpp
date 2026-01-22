@@ -22,6 +22,7 @@
 //------------------------------------------------------------------------------
 
 #include "core.hpp"
+#include "elfbsp.hpp"
 #include "local.hpp"
 
 //
@@ -119,7 +120,7 @@ void Recompute(seg_t *seg)
 
   if (seg->p_length <= 0)
   {
-    FatalError("Seg %p has zero p_length.\n", seg);
+    PrintLine(LOG_ERROR, "Seg %p has zero p_length.", seg);
   }
 
   seg->p_perp = seg->psy * seg->pdx - seg->psx * seg->pdy;
@@ -140,16 +141,15 @@ void Recompute(seg_t *seg)
 //
 seg_t *SplitSeg(seg_t *old_seg, double x, double y)
 {
-  if constexpr (DEBUG_SPLIT)
+  if (HAS_BIT(config.debug, DEBUG_SPLIT))
   {
-
     if (old_seg->linedef)
     {
-      Debug("Splitting Linedef %zu (%p) at (%1.1f,%1.1f)\n", old_seg->linedef->index, old_seg, x, y);
+      PrintLine(LOG_DEBUG, "[%s] Splitting Linedef %zu (%p) at (%1.1f,%1.1f)", __func__, old_seg->linedef->index, old_seg, x, y);
     }
     else
     {
-      Debug("Splitting Miniseg %p at (%1.1f,%1.1f)\n", old_seg, x, y);
+      PrintLine(LOG_DEBUG, "[%s] Splitting Miniseg %p at (%1.1f,%1.1f)", __func__, old_seg, x, y);
     }
   }
 
@@ -166,18 +166,18 @@ seg_t *SplitSeg(seg_t *old_seg, double x, double y)
   Recompute(old_seg);
   Recompute(new_seg);
 
-  if constexpr (DEBUG_SPLIT)
+  if (HAS_BIT(config.debug, DEBUG_SPLIT))
   {
-    Debug("Splitting Vertex is %zu at (%1.1f,%1.1f)\n", new_vert->index, new_vert->x, new_vert->y);
+    PrintLine(LOG_DEBUG, "[%s] Splitting Vertex is %zu at (%1.1f,%1.1f)", __func__, new_vert->index, new_vert->x, new_vert->y);
   }
 
   // handle partners
 
   if (old_seg->partner)
   {
-    if constexpr (DEBUG_SPLIT)
+    if (HAS_BIT(config.debug, DEBUG_SPLIT))
     {
-      Debug("Splitting Partner %p\n", old_seg->partner);
+      PrintLine(LOG_DEBUG, "[%s] Splitting Partner %p", __func__, old_seg->partner);
     }
 
     new_seg->partner = NewSeg();
@@ -540,9 +540,10 @@ double EvalPartition(quadtree_c *tree, seg_t *part, double best_cost)
   /* make sure there is at least one real seg on each side */
   if (info.real_left == 0 || info.real_right == 0)
   {
-    if constexpr (DEBUG_PICKNODE)
+    if (HAS_BIT(config.debug, DEBUG_PICKNODE))
     {
-      Debug("Eval : No real segs on %s%sside\n", info.real_left ? "" : "left ", info.real_right ? "" : "right ");
+      PrintLine(LOG_DEBUG, "[%s] No real segs on %s%sside", __func__, info.real_left ? "" : "left ",
+                info.real_right ? "" : "right ");
     }
 
     return -1;
@@ -563,10 +564,11 @@ double EvalPartition(quadtree_c *tree, seg_t *part, double best_cost)
     info.cost += 25.0;
   }
 
-  if constexpr (DEBUG_PICKNODE)
+  if (HAS_BIT(config.debug, DEBUG_PICKNODE))
   {
-    Debug("Eval %p: splits=%zu iffy=%zu near=%zu left=%zu+%zu right=%zu+%zu cost=%1.4f\n", part, info.splits, info.iffy,
-          info.near_miss, info.real_left, info.mini_left, info.real_right, info.mini_right, info.cost);
+    PrintLine(LOG_DEBUG, "[%s] %p splits=%zu iffy=%zu near=%zu left=%zu+%zu right=%zu+%zu cost=%1.4f", __func__, part,
+              info.splits, info.iffy, info.near_miss, info.real_left, info.mini_left, info.real_right, info.mini_right,
+              info.cost);
   }
 
   return info.cost;
@@ -653,9 +655,9 @@ seg_t *FindFastSeg(quadtree_c *tree)
     V_cost = EvalPartition(tree, best_V, 1.0e99);
   }
 
-  if constexpr (DEBUG_PICKNODE)
+  if (HAS_BIT(config.debug, DEBUG_PICKNODE))
   {
-    Debug("FindFastSeg: best_H=%p (cost %1.4f) | best_V=%p (cost %1.4f)\n", best_H, H_cost, best_V, V_cost);
+    PrintLine(LOG_DEBUG, "[%s] best_H=%p (cost %1.4f) | best_V=%p (cost %1.4f)", __func__, best_H, H_cost, best_V, V_cost);
   }
 
   if (H_cost < 0 && V_cost < 0)
@@ -681,10 +683,10 @@ bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, doubl
   /* try each Seg as partition */
   for (seg_t *part = part_list->list; part; part = part->next)
   {
-    if constexpr (DEBUG_PICKNODE)
+    if (HAS_BIT(config.debug, DEBUG_PICKNODE))
     {
-      Debug("PickNode:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", part->linedef ? "" : "MINI", part, part->start->x,
-            part->start->y, part->end->x, part->end->y);
+      PrintLine(LOG_DEBUG, "[%s]   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, part->linedef ? "" : "MINI", part,
+                part->start->x, part->start->y, part->end->x, part->end->y);
     }
 
     /* ignore minisegs as partition candidates */
@@ -732,9 +734,9 @@ seg_t *PickNode(quadtree_c *tree, int depth)
 
   double best_cost = 1.0e99;
 
-  if constexpr (DEBUG_PICKNODE)
+  if (HAS_BIT(config.debug, DEBUG_PICKNODE))
   {
-    Debug("PickNode: BEGUN (depth %d)\n", depth);
+    PrintLine(LOG_DEBUG, "[%s] BEGUN (depth %d)", __func__, depth);
   }
 
   /* -AJA- here is the logic for "fast mode".  We look for segs which
@@ -743,19 +745,19 @@ seg_t *PickNode(quadtree_c *tree, int depth)
    */
   if (config.fast && tree->real_num >= SEG_FAST_THRESHHOLD)
   {
-    if constexpr (DEBUG_PICKNODE)
+    if (HAS_BIT(config.debug, DEBUG_PICKNODE))
     {
-      Debug("PickNode: Looking for Fast node...\n");
+      PrintLine(LOG_DEBUG, "[%s] Looking for Fast node...", __func__);
     }
 
     best = FindFastSeg(tree);
 
     if (best != nullptr)
     {
-      if constexpr (DEBUG_PICKNODE)
+      if (HAS_BIT(config.debug, DEBUG_PICKNODE))
       {
-        Debug("PickNode: Using Fast node (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", best->start->x, best->start->y, best->end->x,
-              best->end->y);
+        PrintLine(LOG_DEBUG, "[%s] Using Fast node (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, best->start->x, best->start->y,
+                  best->end->x, best->end->y);
       }
       return best;
     }
@@ -767,16 +769,16 @@ seg_t *PickNode(quadtree_c *tree, int depth)
     return nullptr;
   }
 
-  if constexpr (DEBUG_PICKNODE)
+  if (HAS_BIT(config.debug, DEBUG_PICKNODE))
   {
     if (!best)
     {
-      Debug("PickNode: NO BEST FOUND !\n");
+      PrintLine(LOG_DEBUG, "[%s] NO BEST FOUND !", __func__);
     }
     else
     {
-      Debug("PickNode: Best has score %1.4f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", best_cost, best->start->x, best->start->y,
-            best->end->x, best->end->y);
+      PrintLine(LOG_DEBUG, "[%s] Best has score %1.4f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, best_cost, best->start->x,
+                best->start->y, best->end->x, best->end->y);
     }
   }
 
@@ -951,15 +953,16 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
 {
   intersection_t *cut, *next;
 
-  if constexpr (DEBUG_CUTLIST)
+  if (HAS_BIT(config.debug, DEBUG_CUTLIST))
   {
-    Debug("CUT LIST:\n");
-    Debug("PARTITION: (%1.1f,%1.1f) += (%1.1f,%1.1f)\n", part->psx, part->psy, part->pdx, part->pdy);
+    PrintLine(LOG_DEBUG, "[%s] CUT LIST:", __func__);
+    PrintLine(LOG_DEBUG, "[%s] PARTITION: (%1.1f,%1.1f) += (%1.1f,%1.1f)", __func__, part->psx, part->psy, part->pdx, part->pdy);
 
     for (cut = cut_list; cut; cut = cut->next)
     {
-      Debug("  Vertex %zu (%1.1f,%1.1f)  Along %1.2f  [%d/%d]  %s\n", cut->vertex->index, cut->vertex->x, cut->vertex->y,
-            cut->along_dist, cut->open_before ? 1 : 0, cut->open_after ? 1 : 0, cut->self_ref ? "SELFREF" : "");
+      PrintLine(LOG_DEBUG, "[%s] Vertex %zu (%1.1f,%1.1f)  Along %1.2f  [%d/%d]  %s", __func__, cut->vertex->index,
+                cut->vertex->x, cut->vertex->y, cut->along_dist, cut->open_before ? 1 : 0, cut->open_after ? 1 : 0,
+                cut->self_ref ? "SELFREF" : "");
     }
   }
 
@@ -973,7 +976,7 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
     double len = next->along_dist - cut->along_dist;
     if (len < -0.001)
     {
-      FatalError("Bad order in intersect list: %1.3f > %1.3f\n", cut->along_dist, next->along_dist);
+      PrintLine(LOG_ERROR, "Bad order in intersect list: %1.3f > %1.3f", cut->along_dist, next->along_dist);
     }
 
     bool A = cut->open_after;
@@ -1020,14 +1023,14 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
     ListAddSeg(right_list, seg);
     ListAddSeg(left_list, buddy);
 
-    if constexpr (DEBUG_CUTLIST)
+    if (HAS_BIT(config.debug, DEBUG_CUTLIST))
     {
 
-      Debug("AddMiniseg: %p RIGHT  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, seg->start->x, seg->start->y, seg->end->x,
-            seg->end->y);
+      PrintLine(LOG_DEBUG, "[%s] %p RIGHT  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, seg, seg->start->x, seg->start->y,
+                seg->end->x, seg->end->y);
 
-      Debug("AddMiniseg: %p LEFT   (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, buddy->start->x, buddy->start->y, buddy->end->x,
-            buddy->end->y);
+      PrintLine(LOG_DEBUG, "[%s] %p LEFT   (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, seg, buddy->start->x, buddy->start->y,
+                buddy->end->x, buddy->end->y);
     }
   }
 }
@@ -1281,7 +1284,8 @@ seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *
   // check for bad sidedef
   if (side->sector == nullptr)
   {
-    Warning("Bad sidedef on linedef #%zu (Z_CheckHeap error)\n", line->index);
+    PrintLine(LOG_NORMAL, "WARNING: Bad sidedef on linedef #%zu (Z_CheckHeap error)", line->index);
+    config.total_warnings++;
   }
 
   // handle overlapping vertices, pick a nominal one
@@ -1344,7 +1348,8 @@ seg_t *CreateSegs(void)
     // check for extremely long lines
     if (hypot(line->start->x - line->end->x, line->start->y - line->end->y) >= 32000)
     {
-      Warning("Linedef #%zu is VERY long, it may cause problems\n", line->index);
+      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is VERY long, it may cause problems", line->index);
+      config.total_warnings++;
     }
 
     if (line->right != nullptr)
@@ -1354,7 +1359,8 @@ seg_t *CreateSegs(void)
     }
     else
     {
-      Warning("Linedef #%zu has no right sidedef!\n", line->index);
+      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu has no right sidedef!", line->index);
+      config.total_warnings++;
     }
 
     if (line->left != nullptr)
@@ -1376,7 +1382,8 @@ seg_t *CreateSegs(void)
     {
       if (line->two_sided)
       {
-        Warning("Linedef #%zu is 2s but has no left sidedef\n", line->index);
+        PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is 2s but has no left sidedef", line->index);
+        config.total_warnings++;
         line->two_sided = false;
       }
     }
@@ -1438,9 +1445,9 @@ void ClockwiseOrder(subsec_t *subsec)
 {
   seg_t *seg;
 
-  if constexpr (DEBUG_SUBSEC)
+  if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
-    Debug("Subsec: Clockwising %zu\n", subsec->index);
+    PrintLine(LOG_DEBUG, "[%s] Clockwising %zu", __func__, subsec->index);
   }
 
   std::vector<seg_t *> array;
@@ -1517,14 +1524,14 @@ void ClockwiseOrder(subsec_t *subsec)
     AddToTail(subsec, array[k]);
   }
 
-  if constexpr (DEBUG_SORTER)
+  if (HAS_BIT(config.debug, DEBUG_SORTER))
   {
-    Debug("Sorted SEGS around (%1.1f,%1.1f)\n", subsec->mid_x, subsec->mid_y);
+    PrintLine(LOG_DEBUG, "[%s] Sorted SEGS around (%1.1f,%1.1f)", __func__, subsec->mid_x, subsec->mid_y);
 
     for (seg = subsec->seg_list; seg; seg = seg->next)
     {
-      Debug("  Seg %p: Angle %1.6f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg, seg->cmp_angle, seg->start->x, seg->start->y,
-            seg->end->x, seg->end->y);
+      PrintLine(LOG_DEBUG, "[%s] Seg %p: Angle %1.6f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, seg, seg->cmp_angle, seg->start->x,
+                seg->start->y, seg->end->x, seg->end->y);
     }
   }
 }
@@ -1553,14 +1560,18 @@ void SanityCheckClosed(subsec_t *subsec)
 
   if (gaps > 0)
   {
-    MinorIssue("Subsector #%zu near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)\n", subsec->index, subsec->mid_x,
-               subsec->mid_y, gaps, total);
+    if (config.verbose)
+    {
+      PrintLine(LOG_WARN, "MINOR ISSUE: Subsector #%zu near (%1.1f,%1.1f) is not closed (%d gaps, %d segs)", subsec->index,
+                subsec->mid_x, subsec->mid_y, gaps, total);
+    }
 
-    if constexpr (DEBUG_SUBSEC)
+    if (HAS_BIT(config.debug, DEBUG_SUBSEC))
     {
       for (seg = subsec->seg_list; seg; seg = seg->next)
       {
-        Debug("  SEG %p  (%1.1f,%1.1f) --> (%1.1f,%1.1f)\n", seg, seg->start->x, seg->start->y, seg->end->x, seg->end->y);
+        PrintLine(LOG_DEBUG, "[%s] SEG %p  (%1.1f,%1.1f) --> (%1.1f,%1.1f)", __func__, seg, seg->start->x, seg->start->y,
+                  seg->end->x, seg->end->y);
       }
     }
   }
@@ -1576,14 +1587,14 @@ void SanityCheckHasRealSeg(subsec_t *subsec)
     }
   }
 
-  FatalError("Subsector #%zu near (%1.1f,%1.1f) has no real seg!\n", subsec->index, subsec->mid_x, subsec->mid_y);
+  PrintLine(LOG_ERROR, "Subsector #%zu near (%1.1f,%1.1f) has no real seg!", subsec->index, subsec->mid_x, subsec->mid_y);
 }
 
 void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index)
 {
-  if constexpr (DEBUG_SUBSEC)
+  if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
-    Debug("Subsec: Renumbering %zu\n", subsec->index);
+    PrintLine(LOG_DEBUG, "[%s] Renumbering %zu", __func__, subsec->index);
   }
 
   subsec->seg_count = 0;
@@ -1595,9 +1606,9 @@ void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index)
 
     subsec->seg_count++;
 
-    if constexpr (DEBUG_SUBSEC)
+    if (HAS_BIT(config.debug, DEBUG_SUBSEC))
     {
-      Debug("Subsec:   %zu: Seg %p  Index %zu\n", subsec->seg_count, seg, seg->index);
+      PrintLine(LOG_DEBUG, "[%s]   %zu: Seg %p  Index %zu", __func__, subsec->seg_count, seg, seg->index);
     }
   }
 }
@@ -1617,9 +1628,9 @@ subsec_t *CreateSubsec(quadtree_c *tree)
   ConvertToList(tree, &sub->seg_list);
   DetermineMiddle(sub);
 
-  if constexpr (DEBUG_SUBSEC)
+  if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
-    Debug("Subsec: Creating %zu\n", sub->index);
+    PrintLine(LOG_DEBUG, "[%s] Creating %zu", __func__, sub->index);
   }
 
   return sub;
@@ -1638,24 +1649,19 @@ int ComputeBspHeight(const node_t *node)
   return std::max(left, right) + 1;
 }
 
-void DebugShowSegs(const seg_t *list)
-{
-  for (const seg_t *seg = list; seg; seg = seg->next)
-  {
-    Debug("Build:   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)\n", seg->linedef ? "" : "MINI", seg, seg->start->x, seg->start->y,
-          seg->end->x, seg->end->y);
-  }
-}
-
 build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, node_t **N, subsec_t **S)
 {
   *N = nullptr;
   *S = nullptr;
 
-  if constexpr (DEBUG_BUILDER)
+  if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {
-    Debug("Build: BEGUN @ %d\n", depth);
-    DebugShowSegs(list);
+    PrintLine(LOG_DEBUG, "[%s] BEGUN @ %d", __func__, depth);
+    for (const seg_t *seg = list; seg; seg = seg->next)
+    {
+      PrintLine(LOG_DEBUG, "[%s]   %sSEG %p  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, seg->linedef ? "" : "MINI", seg,
+                seg->start->x, seg->start->y, seg->end->x, seg->end->y);
+    }
   }
 
   // determine bounds of segs
@@ -1668,9 +1674,9 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
 
   if (part == nullptr)
   {
-    if constexpr (DEBUG_BUILDER)
+    if (HAS_BIT(config.debug, DEBUG_BUILDER))
     {
-      Debug("Build: CONVEX\n");
+      PrintLine(LOG_DEBUG, "[%s] CONVEX", __func__);
     }
 
     *S = CreateSubsec(tree);
@@ -1679,10 +1685,10 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
     return BUILD_OK;
   }
 
-  if constexpr (DEBUG_BUILDER)
+  if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {
-    Debug("Build: PARTITION %p (%1.0f,%1.0f) -> (%1.0f,%1.0f)\n", part, part->start->x, part->start->y, part->end->x,
-          part->end->y);
+    PrintLine(LOG_DEBUG, "[%s] PARTITION %p (%1.0f,%1.0f) -> (%1.0f,%1.0f)", __func__, part, part->start->x, part->start->y,
+              part->end->x, part->end->y);
   }
 
   node_t *node = NewNode();
@@ -1701,12 +1707,12 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
   /* sanity checks... */
   if (rights == nullptr)
   {
-    FatalError("Separated seg-list has empty RIGHT side\n");
+    PrintLine(LOG_ERROR, "Separated seg-list has empty RIGHT side");
   }
 
   if (lefts == nullptr)
   {
-    FatalError("Separated seg-list has empty LEFT side\n");
+    PrintLine(LOG_ERROR, "Separated seg-list has empty LEFT side");
   }
 
   if (cut_list != nullptr)
@@ -1716,9 +1722,9 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
 
   SetPartition(node, part);
 
-  if constexpr (DEBUG_BUILDER)
+  if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {
-    Debug("Build: Going LEFT\n");
+    PrintLine(LOG_DEBUG, "[%s] Going LEFT", __func__);
   }
 
   build_result_e ret;
@@ -1730,9 +1736,9 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
     return ret;
   }
 
-  if constexpr (DEBUG_BUILDER)
+  if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {
-    Debug("Build: Going RIGHT\n");
+    PrintLine(LOG_DEBUG, "[%s] Going RIGHT", __func__);
   }
 
   // recursively build the right side
@@ -1742,9 +1748,9 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
     return ret;
   }
 
-  if constexpr (DEBUG_BUILDER)
+  if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {
-    Debug("Build: DONE\n");
+    PrintLine(LOG_DEBUG, "[%s] DONE", __func__);
   }
 
   return BUILD_OK;
@@ -1773,9 +1779,9 @@ void Normalise(subsec_t *subsec)
   seg_t *new_head = nullptr;
   seg_t *new_tail = nullptr;
 
-  if constexpr (DEBUG_SUBSEC)
+  if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
-    Debug("Subsec: Normalising %zu\n", subsec->index);
+    PrintLine(LOG_DEBUG, "[%s] Normalising %zu", __func__, subsec->index);
   }
 
   while (subsec->seg_list)
@@ -1787,9 +1793,9 @@ void Normalise(subsec_t *subsec)
     // filter out minisegs
     if (seg->linedef == nullptr)
     {
-      if constexpr (DEBUG_SUBSEC)
+      if (HAS_BIT(config.debug, DEBUG_SUBSEC))
       {
-        Debug("Subsec: Removing miniseg %p\n", seg);
+        PrintLine(LOG_DEBUG, "[%s] Removing miniseg %p", __func__, seg);
       }
 
       // this causes SortSegs() to remove the seg
@@ -1817,7 +1823,7 @@ void Normalise(subsec_t *subsec)
 
   if (new_head == nullptr)
   {
-    FatalError("Subsector %zu normalised to being EMPTY\n", subsec->index);
+    PrintLine(LOG_ERROR, "Subsector %zu normalised to being EMPTY", subsec->index);
   }
 
   subsec->seg_list = new_head;
@@ -1863,9 +1869,9 @@ void RoundOff(subsec_t *subsec)
   int real_total = 0;
 
   int degen_total = 0;
-  if constexpr (DEBUG_SUBSEC)
+  if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
-    Debug("Subsec: Rounding off %zu\n", subsec->index);
+    PrintLine(LOG_DEBUG, "[%s] Rounding off %zu", __func__, subsec->index);
   }
 
   // do an initial pass, just counting the degenerates
@@ -1882,7 +1888,7 @@ void RoundOff(subsec_t *subsec)
         last_real_degen = seg;
       }
 
-      if constexpr (DEBUG_SUBSEC)
+      if (HAS_BIT(config.debug, DEBUG_SUBSEC))
       {
         degen_total++;
       }
@@ -1896,9 +1902,9 @@ void RoundOff(subsec_t *subsec)
     }
   }
 
-  if constexpr (DEBUG_SUBSEC)
+  if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
-    Debug("Subsec: degen=%d real=%d\n", degen_total, real_total);
+    PrintLine(LOG_DEBUG, "[%s] degen=%d real=%d", __func__, degen_total, real_total);
   }
 
   // handle the (hopefully rare) case where all of the real segs
@@ -1907,23 +1913,23 @@ void RoundOff(subsec_t *subsec)
   {
     if (last_real_degen == nullptr)
     {
-      FatalError("Subsector %zu rounded off with NO real segs\n", subsec->index);
+      PrintLine(LOG_ERROR, "Subsector %zu rounded off with NO real segs", subsec->index);
     }
 
-    if constexpr (DEBUG_SUBSEC)
+    if (HAS_BIT(config.debug, DEBUG_SUBSEC))
     {
-      Debug("Degenerate before: (%1.2f,%1.2f) -> (%1.2f,%1.2f)\n", last_real_degen->start->x, last_real_degen->start->y,
-            last_real_degen->end->x, last_real_degen->end->y);
+      PrintLine(LOG_DEBUG, "[%s] Degenerate before: (%1.2f,%1.2f) -> (%1.2f,%1.2f)", __func__, last_real_degen->start->x,
+                last_real_degen->start->y, last_real_degen->end->x, last_real_degen->end->y);
     }
 
     // create a new vertex for this baby
     last_real_degen->end = NewVertexDegenerate(last_real_degen->start, last_real_degen->end);
 
-    if constexpr (DEBUG_SUBSEC)
+    if (HAS_BIT(config.debug, DEBUG_SUBSEC))
     {
-      Debug("Degenerate after:  (%d,%d) -> (%d,%d)\n", static_cast<int32_t>(floor(last_real_degen->start->x)),
-            static_cast<int32_t>(floor(last_real_degen->start->y)), static_cast<int32_t>(floor(last_real_degen->end->x)),
-            static_cast<int32_t>(floor(last_real_degen->end->y)));
+      PrintLine(LOG_DEBUG, "[%s] Degenerate after:  (%d,%d) -> (%d,%d)", __func__,
+                static_cast<int32_t>(floor(last_real_degen->start->x)), static_cast<int32_t>(floor(last_real_degen->start->y)),
+                static_cast<int32_t>(floor(last_real_degen->end->x)), static_cast<int32_t>(floor(last_real_degen->end->y)));
     }
 
     last_real_degen->is_degenerate = false;
@@ -1938,9 +1944,9 @@ void RoundOff(subsec_t *subsec)
 
     if (seg->is_degenerate)
     {
-      if constexpr (DEBUG_SUBSEC)
+      if (HAS_BIT(config.debug, DEBUG_SUBSEC))
       {
-        Debug("Subsec: Removing degenerate %p\n", seg);
+        PrintLine(LOG_DEBUG, "[%s] Removing degenerate %p", __func__, seg);
       }
       // this causes SortSegs() to remove the seg
       seg->index = SEG_IS_GARBAGE;
@@ -1967,7 +1973,7 @@ void RoundOff(subsec_t *subsec)
 
   if (new_head == nullptr)
   {
-    FatalError("Subsector %zu rounded off to being EMPTY\n", subsec->index);
+    PrintLine(LOG_ERROR, "Subsector %zu rounded off to being EMPTY", subsec->index);
   }
 
   subsec->seg_list = new_head;

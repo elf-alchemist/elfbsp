@@ -26,50 +26,6 @@
 
 #include <algorithm>
 
-static constexpr uint32_t SYS_MSG_BUFLEN = 4000;
-
-static char message_buf[SYS_MSG_BUFLEN];
-
-void Failure(const char *fmt, ...)
-{
-  va_list args;
-
-  va_start(args, fmt);
-  vsnprintf(message_buf, sizeof(message_buf), fmt, args);
-  va_end(args);
-
-  config.Print_Verbose("    FAILURE: %s", message_buf);
-}
-
-void Warning(const char *fmt, ...)
-{
-  va_list args;
-
-  va_start(args, fmt);
-  vsnprintf(message_buf, sizeof(message_buf), fmt, args);
-  va_end(args);
-
-  config.Print_Verbose("    WARNING: %s", message_buf);
-
-  config.total_warnings++;
-}
-
-void MinorIssue(const char *fmt, ...)
-{
-  if (config.verbose)
-  {
-    va_list args;
-
-    va_start(args, fmt);
-    vsnprintf(message_buf, sizeof(message_buf), fmt, args);
-    va_end(args);
-
-    config.Print_Verbose("    ISSUE: %s", message_buf);
-  }
-
-  config.total_minor_issues++;
-}
-
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
 //------------------------------------------------------------------------
@@ -85,9 +41,9 @@ void MarkPolyobjSector(sector_t *sector)
     return;
   }
 
-  if constexpr (DEBUG_POLYOBJ)
+  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
-    Debug("  Marking SECTOR %zu\n", sector->index);
+    PrintLine(LOG_DEBUG, "[%s] Marking Polyobj SECTOR %zu", __func__, sector->index);
   }
 
   /* already marked ? */
@@ -135,9 +91,9 @@ void MarkPolyobjPoint(double x, double y)
     if (CheckLinedefInsideBox(bminx, bminy, bmaxx, bmaxy, static_cast<int32_t>(L->start->x), static_cast<int32_t>(L->start->y),
                               static_cast<int32_t>(L->end->x), static_cast<int32_t>(L->end->y)))
     {
-      if constexpr (DEBUG_POLYOBJ)
+      if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
       {
-        Debug("  Touching line was %zu\n", L->index);
+        PrintLine(LOG_DEBUG, "[%s] Touching line was %zu", __func__, L->index);
       }
 
       if (L->left != nullptr)
@@ -198,24 +154,26 @@ void MarkPolyobjPoint(double x, double y)
 
   if (best_match == nullptr)
   {
-    Warning("Bad polyobj thing at (%1.0f,%1.0f).\n", x, y);
+    PrintLine(LOG_NORMAL, "WARNING: Bad polyobj thing at (%1.0f,%1.0f).", x, y);
+    config.total_warnings++;
     return;
   }
 
   double y1 = best_match->start->y;
   double y2 = best_match->end->y;
 
-  if constexpr (DEBUG_POLYOBJ)
+  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
-    Debug("  Closest line was %zu Y=%1.0f..%1.0f (dist=%1.1f)\n", best_match->index, y1, y2, best_dist);
+    PrintLine(LOG_DEBUG, "[%s] Closest line was %zu Y=%1.0f..%1.0f (dist=%1.1f)", __func__, best_match->index, y1, y2,
+              best_dist);
   }
 
   /* sanity check: shouldn't be directly on the line */
-  if constexpr (DEBUG_POLYOBJ)
+  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
     if (fabs(best_dist) < DIST_EPSILON)
     {
-      Debug("  Polyobj FAILURE: directly on the line (%zu)\n", best_match->index);
+      PrintLine(LOG_DEBUG, "[%s] Polyobj directly on the line (%zu)", __func__, best_match->index);
     }
   }
 
@@ -231,14 +189,15 @@ void MarkPolyobjPoint(double x, double y)
     sector = best_match->left ? best_match->left->sector : nullptr;
   }
 
-  if constexpr (DEBUG_POLYOBJ)
+  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
-    Debug("  Sector %zu contains the polyobj.\n", sector ? sector->index : NO_INDEX);
+    PrintLine(LOG_DEBUG, "[%s] Sector %zu contains the polyobj.", __func__, sector ? sector->index : NO_INDEX);
   }
 
   if (sector == nullptr)
   {
-    Warning("Invalid Polyobj thing at (%1.0f,%1.0f).\n", x, y);
+    PrintLine(LOG_NORMAL, "WARNING: Invalid Polyobj thing at (%1.0f,%1.0f).", x, y);
+    config.total_warnings++;
     return;
   }
 
@@ -305,9 +264,9 @@ void DetectPolyobjSectors(bool is_udmf)
     }
   }
 
-  if constexpr (DEBUG_POLYOBJ)
+  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
-    Debug("Using %s style polyobj things\n", hexen_style ? "HEXEN" : "ZDOOM");
+    PrintLine(LOG_DEBUG, "[%s] Using %s style polyobj things", __func__, hexen_style ? "HEXEN" : "ZDOOM");
   }
 
   for (size_t j = 0; j < lev_things.size(); j++)
@@ -335,9 +294,9 @@ void DetectPolyobjSectors(bool is_udmf)
       }
     }
 
-    if constexpr (DEBUG_POLYOBJ)
+    if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
     {
-      Debug("Thing %zu at (%1.0f,%1.0f) is a polyobj spawner.\n", i, x, y);
+      PrintLine(LOG_DEBUG, "[%s] Thing %zu at (%1.0f,%1.0f) is a polyobj spawner.", __func__, i, x, y);
     }
 
     MarkPolyobjPoint(x, y);
@@ -394,9 +353,9 @@ void DetectOverlappingVertices(void)
         // found an overlap !
         B->overlap = A->overlap ? A->overlap : A;
 
-        if constexpr (DEBUG_OVERLAPS)
+        if (HAS_BIT(config.debug, DEBUG_OVERLAPS))
         {
-          Print("Overlap: #%zu + #%zu\n", array[i]->index, array[i + 1]->index);
+          PrintLine(LOG_DEBUG, "[%s] Overlap: #%zu + #%zu", __func__, array[i]->index, array[i + 1]->index);
         }
       }
     }
@@ -445,7 +404,10 @@ void PruneVerticesAtEnd(void)
 
   if (unused > 0)
   {
-    config.Print_Verbose("    Pruned %zu unused vertices at end\n", unused);
+    if (config.verbose)
+    {
+      PrintLine(LOG_NORMAL, "Pruned %zu unused vertices at end", unused);
+    }
   }
 
   num_old_vert = lev_vertices.size();
@@ -511,7 +473,10 @@ void DetectOverlappingLines(void)
 
   if (count > 0)
   {
-    config.Print_Verbose("    Detected %zu overlapped linedefs\n", count);
+    if (config.verbose)
+    {
+      PrintLine(LOG_NORMAL, "Detected %zu overlapped linedefs", count);
+    }
   }
 }
 
@@ -588,17 +553,17 @@ void CalculateWallTips(void)
     AddWallTip(L->end, x1 - x2, y1 - y2, right, left);
   }
 
-  if constexpr (DEBUG_WALLTIPS)
+  if (HAS_BIT(config.debug, DEBUG_WALLTIPS))
   {
     for (size_t k = 0; k < lev_vertices.size(); k++)
     {
       vertex_t *V = lev_vertices[k];
 
-      Debug("WallTips for vertex %zu:\n", k);
+      PrintLine(LOG_DEBUG, "[%s] WallTips for vertex %zu:", __func__, k);
 
       for (walltip_t *tip = V->tip_set; tip; tip = tip->next)
       {
-        Debug("  Angle=%1.1f left=%d right=%d\n", tip->angle, tip->open_left ? 1 : 0, tip->open_right ? 1 : 0);
+        PrintLine(LOG_DEBUG, "Angle=%1.1f left=%d right=%d", tip->angle, tip->open_left ? 1 : 0, tip->open_right ? 1 : 0);
       }
     }
   }
@@ -662,7 +627,7 @@ vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end)
 
   if (dlen == 0)
   {
-    FatalError("NewVertexDegenerate: bad delta!\n");
+    PrintLine(LOG_ERROR, "NewVertexDegenerate: bad delta!");
   }
 
   dx /= dlen;

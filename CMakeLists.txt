@@ -25,11 +25,6 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
         "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-set(PROJECT_COMPANY "Guilherme Miranda, et al")
-set(PROJECT_COPYRIGHT "Copyright (C) 1994-2025")
-set(PROJECT_LICENSE "GNU General Public License, version 2")
-set(PROJECT_STRING "${PROJECT_NAME} ${PROJECT_VERSION}")
-
 option(ENABLE_WERROR "Treat warnings as errors" OFF)
 option(ENABLE_ASAN "Enable ASan" OFF)
 option(ENABLE_UBSAN "Enable UBSan" OFF)
@@ -67,12 +62,6 @@ add_executable(elfbsp
     src/misc.cpp
     src/parse.cpp
     src/wad.cpp
-)
-
-target_compile_definitions(elfbsp PRIVATE
-    PROJECT_NAME="${PROJECT_NAME}"
-    PROJECT_VERSION="${PROJECT_VERSION}"
-    PROJECT_STRING="${PROJECT_NAME} ${PROJECT_VERSION}"
 )
 
 target_compile_options(elfbsp PRIVATE

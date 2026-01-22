@@ -35,14 +35,6 @@ struct Wad_file;
 extern Wad_file *cur_wad;
 
 //------------------------------------------------------------------------
-// UTILITY : general purpose functions
-//------------------------------------------------------------------------
-
-void Failure(const char *fmt, ...);
-void Warning(const char *fmt, ...);
-void MinorIssue(const char *fmt, ...);
-
-//------------------------------------------------------------------------
 // BLOCKMAP : Generate the blockmap
 //------------------------------------------------------------------------
 

@@ -24,6 +24,14 @@
 
 #pragma once
 
+static constexpr const char *PROJECT_COMPANY = "Guilherme Miranda, et al";
+static constexpr const char *PROJECT_COPYRIGHT = "Copyright (C) 1994-2026";
+static constexpr const char *PROJECT_LICENSE = "GNU General Public License, version 2";
+
+static constexpr const char *PROJECT_NAME = "ELFBSP";
+static constexpr const char *PROJECT_VERSION = "v1.1";
+static constexpr const char *PROJECT_STRING = "ELFBSP v1.1";
+
 /*
  *  Standard headers
  */
@@ -71,21 +79,6 @@ static constexpr bool LINUX = true;
 
 static constexpr char PATH_SEP_CH = (WINDOWS) ? ';' : ':';
 static constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
-
-static constexpr bool DEBUG_BLOCKMAP = false;
-static constexpr bool DEBUG_REJECT = false;
-static constexpr bool DEBUG_LOAD = false;
-static constexpr bool DEBUG_BSP = false;
-static constexpr bool DEBUG_WALLTIPS = false;
-static constexpr bool DEBUG_POLYOBJ = false;
-static constexpr bool DEBUG_OVERLAPS = false;
-static constexpr bool DEBUG_PICKNODE = false;
-static constexpr bool DEBUG_SPLIT = false;
-static constexpr bool DEBUG_CUTLIST = false;
-static constexpr bool DEBUG_BUILDER = false;
-static constexpr bool DEBUG_SORTER = false;
-static constexpr bool DEBUG_SUBSEC = false;
-static constexpr bool DEBUG_WAD = false;
 
 //
 // The packed attribute forces structures to be packed into the minimum
@@ -184,8 +177,9 @@ static constexpr size_t NO_INDEX = static_cast<size_t>(-1);
 static constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
 static constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
 
-static constexpr size_t MSG_BUFFER_LENGTH = 1024;
 static constexpr size_t WAD_LUMP_NAME = 8;
+
+static constexpr size_t MSG_BUFFER_LENGTH = 1024;
 
 // bitflags
 static inline constexpr uint32_t BIT(uint32_t x)
@@ -234,20 +228,32 @@ static inline constexpr short_angle_t DegreesToShortBAM(uint16_t x)
 // STRING STUFF
 //------------------------------------------------------------------------
 
-// this is > 0 when ShowMap() is used and the current line
-// has not been terminated with a new-line ('\n') character.
-static inline size_t hanging_pos = 0;
-
-static inline void StopHanging()
+using log_level_t = enum
 {
-  if (hanging_pos > 0)
-  {
-    hanging_pos = 0;
+  LOG_NORMAL,
+  LOG_ERROR,
+  LOG_WARN,
+  LOG_DEBUG,
+};
 
-    printf("\n");
-    fflush(stdout);
-  }
-}
+using debug_t = enum : uint32_t
+{
+  DEBUG_NONE = 0,
+  DEBUG_BLOCKMAP = BIT(0),
+  DEBUG_REJECT = BIT(1),
+  DEBUG_LOAD = BIT(2),
+  DEBUG_BSP = BIT(3),
+  DEBUG_WALLTIPS = BIT(4),
+  DEBUG_POLYOBJ = BIT(5),
+  DEBUG_OVERLAPS = BIT(6),
+  DEBUG_PICKNODE = BIT(7),
+  DEBUG_SPLIT = BIT(8),
+  DEBUG_CUTLIST = BIT(9),
+  DEBUG_BUILDER = BIT(10),
+  DEBUG_SORTER = BIT(11),
+  DEBUG_SUBSEC = BIT(12),
+  DEBUG_WAD = BIT(13),
+};
 
 // Safe, portable vsnprintf().
 static inline int32_t PRINTF_ATTR(3, 0) M_vsnprintf(char *buf, size_t buf_len, const char *s, va_list args)
@@ -284,64 +290,37 @@ static inline int32_t PRINTF_ATTR(3, 4) M_snprintf(char *buf, size_t buf_len, co
   return result;
 }
 
-static inline void PRINTF_ATTR(1, 2) Debug(const char *fmt, ...)
-{
-  char buffer[MSG_BUFFER_LENGTH];
-
-  va_list args;
-
-  va_start(args, fmt);
-  vsnprintf(buffer, sizeof(buffer), fmt, args);
-  va_end(args);
-
-  fprintf(stderr, "%s", buffer);
-}
-
 //
 //  show a message
 //
-static inline void PRINTF_ATTR(1, 2) Print(const char *fmt, ...)
+static inline void PRINTF_ATTR(2, 3) PrintLine(log_level_t level, const char *fmt, ...)
 {
+  FILE *const stream = (level == LOG_NORMAL) ? stdout : stderr;
   char buffer[MSG_BUFFER_LENGTH];
 
   va_list arg_ptr;
 
   va_start(arg_ptr, fmt);
-  vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
+  M_vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
   va_end(arg_ptr);
 
-  buffer[MSG_BUFFER_LENGTH - 1] = 0;
+  buffer[MSG_BUFFER_LENGTH - 1] = '\0';
 
-  StopHanging();
-  printf("%s", buffer);
-  fflush(stdout);
+  fprintf(stream, "%s\n", buffer);
+  fflush(stream);
+
+  if (level == LOG_ERROR)
+  {
+    exit(3);
+  }
 }
 
 //
-//  show an error message and terminate the program
-//
-static inline void PRINTF_ATTR(1, 2) FatalError(const char *fmt, ...)
-{
-  char buffer[MSG_BUFFER_LENGTH];
-
-  va_list arg_ptr;
-
-  va_start(arg_ptr, fmt);
-  vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
-  va_end(arg_ptr);
-
-  buffer[MSG_BUFFER_LENGTH - 1] = 0;
-
-  StopHanging();
-  fprintf(stderr, "\nFATAL ERROR: %s", buffer);
-  exit(3);
-}
-
 // Assertion macros
-
+//
 static inline constexpr void SYS_ASSERT(bool cond)
 {
-  return (cond) ? (void)0 : FatalError("Assertion failed\nIn function %s (%s:%d)\n", __func__, __FILE__, __LINE__);
+  return (cond) ? (void)0 : PrintLine(LOG_ERROR, "Assertion failed! In function %s (%s:%d)", __func__, __FILE__, __LINE__);
 }
 
 //------------------------------------------------------------------------
@@ -357,7 +336,7 @@ template <typename T> static inline constexpr T *UtilCalloc(size_t size)
 
   if (!ret)
   {
-    FatalError("Out of memory (cannot allocate %zu bytes)", size);
+    PrintLine(LOG_ERROR, "Out of memory (cannot allocate %zu bytes)", size);
   }
 
   return ret;
@@ -372,7 +351,7 @@ template <typename T> static inline constexpr T *UtilRealloc(T *old, size_t size
 
   if (!ret)
   {
-    FatalError("Out of memory (cannot reallocate %zu bytes)", size);
+    PrintLine(LOG_ERROR, "Out of memory (cannot reallocate %zu bytes)", size);
   }
 
   return ret;
@@ -385,7 +364,7 @@ template <typename T> static inline constexpr void UtilFree(T *data)
 {
   if (data == nullptr)
   {
-    FatalError("Trying to free a nullptr");
+    PrintLine(LOG_ERROR, "Trying to free a nullptr");
   }
 
   free(data);
