@@ -36,20 +36,20 @@ elfbsp example.wad --map MAP04,MAP22-MAP25 # or you may combine both
 
 ## Documentation
 
-`-v --verbose`
+#### `-v --verbose`
 Produces more verbose output to the terminal.
 Some warnings which are normally hidden (except for a final tally) will be shown when enabled.
 
-`-b --backup`
+#### `-b --backup`
 Backs up each input file before processing it.
 The backup files will have the ".bak" extension (replacing the ".wad" extension).
 If the backup file already exists, it will be silently overwritten.
 
-`-f --fast`
+#### `-f --fast`
 Enables a faster method for selecting partition lines.
 On large maps this can be significantly faster, however the BSP tree may not be as good.
 
-`-m --map  NAME(s)`
+#### `-m --map  NAME(s)`
 Specifies one or more maps to process. All other maps will be skipped (not touched at all).
 The same set of maps applies to every given wad file. The default behavior is to process every map in the wad.
 
@@ -59,34 +59,34 @@ Several map names and/or ranges can be given, using commas to separate them, suc
 
 NOTE: spaces cannot be used to separate map names.
 
-`-x --xnod`
+#### `-x --xnod`
 Forces XNOD (ZDoom extended) format of normal nodes.
 Without this option, normal nodes will be built using the standard DOOM format, and only switch to XNOD format when the level is too large (e.g. has too many segs).
 
 Using XNOD format can be better for source ports which support it, since it provides higher accuracy for seg splits.
 However, it cannot be used with the original DOOM.EXE or with Chocolate-Doom.
 
-`-s --ssect`
+#### `-s --ssect`
 Build XGL3 (extended Nodes) format in the SSECTORS lump.
 This option will disable the building of normal nodes, leaving the NODES and SEGS lumps empty.
 Although it can be used with the `-x` option to store XNOD format nodes in the NODES lump as well.
 
-`-c --cost  ##`
+#### `-c --cost  ##`
 Sets the cost for making seg splits. The value is a number between 1 and 32. The default value is 11.
 Larger values try to reduce the number of seg splits, whereas smaller values produce more balanced BSP trees.
 
 NOTE: this option has little effect when the --fast option is enabled.
 
-`-o --output  FILE`
+#### `-o --output  FILE`
 This option is provided *only* for compatibility with existing node builders.
 It causes the input file to be copied to the specified file, and that file is the one processed.
 This option *cannot* be used with multiple input files, or with the --backup option.
 
-`-h --help`
+#### `-h --help`
 Displays a brief help screen, then exits.
 
-`-d --doc`
+#### `-d --doc`
 Displays this documentaion screen, then exits.
 
-`--version`
+#### `--version`
 Displays the version of ELFBSP, then exits.
