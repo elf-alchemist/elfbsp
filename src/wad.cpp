@@ -55,7 +55,7 @@ Lump_c *MakeLumpFromEntry(Wad_file *wad, const raw_wad_entry_t *entry)
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "new lump '%s' @ %zu len:%zu", new_lump->Name(), new_lump->l_start, new_lump->l_length);
+    PrintLine(LOG_DEBUG, "[%s] New lump '%s' @ %zu len:%zu", __func__, new_lump->Name(), new_lump->l_start, new_lump->l_length);
   }
   return new_lump;
 }
@@ -105,7 +105,7 @@ Wad_file *Wad_file::Open(const char *filename, char mode)
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "Opening WAD file: %s", filename);
+    PrintLine(LOG_DEBUG, "[%s] Opening WAD file: %s", __func__, filename);
   }
 
   FILE *fp = nullptr;
@@ -126,7 +126,7 @@ retry:
     {
       if (HAS_BIT(config.debug, DEBUG_WAD))
       {
-        PrintLine(LOG_DEBUG, "Open r/w failed, trying again in read mode...");
+        PrintLine(LOG_DEBUG, "[%s] Open r/w failed, trying again in read mode...", __func__);
       }
       mode = 'r';
       goto retry;
@@ -134,7 +134,7 @@ retry:
 
     if (HAS_BIT(config.debug, DEBUG_WAD))
     {
-      PrintLine(LOG_DEBUG, "Open file failed: %s", strerror(errno));
+      PrintLine(LOG_DEBUG, "[%s] Open file failed: %s", __func__, strerror(errno));
     }
     return nullptr;
   }
@@ -151,7 +151,7 @@ retry:
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "total_size = %zu", w->total_size);
+    PrintLine(LOG_DEBUG, "[%s] total_size = %zu", __func__, w->total_size);
   }
 
   if (w->total_size < 0)
@@ -170,7 +170,7 @@ Wad_file *Wad_file::Create(const char *filename, char mode)
 {
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "Creating new WAD file: %s", filename);
+    PrintLine(LOG_DEBUG, "[%s] Creating new WAD file: %s", __func__, filename);
   }
 
   FILE *fp = fopen(filename, "w+b");
@@ -418,7 +418,7 @@ void Wad_file::DetectLevels(void)
       levels.push_back(k);
       if (HAS_BIT(config.debug, DEBUG_WAD))
       {
-        PrintLine(LOG_DEBUG, "Detected level : %s (UDMF)", directory[k]->Name());
+        PrintLine(LOG_DEBUG, "[%s] Detected level : %s (UDMF)", __func__, directory[k]->Name());
       }
 
       continue;
@@ -455,7 +455,7 @@ void Wad_file::DetectLevels(void)
 
       if (HAS_BIT(config.debug, DEBUG_WAD))
       {
-        PrintLine(LOG_DEBUG, "Detected level : %s", directory[k]->Name());
+        PrintLine(LOG_DEBUG, "[%s] Detected level : %s", __func__, directory[k]->Name());
       }
     }
   }
@@ -533,7 +533,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if (HAS_BIT(config.debug, DEBUG_WAD))
         {
-          PrintLine(LOG_DEBUG, "missing %c_END marker.", active);
+          PrintLine(LOG_DEBUG, "[%s] Missing %c_END marker.", __func__, active);
         }
       }
 
@@ -546,7 +546,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if (HAS_BIT(config.debug, DEBUG_WAD))
         {
-          PrintLine(LOG_DEBUG, "stray P_END marker found.");
+          PrintLine(LOG_DEBUG, "[%s] Stray P_END marker found.", __func__);
         }
       }
 
@@ -560,7 +560,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if (HAS_BIT(config.debug, DEBUG_WAD))
         {
-          PrintLine(LOG_DEBUG, "missing %c_END marker.", active);
+          PrintLine(LOG_DEBUG, "[%s] Missing %c_END marker.", __func__, active);
         }
       }
 
@@ -573,7 +573,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if (HAS_BIT(config.debug, DEBUG_WAD))
         {
-          PrintLine(LOG_DEBUG, "stray S_END marker found.");
+          PrintLine(LOG_DEBUG, "[%s] stray S_END marker found.", __func__);
         }
       }
 
@@ -587,7 +587,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if (HAS_BIT(config.debug, DEBUG_WAD))
         {
-          PrintLine(LOG_DEBUG, "missing %c_END marker.", active);
+          PrintLine(LOG_DEBUG, "[%s] missing %c_END marker.", __func__, active);
         }
       }
 
@@ -600,7 +600,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if (HAS_BIT(config.debug, DEBUG_WAD))
         {
-          PrintLine(LOG_DEBUG, "stray F_END marker found.");
+          PrintLine(LOG_DEBUG, "[%s] stray F_END marker found.", __func__);
         }
       }
 
@@ -614,7 +614,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if (HAS_BIT(config.debug, DEBUG_WAD))
         {
-          PrintLine(LOG_DEBUG, "missing %c_END marker.", active);
+          PrintLine(LOG_DEBUG, "[%s] missing %c_END marker.", __func__, active);
         }
       }
 
@@ -627,7 +627,7 @@ void Wad_file::ProcessNamespaces(void)
       {
         if (HAS_BIT(config.debug, DEBUG_WAD))
         {
-          PrintLine(LOG_DEBUG, "stray TX_END marker found.");
+          PrintLine(LOG_DEBUG, "[%s] stray TX_END marker found.", __func__);
         }
       }
 
@@ -641,14 +641,14 @@ void Wad_file::ProcessNamespaces(void)
       {
         if (HAS_BIT(config.debug, DEBUG_WAD))
         {
-          PrintLine(LOG_DEBUG, "skipping empty lump %s in %c_START", name, active);
+          PrintLine(LOG_DEBUG, "[%s] skipping empty lump %s in %c_START", __func__, name, active);
         }
         continue;
       }
 
       if (HAS_BIT(config.debug, DEBUG_WAD))
       {
-        PrintLine(LOG_DEBUG, "Namespace %c lump : %s", active, name);
+        PrintLine(LOG_DEBUG, "[%s] Namespace %c lump : %s", __func__, active, name);
       }
 
       switch (active)
@@ -676,7 +676,7 @@ void Wad_file::ProcessNamespaces(void)
   {
     if (active)
     {
-      PrintLine(LOG_DEBUG, "Missing %c_END marker (at EOF)", active);
+      PrintLine(LOG_DEBUG, "[%s] Missing %c_END marker (at EOF)", __func__, active);
     }
   }
 }
@@ -975,7 +975,7 @@ size_t Wad_file::PositionForWrite(size_t max_size)
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "POSITION FOR WRITE: %zu  (total_size %zu)", want_pos, total_size);
+    PrintLine(LOG_DEBUG, "[%s] POSITION FOR WRITE: %zu  (total_size %zu)", __func__, want_pos, total_size);
   }
 
   return static_cast<size_t>(want_pos);
@@ -1033,8 +1033,7 @@ void Wad_file::WriteDirectory(void)
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "WriteDirectory...");
-    PrintLine(LOG_DEBUG, "dir_start:%zu  dir_count:%zu", dir_start, dir_count);
+    PrintLine(LOG_DEBUG, "[%s] dir_start:%zu  dir_count:%zu", __func__, dir_start, dir_count);
   }
 
   for (size_t k = 0; k < dir_count; k++)
@@ -1058,7 +1057,7 @@ void Wad_file::WriteDirectory(void)
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "total_size: %zu", total_size);
+    PrintLine(LOG_DEBUG, "[%s] total_size: %zu", __func__, total_size);
   }
 
   if (total_size < 0)

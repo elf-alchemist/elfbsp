@@ -150,7 +150,7 @@ static void BlockAdd(size_t blk_num, size_t line_index)
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
-    PrintLine(LOG_DEBUG, "Block %zu has line %zu", blk_num, line_index);
+    PrintLine(LOG_DEBUG, "[%s] Block %zu has line %zu", __func__, blk_num, line_index);
   }
 
   if (blk_num >= block_count)
@@ -194,7 +194,7 @@ static void BlockAddLine(const linedef_t *L)
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
-    PrintLine(LOG_DEBUG, "BlockAddLine: %zu (%d,%d) -> (%d,%d)", line_index, x1, y1, x2, y2);
+    PrintLine(LOG_DEBUG, "[%s] %zu (%d,%d) -> (%d,%d)", __func__, line_index, x1, y1, x2, y2);
   }
 
   int32_t bx1_temp = (std::min(x1, x2) - block_x) / 128;
@@ -390,7 +390,7 @@ static void CompressBlockmap(void)
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
-    PrintLine(LOG_DEBUG, "Blockmap: Last ptr = %zu  duplicates = %zu", cur_offset, dup_count);
+    PrintLine(LOG_DEBUG, "[%s] Last ptr = %zu  duplicates = %zu", __func__, cur_offset, dup_count);
   }
 
   block_compression = static_cast<int32_t>((static_cast<int32_t>(orig_size) - static_cast<int32_t>(new_size)) * 100
@@ -567,7 +567,7 @@ static void FindBlockmapLimits(bbox_t *bbox)
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
-    PrintLine(LOG_DEBUG, "Blockmap lines centered at (%d,%d)", block_mid_x, block_mid_y);
+    PrintLine(LOG_DEBUG, "[%s] Blockmap lines centered at (%d,%d)", __func__, block_mid_x, block_mid_y);
   }
 }
 
@@ -1019,7 +1019,7 @@ static void GetVertices(void)
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "GetVertices: num = %zu", count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
   }
 
   if (lump == nullptr || count == 0)
@@ -1073,7 +1073,7 @@ static void GetSectors(void)
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "GetSectors: num = %zu", count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1115,7 +1115,7 @@ static void GetThings(void)
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "GetThings: num = %zu", count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1158,7 +1158,7 @@ static void GetThingsHexen(void)
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "GetThingsHexen: num = %zu", count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1201,7 +1201,7 @@ static void GetSidedefs(void)
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "GetSidedefs: num = %zu", count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1242,7 +1242,7 @@ static void GetLinedefs(void)
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "GetLinedefs: num = %zu", count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1324,7 +1324,7 @@ static void GetLinedefsHexen(void)
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "GetLinedefsHexen: num = %zu", count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1869,7 +1869,7 @@ static void PutSegs(void)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "PUT SEG: %zu  Vert %04X->%04X  Line %04X %s  Angle %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)",
+      PrintLine(LOG_DEBUG, "[%s] %zu  Vert %04X->%04X  Line %04X %s  Angle %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__,
                 seg->index, GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef),
                 seg->side ? "L" : "R", GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
     }
@@ -1903,7 +1903,7 @@ static void PutSubsecs(void)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "PUT SUBSEC %zu  First %04X  Num %04X", sub->index, GetLittleEndian(raw.first),
+      PrintLine(LOG_DEBUG, "[%s] %zu  First %04X  Num %04X", __func__, sub->index, GetLittleEndian(raw.first),
                 GetLittleEndian(raw.num));
     }
   }
@@ -1981,7 +1981,7 @@ static void PutOneNode(node_t *node, Lump_c *lump)
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
-    PrintLine(LOG_DEBUG, "PUT NODE %zu  Left %04X  Right %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", node->index,
+    PrintLine(LOG_DEBUG, "[%s] %zu  Left %04X  Right %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, node->index,
               GetLittleEndian(raw.left), GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
   }
 }
@@ -2196,7 +2196,8 @@ static void PutXgl2Segs(Lump_c *lump)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "SEG[%zu] v1=%d partner=%d line=%d side=%d", i, raw.vertex, raw.partner, raw.linedef, raw.side);
+      PrintLine(LOG_DEBUG, "[%s] SEG[%zu] v1=%d partner=%d line=%d side=%d", __func__, i, raw.vertex, raw.partner, raw.linedef,
+                raw.side);
     }
   }
 }
@@ -2286,7 +2287,7 @@ static void PutOneXnodNode(Lump_c *lump, node_t *node, bool xgl3)
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
-    PrintLine(LOG_DEBUG, "PUT Z NODE %zu  Left %08X  Right %08X  (%f,%f) -> (%f,%f)", node->index, GetLittleEndian(raw.left),
+    PrintLine(LOG_DEBUG, "[%s] %zu  Left %08X  Right %08X  (%f,%f) -> (%f,%f)", __func__, node->index, GetLittleEndian(raw.left),
               GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
   }
 }

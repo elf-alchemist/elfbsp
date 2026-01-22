@@ -43,7 +43,7 @@ void MarkPolyobjSector(sector_t *sector)
 
   if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
-    PrintLine(LOG_DEBUG, "Marking Polyobj SECTOR %zu", sector->index);
+    PrintLine(LOG_DEBUG, "[%s] Marking Polyobj SECTOR %zu", __func__, sector->index);
   }
 
   /* already marked ? */
@@ -93,7 +93,7 @@ void MarkPolyobjPoint(double x, double y)
     {
       if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
       {
-        PrintLine(LOG_DEBUG, "Touching line was %zu", L->index);
+        PrintLine(LOG_DEBUG, "[%s] Touching line was %zu", __func__, L->index);
       }
 
       if (L->left != nullptr)
@@ -164,7 +164,8 @@ void MarkPolyobjPoint(double x, double y)
 
   if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
-    PrintLine(LOG_DEBUG, "Closest line was %zu Y=%1.0f..%1.0f (dist=%1.1f)", best_match->index, y1, y2, best_dist);
+    PrintLine(LOG_DEBUG, "[%s] Closest line was %zu Y=%1.0f..%1.0f (dist=%1.1f)", __func__, best_match->index, y1, y2,
+              best_dist);
   }
 
   /* sanity check: shouldn't be directly on the line */
@@ -172,7 +173,7 @@ void MarkPolyobjPoint(double x, double y)
   {
     if (fabs(best_dist) < DIST_EPSILON)
     {
-      PrintLine(LOG_DEBUG, "FAILURE: Polyobj directly on the line (%zu)", best_match->index);
+      PrintLine(LOG_DEBUG, "[%s] Polyobj directly on the line (%zu)", __func__, best_match->index);
     }
   }
 
@@ -190,7 +191,7 @@ void MarkPolyobjPoint(double x, double y)
 
   if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
-    PrintLine(LOG_DEBUG, "Sector %zu contains the polyobj.", sector ? sector->index : NO_INDEX);
+    PrintLine(LOG_DEBUG, "[%s] Sector %zu contains the polyobj.", __func__, sector ? sector->index : NO_INDEX);
   }
 
   if (sector == nullptr)
@@ -265,7 +266,7 @@ void DetectPolyobjSectors(bool is_udmf)
 
   if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
-    PrintLine(LOG_DEBUG, "Using %s style polyobj things", hexen_style ? "HEXEN" : "ZDOOM");
+    PrintLine(LOG_DEBUG, "[%s] Using %s style polyobj things", __func__, hexen_style ? "HEXEN" : "ZDOOM");
   }
 
   for (size_t j = 0; j < lev_things.size(); j++)
@@ -295,7 +296,7 @@ void DetectPolyobjSectors(bool is_udmf)
 
     if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
     {
-      PrintLine(LOG_DEBUG, "Thing %zu at (%1.0f,%1.0f) is a polyobj spawner.", i, x, y);
+      PrintLine(LOG_DEBUG, "[%s] Thing %zu at (%1.0f,%1.0f) is a polyobj spawner.", __func__, i, x, y);
     }
 
     MarkPolyobjPoint(x, y);
@@ -354,7 +355,7 @@ void DetectOverlappingVertices(void)
 
         if (HAS_BIT(config.debug, DEBUG_OVERLAPS))
         {
-          PrintLine(LOG_DEBUG, "Overlap: #%zu + #%zu", array[i]->index, array[i + 1]->index);
+          PrintLine(LOG_DEBUG, "[%s] Overlap: #%zu + #%zu", __func__, array[i]->index, array[i + 1]->index);
         }
       }
     }
@@ -558,7 +559,7 @@ void CalculateWallTips(void)
     {
       vertex_t *V = lev_vertices[k];
 
-      PrintLine(LOG_DEBUG, "WallTips for vertex %zu:", k);
+      PrintLine(LOG_DEBUG, "[%s] WallTips for vertex %zu:", __func__, k);
 
       for (walltip_t *tip = V->tip_set; tip; tip = tip->next)
       {
