@@ -90,3 +90,8 @@ Displays this documentaion screen, then exits.
 
 #### `--version`
 Displays the version of ELFBSP, then exits.
+
+#### `--debug-blockmap` `--debug-reject` `--debug-load` `--debug-bsp` `--debug-walltips` `--debug-polyobj` `--debug-overlaps` `--debug-picknode` `--debug-split` `--debug-cutlist` `--debug-builder` `--debug-sorter` `--debug-subsec` `--debug-wad`
+Debugging utilities to display runtime information.
+Any permutation of the above list is valid, though the output will become hard and harder to read.
+It is recommended to use as few as needed at once.
