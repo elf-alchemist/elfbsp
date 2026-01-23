@@ -25,6 +25,8 @@
 #include "core.hpp"
 
 #include <cstring>
+#include <format>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -47,8 +49,41 @@ struct map_range_t
 };
 
 static std::vector<map_range_t> map_list;
+static std::vector<std::string> analysis_csv;
 
 buildinfo_t config;
+
+//------------------------------------------------------------------------
+
+void AnalysisPushLine(size_t level_index, double split_cost, size_t segs, size_t subsecs, size_t nodes, int32_t left_size,
+                      int32_t right_size)
+{
+  std::string line = std::format("{},{},{},{},{}", GetLevelName(level_index), split_cost, segs, subsecs, nodes);
+  analysis_csv.push_back(line);
+}
+
+void WriteAnalysis(std::string path)
+{
+  PrintLine(LOG_NORMAL, "[%s] Trying to write data to CSV file %s.", __func__, path.c_str());
+
+  auto csv_file = std::ofstream(path.c_str());
+
+  if (!csv_file.is_open())
+  {
+    PrintLine(LOG_WARN, "[%s] Couldn't open file %s for writing.", __func__, path.c_str());
+    return;
+  }
+
+  for (auto line : analysis_csv)
+  {
+    csv_file << line << '\n';
+  }
+
+  csv_file << '\n';
+  csv_file.close();
+
+  PrintLine(LOG_NORMAL, "[%s] Succesfully finished writing data to CSV file %s.", __func__, path.c_str());
+}
 
 //------------------------------------------------------------------------
 
@@ -206,6 +241,20 @@ void BackupFile(const char *filename)
   PrintLine(LOG_NORMAL, "Created backup: %s", dest_name.c_str());
 }
 
+void AnalyseFile(const char *filename)
+{
+  std::string csv_path = filename;
+
+  if (size_t ext_pos = FindExtension(filename) > 0)
+  {
+    csv_path.resize(ext_pos);
+  }
+
+  csv_path += ".csv";
+
+  WriteAnalysis(csv_path);
+}
+
 void VisitFile(unsigned int idx, const char *filename)
 {
   // handle the -o option
@@ -232,6 +281,11 @@ void VisitFile(unsigned int idx, const char *filename)
   OpenWad(filename);
 
   BuildFile();
+
+  if (config.analysis)
+  {
+    AnalyseFile(filename);
+  }
 
   CloseWad();
 }
@@ -364,7 +418,7 @@ void ParseShortArgument(const char *arg)
   while (*arg)
   {
     char c = *arg++;
-    int val = 0;
+    int32_t val = 0;
 
     switch (c)
     {
@@ -387,10 +441,12 @@ void ParseShortArgument(const char *arg)
       case 's':
         config.ssect_xgl3 = true;
         continue;
+      case 'a':
+        config.analysis = true;
+        continue;
 
       case 'm':
       case 'o':
-      case 't':
         PrintLine(LOG_ERROR, "cannot use option '-%c' like that", c);
         return;
 
@@ -415,7 +471,7 @@ void ParseShortArgument(const char *arg)
           PrintLine(LOG_ERROR, "illegal value for '-c' option");
         }
 
-        config.split_cost = static_cast<size_t>(val);
+        config.split_cost = val;
         continue;
 
       default:
@@ -504,6 +560,10 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
   {
     opt_version = true;
   }
+  else if (strcmp(name, "--analysis") == 0)
+  {
+    config.analysis = true;
+  }
   else if (strcmp(name, "--verbose") == 0)
   {
     config.verbose = true;
@@ -549,7 +609,7 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
       PrintLine(LOG_ERROR, "illegal value for '--cost' option");
     }
 
-    config.split_cost = static_cast<size_t>(val);
+    config.split_cost = val;
     used = 1;
   }
   else if (strcmp(name, "--output") == 0)
@@ -638,6 +698,10 @@ void ParseCommandLine(int argc, char *argv[])
     if (strcmp(arg, "-o") == 0)
     {
       arg = "--output";
+    }
+    if (strcmp(arg, "-a") == 0)
+    {
+      arg = "--analysis";
     }
 
     if (arg[1] != '-')

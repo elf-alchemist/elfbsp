@@ -31,9 +31,9 @@
 // Node Build Information Structure
 //
 
-static constexpr int32_t SPLIT_COST_MIN = 1;
-static constexpr int32_t SPLIT_COST_DEFAULT = 11;
-static constexpr int32_t SPLIT_COST_MAX = 32;
+static constexpr double SPLIT_COST_MIN = 1.0;
+static constexpr double SPLIT_COST_DEFAULT = 11.0;
+static constexpr double SPLIT_COST_MAX = 32.0;
 
 using buildinfo_t = struct buildinfo_s;
 
@@ -44,11 +44,13 @@ struct buildinfo_s
   // use a faster method to pick nodes
   bool fast = false;
   bool backup = false;
+  // write out CSV for data analysis and visualization
+  bool analysis = false;
 
   bool force_xnod = false;
   bool ssect_xgl3 = false;
 
-  size_t split_cost = SPLIT_COST_DEFAULT;
+  double split_cost = SPLIT_COST_DEFAULT;
 
   // this affects how some messages are shown
   bool verbose = false;
@@ -105,3 +107,6 @@ const char *GetLevelName(size_t lev_idx);
 // is updated to store the new lumps and returns either BUILD_OK or
 // BUILD_LumpOverflow if some limits were exceeded.
 build_result_e BuildLevel(size_t lev_idx);
+
+void AnalysisPushLine(size_t level_index, double split_cost, size_t segs, size_t subsecs, size_t nodes, int32_t left_size,
+                      int32_t right_size);
