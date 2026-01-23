@@ -106,7 +106,8 @@ const char *GetLevelName(size_t lev_idx);
 // BUILD_Cancelled result and the wad is unchanged.  otherwise the wad
 // is updated to store the new lumps and returns either BUILD_OK or
 // BUILD_LumpOverflow if some limits were exceeded.
-build_result_e BuildLevel(size_t lev_idx);
+build_result_e BuildLevel(size_t lev_idx, const char* filename);
 
+void WriteAnalysis(const char *filename);
 void AnalysisPushLine(size_t level_index, double split_cost, size_t segs, size_t subsecs, size_t nodes, int32_t left_size,
                       int32_t right_size);

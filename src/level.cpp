@@ -2673,7 +2673,7 @@ const char *GetLevelName(size_t lev_idx)
 
 /* ----- build nodes for a single level ----- */
 
-build_result_e BuildLevel(size_t lev_idx)
+build_result_e BuildLevel(size_t lev_idx, const char* filename)
 {
   node_t *root_node = nullptr;
   subsec_t *root_sub = nullptr;
@@ -2749,6 +2749,12 @@ build_result_e BuildLevel(size_t lev_idx)
   }
 
   FreeLevel();
+
+
+  if (config.analysis)
+  {
+    WriteAnalysis(filename);
+  }
 
   return ret;
 }
