@@ -63,6 +63,8 @@ void AnalysisPushLine(size_t level_index, double split_cost, size_t segs, size_t
   analysis_csv.push_back(line);
 }
 
+// writes out for current file
+// expects AnalysisPushLine to have been called with all 0-32 split costs during node-building
 void WriteAnalysis(const char *filename)
 {
   auto csv_path = std::string(filename);
