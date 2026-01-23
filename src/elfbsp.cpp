@@ -99,25 +99,6 @@ void WriteAnalysis(const char *filename)
   PrintLine(LOG_NORMAL, "[%s] Succesfully finished writing data to CSV file %s.", __func__, csv_path.c_str());
 }
 
-void CleanAnalysisFile(const char *filename)
-{
-  auto csv_path = std::string(filename);
-
-  auto ext_pos = FindExtension(filename);
-  if (ext_pos > 0)
-  {
-    csv_path.resize(ext_pos);
-  }
-
-  csv_path += ".csv";
-  auto csv_file = std::ofstream(csv_path.c_str(), std::ios::trunc);
-
-  if (csv_file.is_open())
-  {
-    csv_file.close();
-  }
-}
-
 //------------------------------------------------------------------------
 
 bool CheckMapInRange(const map_range_t *range, const char *name)
@@ -296,7 +277,7 @@ void VisitFile(unsigned int idx, const char *filename)
 
   if (config.analysis)
   {
-    CleanAnalysisFile(filename);
+    FileClear(filename);
   }
 
   PrintLine(LOG_NORMAL, "Building %s", filename);
