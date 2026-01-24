@@ -2,6 +2,7 @@ using CSV
 using Tables
 using Makie
 using CairoMakie
+using Base.Filesystem
 
 struct DataVisBSP
   map_name::String
@@ -17,6 +18,7 @@ end
 file_path = ARGS[1]
 
 file = CSV.File(file_path)
+stem = splitext(basename(file_path))[1]
 rows = Tables.rowtable(file)
 
 bsp_vis = DataVisBSP[]
@@ -42,51 +44,72 @@ for row in bsp_vis
   push!(get!(levels, key, DataVisBSP[]), row)
 end
 
+maps = Dict{String, Dict{Bool, Vector{DataVisBSP}}}()
+
 for ((map, is_fast), data) in levels
-  x = 1:length(data)
-  xt = 0:4:length(data)
-  mode_label = is_fast ? "FAST" : "NORMAL"
+    by_mode = get!(maps, map, Dict{Bool, Vector{DataVisBSP}}())
+    by_mode[is_fast] = data
+end
 
-  fig = Figure(size = (960, 960))
+styles = Dict(
+  false => (linestyle = :solid, marker = :circle),
+  true  => (linestyle = :dash,  marker = :utriangle)
+)
 
-  ax = Axis(fig[1, 1], xticks = xt, ylabel = "Nodes")
-  ax2 = Axis(fig[2, 1], xticks = xt, ylabel = "Subsectors")
-  ax3 = Axis(fig[3, 1], xticks = xt, ylabel = "Segments")
-  ax4 = Axis(fig[4, 1], xticks = xt, ylabel = "Binary tree depth", xlabel = "Cost factor of splitting segments")
+colors = Dict(
+  :nodes => :dodgerblue,
+  :subsecs => :seagreen,
+  :segs => :firebrick,
+  :size_left => :purple,
+  :size_right => :darkgoldenrod,
+)
 
-  linkxaxes!(ax, ax2, ax3, ax4)
+for (map, modes) in maps
+  fig = Figure(size = (720, 1280))
+  xt = 0:4:64
 
-  y_nodes = getfield.(data, :num_nodes)
-  y_subsecs = getfield.(data, :num_subsecs)
-  y_segs = getfield.(data, :num_segs)
-  y_size_left = getfield.(data, :size_left)
-  y_size_right = getfield.(data, :size_right)
+  ax = Axis(fig[1, 1], xticks = xt, ytickformat = "{:d}", title = "Nodes")
+  ax2 = Axis(fig[2, 1], xticks = xt, ytickformat = "{:d}", title = "Subsectors")
+  ax3 = Axis(fig[3, 1], xticks = xt, ytickformat = "{:d}", title = "Segments")
 
-  plot_nodes = lines!(ax, x, y_nodes, color = :dodgerblue)
-  scatter!(ax, x, y_nodes, markersize = 6, color = :dodgerblue)
+  ax4 = Axis(fig[4, 1], xticks = xt, ytickformat = "{:d}", title = "Tree depth left")
+  ax5 = Axis(fig[5, 1], xticks = xt, ytickformat = "{:d}", title = "Tree depth right", xlabel = "Cost factor of splitting segments")
 
-  plot_subsecs = lines!(ax2, x, y_subsecs, color = :seagreen)
-  scatter!(ax2, x, y_subsecs, markersize = 6, color = :seagreen)
+  linkxaxes!(ax, ax2, ax3)
+  linkxaxes!(ax4, ax5)
 
-  plot_segments = lines!(ax3, x, y_segs, color = :firebrick)
-  scatter!(ax3, x, y_segs, markersize = 6, color = :firebrick)
+  for is_fast in (false, true)
+    haskey(modes, is_fast) || continue
+    data = modes[is_fast]
+    x = 1:length(data)
 
-  plot_size_left = lines!(ax4, x, y_size_left, color = :purple)
-  scatter!(ax4, x, y_size_left, markersize = 6, color = :purple)
+    y_nodes = getfield.(data, :num_nodes)
+    y_subsecs = getfield.(data, :num_subsecs)
+    y_segs = getfield.(data, :num_segs)
+    y_size_left = getfield.(data, :size_left)
+    y_size_right = getfield.(data, :size_right)
 
-  plot_size_right = lines!(ax4, x, y_size_right, color = :darkgoldenrod)
-  scatter!(ax4, x, y_size_right, markersize = 6, color = :darkgoldenrod)
+    st = styles[is_fast]
 
-  Legend(
-    fig[4, 2],
-    [plot_nodes, plot_subsecs, plot_segments, plot_size_left, plot_size_right],
-    ["Nodes", "Subsectors", "Segments", "Left side tree depth", "Right side tree depth"];
-    framevisible = true
-  )
+    lines!( ax, x, y_nodes; color = colors[:nodes], linestyle = st.linestyle, label = is_fast ? "Nodes (fast)" : "Nodes (normal)" )
+    scatter!( ax, x, y_nodes; color = colors[:nodes], marker = st.marker )
 
-  Label(fig[0, :], "ELFBSP Segment Split Cost Analysis - $(map) ($(mode_label))", justification = :center, font = :bold, fontsize = 24)
+    lines!( ax2, x, y_subsecs; color = colors[:subsecs], linestyle = st.linestyle, label = is_fast ? "Subsectors (fast)" : "Subsectors (normal)" )
+    scatter!( ax2, x, y_subsecs; color = colors[:subsecs], marker = st.marker )
 
-  trim!(fig.layout)
+    lines!( ax3, x, y_segs; color = colors[:segs], linestyle = st.linestyle, label = is_fast ? "Segments (fast)" : "Segments (normal)" )
+    scatter!( ax3, x, y_segs; color = colors[:segs], marker = st.marker )
 
-  save("ELFBSP_SegmentSplitCostAnalysis_$(map)_$(mode_label).png", fig)
+    lines!( ax4, x, y_size_left; color = colors[:size_left], linestyle = st.linestyle, label = is_fast ? "Tree depth left (fast)" : "Tree depth left (normal)" )
+    scatter!( ax4, x, y_size_left; color = colors[:size_left], marker = st.marker )
+
+    lines!( ax5, x, y_size_right; color = colors[:size_right], linestyle = st.linestyle, label = is_fast ? "Tree depth right (fast)" : "Tree depth right (normal)" )
+    scatter!( ax5, x, y_size_right; color = colors[:size_right], marker = st.marker )
+
+  end
+
+  Label(fig[0, :], "ELFBSP Split Cost Analysis - $(stem) $(map)", justification = :center, font = :bold, fontsize = 24)
+  colsize!(fig.layout, 1, Relative(1.00))
+
+  save("ELFBSP $(stem) $(map).png", fig)
 end
