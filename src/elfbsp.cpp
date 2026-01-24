@@ -54,12 +54,28 @@ static std::vector<std::string> analysis_csv;
 buildinfo_t config;
 
 //------------------------------------------------------------------------
+void AnalysisSetupFile(const char * filepath)
+{
+  auto csv_path = std::string(filepath);
 
-void AnalysisPushLine(size_t level_index, double split_cost, size_t segs, size_t subsecs, size_t nodes, int32_t left_size,
+  auto ext_pos = FindExtension(filepath);
+  if (ext_pos > 0)
+  {
+    csv_path.resize(ext_pos);
+  }
+
+  csv_path += ".csv";
+  FileClear(csv_path.c_str());
+
+  std::string line = "map_name,is_fast,split_cost,num_segs,num_subsecs,num_nodes,size_left,size_right";
+  analysis_csv.push_back(line);
+}
+
+void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes, int32_t left_size,
                       int32_t right_size)
 {
   std::string line =
-      std::format("{},{},{},{},{},{},{}", GetLevelName(level_index), split_cost, segs, subsecs, nodes, left_size, right_size);
+      std::format("{},{},{},{},{},{},{},{}", GetLevelName(level_index), is_fast, split_cost, segs, subsecs, nodes, left_size, right_size);
   analysis_csv.push_back(line);
 }
 
@@ -279,7 +295,7 @@ void VisitFile(unsigned int idx, const char *filename)
 
   if (config.analysis)
   {
-    FileClear(filename);
+    AnalysisSetupFile(filename);
   }
 
   PrintLine(LOG_NORMAL, "Building %s", filename);

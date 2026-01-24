@@ -727,7 +727,7 @@ bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, doubl
 //
 // Find the best seg in the seg_list to use as a partition line.
 //
-seg_t *PickNode(quadtree_c *tree, int depth, double split_cost)
+seg_t *PickNode(quadtree_c *tree, int depth, double split_cost, bool fast)
 {
   seg_t *best = nullptr;
 
@@ -742,7 +742,7 @@ seg_t *PickNode(quadtree_c *tree, int depth, double split_cost)
    *       are axis-aligned and roughly divide the current group into
    *       two halves.  This can save *heaps* of times on large levels.
    */
-  if (config.fast && tree->real_num >= SEG_FAST_THRESHHOLD)
+  if (fast && tree->real_num >= SEG_FAST_THRESHHOLD)
   {
     if (HAS_BIT(config.debug, DEBUG_PICKNODE))
     {
@@ -1650,7 +1650,8 @@ int ComputeBspHeight(const node_t *node)
   return std::max(left, right) + 1;
 }
 
-build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool analysis)
+build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast,
+                          bool analysis)
 {
   *N = nullptr;
   *S = nullptr;
@@ -1671,7 +1672,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, su
   quadtree_c *tree = TreeFromSegList(list, bounds);
 
   /* pick partition line, NONE indicates convexicity */
-  seg_t *part = PickNode(tree, depth, split_cost);
+  seg_t *part = PickNode(tree, depth, split_cost, fast);
 
   if (part == nullptr)
   {
@@ -1731,7 +1732,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, su
   build_result_e ret;
 
   // recursively build the left side
-  ret = BuildNodes(lefts, depth + 1, &node->l.bounds, &node->l.node, &node->l.subsec, split_cost, analysis);
+  ret = BuildNodes(lefts, depth + 1, &node->l.bounds, &node->l.node, &node->l.subsec, split_cost, fast, analysis);
   if (ret != BUILD_OK)
   {
     return ret;
@@ -1743,7 +1744,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, su
   }
 
   // recursively build the right side
-  ret = BuildNodes(rights, depth + 1, &node->r.bounds, &node->r.node, &node->r.subsec, split_cost, analysis);
+  ret = BuildNodes(rights, depth + 1, &node->r.bounds, &node->r.node, &node->r.subsec, split_cost, fast, analysis);
   if (ret != BUILD_OK)
   {
     return ret;

@@ -109,5 +109,5 @@ const char *GetLevelName(size_t lev_idx);
 build_result_e BuildLevel(size_t lev_idx, const char* filename);
 
 void WriteAnalysis(const char *filename);
-void AnalysisPushLine(size_t level_index, double split_cost, size_t segs, size_t subsecs, size_t nodes, int32_t left_size,
+void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes, int32_t left_size,
                       int32_t right_size);

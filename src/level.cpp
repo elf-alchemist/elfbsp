@@ -2673,7 +2673,7 @@ const char *GetLevelName(size_t lev_idx)
 
 /* ----- build nodes for a single level ----- */
 
-build_result_e BuildLevel(size_t lev_idx, const char* filename)
+build_result_e BuildLevel(size_t lev_idx, const char *filename)
 {
   node_t *root_node = nullptr;
   subsec_t *root_sub = nullptr;
@@ -2692,13 +2692,27 @@ build_result_e BuildLevel(size_t lev_idx, const char* filename)
   {
     if (config.analysis)
     {
+      // normal mode, across all default costs
       for (double split_cost = 1.0; split_cost <= 32.0; split_cost++)
       {
         bbox_t dummy;
         root_node = nullptr;
         root_sub = nullptr;
-        BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, split_cost, true);
-        AnalysisPushLine(lev_current_idx, split_cost, lev_segs.size(), lev_subsecs.size(), lev_nodes.size(),
+        BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, split_cost, false, true);
+        AnalysisPushLine(lev_current_idx, false, split_cost, lev_segs.size(), lev_subsecs.size(), lev_nodes.size(),
+                         ComputeBspHeight(root_node->l.node), ComputeBspHeight(root_node->r.node));
+        FreeNodes();
+        FreeSubsecs();
+        FreeSegs();
+      }
+      // fast mode, also across all default costs
+      for (double split_cost = 1.0; split_cost <= 32.0; split_cost++)
+      {
+        bbox_t dummy;
+        root_node = nullptr;
+        root_sub = nullptr;
+        BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, split_cost, true, true);
+        AnalysisPushLine(lev_current_idx, true, split_cost, lev_segs.size(), lev_subsecs.size(), lev_nodes.size(),
                          ComputeBspHeight(root_node->l.node), ComputeBspHeight(root_node->r.node));
         FreeNodes();
         FreeSubsecs();
@@ -2708,7 +2722,7 @@ build_result_e BuildLevel(size_t lev_idx, const char* filename)
 
     bbox_t dummy;
     // recursively create nodes
-    ret = BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, config.split_cost, false);
+    ret = BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, config.split_cost, config.fast, false);
   }
 
   if (ret == BUILD_OK)

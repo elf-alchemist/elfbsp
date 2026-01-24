@@ -495,7 +495,7 @@ struct intersection_t
 // partition line, returning it.  If no seg can be used, returns nullptr.
 // The 'depth' parameter is the current depth in the tree, used for
 // computing the current progress.
-seg_t *PickNode(quadtree_c *tree, int depth, double split_cost);
+seg_t *PickNode(quadtree_c *tree, int depth, double split_cost, bool fast);
 
 // take the given seg 'cur', compare it with the partition line, and
 // determine it's fate: moving it into either the left or right lists
@@ -533,7 +533,8 @@ quadtree_c *TreeFromSegList(seg_t *list);
 // and '*N' is the new node (and '*S' is set to nullptr).  Normally
 // returns BUILD_OK, or BUILD_Cancelled if user stopped it.
 
-build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool analysis);
+build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast,
+                          bool analysis);
 
 // compute the height of the bsp tree, starting at 'node'.
 int ComputeBspHeight(const node_t *node);
