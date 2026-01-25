@@ -318,10 +318,8 @@ static inline void PRINTF_ATTR(2, 3) PrintLine(log_level_t level, const char *fm
 //
 // Assertion macros
 //
-static inline constexpr void SYS_ASSERT(bool cond)
-{
-  return (cond) ? (void)0 : PrintLine(LOG_ERROR, "Assertion failed! In function %s (%s:%d)", __func__, __FILE__, __LINE__);
-}
+#define SYS_ASSERT(cond) \
+  (cond) ? (void)0 : PrintLine(LOG_ERROR, "Assertion failed! In function %s (%s:%d)", __func__, __FILE__, __LINE__);
 
 //------------------------------------------------------------------------
 // MEMORY ALLOCATION
@@ -373,6 +371,15 @@ template <typename T> static inline constexpr void UtilFree(T *data)
 //------------------------------------------------------------------------
 // FILE MANAGEMENT
 //------------------------------------------------------------------------
+
+static inline void FileClear(const char *filename)
+{
+  FILE *fp = fopen(filename, "w");
+  if (fp)
+  {
+    fclose(fp);
+  }
+}
 
 static inline bool FileExists(const char *filename)
 {

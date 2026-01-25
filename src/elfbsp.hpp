@@ -31,9 +31,9 @@
 // Node Build Information Structure
 //
 
-static constexpr int32_t SPLIT_COST_MIN = 1;
-static constexpr int32_t SPLIT_COST_DEFAULT = 11;
-static constexpr int32_t SPLIT_COST_MAX = 32;
+static constexpr double SPLIT_COST_MIN = 1.0;
+static constexpr double SPLIT_COST_DEFAULT = 11.0;
+static constexpr double SPLIT_COST_MAX = 32.0;
 
 using buildinfo_t = struct buildinfo_s;
 
@@ -43,13 +43,19 @@ struct buildinfo_s
 {
   size_t total_warnings = 0;
   size_t total_minor_issues = 0;
-  double split_cost = static_cast<double>(SPLIT_COST_DEFAULT);
+  double split_cost = SPLIT_COST_DEFAULT;
 
   bsp_type_t bsp_type = BSP_VANILLA;
 
   bool fast = false;
   bool backup = false;
+  // write out CSV for data analysis and visualization
+  bool analysis = false;
 
+  bool force_xnod = false;
+  bool ssect_xgl3 = false;
+
+  // this affects how some messages are shown
   bool verbose = false;
 
   uint32_t debug = DEBUG_NONE;
@@ -100,4 +106,8 @@ const char *GetLevelName(size_t lev_idx);
 // BUILD_Cancelled result and the wad is unchanged.  otherwise the wad
 // is updated to store the new lumps and returns either BUILD_OK or
 // BUILD_LumpOverflow if some limits were exceeded.
-build_result_e BuildLevel(size_t lev_idx);
+build_result_e BuildLevel(size_t lev_idx, const char* filename);
+
+void WriteAnalysis(const char *filename);
+void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes, int32_t left_size,
+                      int32_t right_size);
