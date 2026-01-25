@@ -22,6 +22,7 @@
 //------------------------------------------------------------------------------
 
 #include "core.hpp"
+#include "elfbsp.hpp"
 #include "local.hpp"
 #include "parse.hpp"
 #include "wad.hpp"
@@ -923,7 +924,7 @@ static void FreeThings(void)
   lev_things.clear();
 }
 
-static void FreeSegs(void)
+void FreeSegs(void)
 {
   for (size_t i = 0; i < lev_segs.size(); i++)
   {
@@ -933,7 +934,7 @@ static void FreeSegs(void)
   lev_segs.clear();
 }
 
-static void FreeSubsecs(void)
+void FreeSubsecs(void)
 {
   for (size_t i = 0; i < lev_subsecs.size(); i++)
   {
@@ -943,7 +944,7 @@ static void FreeSubsecs(void)
   lev_subsecs.clear();
 }
 
-static void FreeNodes(void)
+void FreeNodes(void)
 {
   for (size_t i = 0; i < lev_nodes.size(); i++)
   {
@@ -2287,8 +2288,8 @@ static void PutOneXnodNode(Lump_c *lump, node_t *node, bool xgl3)
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
-    PrintLine(LOG_DEBUG, "[%s] %zu  Left %08X  Right %08X  (%f,%f) -> (%f,%f)", __func__, node->index, GetLittleEndian(raw.left),
-              GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
+    PrintLine(LOG_DEBUG, "[%s] %zu  Left %08X  Right %08X  (%f,%f) -> (%f,%f)", __func__, node->index,
+              GetLittleEndian(raw.left), GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
   }
 }
 
@@ -2672,7 +2673,7 @@ const char *GetLevelName(size_t lev_idx)
 
 /* ----- build nodes for a single level ----- */
 
-build_result_e BuildLevel(size_t lev_idx)
+build_result_e BuildLevel(size_t lev_idx, const char *filename)
 {
   node_t *root_node = nullptr;
   subsec_t *root_sub = nullptr;
@@ -2689,13 +2690,39 @@ build_result_e BuildLevel(size_t lev_idx)
 
   if (num_real_lines > 0)
   {
+    if (config.analysis)
+    {
+      // normal mode, across all default costs
+      for (double split_cost = 1.0; split_cost <= 32.0; split_cost++)
+      {
+        bbox_t dummy;
+        root_node = nullptr;
+        root_sub = nullptr;
+        BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, split_cost, false, true);
+        AnalysisPushLine(lev_current_idx, false, split_cost, lev_segs.size(), lev_subsecs.size(), lev_nodes.size(),
+                         ComputeBspHeight(root_node->l.node), ComputeBspHeight(root_node->r.node));
+        FreeNodes();
+        FreeSubsecs();
+        FreeSegs();
+      }
+      // fast mode, also across all default costs
+      for (double split_cost = 1.0; split_cost <= 32.0; split_cost++)
+      {
+        bbox_t dummy;
+        root_node = nullptr;
+        root_sub = nullptr;
+        BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, split_cost, true, true);
+        AnalysisPushLine(lev_current_idx, true, split_cost, lev_segs.size(), lev_subsecs.size(), lev_nodes.size(),
+                         ComputeBspHeight(root_node->l.node), ComputeBspHeight(root_node->r.node));
+        FreeNodes();
+        FreeSubsecs();
+        FreeSegs();
+      }
+    }
+
     bbox_t dummy;
-
-    // create initial segs
-    seg_t *list = CreateSegs();
-
     // recursively create nodes
-    ret = BuildNodes(list, 0, &dummy, &root_node, &root_sub);
+    ret = BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, config.split_cost, config.fast, false);
   }
 
   if (ret == BUILD_OK)
@@ -2736,6 +2763,12 @@ build_result_e BuildLevel(size_t lev_idx)
   }
 
   FreeLevel();
+
+
+  if (config.analysis)
+  {
+    WriteAnalysis(filename);
+  }
 
   return ret;
 }

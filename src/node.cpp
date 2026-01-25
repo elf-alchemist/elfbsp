@@ -145,7 +145,8 @@ seg_t *SplitSeg(seg_t *old_seg, double x, double y)
   {
     if (old_seg->linedef)
     {
-      PrintLine(LOG_DEBUG, "[%s] Splitting Linedef %zu (%p) at (%1.1f,%1.1f)", __func__, old_seg->linedef->index, old_seg, x, y);
+      PrintLine(LOG_DEBUG, "[%s] Splitting Linedef %zu (%p) at (%1.1f,%1.1f)", __func__, old_seg->linedef->index, old_seg, x,
+                y);
     }
     else
     {
@@ -314,10 +315,8 @@ void AddIntersection(intersection_t **cut_list, vertex_t *vert, seg_t *part, boo
 //
 // Returns true if a "bad seg" was found early.
 //
-bool EvalPartitionWorker(quadtree_c *tree, seg_t *part, double best_cost, eval_info_t *info)
+bool EvalPartitionWorker(quadtree_c *tree, seg_t *part, double best_cost, double split_cost, eval_info_t *info)
 {
-  double split_cost = static_cast<double>(config.split_cost);
-
   // -AJA- this is the heart of the superblock idea, it tests the
   //       *whole* quad against the partition line to quickly handle
   //       all the segs within it at once.  Only when the partition
@@ -498,7 +497,7 @@ bool EvalPartitionWorker(quadtree_c *tree, seg_t *part, double best_cost, eval_i
 
     if (tree->subs[c] != nullptr && !tree->subs[c]->Empty())
     {
-      if (EvalPartitionWorker(tree->subs[c], part, best_cost, info))
+      if (EvalPartitionWorker(tree->subs[c], part, best_cost, split_cost, info))
       {
         return true;
       }
@@ -517,7 +516,7 @@ bool EvalPartitionWorker(quadtree_c *tree, seg_t *part, double best_cost, eval_i
 // Returns the computed cost, or a negative value if the seg should be
 // skipped altogether.
 //
-double EvalPartition(quadtree_c *tree, seg_t *part, double best_cost)
+double EvalPartition(quadtree_c *tree, seg_t *part, double best_cost, double split_cost)
 {
   eval_info_t info;
 
@@ -532,7 +531,7 @@ double EvalPartition(quadtree_c *tree, seg_t *part, double best_cost)
   info.mini_left = 0;
   info.mini_right = 0;
 
-  if (EvalPartitionWorker(tree, part, best_cost, &info))
+  if (EvalPartitionWorker(tree, part, best_cost, split_cost, &info))
   {
     return -1.0;
   }
@@ -632,7 +631,7 @@ void EvaluateFastWorker(quadtree_c *tree, seg_t **best_H, seg_t **best_V, int mi
   }
 }
 
-seg_t *FindFastSeg(quadtree_c *tree)
+seg_t *FindFastSeg(quadtree_c *tree, double split_cost)
 {
   seg_t *best_H = nullptr;
   seg_t *best_V = nullptr;
@@ -647,12 +646,12 @@ seg_t *FindFastSeg(quadtree_c *tree)
 
   if (best_H)
   {
-    H_cost = EvalPartition(tree, best_H, 1.0e99);
+    H_cost = EvalPartition(tree, best_H, 1.0e99, split_cost);
   }
 
   if (best_V)
   {
-    V_cost = EvalPartition(tree, best_V, 1.0e99);
+    V_cost = EvalPartition(tree, best_V, 1.0e99, split_cost);
   }
 
   if (HAS_BIT(config.debug, DEBUG_PICKNODE))
@@ -678,7 +677,7 @@ seg_t *FindFastSeg(quadtree_c *tree)
 }
 
 /* returns false if cancelled */
-bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, double *best_cost)
+bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, double *best_cost, double split_cost)
 {
   /* try each Seg as partition */
   for (seg_t *part = part_list->list; part; part = part->next)
@@ -695,7 +694,7 @@ bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, doubl
       continue;
     }
 
-    double cost = EvalPartition(tree, part, *best_cost);
+    double cost = EvalPartition(tree, part, *best_cost, split_cost);
 
     /* seg unsuitable or too costly ? */
     if (cost < 0 || cost >= *best_cost)
@@ -715,7 +714,7 @@ bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, doubl
   {
     if (part_list->subs[c] != nullptr && !part_list->subs[c]->Empty())
     {
-      if (!PickNodeWorker(part_list->subs[c], tree, best, best_cost))
+      if (!PickNodeWorker(part_list->subs[c], tree, best, best_cost, split_cost))
       {
         return false;
       }
@@ -728,7 +727,7 @@ bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, doubl
 //
 // Find the best seg in the seg_list to use as a partition line.
 //
-seg_t *PickNode(quadtree_c *tree, int depth)
+seg_t *PickNode(quadtree_c *tree, int depth, double split_cost, bool fast)
 {
   seg_t *best = nullptr;
 
@@ -743,14 +742,14 @@ seg_t *PickNode(quadtree_c *tree, int depth)
    *       are axis-aligned and roughly divide the current group into
    *       two halves.  This can save *heaps* of times on large levels.
    */
-  if (config.fast && tree->real_num >= SEG_FAST_THRESHHOLD)
+  if (fast && tree->real_num >= SEG_FAST_THRESHHOLD)
   {
     if (HAS_BIT(config.debug, DEBUG_PICKNODE))
     {
       PrintLine(LOG_DEBUG, "[%s] Looking for Fast node...", __func__);
     }
 
-    best = FindFastSeg(tree);
+    best = FindFastSeg(tree, split_cost);
 
     if (best != nullptr)
     {
@@ -763,7 +762,7 @@ seg_t *PickNode(quadtree_c *tree, int depth)
     }
   }
 
-  if (!PickNodeWorker(tree, tree, &best, &best_cost))
+  if (!PickNodeWorker(tree, tree, &best, &best_cost, split_cost))
   {
     /* hack here : BuildNodes will detect the cancellation */
     return nullptr;
@@ -903,6 +902,7 @@ void SeparateSegs(quadtree_c *tree, seg_t *part, seg_t **left_list, seg_t **righ
   // this quadtree_c is empty now
 }
 
+// compute the boundary of the list of segs
 void FindLimits2(seg_t *list, bbox_t *bbox)
 {
   // empty list?
@@ -956,7 +956,8 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
   if (HAS_BIT(config.debug, DEBUG_CUTLIST))
   {
     PrintLine(LOG_DEBUG, "[%s] CUT LIST:", __func__);
-    PrintLine(LOG_DEBUG, "[%s] PARTITION: (%1.1f,%1.1f) += (%1.1f,%1.1f)", __func__, part->psx, part->psy, part->pdx, part->pdy);
+    PrintLine(LOG_DEBUG, "[%s] PARTITION: (%1.1f,%1.1f) += (%1.1f,%1.1f)", __func__, part->psx, part->psy, part->pdx,
+              part->pdy);
 
     for (cut = cut_list; cut; cut = cut->next)
     {
@@ -1530,8 +1531,8 @@ void ClockwiseOrder(subsec_t *subsec)
 
     for (seg = subsec->seg_list; seg; seg = seg->next)
     {
-      PrintLine(LOG_DEBUG, "[%s] Seg %p: Angle %1.6f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, seg, seg->cmp_angle, seg->start->x,
-                seg->start->y, seg->end->x, seg->end->y);
+      PrintLine(LOG_DEBUG, "[%s] Seg %p: Angle %1.6f  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, seg, seg->cmp_angle,
+                seg->start->x, seg->start->y, seg->end->x, seg->end->y);
     }
   }
 }
@@ -1649,7 +1650,8 @@ int ComputeBspHeight(const node_t *node)
   return std::max(left, right) + 1;
 }
 
-build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, node_t **N, subsec_t **S)
+build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast,
+                          bool analysis)
 {
   *N = nullptr;
   *S = nullptr;
@@ -1670,7 +1672,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
   quadtree_c *tree = TreeFromSegList(list, bounds);
 
   /* pick partition line, NONE indicates convexicity */
-  seg_t *part = PickNode(tree, depth);
+  seg_t *part = PickNode(tree, depth, split_cost, fast);
 
   if (part == nullptr)
   {
@@ -1730,7 +1732,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
   build_result_e ret;
 
   // recursively build the left side
-  ret = BuildNodes(lefts, depth + 1, &node->l.bounds, &node->l.node, &node->l.subsec);
+  ret = BuildNodes(lefts, depth + 1, &node->l.bounds, &node->l.node, &node->l.subsec, split_cost, fast, analysis);
   if (ret != BUILD_OK)
   {
     return ret;
@@ -1742,7 +1744,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds /* output */, n
   }
 
   // recursively build the right side
-  ret = BuildNodes(rights, depth + 1, &node->r.bounds, &node->r.node, &node->r.subsec);
+  ret = BuildNodes(rights, depth + 1, &node->r.bounds, &node->r.node, &node->r.subsec, split_cost, fast, analysis);
   if (ret != BUILD_OK)
   {
     return ret;

@@ -39,10 +39,6 @@ foreach(san ENABLE_ASAN ENABLE_UBSAN ENABLE_TSAN)
     endif()
 endforeach()
 
-if(SAN_COUNT GREATER 1)
-    message(FATAL_ERROR "Only one sanitizer may be enabled at a time.")
-endif()
-
 if(ENABLE_LTO AND SAN_COUNT GREATER 0)
     message(FATAL_ERROR "LTO cannot be enabled together with sanitizers.")
 endif()
