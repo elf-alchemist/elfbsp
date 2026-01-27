@@ -67,7 +67,6 @@ target_compile_options(elfbsp PRIVATE
     -Wconversion
     -Wsign-conversion
     -Wno-unused-parameter
-    -Wold-style-cast
 )
 
 target_compile_options(elfbsp PRIVATE
@@ -80,6 +79,7 @@ target_compile_options(elfbsp PRIVATE
 target_compile_options(elfbsp PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
     $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
+    $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
 )
 
 if(ENABLE_WERROR)
