@@ -165,11 +165,6 @@ using long_angle_t = uint32_t;
 using short_angle_t = uint16_t;
 using lump_t = char[8];
 
-using vec2_fixed_t = struct
-{
-  fixed_t x, y;
-};
-
 // misc constants
 static constexpr long_angle_t LONG_ANGLE_45 = 0x20000000;
 static constexpr long_angle_t LONG_ANGLE_1 = (LONG_ANGLE_45 / 45);
@@ -994,22 +989,22 @@ using bsp_specials_t = enum bsp_specials_e : uint32_t
 {
   Special_VanillaScroll = 48,
 
-  Special_RemoteScroll = 1048, // potentialy lossy? -- i.e alters user-provided lumps?
+  Special_RemoteScroll = 1048,
 
   Special_ChangeStartVertex = 1078,
   Special_ChangeEndVertex,
 
-  Special_RotateDegrees,     // only vanilla segs encode angle
+  Special_RotateDegrees,     // currently only vanilla & deepbspv4 segs encode angle
   Special_RotateDegreesHard, //
   Special_RotateAngleT,      //
   Special_RotateAngleTHard,  //
 
-  Special_DoNotRenderBackSeg,  // not supported on SSECTORS' XGL nodes
-  Special_DoNotRenderFrontSeg, //
-  Special_DoNotRenderAnySeg,   //
+  Special_DoNotRenderBackSeg,
+  Special_DoNotRenderFrontSeg,
+  Special_DoNotRenderAnySeg,
 
-  Special_Unknown1, // related to splitting?
-  Special_Unknown2, // line tag value becomes seg's associated line index? why?
+  Special_DoNotSplitSeg,
+  Special_Unknown2, // line tag value becomes seg's associated line index?
 };
 
 using bsp_tags_t = enum bsp_tags_e
