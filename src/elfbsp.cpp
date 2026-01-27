@@ -93,8 +93,6 @@ void WriteAnalysis(const char *filename)
 
   csv_path += ".csv";
 
-  PrintLine(LOG_NORMAL, "[%s] Trying to write data to CSV file %s.", __func__, csv_path.c_str());
-
   // Append to fresh CSV
   auto csv_file = std::ofstream(csv_path.c_str(), std::ios::app);
 
