@@ -21,7 +21,6 @@
 //
 //------------------------------------------------------------------------------
 
-#include "elfbsp.hpp"
 #include "core.hpp"
 
 #include <cstring>
@@ -85,8 +84,7 @@ void WriteAnalysis(const char *filename)
 {
   auto csv_path = std::string(filename);
 
-  auto ext_pos = FindExtension(filename);
-  if (ext_pos > 0)
+  if (const auto ext_pos = FindExtension(filename); ext_pos > 0)
   {
     csv_path.resize(ext_pos);
   }
@@ -102,7 +100,7 @@ void WriteAnalysis(const char *filename)
     return;
   }
 
-  for (auto line : analysis_csv)
+  for (const auto& line : analysis_csv)
   {
     csv_file << line << '\n';
   }
@@ -112,7 +110,7 @@ void WriteAnalysis(const char *filename)
   // Flush out from memory
   analysis_csv.clear();
 
-  PrintLine(LOG_NORMAL, "[%s] Succesfully finished writing data to CSV file %s.", __func__, csv_path.c_str());
+  PrintLine(LOG_NORMAL, "[%s] Successfully finished writing data to CSV file %s.", __func__, csv_path.c_str());
 }
 
 //------------------------------------------------------------------------
@@ -137,7 +135,7 @@ bool CheckMapInRange(const map_range_t *range, const char *name)
   return true;
 }
 
-bool CheckMapInMaplist(size_t lev_idx)
+bool CheckMapInMapList(const size_t lev_idx)
 {
   // when --map is not used, allow everything
   if (map_list.empty())
@@ -147,9 +145,9 @@ bool CheckMapInMaplist(size_t lev_idx)
 
   const char *name = GetLevelName(lev_idx);
 
-  for (unsigned int i = 0; i < map_list.size(); i++)
+  for (auto & map : map_list)
   {
-    if (CheckMapInRange(&map_list[i], name))
+    if (CheckMapInRange(&map, name))
     {
       return true;
     }
@@ -162,7 +160,7 @@ static void BuildFile(const char *filename)
 {
   config.total_warnings = 0;
 
-  size_t num_levels = LevelsInWad();
+  const size_t num_levels = LevelsInWad();
 
   if (num_levels == 0)
   {
@@ -179,7 +177,7 @@ static void BuildFile(const char *filename)
   // loop over each level in the wad
   for (size_t n = 0; n < num_levels; n++)
   {
-    if (!CheckMapInMaplist(n))
+    if (!CheckMapInMapList(n))
     {
       continue;
     }
@@ -271,10 +269,10 @@ void BackupFile(const char *filename)
   PrintLine(LOG_NORMAL, "Created backup: %s", dest_name.c_str());
 }
 
-void VisitFile(unsigned int idx, const char *filename)
+void VisitFile(const char *filename)
 {
   // handle the -o option
-  if (opt_output.size() > 0)
+  if (!opt_output.empty())
   {
     if (!FileCopy(filename, opt_output.c_str()))
     {
@@ -564,9 +562,9 @@ void ProcessDebugParam(const char *param, uint32_t &debug)
   }
 }
 
-int ParseLongArgument(const char *name, int argc, char *argv[])
+int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv[])
 {
-  int used = 0;
+  int32_t used = 0;
 
   if (strcmp(name, "--help") == 0)
   {
@@ -637,7 +635,7 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
       PrintLine(LOG_ERROR, "missing value for '--output' option");
     }
 
-    if (opt_output.size() > 0)
+    if (!opt_output.empty())
     {
       PrintLine(LOG_ERROR, "cannot use '--output' option twice");
     }
@@ -657,7 +655,7 @@ int ParseLongArgument(const char *name, int argc, char *argv[])
   return used;
 }
 
-void ParseCommandLine(int argc, char *argv[])
+void ParseCommandLine(int32_t argc, const char *argv[])
 {
   // skip program name
   argc--;
@@ -672,7 +670,7 @@ void ParseCommandLine(int argc, char *argv[])
 
     if constexpr (MACOS)
     {
-      // ignore MacOS X rubbish
+      // ignore Mac OS X garbage
       if (strncmp(arg, "-psn_", 5) == 0)
       {
         continue;
@@ -726,7 +724,7 @@ void ParseCommandLine(int argc, char *argv[])
       continue;
     }
 
-    int count = ParseLongArgument(arg, argc, argv);
+    int32_t count = ParseLongArgument(arg, argc, argv);
 
     if (count > 0)
     {
@@ -736,7 +734,7 @@ void ParseCommandLine(int argc, char *argv[])
   }
 }
 
-int main(int argc, char *argv[])
+int32_t main(const int32_t argc, const char *argv[])
 {
   ParseCommandLine(argc, argv);
 
@@ -760,7 +758,7 @@ int main(int argc, char *argv[])
     return 0;
   }
 
-  if (opt_output.size() > 0)
+  if (!opt_output.empty())
   {
     if (config.backup)
     {
@@ -779,10 +777,8 @@ int main(int argc, char *argv[])
   }
 
   // validate all filenames before processing any of them
-  for (unsigned int i = 0; i < wad_list.size(); i++)
+  for (const auto filename : wad_list)
   {
-    const char *filename = wad_list[i];
-
     ValidateInputFilename(filename);
 
     if (!FileExists(filename))
@@ -791,9 +787,9 @@ int main(int argc, char *argv[])
     }
   }
 
-  for (unsigned int i = 0; i < wad_list.size(); i++)
+  for (const auto & wad : wad_list)
   {
-    VisitFile(i, wad_list[i]);
+    VisitFile(wad);
   }
 
   if (total_failed_files > 0)
