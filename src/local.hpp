@@ -374,16 +374,16 @@ int OnLineSide(quadtree_c *quadtree, const seg_t *part);
 
 /* ----- Level data arrays ----------------------- */
 
-extern std::vector<vertex_t *> lev_vertices;
-extern std::vector<linedef_t *> lev_linedefs;
-extern std::vector<sidedef_t *> lev_sidedefs;
-extern std::vector<sector_t *> lev_sectors;
-extern std::vector<thing_t *> lev_things;
+extern std::vector<vertex_t> lev_vertices;
+extern std::vector<linedef_t> lev_linedefs;
+extern std::vector<sidedef_t> lev_sidedefs;
+extern std::vector<sector_t> lev_sectors;
+extern std::vector<thing_t> lev_things;
 
-extern std::vector<seg_t *> lev_segs;
-extern std::vector<subsec_t *> lev_subsecs;
-extern std::vector<node_t *> lev_nodes;
-extern std::vector<walltip_t *> lev_walltips;
+extern std::vector<seg_t> lev_segs;
+extern std::vector<subsec_t> lev_subsecs;
+extern std::vector<node_t> lev_nodes;
+extern std::vector<walltip_t> lev_walltips;
 
 extern size_t num_old_vert;
 extern size_t num_new_vert;

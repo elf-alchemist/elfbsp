@@ -28,7 +28,7 @@
 #include <utility>
 #include <vector>
 
-static constexpr std::uint32_t DUMMY_DUP = 0xFFFF;
+static constexpr uint32_t DUMMY_DUP = 0xFFFF;
 
 Wad_file *cur_wad;
 
@@ -258,22 +258,20 @@ static void CreateBlockmap(void)
 {
   block_lines = UtilCalloc<uint16_t *>(block_count * sizeof(uint16_t *));
 
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (auto &L : lev_linedefs)
   {
-    const linedef_t *L = lev_linedefs[i];
-
     // ignore zero-length lines
-    if (L->zero_len)
+    if (L.zero_len)
     {
       continue;
     }
 
-    if (L->no_blockmap)
+    if (L.no_blockmap)
     {
       continue;
     }
 
-    BlockAddLine(L);
+    BlockAddLine(&L);
   }
 }
 
@@ -513,21 +511,19 @@ static void FindBlockmapLimits(bbox_t *bbox)
   bbox->minx = bbox->miny = SHRT_MAX;
   bbox->maxx = bbox->maxy = SHRT_MIN;
 
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (auto &L : lev_linedefs)
   {
-    const linedef_t *L = lev_linedefs[i];
-
-    if (L->no_blockmap)
+    if (L.no_blockmap)
     {
       continue;
     }
 
-    if (!L->zero_len)
+    if (!L.zero_len)
     {
-      double x1 = L->start->x;
-      double y1 = L->start->y;
-      double x2 = L->end->x;
-      double y2 = L->end->y;
+      double x1 = L.start->x;
+      double y1 = L.start->y;
+      double x2 = L.end->x;
+      double y2 = L.end->y;
 
       int32_t lx = static_cast<int32_t>(floor(std::min(x1, x2)));
       int32_t ly = static_cast<int32_t>(floor(std::min(y1, y2)));
@@ -592,7 +588,7 @@ static void InitBlockmap(void)
 
 static void PutBlockmap(void)
 {
-  if (lev_linedefs.size() == 0)
+  if (lev_linedefs.empty())
   {
     // just create an empty blockmap lump
     CreateLevelLump("BLOCKMAP")->Finish();
@@ -670,17 +666,15 @@ static void Reject_Free(void)
 //
 static void Reject_GroupSectors(void)
 {
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (auto &line : lev_linedefs)
   {
-    const linedef_t *line = lev_linedefs[i];
-
-    if (!line->right || !line->left)
+    if (!line.right || !line.left)
     {
       continue;
     }
 
-    sector_t *sec1 = line->right->sector;
-    sector_t *sec2 = line->left->sector;
+    sector_t *sec1 = line.right->sector;
+    sector_t *sec2 = line.left->sector;
 
     if (!sec1 || !sec2 || sec1 == sec2)
     {
@@ -784,16 +778,16 @@ bool lev_force_xnod;
 bool lev_overflows;
 
 // objects of loaded level, and stuff we've built
-std::vector<vertex_t *> lev_vertices;
-std::vector<linedef_t *> lev_linedefs;
-std::vector<sidedef_t *> lev_sidedefs;
-std::vector<sector_t *> lev_sectors;
-std::vector<thing_t *> lev_things;
+std::vector<vertex_t> lev_vertices;
+std::vector<linedef_t> lev_linedefs;
+std::vector<sidedef_t> lev_sidedefs;
+std::vector<sector_t> lev_sectors;
+std::vector<thing_t> lev_things;
 
-std::vector<seg_t *> lev_segs;
-std::vector<subsec_t *> lev_subsecs;
-std::vector<node_t *> lev_nodes;
-std::vector<walltip_t *> lev_walltips;
+std::vector<seg_t> lev_segs;
+std::vector<subsec_t> lev_subsecs;
+std::vector<node_t> lev_nodes;
+std::vector<walltip_t> lev_walltips;
 
 size_t num_old_vert = 0;
 size_t num_new_vert = 0;
@@ -803,161 +797,125 @@ size_t num_real_lines = 0;
 
 vertex_t *NewVertex(void)
 {
-  vertex_t *V = UtilCalloc<vertex_t>(sizeof(vertex_t));
-  V->index = lev_vertices.size();
+  vertex_t V;
+  memset(&V, 0, sizeof(V));
+  V.index = lev_vertices.size();
   lev_vertices.push_back(V);
-  return V;
+  return &lev_vertices.back();
 }
 
 linedef_t *NewLinedef(void)
 {
-  linedef_t *L = UtilCalloc<linedef_t>(sizeof(linedef_t));
-  L->index = lev_linedefs.size();
+  linedef_t L;
+  memset(&L, 0, sizeof(L));
+  L.index = lev_linedefs.size();
   lev_linedefs.push_back(L);
-  return L;
+  return &lev_linedefs.back();
 }
 
 sidedef_t *NewSidedef(void)
 {
-  sidedef_t *S = UtilCalloc<sidedef_t>(sizeof(sidedef_t));
-  S->index = lev_sidedefs.size();
+  sidedef_t S;
+  memset(&S, 0, sizeof(S));
+  S.index = lev_sidedefs.size();
   lev_sidedefs.push_back(S);
-  return S;
+  return &lev_sidedefs.back();
 }
 
 sector_t *NewSector(void)
 {
-  sector_t *S = UtilCalloc<sector_t>(sizeof(sector_t));
-  S->index = lev_sectors.size();
+  sector_t S;
+  memset(&S, 0, sizeof(S));
+  S.index = lev_sectors.size();
   lev_sectors.push_back(S);
-  return S;
+  return &lev_sectors.back();
 }
 
 thing_t *NewThing(void)
 {
-  thing_t *T = UtilCalloc<thing_t>(sizeof(thing_t));
-  T->index = lev_things.size();
+  thing_t T;
+  memset(&T, 0, sizeof(T));
+  T.index = lev_things.size();
   lev_things.push_back(T);
-  return T;
+  return &lev_things.back();
 }
 
 seg_t *NewSeg(void)
 {
-  seg_t *S = UtilCalloc<seg_t>(sizeof(seg_t));
+  seg_t S;
+  memset(&S, 0, sizeof(S));
   lev_segs.push_back(S);
-  return S;
+  return &lev_segs.back();
 }
 
 subsec_t *NewSubsec(void)
 {
-  subsec_t *S = UtilCalloc<subsec_t>(sizeof(subsec_t));
+  subsec_t S;
+  memset(&S, 0, sizeof(S));
   lev_subsecs.push_back(S);
-  return S;
+  return &lev_subsecs.back();
 }
 
 node_t *NewNode(void)
 {
-  node_t *N = UtilCalloc<node_t>(sizeof(node_t));
+  node_t N;
+  memset(&N, 0, sizeof(N));
   lev_nodes.push_back(N);
-  return N;
+  return &lev_nodes.back();
 }
 
 walltip_t *NewWallTip(void)
 {
-  walltip_t *WT = UtilCalloc<walltip_t>(sizeof(walltip_t));
+  walltip_t WT;
+  memset(&WT, 0, sizeof(WT));
   lev_walltips.push_back(WT);
-  return WT;
+  return &lev_walltips.back();
 }
 
 /* ----- free routines ---------------------------- */
 
 static void FreeVertices(void)
 {
-  for (size_t i = 0; i < lev_vertices.size(); i++)
-  {
-    UtilFree(lev_vertices[i]);
-  }
-
   lev_vertices.clear();
 }
 
 static void FreeLinedefs(void)
 {
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
-  {
-    UtilFree(lev_linedefs[i]);
-  }
-
   lev_linedefs.clear();
 }
 
 static void FreeSidedefs(void)
 {
-  for (size_t i = 0; i < lev_sidedefs.size(); i++)
-  {
-    UtilFree(lev_sidedefs[i]);
-  }
-
   lev_sidedefs.clear();
 }
 
 static void FreeSectors(void)
 {
-  for (size_t i = 0; i < lev_sectors.size(); i++)
-  {
-    UtilFree(lev_sectors[i]);
-  }
-
   lev_sectors.clear();
 }
 
 static void FreeThings(void)
 {
-  for (size_t i = 0; i < lev_things.size(); i++)
-  {
-    UtilFree(lev_things[i]);
-  }
-
   lev_things.clear();
 }
 
 void FreeSegs(void)
 {
-  for (size_t i = 0; i < lev_segs.size(); i++)
-  {
-    UtilFree(lev_segs[i]);
-  }
-
   lev_segs.clear();
 }
 
 void FreeSubsecs(void)
 {
-  for (size_t i = 0; i < lev_subsecs.size(); i++)
-  {
-    UtilFree(lev_subsecs[i]);
-  }
-
   lev_subsecs.clear();
 }
 
 void FreeNodes(void)
 {
-  for (size_t i = 0; i < lev_nodes.size(); i++)
-  {
-    UtilFree(lev_nodes[i]);
-  }
-
   lev_nodes.clear();
 }
 
 static void FreeWallTips(void)
 {
-  for (size_t i = 0; i < lev_walltips.size(); i++)
-  {
-    UtilFree(lev_walltips[i]);
-  }
-
   lev_walltips.clear();
 }
 
@@ -970,7 +928,7 @@ static vertex_t *SafeLookupVertex(size_t num)
     PrintLine(LOG_ERROR, "illegal vertex number #%zu", num);
   }
 
-  return lev_vertices[num];
+  return &lev_vertices[num];
 }
 
 static sector_t *SafeLookupSector(uint16_t num)
@@ -985,7 +943,7 @@ static sector_t *SafeLookupSector(uint16_t num)
     PrintLine(LOG_ERROR, "illegal sector number #%zu", static_cast<size_t>(num));
   }
 
-  return lev_sectors[num];
+  return &lev_sectors[num];
 }
 
 static inline sidedef_t *SafeLookupSidedef(uint16_t num)
@@ -1001,7 +959,7 @@ static inline sidedef_t *SafeLookupSidedef(uint16_t num)
     return nullptr;
   }
 
-  return lev_sidedefs[num];
+  return &lev_sidedefs[num];
 }
 
 static void GetVertices(void)
@@ -1368,23 +1326,23 @@ static void GetLinedefsHexen(void)
   }
 }
 
-static inline uint16_t VanillaSegDist(const seg_t *seg)
+static inline uint16_t VanillaSegDist(const seg_t &seg)
 {
-  double lx = seg->side ? seg->linedef->end->x : seg->linedef->start->x;
-  double ly = seg->side ? seg->linedef->end->y : seg->linedef->start->y;
+  double lx = seg.side ? seg.linedef->end->x : seg.linedef->start->x;
+  double ly = seg.side ? seg.linedef->end->y : seg.linedef->start->y;
 
   // use the "true" starting coord (as stored in the wad)
-  double sx = round(seg->start->x);
-  double sy = round(seg->start->y);
+  double sx = round(seg.start->x);
+  double sy = round(seg.start->y);
 
   return static_cast<uint16_t>(floor(hypot(sx - lx, sy - ly) + 0.5));
 }
 
-static inline short_angle_t VanillaSegAngle(const seg_t *seg)
+static inline short_angle_t VanillaSegAngle(const seg_t &seg)
 {
   // compute the "true" delta
-  double dx = round(seg->end->x) - round(seg->start->x);
-  double dy = round(seg->end->y) - round(seg->start->y);
+  double dx = round(seg.end->x) - round(seg.start->x);
+  double dy = round(seg.end->y) - round(seg.start->y);
 
   double angle = ComputeAngle(dx, dy);
 
@@ -1405,21 +1363,21 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
   // 1081 => Set to degrees stored in tag
   // 1082 => Additive BAM stored in tag
   // 1083 => Set to BAM stored in tag
-  if (seg->linedef->special == Special_RotateDegrees)
+  if (seg.linedef->special == Special_RotateDegrees)
   {
-    result += DegreesToShortBAM(static_cast<uint16_t>(seg->linedef->tag));
+    result += DegreesToShortBAM(static_cast<uint16_t>(seg.linedef->tag));
   }
-  else if (seg->linedef->special == Special_RotateDegreesHard)
+  else if (seg.linedef->special == Special_RotateDegreesHard)
   {
-    result = DegreesToShortBAM(static_cast<uint16_t>(seg->linedef->tag));
+    result = DegreesToShortBAM(static_cast<uint16_t>(seg.linedef->tag));
   }
-  else if (seg->linedef->special == Special_RotateAngleT)
+  else if (seg.linedef->special == Special_RotateAngleT)
   {
-    result += static_cast<short_angle_t>(seg->linedef->tag);
+    result += static_cast<short_angle_t>(seg.linedef->tag);
   }
-  else if (seg->linedef->special == Special_RotateAngleTHard)
+  else if (seg.linedef->special == Special_RotateAngleTHard)
   {
-    result = static_cast<short_angle_t>(seg->linedef->tag);
+    result = static_cast<short_angle_t>(seg.linedef->tag);
   }
 
   return result;
@@ -1480,7 +1438,7 @@ static void ParseSidedefField(sidedef_t *side, const std::string &key, token_kin
       PrintLine(LOG_ERROR, "illegal sector number #%zu", static_cast<size_t>(num));
     }
 
-    side->sector = lev_sectors[num];
+    side->sector = &lev_sectors[num];
   }
 }
 
@@ -1516,7 +1474,7 @@ static void ParseLinedefField(linedef_t *line, const std::string &key, token_kin
     }
     else
     {
-      line->right = lev_sidedefs[num];
+      line->right = &lev_sidedefs[num];
     }
   }
 
@@ -1530,7 +1488,7 @@ static void ParseLinedefField(linedef_t *line, const std::string &key, token_kin
     }
     else
     {
-      line->left = lev_sidedefs[num];
+      line->left = &lev_sidedefs[num];
     }
   }
 }
@@ -1784,19 +1742,17 @@ static void PutVertices(void)
   Lump_c *lump = CreateLevelLump("VERTEXES", size);
 
   size_t count = 0;
-  for (size_t i = 0; i < lev_vertices.size(); i++)
+  for (auto &vert : lev_vertices)
   {
     raw_vertex_t raw;
 
-    const vertex_t *vert = lev_vertices[i];
-
-    if (vert->is_new)
+    if (vert.is_new)
     {
       continue;
     }
 
-    raw.x = GetLittleEndian(static_cast<int16_t>(floor(vert->x)));
-    raw.y = GetLittleEndian(static_cast<int16_t>(floor(vert->y)));
+    raw.x = GetLittleEndian(static_cast<int16_t>(floor(vert.x)));
+    raw.y = GetLittleEndian(static_cast<int16_t>(floor(vert.y)));
 
     lump->Write(&raw, sizeof(raw));
 
@@ -1848,17 +1804,17 @@ static void PutSegs(void)
   {
     raw_seg_t raw;
 
-    const seg_t *seg = lev_segs[i];
+    const seg_t &seg = lev_segs[i];
 
-    raw.start = GetLittleEndian(VertexIndex16Bit(seg->start));
-    raw.end = GetLittleEndian(VertexIndex16Bit(seg->end));
+    raw.start = GetLittleEndian(VertexIndex16Bit(seg.start));
+    raw.end = GetLittleEndian(VertexIndex16Bit(seg.end));
     raw.angle = GetLittleEndian(VanillaSegAngle(seg));
-    raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef->index));
-    raw.flip = GetLittleEndian(seg->side);
+    raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg.linedef->index));
+    raw.flip = GetLittleEndian(seg.side);
     raw.dist = GetLittleEndian(VanillaSegDist(seg));
 
     // -Elf- ZokumBSP
-    if ((seg->linedef->dont_render_back && seg->side) || (seg->linedef->dont_render_front && !seg->side))
+    if ((seg.linedef->dont_render_back && seg.side) || (seg.linedef->dont_render_front && !seg.side))
     {
       raw = {};
     }
@@ -1868,8 +1824,8 @@ static void PutSegs(void)
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
       PrintLine(LOG_DEBUG, "[%s] %zu  Vert %04X->%04X  Line %04X %s  Angle %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__,
-                seg->index, GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef),
-                seg->side ? "L" : "R", GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
+                seg.index, GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef),
+                seg.side ? "L" : "R", GetLittleEndian(raw.angle), seg.start->x, seg.start->y, seg.end->x, seg.end->y);
     }
   }
 
@@ -1892,16 +1848,16 @@ static void PutSubsecs(void)
   {
     raw_subsec_t raw;
 
-    const subsec_t *sub = lev_subsecs[i];
+    const subsec_t& sub = lev_subsecs[i];
 
-    raw.first = GetLittleEndian(static_cast<uint16_t>(sub->seg_list->index));
-    raw.num = GetLittleEndian(static_cast<uint16_t>(sub->seg_count));
+    raw.first = GetLittleEndian(static_cast<uint16_t>(sub.seg_list->index));
+    raw.num = GetLittleEndian(static_cast<uint16_t>(sub.seg_count));
 
     lump->Write(&raw, sizeof(raw));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] %zu  First %04X  Num %04X", __func__, sub->index, GetLittleEndian(raw.first),
+      PrintLine(LOG_DEBUG, "[%s] %zu  First %04X  Num %04X", __func__, sub.index, GetLittleEndian(raw.first),
                 GetLittleEndian(raw.num));
     }
   }
@@ -2053,9 +2009,9 @@ static void CheckLimits(void)
 
 struct Compare_seg_pred
 {
-  inline bool operator()(const seg_t *A, const seg_t *B) const
+  inline bool operator()(const seg_t A, const seg_t B) const
   {
-    return A->index < B->index;
+    return A.index < B.index;
   }
 };
 
@@ -2065,9 +2021,8 @@ void SortSegs(void)
   std::sort(lev_segs.begin(), lev_segs.end(), Compare_seg_pred());
 
   // remove unwanted segs
-  while (lev_segs.size() > 0 && lev_segs.back()->index == SEG_IS_GARBAGE)
+  while (lev_segs.size() > 0 && lev_segs.back().index == SEG_IS_GARBAGE)
   {
-    UtilFree(lev_segs.back());
     lev_segs.pop_back();
   }
 }
@@ -2087,15 +2042,15 @@ static void PutXnodVertices(Lump_c *lump)
   {
     raw_xnod_vertex_t raw;
 
-    const vertex_t *vert = lev_vertices[i];
+    const vertex_t &vert = lev_vertices[i];
 
-    if (!vert->is_new)
+    if (!vert.is_new)
     {
       continue;
     }
 
-    raw.x = GetLittleEndian(static_cast<int32_t>(floor(vert->x * 65536.0)));
-    raw.y = GetLittleEndian(static_cast<int32_t>(floor(vert->y * 65536.0)));
+    raw.x = GetLittleEndian(static_cast<int32_t>(floor(vert.x * 65536.0)));
+    raw.y = GetLittleEndian(static_cast<int32_t>(floor(vert.y * 65536.0)));
 
     lump->Write(&raw, sizeof(raw));
 
@@ -2116,14 +2071,14 @@ static void PutXnodSubsecs(Lump_c *lump)
   size_t cur_seg_index = 0;
   for (size_t i = 0; i < lev_subsecs.size(); i++)
   {
-    const subsec_t *sub = lev_subsecs[i];
+    const subsec_t &sub = lev_subsecs[i];
 
-    raw_num = GetLittleEndian(sub->seg_count);
+    raw_num = GetLittleEndian(sub.seg_count);
     lump->Write(&raw_num, 4);
 
     // sanity check the seg index values
     size_t count = 0;
-    for (const seg_t *seg = sub->seg_list; seg; seg = seg->next, cur_seg_index++)
+    for (const seg_t *seg = sub.seg_list; seg; seg = seg->next, cur_seg_index++)
     {
       if (cur_seg_index != seg->index)
       {
@@ -2133,9 +2088,9 @@ static void PutXnodSubsecs(Lump_c *lump)
       count++;
     }
 
-    if (count != sub->seg_count)
+    if (count != sub.seg_count)
     {
-      PrintLine(LOG_ERROR, "PutZSubsecs: miscounted segs in sub %zu (%zu != %zu)", i, count, sub->seg_count);
+      PrintLine(LOG_ERROR, "PutZSubsecs: miscounted segs in sub %zu (%zu != %zu)", i, count, sub.seg_count);
     }
   }
 
@@ -2152,7 +2107,7 @@ static void PutXnodSegs(Lump_c *lump)
 
   for (size_t i = 0; i < lev_segs.size(); i++)
   {
-    const seg_t *seg = lev_segs[i];
+    const seg_t *seg = &lev_segs[i];
 
     if (seg->index != i)
     {
@@ -2176,7 +2131,7 @@ static void PutXgl2Segs(Lump_c *lump)
 
   for (size_t i = 0; i < lev_segs.size(); i++)
   {
-    const seg_t *seg = lev_segs[i];
+    const seg_t *seg = &lev_segs[i];
 
     if (seg->index != i)
     {
@@ -2423,10 +2378,13 @@ void LoadLevel(void)
               lev_sectors.size(), lev_sidedefs.size(), lev_linedefs.size(), lev_things.size());
   }
 
+  PrintLine(LOG_NORMAL, "Testing %s, %d", __func__, __LINE__);
   DetectOverlappingVertices();
+  PrintLine(LOG_NORMAL, "Testing %s, %d", __func__, __LINE__);
   DetectOverlappingLines();
-
+  PrintLine(LOG_NORMAL, "Testing %s, %d", __func__, __LINE__);
   CalculateWallTips();
+  PrintLine(LOG_NORMAL, "Testing %s, %d", __func__, __LINE__);
 
   // -JL- Find sectors containing polyobjs
   switch (lev_format)
@@ -2440,6 +2398,7 @@ void LoadLevel(void)
     default:
       break;
   }
+  PrintLine(LOG_NORMAL, "Testing %s, %d", __func__, __LINE__);
 }
 
 void FreeLevel(void)
@@ -2555,9 +2514,6 @@ build_result_e SaveLevel(node_t *root_node)
 build_result_e SaveUDMF(node_t *root_node)
 {
   cur_wad->BeginWrite();
-
-  // remove any existing ZNODES lump
-  cur_wad->RemoveZNodes(lev_current_idx);
 
   Lump_c *lump = CreateLevelLump("ZNODES", NO_INDEX);
 
@@ -2760,7 +2716,6 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
   }
 
   FreeLevel();
-
 
   if (config.analysis)
   {

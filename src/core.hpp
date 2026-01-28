@@ -1055,18 +1055,18 @@ using hexen_option_t = enum hexen_option_e : uint16_t
 //
 // Polyobject stuff
 //
-constexpr uint32_t HEXTYPE_POLY_START = 1;
-constexpr uint32_t HEXTYPE_POLY_EXPLICIT = 5;
+constexpr auto HEXTYPE_POLY_START = 1;
+constexpr auto HEXTYPE_POLY_EXPLICIT = 5;
 
 // -JL- Hexen polyobj thing types
-constexpr uint32_t PO_ANCHOR_TYPE = 3000;
-constexpr uint32_t PO_SPAWN_TYPE = 3001;
-constexpr uint32_t PO_SPAWNCRUSH_TYPE = 3002;
+constexpr auto HEXEN_PO_ANCHOR_TYPE = 3000;
+constexpr auto HEXEN_PO_SPAWN_TYPE = 3001;
+constexpr auto HEXEN_PO_SPAWNCRUSH_TYPE = 3002;
 
 // -JL- ZDoom polyobj thing types
-constexpr uint32_t ZDOOM_PO_ANCHOR_TYPE = 9300;
-constexpr uint32_t ZDOOM_PO_SPAWN_TYPE = 9301;
-constexpr uint32_t ZDOOM_PO_SPAWNCRUSH_TYPE = 9302;
+constexpr auto PO_ANCHOR_TYPE = 9300;
+constexpr auto PO_SPAWN_TYPE = 9301;
+constexpr auto PO_SPAWNCRUSH_TYPE = 9302;
 
 //
 // File handling
@@ -1087,7 +1087,7 @@ struct Wad_file
   // the finalizing EndWrite().
   off_t total_size;
 
-  std::vector<Lump_c *> directory;
+  std::vector<Lump_c> directory;
 
   size_t dir_start;
   size_t dir_count;
@@ -1121,22 +1121,13 @@ struct Wad_file
   //
   static Wad_file *Open(const char *filename, char mode = 'a');
 
-  [[nodiscard]] bool IsReadOnly(void) const
-  {
-    return mode == 'r';
-  }
+  bool IsReadOnly(void) const;
 
-  [[nodiscard]] size_t NumLumps(void) const
-  {
-    return directory.size();
-  }
+  size_t NumLumps(void) const;
 
   Lump_c *GetLump(size_t index);
 
-  [[nodiscard]] size_t LevelCount(void) const
-  {
-    return levels.size();
-  }
+  size_t LevelCount(void) const;
 
   size_t LevelHeader(size_t lev_num);
   size_t LevelLastLump(size_t lev_num);
@@ -1153,14 +1144,6 @@ struct Wad_file
   // during this period, it will be re-written by EndWrite().
   void BeginWrite(void);
   void EndWrite(void);
-
-  // remove the given lump(s)
-  // this will change index numbers on existing lumps
-  // (previous results of FindLumpNum or LevelHeader are invalidated).
-  void RemoveLumps(size_t index, size_t count = 1);
-
-  // removes any ZNODES lump from a UDMF level.
-  void RemoveZNodes(size_t lev_num);
 
   // insert a new lump.
   // The second form is for a level marker.

@@ -82,24 +82,17 @@ struct eval_info_t
   }
 };
 
-std::vector<intersection_t *> alloc_cuts;
+std::vector<intersection_t> alloc_cuts;
 
 intersection_t *NewIntersection(void)
 {
-  intersection_t *cut = new intersection_t;
-
+  intersection_t cut = {};
   alloc_cuts.push_back(cut);
-
-  return cut;
+  return &alloc_cuts.back();
 }
 
 void FreeIntersections(void)
 {
-  for (size_t i = 0; i < alloc_cuts.size(); i++)
-  {
-    delete alloc_cuts[i];
-  }
-
   alloc_cuts.clear();
 }
 
@@ -1320,52 +1313,51 @@ seg_t *CreateSegs(void)
 {
   seg_t *list = nullptr;
 
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (auto &line : lev_linedefs)
   {
-    linedef_t *line = lev_linedefs[i];
 
     seg_t *left = nullptr;
     seg_t *right = nullptr;
 
     // ignore zero-length lines
-    if (line->zero_len)
+    if (line.zero_len)
     {
       continue;
     }
 
     // ignore overlapping lines
-    if (line->overlap != nullptr)
+    if (line.overlap != nullptr)
     {
       continue;
     }
 
     // -Elf- ZokumBSP
-    if (line->dont_render)
+    if (line.dont_render)
     {
       continue;
     }
 
     // check for extremely long lines
-    if (hypot(line->start->x - line->end->x, line->start->y - line->end->y) >= 32000)
+    if (hypot(line.start->x - line.end->x, line.start->y - line.end->y) >= 32000)
     {
-      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is VERY long, it may cause problems", line->index);
+      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is VERY long, it may cause problems", line.index);
       config.total_warnings++;
     }
 
-    if (line->right != nullptr)
+    if (line.right != nullptr)
     {
-      right = CreateOneSeg(line, line->start, line->end, line->right, 0);
+      right = CreateOneSeg(&line, line.start, line.end, line.right, 0);
       ListAddSeg(&list, right);
     }
     else
     {
-      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu has no right sidedef!", line->index);
+      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu has no right sidedef!", line.index);
       config.total_warnings++;
     }
 
-    if (line->left != nullptr)
+    if (line.left != nullptr)
     {
-      left = CreateOneSeg(line, line->end, line->start, line->left, 1);
+      left = CreateOneSeg(&line, line.end, line.start, line.left, 1);
       ListAddSeg(&list, left);
 
       if (right != nullptr)
@@ -1380,11 +1372,11 @@ seg_t *CreateSegs(void)
     }
     else
     {
-      if (line->two_sided)
+      if (line.two_sided)
       {
-        PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is 2s but has no left sidedef", line->index);
+        PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is 2s but has no left sidedef", line.index);
         config.total_warnings++;
-        line->two_sided = false;
+        line.two_sided = false;
       }
     }
   }
@@ -1761,16 +1753,14 @@ void ClockwiseBspTree(void)
 {
   size_t cur_seg_index = 0;
 
-  for (size_t i = 0; i < lev_subsecs.size(); i++)
+  for (auto &sub : lev_subsecs)
   {
-    subsec_t *sub = lev_subsecs[i];
-
-    ClockwiseOrder(sub);
-    RenumberSegs(sub, cur_seg_index);
+    ClockwiseOrder(&sub);
+    RenumberSegs(&sub, cur_seg_index);
 
     // do some sanity checks
-    SanityCheckClosed(sub);
-    SanityCheckHasRealSeg(sub);
+    SanityCheckClosed(&sub);
+    SanityCheckHasRealSeg(&sub);
   }
 }
 
@@ -1835,24 +1825,21 @@ void NormaliseBspTree(void)
   // unlinks all minisegs from each subsector
   size_t cur_seg_index = 0;
 
-  for (size_t i = 0; i < lev_subsecs.size(); i++)
+  for (auto &sub : lev_subsecs)
   {
-    subsec_t *sub = lev_subsecs[i];
-    Normalise(sub);
-    RenumberSegs(sub, cur_seg_index);
+    Normalise(&sub);
+    RenumberSegs(&sub, cur_seg_index);
   }
 }
 
 void RoundOffVertices(void)
 {
-  for (size_t i = 0; i < lev_vertices.size(); i++)
+  for (auto &vert : lev_vertices)
   {
-    vertex_t *vert = lev_vertices[i];
-
-    if (vert->is_new)
+    if (vert.is_new)
     {
-      vert->is_new = false;
-      vert->index = num_old_vert;
+      vert.is_new = false;
+      vert.index = num_old_vert;
       num_old_vert++;
     }
   }
@@ -1986,11 +1973,9 @@ void RoundOffBspTree(void)
 
   RoundOffVertices();
 
-  for (size_t i = 0; i < lev_subsecs.size(); i++)
+  for (auto &sub : lev_subsecs)
   {
-    subsec_t *sub = lev_subsecs[i];
-
-    RoundOff(sub);
-    RenumberSegs(sub, cur_seg_index);
+    RoundOff(&sub);
+    RenumberSegs(&sub, cur_seg_index);
   }
 }

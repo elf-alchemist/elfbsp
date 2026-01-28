@@ -29,36 +29,6 @@
 //  LUMP Handling
 //------------------------------------------------------------------------
 
-Lump_c *MakeLump(Wad_file *wad, const char *lumpname, size_t l_start, size_t l_length)
-{
-  Lump_c *new_lump = new Lump_c;
-  new_lump->Rename(lumpname);
-  new_lump->parent = wad;
-  new_lump->l_start = l_start;
-  new_lump->l_length = l_length;
-  return new_lump;
-}
-
-Lump_c *MakeLumpFromEntry(Wad_file *wad, const raw_wad_entry_t *entry)
-{
-  Lump_c *new_lump = new Lump_c;
-
-  // handle the entry name, which can lack a terminating NUL
-  char buffer[9];
-  strncpy(buffer, entry->name, 8);
-  buffer[8] = 0;
-  new_lump->Rename(buffer);
-  new_lump->parent = wad;
-  new_lump->l_start = GetLittleEndian(entry->pos);
-  new_lump->l_length = GetLittleEndian(entry->size);
-
-  if (HAS_BIT(config.debug, DEBUG_WAD))
-  {
-    PrintLine(LOG_DEBUG, "[%s] New lump '%s' @ %zu len:%zu", __func__, new_lump->Name(), new_lump->l_start, new_lump->l_length);
-  }
-  return new_lump;
-}
-
 void Lump_c::MakeEntry(raw_wad_entry_t *entry)
 {
   // do a dance to avoid a compiler warning from strncpy(), *sigh*
@@ -83,13 +53,6 @@ Wad_file::Wad_file(const char *_name, char _mode, FILE *_fp)
 Wad_file::~Wad_file(void)
 {
   fclose(fp);
-
-  // free the directory
-  for (size_t k = 0; k < NumLumps(); k++)
-  {
-    delete directory[k];
-  }
-
   directory.clear();
 }
 
@@ -163,6 +126,21 @@ retry:
   w->ProcessNamespaces();
 
   return w;
+}
+
+bool Wad_file::IsReadOnly(void) const
+{
+  return mode == 'r';
+}
+
+size_t Wad_file::NumLumps(void) const
+{
+  return directory.size();
+}
+
+size_t Wad_file::LevelCount(void) const
+{
+  return levels.size();
 }
 
 Wad_file *Wad_file::Create(const char *filename, char mode)
@@ -257,9 +235,8 @@ static bool IsLevelLump(const char *name)
 Lump_c *Wad_file::GetLump(size_t index)
 {
   SYS_ASSERT(index < NumLumps());
-  SYS_ASSERT(directory[index]);
 
-  return directory[index];
+  return &directory[index];
 }
 
 static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
@@ -273,7 +250,7 @@ size_t Wad_file::LevelLookupLump(size_t lev_num, const char *name)
   {
     SYS_ASSERT(k < NumLumps());
 
-    if (directory[k]->Match(name))
+    if (directory[k].Match(name))
     {
       return k;
     }
@@ -292,7 +269,7 @@ size_t Wad_file::LevelLastLump(size_t lev_num)
   {
     while (count < MAX_LUMPS_IN_A_LEVEL && start + count < NumLumps())
     {
-      if (directory[start + count]->Match("ENDMAP"))
+      if (directory[start + count].Match("ENDMAP"))
       {
         count++;
         break;
@@ -303,7 +280,7 @@ size_t Wad_file::LevelLastLump(size_t lev_num)
   }
   else // standard DOOM or HEXEN format
   {
-    while (count < MAX_LUMPS_IN_A_LEVEL && start + count < NumLumps() && IsLevelLump(directory[start + count]->Name()))
+    while (count < MAX_LUMPS_IN_A_LEVEL && start + count < NumLumps() && IsLevelLump(directory[start + count].Name()))
     {
       count++;
     }
@@ -385,11 +362,24 @@ void Wad_file::ReadDirectory(void)
       PrintLine(LOG_ERROR, "Error reading WAD directory.");
     }
 
-    Lump_c *lump = MakeLumpFromEntry(this, &entry);
+    char buffer[9];
+    strncpy(buffer, entry.name, 8);
+    buffer[8] = 0;
+
+    Lump_c new_lump;
+    new_lump.Rename(buffer);
+    new_lump.parent = this;
+    new_lump.l_start = GetLittleEndian(entry.pos);
+    new_lump.l_length = GetLittleEndian(entry.size);
+
+    if (HAS_BIT(config.debug, DEBUG_WAD))
+    {
+      PrintLine(LOG_DEBUG, "[%s] New lump '%s' @ %zu len:%zu", __func__, new_lump.Name(), new_lump.l_start, new_lump.l_length);
+    }
 
     // WISH: check if entry is valid
 
-    directory.push_back(lump);
+    directory.push_back(new_lump);
   }
 }
 
@@ -406,18 +396,18 @@ void Wad_file::DetectLevels(void)
 
     // Ignore non-header map lumps
     // Fixes sliding window bug on single-level WADs
-    if (WhatLevelPart(directory[k]->Name()) != 0)
+    if (WhatLevelPart(directory[k].Name()) != 0)
     {
       continue;
     }
 
     // check for UDMF levels
-    if (directory[k + 1]->Match("TEXTMAP"))
+    if (directory[k + 1].Match("TEXTMAP"))
     {
       levels.push_back(k);
       if (HAS_BIT(config.debug, DEBUG_WAD))
       {
-        PrintLine(LOG_DEBUG, "[%s] Detected level : %s (UDMF)", __func__, directory[k]->Name());
+        PrintLine(LOG_DEBUG, "[%s] Detected level : %s (UDMF)", __func__, directory[k].Name());
       }
 
       continue;
@@ -431,7 +421,7 @@ void Wad_file::DetectLevels(void)
         break;
       }
 
-      size_t part = WhatLevelPart(directory[k + i]->Name());
+      size_t part = WhatLevelPart(directory[k + i].Name());
 
       if (part == 0)
       {
@@ -454,7 +444,7 @@ void Wad_file::DetectLevels(void)
 
       if (HAS_BIT(config.debug, DEBUG_WAD))
       {
-        PrintLine(LOG_DEBUG, "[%s] Detected level : %s", __func__, directory[k]->Name());
+        PrintLine(LOG_DEBUG, "[%s] Detected level : %s", __func__, directory[k].Name());
       }
     }
   }
@@ -476,8 +466,8 @@ void Wad_file::SortLevels(void)
 
     inline bool operator()(const size_t A, const size_t B) const
     {
-      const Lump_c *L1 = wad->directory[A];
-      const Lump_c *L2 = wad->directory[B];
+      const Lump_c *L1 = &wad->directory[A];
+      const Lump_c *L2 = &wad->directory[B];
 
       return (strcmp(L1->Name(), L2->Name()) < 0);
     }
@@ -518,7 +508,7 @@ void Wad_file::ProcessNamespaces(void)
 
   for (size_t k = 0; k < NumLumps(); k++)
   {
-    const char *name = directory[k]->Name();
+    const char *name = directory[k].Name();
 
     // skip the sub-namespace markers
     if (IsDummyMarker(name))
@@ -636,7 +626,7 @@ void Wad_file::ProcessNamespaces(void)
 
     if (active)
     {
-      if (directory[k]->Length() == 0)
+      if (directory[k].Length() == 0)
       {
         if (HAS_BIT(config.debug, DEBUG_WAD))
         {
@@ -716,53 +706,6 @@ void Wad_file::EndWrite(void)
   insert_point = NO_INDEX;
 }
 
-void Wad_file::RemoveLumps(size_t index, size_t count)
-{
-  SYS_ASSERT(begun_write);
-  SYS_ASSERT(index < NumLumps());
-  SYS_ASSERT(directory[index]);
-
-  for (size_t i = 0; i < count; i++)
-  {
-    delete directory[index + i];
-  }
-
-  for (size_t i = index; i + count < NumLumps(); i++)
-  {
-    directory[i] = directory[i + count];
-  }
-
-  directory.resize(directory.size() - count);
-
-  // fix various arrays containing lump indices
-  FixGroup(levels, index, 0, count);
-  FixGroup(patches, index, 0, count);
-  FixGroup(sprites, index, 0, count);
-  FixGroup(flats, index, 0, count);
-  FixGroup(tx_tex, index, 0, count);
-
-  // reset the insertion point
-  insert_point = NO_INDEX;
-}
-
-void Wad_file::RemoveZNodes(size_t lev_num)
-{
-  SYS_ASSERT(begun_write);
-  SYS_ASSERT(lev_num < LevelCount());
-
-  size_t start = LevelHeader(lev_num);
-  size_t finish = LevelLastLump(lev_num);
-
-  for (; start <= finish; start++)
-  {
-    if (StringCaseCmp(directory[start]->Name(), "ZNODES") == 0)
-    {
-      RemoveLumps(start, 1);
-      break;
-    }
-  }
-}
-
 void Wad_file::FixGroup(std::vector<size_t> &group, size_t index, size_t num_added, size_t num_removed)
 {
   bool did_remove = false;
@@ -801,7 +744,13 @@ Lump_c *Wad_file::AddLump(const char *name, size_t max_size)
 
   size_t start = PositionForWrite(max_size);
 
-  Lump_c *lump = MakeLump(this, name, start, 0);
+  Lump_c *lump = nullptr;
+  Lump_c new_lump;
+  new_lump.lumpname = name;
+  new_lump.Rename(name);
+  new_lump.parent = this;
+  new_lump.l_start = start;
+  new_lump.l_length = 0;
 
   // check if the insert_point is still valid
   if (insert_point >= NumLumps())
@@ -818,13 +767,15 @@ Lump_c *Wad_file::AddLump(const char *name, size_t max_size)
     FixGroup(flats, insert_point, 1, 0);
     FixGroup(tx_tex, insert_point, 1, 0);
 
-    directory.insert(directory.begin() + static_cast<int32_t>(insert_point), lump);
+    directory.insert(directory.begin() + static_cast<int32_t>(insert_point), new_lump);
+    lump = &directory.at(insert_point);
 
     insert_point++;
   }
   else // add to end
   {
-    directory.push_back(lump);
+    directory.push_back(new_lump);
+    lump = &directory.back();
   }
 
   return lump;
@@ -854,15 +805,15 @@ size_t Wad_file::HighWaterMark(void)
 
   for (size_t k = 0; k < NumLumps(); k++)
   {
-    Lump_c *lump = directory[k];
+    Lump_c lump = directory[k];
 
     // ignore zero-length lumps (their offset could be anything)
-    if (lump->Length() <= 0)
+    if (lump.Length() <= 0)
     {
       continue;
     }
 
-    size_t l_end = lump->l_start + lump->l_length;
+    size_t l_end = lump.l_start + lump.l_length;
 
     l_end = ((l_end + 3) / 4) * 4;
 
@@ -880,13 +831,13 @@ size_t Wad_file::FindFreeSpace(size_t length)
   length = ((length + 3) / 4) * 4;
 
   // collect non-zero length lumps and sort by their offset
-  std::vector<Lump_c *> sorted_dir;
+  std::vector<Lump_c> sorted_dir;
 
   for (size_t k = 0; k < NumLumps(); k++)
   {
-    Lump_c *lump = directory[k];
+    Lump_c lump = directory[k];
 
-    if (lump->Length() > 0)
+    if (lump.Length() > 0)
     {
       sorted_dir.push_back(lump);
     }
@@ -894,9 +845,9 @@ size_t Wad_file::FindFreeSpace(size_t length)
 
   struct offset_CMP_pred
   {
-    inline bool operator()(const Lump_c *A, const Lump_c *B) const
+    inline bool operator()(const Lump_c A, const Lump_c B) const
     {
-      return A->l_start < B->l_start;
+      return A.l_start < B.l_start;
     }
   };
 
@@ -906,10 +857,10 @@ size_t Wad_file::FindFreeSpace(size_t length)
 
   for (size_t k = 0; k < sorted_dir.size(); k++)
   {
-    Lump_c *lump = sorted_dir[k];
+    Lump_c lump = sorted_dir[k];
 
-    size_t l_start = lump->l_start;
-    size_t l_end = lump->l_start + lump->l_length;
+    size_t l_start = lump.l_start;
+    size_t l_end = lump.l_start + lump.l_length;
 
     l_end = ((l_end + 3) / 4) * 4;
 
@@ -1037,7 +988,7 @@ void Wad_file::WriteDirectory(void)
 
   for (size_t k = 0; k < dir_count; k++)
   {
-    Lump_c *lump = directory[k];
+    Lump_c *lump = &directory[k];
     SYS_ASSERT(lump);
 
     raw_wad_entry_t entry;

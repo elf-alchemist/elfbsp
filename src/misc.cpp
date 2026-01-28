@@ -56,13 +56,11 @@ void MarkPolyobjSector(sector_t *sector)
   // the sector from being split.
   sector->has_polyobj = true;
 
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (auto &L : lev_linedefs)
   {
-    linedef_t *L = lev_linedefs[i];
-
-    if ((L->right != nullptr && L->right->sector == sector) || (L->left != nullptr && L->left->sector == sector))
+    if ((L.right != nullptr && L.right->sector == sector) || (L.left != nullptr && L.left->sector == sector))
     {
-      L->is_precious = true;
+      L.is_precious = true;
     }
   }
 }
@@ -84,26 +82,24 @@ void MarkPolyobjPoint(double x, double y)
   int32_t bmaxx = static_cast<int32_t>(x + POLY_BOX_SZ);
   int32_t bmaxy = static_cast<int32_t>(y + POLY_BOX_SZ);
 
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (auto &L : lev_linedefs)
   {
-    const linedef_t *L = lev_linedefs[i];
-
-    if (CheckLinedefInsideBox(bminx, bminy, bmaxx, bmaxy, static_cast<int32_t>(L->start->x), static_cast<int32_t>(L->start->y),
-                              static_cast<int32_t>(L->end->x), static_cast<int32_t>(L->end->y)))
+    if (CheckLinedefInsideBox(bminx, bminy, bmaxx, bmaxy, static_cast<int32_t>(L.start->x), static_cast<int32_t>(L.start->y),
+                              static_cast<int32_t>(L.end->x), static_cast<int32_t>(L.end->y)))
     {
       if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
       {
-        PrintLine(LOG_DEBUG, "[%s] Touching line was %zu", __func__, L->index);
+        PrintLine(LOG_DEBUG, "[%s] Touching line was %zu", __func__, L.index);
       }
 
-      if (L->left != nullptr)
+      if (L.left != nullptr)
       {
-        MarkPolyobjSector(L->left->sector);
+        MarkPolyobjSector(L.left->sector);
       }
 
-      if (L->right != nullptr)
+      if (L.right != nullptr)
       {
-        MarkPolyobjSector(L->right->sector);
+        MarkPolyobjSector(L.right->sector);
       }
 
       inside_count++;
@@ -121,14 +117,12 @@ void MarkPolyobjPoint(double x, double y)
   //       If the point is sitting directly on a (two-sided) line,
   //       then we mark the sectors on both sides.
 
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (auto &L : lev_linedefs)
   {
-    const linedef_t *L = lev_linedefs[i];
-
-    double x1 = L->start->x;
-    double y1 = L->start->y;
-    double x2 = L->end->x;
-    double y2 = L->end->y;
+    double x1 = L.start->x;
+    double y1 = L.start->y;
+    double x2 = L.end->x;
+    double y2 = L.end->y;
 
     /* check vertical range */
     if (fabs(y2 - y1) < DIST_EPSILON)
@@ -147,7 +141,7 @@ void MarkPolyobjPoint(double x, double y)
     {
       /* found a closer linedef */
 
-      best_match = L;
+      best_match = &L;
       best_dist = x_cut;
     }
   }
@@ -227,18 +221,17 @@ void DetectPolyobjSectors(bool is_udmf)
   //       things in UDMF maps.
 
   // -JL- First go through all lines to see if level contains any polyobjs
-  size_t i;
-  for (i = 0; i < lev_linedefs.size(); i++)
+  size_t has_poly;
+  for (auto &L : lev_linedefs)
   {
-    linedef_t *L = lev_linedefs[i];
-
-    if (L->special == HEXTYPE_POLY_START || L->special == HEXTYPE_POLY_EXPLICIT)
+    if (L.special == HEXTYPE_POLY_START || L.special == HEXTYPE_POLY_EXPLICIT)
     {
+      has_poly = true;
       break;
     }
   }
 
-  if (i == lev_linedefs.size())
+  if (!has_poly)
   {
     // -JL- No polyobjs in this level
     return;
@@ -252,11 +245,9 @@ void DetectPolyobjSectors(bool is_udmf)
     hexen_style = false;
   }
 
-  for (size_t j = 0; j < lev_things.size(); j++)
+  for (auto &T : lev_things)
   {
-    thing_t *T = lev_things[j];
-
-    if (T->type == ZDOOM_PO_SPAWN_TYPE || T->type == ZDOOM_PO_SPAWNCRUSH_TYPE)
+    if (T.type == PO_SPAWN_TYPE || T.type == PO_SPAWNCRUSH_TYPE)
     {
       // -JL- A ZDoom style polyobj thing found
       hexen_style = false;
@@ -269,18 +260,17 @@ void DetectPolyobjSectors(bool is_udmf)
     PrintLine(LOG_DEBUG, "[%s] Using %s style polyobj things", __func__, hexen_style ? "HEXEN" : "ZDOOM");
   }
 
-  for (size_t j = 0; j < lev_things.size(); j++)
+  size_t i = 0;
+  for (auto &T : lev_things)
   {
-    thing_t *T = lev_things[j];
-
-    double x = T->x;
-    double y = T->y;
+    double x = T.x;
+    double y = T.y;
 
     // ignore everything except polyobj start spots
     if (hexen_style)
     {
       // -JL- Hexen style polyobj things
-      if (T->type != PO_SPAWN_TYPE && T->type != PO_SPAWNCRUSH_TYPE)
+      if (T.type != HEXEN_PO_SPAWN_TYPE && T.type != HEXEN_PO_SPAWNCRUSH_TYPE)
       {
         continue;
       }
@@ -288,7 +278,7 @@ void DetectPolyobjSectors(bool is_udmf)
     else
     {
       // -JL- ZDoom style polyobj things
-      if (T->type != ZDOOM_PO_SPAWN_TYPE && T->type != ZDOOM_PO_SPAWNCRUSH_TYPE)
+      if (T.type != PO_SPAWN_TYPE && T.type != PO_SPAWNCRUSH_TYPE)
       {
         continue;
       }
@@ -300,6 +290,7 @@ void DetectPolyobjSectors(bool is_udmf)
     }
 
     MarkPolyobjPoint(x, y);
+    i++;
   }
 }
 
@@ -314,9 +305,9 @@ bool Overlaps(const vertex_t *vertex, const vertex_t *other)
 
 struct Compare_vertex_X_pred
 {
-  inline bool operator()(const vertex_t *A, const vertex_t *B) const
+  inline bool operator()(const vertex_t A, const vertex_t B) const
   {
-    return A->x < B->x;
+    return A.x < B.x;
   }
 };
 
@@ -328,34 +319,41 @@ void DetectOverlappingVertices(void)
   }
 
   // copy the vertex pointers
-  std::vector<vertex_t *> array(lev_vertices);
+  PrintLine(LOG_NORMAL, "Testing %s, %d", __func__, __LINE__);
+  std::vector<vertex_t> array = std::move(lev_vertices);
+  PrintLine(LOG_NORMAL, "Testing %s, %d", __func__, __LINE__);
 
   // sort the vertices by increasing X coordinate.
   // hence any overlapping vertices will be near each other.
   std::sort(array.begin(), array.end(), Compare_vertex_X_pred());
+  PrintLine(LOG_NORMAL, "Testing %s, %d", __func__, __LINE__);
 
   // now mark them off
   for (size_t i = 0; i < lev_vertices.size() - 1; i++)
   {
-    vertex_t *A = array[i];
+    // PrintLine(LOG_NORMAL, "[%s:%d] Loop: %zu ", __func__, __LINE__, i);
+    vertex_t &A = array[i];
 
     for (size_t k = i + 1; k < lev_vertices.size(); k++)
     {
-      vertex_t *B = array[k];
+      PrintLine(LOG_NORMAL, "[%s:%d] Loop: %zu ", __func__, __LINE__, k);
+      vertex_t &B = array[k];
 
-      if (B->x > A->x + DIST_EPSILON)
+      if (B.x > A.x + DIST_EPSILON)
       {
+        PrintLine(LOG_NORMAL, "Testing %s, %d", __func__, __LINE__);
         break;
       }
 
-      if (Overlaps(A, B))
+      if (Overlaps(&A, &B))
       {
         // found an overlap !
-        B->overlap = A->overlap ? A->overlap : A;
+        B.overlap = A.overlap ? A.overlap : &A;
+        PrintLine(LOG_NORMAL, "Testing %s, %d", __func__, __LINE__);
 
         if (HAS_BIT(config.debug, DEBUG_OVERLAPS))
         {
-          PrintLine(LOG_DEBUG, "[%s] Overlap: #%zu + #%zu", __func__, array[i]->index, array[i + 1]->index);
+          PrintLine(LOG_DEBUG, "[%s] Overlap: #%zu + #%zu", __func__, array[i].index, array[i + 1].index);
         }
       }
     }
@@ -364,19 +362,19 @@ void DetectOverlappingVertices(void)
   // update the in-memory linedefs.
   // DOES NOT affect the on-disk linedefs.
   // this is mainly to help the miniseg creation code.
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  PrintLine(LOG_NORMAL, "Testing %s, %d", __func__, __LINE__);
+  for (auto &L : lev_linedefs)
   {
-    linedef_t *L = lev_linedefs[i];
-
-    while (L->start->overlap)
+    while (L.start->overlap)
     {
-      L->start = L->start->overlap;
+      L.start = L.start->overlap;
     }
 
-    while (L->end->overlap)
+    while (L.end->overlap)
     {
-      L->end = L->end->overlap;
+      L.end = L.end->overlap;
     }
+    PrintLine(LOG_NORMAL, "Testing %s, %d", __func__, __LINE__);
   }
 }
 
@@ -388,14 +386,12 @@ void PruneVerticesAtEnd(void)
   // only remove from the end, so stop when hit a used one.
   for (size_t i = lev_vertices.size() - 1; i != NO_INDEX; i--)
   {
-    vertex_t *V = lev_vertices[i];
+    vertex_t &V = lev_vertices[i];
 
-    if (V->is_used)
+    if (V.is_used)
     {
       break;
     }
-
-    UtilFree(V);
 
     lev_vertices.pop_back();
   }
@@ -415,9 +411,9 @@ void PruneVerticesAtEnd(void)
 
 struct Compare_line_MinX_pred
 {
-  inline bool operator()(const linedef_t *A, const linedef_t *B) const
+  inline bool operator()(const linedef_t A, const linedef_t B) const
   {
-    return A->MinX() < B->MinX();
+    return A.MinX() < B.MinX();
   }
 };
 
@@ -428,7 +424,7 @@ void DetectOverlappingLines(void)
   //   Overlapping lines will then be near each other in this set.
   //   NOTE: does not detect partially overlapping lines.
 
-  std::vector<linedef_t *> array(lev_linedefs);
+  auto array = std::vector<linedef_t>(lev_linedefs);
 
   std::sort(array.begin(), array.end(), Compare_line_MinX_pred());
 
@@ -436,11 +432,11 @@ void DetectOverlappingLines(void)
 
   for (size_t i = 0; i < lev_linedefs.size() - 1; i++)
   {
-    linedef_t *A = array[i];
+    linedef_t *A = &array[i];
 
     for (size_t k = i + 1; k < lev_linedefs.size(); k++)
     {
-      linedef_t *B = array[k];
+      linedef_t *B = &array[k];
 
       if (B->MinX() > A->MinX() + DIST_EPSILON)
       {
@@ -529,39 +525,35 @@ void AddWallTip(vertex_t *vertex, double dx, double dy, bool open_left, bool ope
 
 void CalculateWallTips(void)
 {
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (auto &L : lev_linedefs)
   {
-    const linedef_t *L = lev_linedefs[i];
-
-    if (L->overlap || L->zero_len)
+    if (L.overlap || L.zero_len)
     {
       continue;
     }
 
-    double x1 = L->start->x;
-    double y1 = L->start->y;
-    double x2 = L->end->x;
-    double y2 = L->end->y;
+    double x1 = L.start->x;
+    double y1 = L.start->y;
+    double x2 = L.end->x;
+    double y2 = L.end->y;
 
-    bool left = (L->left != nullptr) && (L->left->sector != nullptr);
-    bool right = (L->right != nullptr) && (L->right->sector != nullptr);
+    bool left = (L.left != nullptr) && (L.left->sector != nullptr);
+    bool right = (L.right != nullptr) && (L.right->sector != nullptr);
 
     // note that start->overlap and end->overlap should be nullptr
     // due to logic in DetectOverlappingVertices.
 
-    AddWallTip(L->start, x2 - x1, y2 - y1, left, right);
-    AddWallTip(L->end, x1 - x2, y1 - y2, right, left);
+    AddWallTip(L.start, x2 - x1, y2 - y1, left, right);
+    AddWallTip(L.end, x1 - x2, y1 - y2, right, left);
   }
 
   if (HAS_BIT(config.debug, DEBUG_WALLTIPS))
   {
-    for (size_t k = 0; k < lev_vertices.size(); k++)
+    for (auto &V : lev_vertices)
     {
-      vertex_t *V = lev_vertices[k];
+      PrintLine(LOG_DEBUG, "[%s] WallTips for vertex %zu:", __func__, V.index);
 
-      PrintLine(LOG_DEBUG, "[%s] WallTips for vertex %zu:", __func__, k);
-
-      for (walltip_t *tip = V->tip_set; tip; tip = tip->next)
+      for (walltip_t *tip = V.tip_set; tip; tip = tip->next)
       {
         PrintLine(LOG_DEBUG, "Angle=%1.1f left=%d right=%d", tip->angle, tip->open_left ? 1 : 0, tip->open_right ? 1 : 0);
       }
