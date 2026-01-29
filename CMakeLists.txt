@@ -51,14 +51,19 @@ if(SAN_COUNT GREATER 0)
     endif()
 endif()
 
+add_subdirectory(third-party/matplot)
+
 add_executable(elfbsp
-    src/elfbsp.cpp
+    src/main.cpp
+    src/info.cpp
     src/level.cpp
     src/node.cpp
     src/misc.cpp
     src/parse.cpp
     src/wad.cpp
 )
+
+target_link_libraries(elfbsp PUBLIC matplot)
 
 target_compile_options(elfbsp PRIVATE
     -Wall
@@ -78,7 +83,6 @@ target_compile_options(elfbsp PRIVATE
 
 target_compile_options(elfbsp PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
-    $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
     $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
 )
 
