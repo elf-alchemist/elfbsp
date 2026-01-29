@@ -1636,19 +1636,6 @@ subsec_t *CreateSubsec(quadtree_c *tree)
   return sub;
 }
 
-int ComputeBspHeight(const node_t *node)
-{
-  if (node == nullptr)
-  {
-    return 1;
-  }
-
-  int right = ComputeBspHeight(node->r.node);
-  int left = ComputeBspHeight(node->l.node);
-
-  return std::max(left, right) + 1;
-}
-
 build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast,
                           bool analysis)
 {

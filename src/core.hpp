@@ -1383,6 +1383,31 @@ struct buildinfo_s
   uint32_t debug = DEBUG_NONE;
 };
 
+struct AnalysisLine
+{
+  size_t split_cost = 0.0; // Compare trees of various different costs
+
+  size_t old_vertex = 0; // Original set of vertices
+  size_t lines = 0; // Original set of linedefs
+  size_t sides = 0; // Original set of sidedefs
+  size_t sectors = 0; // Original set of sectors
+
+  size_t new_vertex = 0; // BSP-generated set of vertices
+  size_t nodes = 0; // Each node of BSP tree
+  size_t subsecs = 0; // Leaves of the BSP, points to a set of segs
+  size_t segs = 0; // Segments, actually used for rendering
+  size_t splits = 0; // Difference between segments and sidedefs
+
+  size_t left_depth = 0; // Maximum depth on the left side of the tree
+  size_t right_depth = 0; // Maximum depth on the right side of the tree
+  double average_depth = 0.0; // Arithmetic mean depth
+  size_t optimal_depth = 0; // Optimal depth for a tree of N leaves
+  double tree_balance = 0.0; // Balance factor
+
+  double worst_case_ratio = 0; // Best possible tree
+  double tree_quality = 0; // Tree's actual figure of merit
+};
+
 constexpr const char PRINT_HELP[] = "\n"
                                     "Usage: elfbsp [options...] FILE...\n"
                                     "\n"
@@ -1430,5 +1455,4 @@ const char *GetLevelName(size_t lev_idx);
 build_result_e BuildLevel(size_t lev_idx, const char *filename);
 
 void WriteAnalysis(const char *filename);
-void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes,
-                      int32_t left_size, int32_t right_size);
+void AnalysisPushLine(size_t level_index, bool is_fast, AnalysisLine line);

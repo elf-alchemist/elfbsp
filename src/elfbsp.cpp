@@ -66,16 +66,20 @@ void AnalysisSetupFile(const char * filepath)
   csv_path += ".csv";
   FileClear(csv_path.c_str());
 
-  std::string line = "map_name,is_fast,split_cost,num_segs,num_subsecs,num_nodes,size_left,size_right";
-  analysis_csv.push_back(line);
+  analysis_csv.push_back("map_name,is_fast,split_cost,old_vertex,lines,sides,sectors,new_vertex,nodes,subsecs,segs,splits,left_"
+                         "depth,right_depth,average_depth,"
+                         "optimal_depth,tree_balance,worst_case_ratio,tree_quality");
 }
 
-void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes, int32_t left_size,
-                      int32_t right_size)
+// HOLY MOTHER OF ALL DATA POINTS
+void AnalysisPushLine(size_t level_index, bool is_fast, AnalysisLine line)
 {
-  std::string line =
-      std::format("{},{},{},{},{},{},{},{}", GetLevelName(level_index), is_fast, split_cost, segs, subsecs, nodes, left_size, right_size);
-  analysis_csv.push_back(line);
+  std::string line_csv =
+      std::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}", GetLevelName(level_index), is_fast, line.split_cost,
+                  line.old_vertex, line.lines, line.sides, line.sectors, line.new_vertex, line.nodes, line.subsecs, line.segs,
+                  line.splits, line.left_depth, line.right_depth, line.average_depth, line.optimal_depth, line.tree_balance,
+                  line.worst_case_ratio, line.tree_quality);
+  analysis_csv.push_back(line_csv);
 }
 
 // writes out for current file
