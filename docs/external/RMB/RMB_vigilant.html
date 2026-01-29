@@ -1,7 +1,9 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html><head>
-<meta http-equiv="content-type" content="text/html; charset=windows-1252">
-    <meta name="generator" content="HTML Tidy for Cygwin (vers 1st June 2002), see www.w3.org">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html>
+  <head>
+    <meta name="generator" content=
+    "HTML Tidy for Cygwin (vers 1st June 2002), see www.w3.org">
     <title>RMB: Reject Map Builder</title>
     <meta name="generator" content="txt2html v1.28">
 
@@ -26,22 +28,24 @@ pre         { margin: 5px auto 5px 25%; width: 90% }
 
       <p>Software by Jens Hykkelbjerg</p>
 
-      <p>=+=+=+=+=+=+=+=+=+=+=+=<br>
-       U S E R M A N U A L<br>
-       =+=+=+=+=+=+=+=+=+=+=+=<br>
+      <p>=+=+=+=+=+=+=+=+=+=+=+=<br/>
+       U S E R M A N U A L<br/>
+       =+=+=+=+=+=+=+=+=+=+=+=<br/>
       </p>
 
-      <p>written by<br>
+      <p>written by<br/>
        Jens Hykkelbjerg and Steve Benner</p>
+
+      <p>Modified by VigilantDoomer to describe VigilantBSP v0.91 addition</p>
     </center>
 
-    <a name="#section-0."></a>
+    <a name="#section-0."/></a>
 
     <ol start="0">
       <li class="level1"><a href="#section-0.">CONTENTS</a></li>
       <li class="level1"><a href="#section-1.">REJECT MAP BUILDER: SOME FAQs</a>
 
-        <ol start="1.1&quot;">
+        <ol start=1.1">
           <li class="level2"><a href="#section-1.1.">What is RMB?</a></li>
           <li class="level2"><a href="#section-1.2.">What is the REJECT resource?</a></li>
           <li class="level2"><a href="#section-1.3.">What is REJECT efficiency?</a></li>
@@ -103,7 +107,7 @@ pre         { margin: 5px auto 5px 25%; width: 90% }
       <li class="level1"><a href="#section-6.">AUTHOR'S NOTE</a></li>
       <li class="level1"><a href="#section-7.">ACKNOWLEDGEMENTS</a></li>
     </ol>
-    <hr>
+    <hr/>
 
     <h2><a name="section-1.">1. REJECT MAP BUILDER: SOME FAQs</a></h2>
 
@@ -131,7 +135,8 @@ pre         { margin: 5px auto 5px 25%; width: 90% }
     the resource, the information is stored as a series of bits, which, on a
     sector by sector basis, we may think of as a table, thus: </p>
 
-<pre>                    Sector the player is in
+<pre>
+                    Sector the player is in
                      0    1    2    3    4 ....       NB: Doom <em>never</em>
                   +----------------------------           uses this table to
   Sector the   0  |  b    b    b    b    b ....           determine what the
@@ -147,7 +152,8 @@ pre         { margin: 5px auto 5px 25%; width: 90% }
     be seen at all from monster's sector.</p>
 
     <p>The following WAD map, for example:</p>
-<pre>    o-------------o----------------o-----------o
+<pre>
+    o-------------o----------------o-----------o
     |             :                :           |      The numbers indicate
     |      1      :       2        :     3     |      SECTORS
     |             :                :           |
@@ -163,7 +169,8 @@ pre         { margin: 5px auto 5px 25%; width: 90% }
 </pre>
 
     <p>would give rise to the following REJECT table:</p>
-<pre>                      (Player sector)
+<pre>
+                      (Player sector)
                      0    1    2    3
                   +-------------------
                0  |  0    0    0    1
@@ -239,7 +246,8 @@ pre         { margin: 5px auto 5px 25%; width: 90% }
     play. In grossly over-simplified form, the Doom monster control loop works
     something like this:</p>
 
-<pre>for each monster
+<pre>
+for each monster
   if the REJECT map says it's feasible then         &lt;-- i.e. REJECT entry of 0
     if player is in sight then                      &lt;-- note los calculation
       if monster is awake then                     \
@@ -286,7 +294,8 @@ next monster
     effects</a></h3>
     <p>By way of an example, consider our earlier 4-sector map. Here is the REJECT
     map that RMB would generate by default: </p>
-<pre>                     0    1    2    3   (Player Sector)
+<pre>
+                     0    1    2    3   (Player Sector)
                   +-------------------
    (Monster    0  |  0    0    0    1
     sector)    1  |  0    0    0    0
@@ -295,7 +304,8 @@ next monster
 </pre>
 
     <p>If this table were to be altered thus:</p>
-<pre>                     0    1    2    3   (Player Sector)
+<pre>
+                     0    1    2    3   (Player Sector)
                   +-------------------
    (Monster    0  |  0    0    0    1
     sector)    1  |  0    1    0    0         &lt;- one bit changed at 1,1
@@ -327,7 +337,8 @@ next monster
     <h3><a name="section-1.8.">1.8 Hmmm... Interesting. What use is it,
     though?</a></h3>
     <p>We could make a couple of other changes to the map: </p>
-<pre>                     0    1    2    3           Note the whole of the
+<pre>
+                     0    1    2    3           Note the whole of the
                   +-------------------          player sector 1 column
    (Monster    0  |  0    1    0    1           set to 1's.
     sector)    1  |  0    1    0    0
@@ -343,7 +354,8 @@ next monster
     player keep reaching for the pause key!</p>
 
     <p>Alternatively, here:</p>
-<pre>                     0    1    2    3   (Player sector)
+<pre>
+                     0    1    2    3   (Player sector)
                   +-------------------
     (Monster   0  |  0    0    0    1
      sector)   1  |  1    1    1    1          &lt;-- whole row set to 1's.
@@ -442,7 +454,8 @@ next monster
     and safety. As you will be aware, height differences between sectors may be
     only a temporary thing in DOOM: consider the following area of a map, seen
     here as a side view:</p>
-<pre>                            4      5
+<pre>
+                            4      5
                          |------|------|        The numbers identify
                          |         o   |        sectors;
                          |         -\  |
@@ -461,7 +474,8 @@ next monster
     <p>Here, sectors 4 &amp; 5 are not in view from sectors 1, 2 &amp; 3 (and
     vice versa). RMB will be unaware of this, however, as it will only consider
     the map view:</p>
-<pre>    o------o------o------o------o------o
+<pre>
+    o------o------o------o------o------o
     |      :      :      :      :      |   where every sector appears to
     |  1   :   2  :   3  :   4  :  5   |   be able to see all others.
     |      :      :      :      :      |
@@ -533,12 +547,14 @@ next monster
 
     <p>For example, for a command specified thus:</p>
 
-<pre>    EFFECT &lt;WADfile&gt; [&lt;level id&gt;] {BLIND, SAFE} {0, 1} {&lt;sector number&gt;, ALL}
+<pre>
+    EFFECT &lt;WADfile&gt; [&lt;level id&gt;] {BLIND, SAFE} {0, 1} {&lt;sector number&gt;, ALL}
 </pre>
 
     <p>any of the following are valid:</p>
 
-<pre>    effect myfile.wad blind 0 22
+<pre>
+    effect myfile.wad blind 0 22
     effect my2file.wad E1M2 safe 1 43 (for use with Doom 1 WAD) effect
     myfile.wad MAP02 blind 0 all (for use with Doom 2 WAD)
 </pre>
@@ -550,28 +566,28 @@ next monster
     may wish to prepare DOS batch files to perform the necessary directory
     switching for them: I (Steve) use a set like this:</p>
 
-	<hr>
-    FIX.BAT                        invokes my editor with a chosen WAD<br>
-    <p>cd waded                    (no, I don't use DEU - just call me perverse)<br>
-    waded %1.wad<br>
+	<hr/>
+    FIX.BAT                        invokes my editor with a chosen WAD<br/>
+    <p>cd waded                    (no, I don't use DEU - just call me perverse)<br/>
+    waded %1.wad<br/>
     cd ..</p>
-    <hr>
+    <hr/>
     MAKEFX.BAT lets me edit my RMB option file (see below) 
 
     <p>edit waded\%1.rej</p>
-    <hr>
+    <hr/>
     REJECT.BAT invokes RMB 
 
     <p>rmb ..\waded\%1 ..\wads\%1 %2</p>
-    <hr>
+    <hr/>
     TRY.BAT lets me play-test the WAD 
 
     <p>doom -file wads\%1.wad -devparm -warp %2 %3</p>
-    <hr>
+    <hr/>
     TRYRAW.BAT lets me play-test the version without REJECT 
 
     <p>doom -file waded\%1.wad -devparm -warp %2 %3</p>
-    <hr>
+    <hr/>
 
     <p>No doubt, each developer will prefer their own.</p>
 
@@ -650,7 +666,8 @@ next monster
     <div class="syntax">RMB &lt;InputWADfile&gt; &lt;OutputWADfile&gt; [OPTIONS]</div>
 
     <p>Where OPTIONS is a list of some of the following possible options:</p>
-<pre>  -EnMx           Process level EnMx
+<pre>
+  -EnMx           Process level EnMx
   -MAPnn          Process level MAPnn
   -PREPROCESS n   Preprocessing efficiency, n is one of [1..9+] (default: 4)
   -PERFECT        Generates a perfect reject map. (Very slow)
@@ -664,7 +681,7 @@ next monster
     larger than 3, and it can be larger than 7, but values above 7 are normally
     not useful.</p>
 
-    <p>Example command line:<br>
+    <p>Example command line:<br/>
     C:&gt; RMB mywad.wad newwad.wad -e1m1 -prepro 3 -nomap</p>
 
     <p>If the wad only contains one level, you don't have to specify any
@@ -742,7 +759,8 @@ next monster
     the degree of safety or blindness that the EFFECT command will produce.
     Currently only 0 or 1 are supported here. Their meanings are:</p>
 
-<pre> SAFE: (0) : Sector is completely safe: no sector has sight of it.
+<pre>
+ SAFE: (0) : Sector is completely safe: no sector has sight of it.
        (1) : Sector is safe only from other sectors: monsters within it can
              see the player.
  BLIND (0) : Sector is completely blind: no sectors can be seen from it,
@@ -818,8 +836,9 @@ next monster
     RMB options used in this example are given in the next section of this
     manual):</p>
 
-    <p><strong>MYWAD.REJ:</strong><br>
-</p><pre>    # This is an example of a multilevel options file, for use with
+    <p><strong>MYWAD.REJ:</strong><br/>
+<pre>
+    # This is an example of a multilevel options file, for use with
     MYWAD.WAD.
 
     # The first lines are the defaults.
@@ -879,9 +898,12 @@ next monster
     <p>NOTE: Options marked with &amp; gained new syntax in v2.1.
       Options marked with + are new to v2.1.
       No options require the PERFECT option to function correctly any more.
-      Options marked with ! can cause problems in combination with PREPROCESS.</p>
+      Options marked with ! can cause problems in combination with PREPROCESS.
+      Options marked with ^ are VigilantBSP addition, not in original RMB program.</p>
 
-<pre>   #          Marks a comment line in the option file
+<pre>
+   #          Marks a comment line in the option file
+^  ASSERT     Can cancel reuse of existing reject by NOPROCESS and force a rebuild
 +  BAND       Makes <q>bands</q> of blindness/ safety
 &amp;! BLIND      Makes sector(s) blind (or partially so)
    BLOCK      Stops monsters seeing through a pair of specified lines
@@ -908,6 +930,7 @@ next monster
    RIGHT      Makes a 2s line one-way see-through (from right to left)
 &amp;! SAFE       Makes sector(s) invisible to far monsters
 +  TRACE      For debugging only: use is not recommended
+^  VORTEX     Conduits visibility across sector lists
 </pre>
 
     <p>INV is short for INVERT. Any option can be abbreviated to its shortest
@@ -924,7 +947,8 @@ next monster
 
     <p>These options speed RMB up (greatest first):</p>
 
-<pre>    NOPROCESS [&lt;Wadfile&gt; [&lt;Level id&gt;]]
+<pre>
+    NOPROCESS [&lt;Wadfile&gt; [&lt;Level id&gt;]]
     PREPROCESS &lt;Number&gt;
     LENGTH     &lt;Distance&gt;
     DISTANCE   &lt;Map distance&gt;
@@ -940,7 +964,8 @@ next monster
 
     <p>These options have no effect on speed:</p>
 
-<pre>    # &lt;Comment&gt;
+<pre>
+    # &lt;Comment&gt;
     EnMy
     MAPxx
     NOMAP
@@ -955,7 +980,8 @@ next monster
 
     <p>These options cause RMB to slow down (greatest last):</p>
 
-<pre>    REPORT     &lt;Distance&gt;
+<pre>
+    REPORT     &lt;Distance&gt;
     NODOOR     &lt;Sector list&gt;
     PROCESS    &lt;Sector list&gt;
     TRACE      &lt;Sector list&gt;
@@ -984,7 +1010,7 @@ next monster
     take: </p>
 
 	<table>
-	  <tbody><tr>
+	  <tr>
 		<td>&lt;Comment&gt;</td><td>  Any text, terminated by end-of-line.</td>
 	  </tr>
 	  <tr>
@@ -1015,7 +1041,7 @@ next monster
 		<td>&lt;Sector list&gt;</td><td> A list of &lt;sectors&gt;, separated from each other
 			   by spaces and surrounded by brackets. e.g. (1 2 5 7 9)</td>
 	  </tr>
-	</tbody></table>
+	</table>
 
     <h3><a name="section-3.2.">3.2 Individual Option Details</a></h3>
     <p>This section contains full details of the operation of each RMB option,
@@ -1029,6 +1055,28 @@ next monster
     comments in your options file to remind yourself of what you are trying to
     achieve in the file, or to temporarily disable options in the file without
     deleting them.</p>
+
+    <div class="syntax">ASSERT Syntax: ASSERT &lt;Sector list&gt; &lt;Sector list&gt; &lt;Number&gt;</div>
+
+    <p>VigilantBSP's addition, not recognized by original RMB program. Works in combination with NOPROCESS,
+    doesn't affect any other option, is not required for NOPROCESS. NOPROCESS executes first, if it
+    sources a valid reject (number of sectors), then ASSERT imposes additional conditions to check in order
+    for loaded reject not to be discarded. If these conditions are violated, a full rebuild happens, just
+    as if NOPROCESS detected a different number of sectors in the old reject.</p>
+
+    <p>ASSERT condition specifies what visibility (or absence thereof) from first sector list to second sector list
+    (in one direction) should be. &lt;Number&gt; is either 0 or 1, which is a value in reject table. 0 means Doom
+    engine must check sight in game, 1 means it must not check sight and presume there is none. So the reject loaded
+    via NOPROCESS must have these values in its table. All failed assertions are displayed at the terminal, and
+    any failed assertion aborts the result of NOPROCESS the same a wrong number of sectors would: pre-loaded reject
+    is considered invalid and is discarded, reject is rebuilt from scratch.</p>
+
+    <p>If no assertions fail, NOPROCESS is not prevented from succeeding, and a limited selection of RMB options
+    that can take effect under NOPROCESS, do. If NOPROCESS is not present, the ASSERTions may not even be
+    displayed, as ASSERT only takes effect with NOPROCESS, and only when NOPROCESS doesn't cancel out earlier
+    because of wrong number of sectors or trying to source reject from non-existent wad.</p>
+
+    <p>ASSERT purposefully ignores GROUP option, and always checks sector visibility individually.</p>
 
     <div class="syntax">BAND Syntax: BAND {BLIND, SAFE} &lt;From&gt; &lt;To&gt; &lt;Sector list&gt;</div>
 
@@ -1045,7 +1093,8 @@ next monster
     marked as BLIND to (or SAFE from) the sector being processed.</p>
 
     <p>Applied to this map:</p>
-<pre>    o----o----o----o----o----o----o----o----o
+<pre>
+    o----o----o----o----o----o----o----o----o
     |    :    :    :    :    :    :    :    |
     | 1  : 2  : 3  : 4  : 5  : 6  : 7  : 8  | (a ':' marks a 2s line)
     |    :    :    :    :    :    :    :    | (The numbers are sector numbers)
@@ -1100,7 +1149,8 @@ next monster
     and all immediately neighbouring sectors, and so on.</p>
 
     <p>Applied to this map:</p>
-<pre>    o----o----o----o----o----o----o----o----o
+<pre>
+    o----o----o----o----o----o----o----o----o
     |    :    :    :    :    :    :    :    |
     | 1  : 2  : 3  : 4  : 5  : 6  : 7  : 8  | (a ':' marks a 2s line)
     |    :    :    :    :    :    :    :    | (The numbers are sector numbers)
@@ -1142,7 +1192,7 @@ next monster
     option, then RMB will blind the specified sector(s) from only those sectors
     located where the two distances overlap. For example, if you use</p>
 
-    <p><strong>INV BLIND 4 1</strong><br>
+    <p><strong>INV BLIND 4 1</strong><br/>
     <strong>BLIND 2 1</strong></p>
 
     <p>RMB interprets this to mean "make sector 1 blind to only those sectors
@@ -1157,7 +1207,7 @@ next monster
     the INV BLIND distance is the smaller of the two, standard combination
     rules apply:</p>
 
-    <p><strong>INV BLIND 2 1</strong><br>
+    <p><strong>INV BLIND 2 1</strong><br/>
     <strong>BLIND 4 1</strong></p>
 
     <p>will be interpreted as "make sector 1 blind to sectors closer than 2 and
@@ -1174,7 +1224,8 @@ next monster
     vertical differences between sectors (remember that it ignores height
     changes in its own los-calculations). Recall our earlier lift shaft? With
     the lift in the 'down' position, it looks like this (in side view):</p>
-<pre>                            4      5
+<pre>
+                            4      5
                          |------|------|        Plain numbers identify
                          |         o   |        sectors;
                          |         -\  |
@@ -1196,7 +1247,8 @@ next monster
     <p>Because of the relative floor and ceiling heights, sectors 1 and 2
     cannot see sector 5 or vice versa. RMB cannot work this out from the level
     map, however, which looks like this:</p>
-<pre>    o------o------o------o------o------o
+<pre>
+    o------o------o------o------o------o
     |      :      :      :      :      |
     |  1   :   2  :   3  :   4  :  5   |   where every sector appears to
     |     #0     #1     #2     #3      |   be able to see all others.
@@ -1249,7 +1301,8 @@ next monster
     however, that RMB will not start to check on whether or not to apply any
     DISTANCE limitation until the sectors being examined are three or more
     sectors removed from each other, thus:</p>
-<pre>    o------o------o------o------o------o----------o--
+<pre>
+    o------o------o------o------o------o----------o--
     |      :      :      :      :      :          :
     |  1   :   2  :   3  :   4  :  5   :     6    :  7
     |      :      :      :      :      :          :
@@ -1268,9 +1321,9 @@ next monster
     take each dash (-) on the map to equate to 10 Doom map units, then the
     distances between sector 1 and all of the other sectors shown are:</p>
 
-    <p>d4: 140<br>
-     d5: 210<br>
-     d6: 280<br>
+    <p>d4: 140<br/>
+     d5: 210<br/>
+     d6: 280<br/>
      d7: 390 etc.</p>
 
     <p>If the option</p>
@@ -1374,7 +1427,8 @@ next monster
     exactly the same things. If for instance sectors 2, 4, 5 and 7 are ambush
     spots, and you want the monsters in these sectors to wake up when the
     player enters sector 10, you can give the following options:</p>
-<pre>        GROUP 5 (2 4 7)
+<pre>
+        GROUP 5 (2 4 7)
         BLIND 0 (5)
         INCLUDE 5 10
 </pre>
@@ -1382,7 +1436,8 @@ next monster
     <p>This will do the trick: the only thing seen from sectors 2, 4, 5 and 7
     now will be sector 10. As a further example of the processing of grouped
     sectors, consider the following options:</p>
-<pre>        GROUP 5 (2 4 7)
+<pre>
+        GROUP 5 (2 4 7)
         BLIND 1 (5)
 </pre>
 
@@ -1415,12 +1470,12 @@ next monster
     doors opening, so I was home free... suddenly, the room was flying with
     fireballs. Where the &lt;censored&gt; did those imps come from?"</p>
 
-	<div class="syntax">INVERT BAND     Syntax: INVERT BAND BLIND &lt;From&gt; &lt;To&gt; &lt;Sector list&gt;<br>
+	<div class="syntax">INVERT BAND     Syntax: INVERT BAND BLIND &lt;From&gt; &lt;To&gt; &lt;Sector list&gt;<br/>
 	                        INVERT BAND SAFE &lt;From&gt; &lt;To&gt; &lt;Sector list&gt;</div>
 
     <p>See the BAND option for details of the INVERT BAND option.</p>
 
-    <div class="syntax">INVERT BLIND/SAFE Syntax: INV BLIND &lt;Distance&gt; &lt;Sector list&gt;<br>
+    <div class="syntax">INVERT BLIND/SAFE Syntax: INV BLIND &lt;Distance&gt; &lt;Sector list&gt;<br/>
                               INV SAFE &lt;Distance&gt; &lt;Sector list&gt;</div>
 
     <p>See BLIND and SAFE for details of the INVERT option.</p>
@@ -1535,8 +1590,8 @@ next monster
     <p>If you are working with a (big!) WAD and want to use RMB every time you
     have made changes, you could make a batch file like this:</p>
 
-    <p>EDITOR thefile.WAD<br>
-     RMB thefile.WAD tmp.wad<br>
+    <p>EDITOR thefile.WAD<br/>
+     RMB thefile.WAD tmp.wad<br/>
      DOOM -file tmp.wad</p>
 
     <p>Maybe you would also like to run a nodebuilder, in which case you just
@@ -1559,6 +1614,13 @@ next monster
     2 multilevel wad this might make sense:</p>
 
     <p>NOPROCESS tmp.wad MAP03</p>
+
+    <p>VigilantBSP has added ASSERT command to available options in *.rej file,
+    which can cause NOPROCESS to consider existing reject outdated even if
+    the number of sectors does match. ASSERT imposes additional restrictions
+    on loaded reject based on visibility of sectors: if it deviates from what
+    is specified in ASSERT, reject is discarded and the reject for target map
+    is rebuilt, like if there were no NOPROCESS.</p>
 
     <div class="syntax">ONE Syntax: ONE &lt;Line #1&gt; &lt;Line #2&gt;</div>
 
@@ -1612,7 +1674,8 @@ next monster
     sector that encloses other sectors (a room), you will make all the
     'decorational' sectors in that room safe too: this is usually what is
     wanted. Consider this room, for example:</p>
-<pre>  Sector 12 is main room;
+<pre>
+  Sector 12 is main room;
       :                                    :      v. low light levels
       :   o.......o       o.....o   o...o  :
       :   :       :       :     :   :   :  :      sectors 13, 14, 15 are
@@ -1633,7 +1696,8 @@ next monster
     monsters who aren't in it: in sectors 10 &amp; 11, for instance, or off to
     the east and west, somewhere. You would therefore use the option SAFE 1 12.
     Without PERFECT, the resulting REJECT table looks like this:</p>
-<pre>                        PLAYER
+<pre>
+                        PLAYER
            7   8   9  10  11  12  13  14  15     Note that all other bits in
         +-------------------------------------   the player sector columns
     7   |  0   0   0   0   0   0   0   0   0       7, 8, 12, 13, 14 &amp; 15
@@ -1657,7 +1721,8 @@ next monster
 
     <p>If the PERFECT option had been specified, on the other hand, the REJECT
     map would have looked like this:</p>
-<pre>                        PLAYER
+<pre>
+                        PLAYER
            7   8   9  10  11  12  13  14  15
         +-------------------------------------
     7   |  0   0   0   0   0   1   0   0   0    Note: all other bits in
@@ -1712,7 +1777,7 @@ next monster
     <p>isn't (because 2 is used as a length by sector parameter).</p>
 
     <p>Note that the options LENGTH, SAFE and BLIND are the ones that specify
-    loslengths by sector. You need to use<br>
+    loslengths by sector. You need to use<br/>
     PREPROCESS with care in conjunction with these options.</p>
 
     <div class="syntax">PROCESS Syntax: PROCESS &lt;Sector list&gt;</div>
@@ -1801,6 +1866,79 @@ next monster
     works. While tracing, the available memory is displayed in the top left
     corner (the number to the right of the three numbers).</p>
 
+    <div class="syntax">VORTEX Syntax: VORTEX &lt;Sector list&gt; &lt;Sector list&gt;</div>
+
+    <p>This option is not supported by any version of RMB, and is instead part of VigilantBSP since v0.91
+    version of the latter. It is a "bidirectional INCLUDE on steroids": its purpose is to enable mapper
+    to adjust for features present in advanced engines or self-referencing sectors which reject builder
+    fails to account for. By default, VigilantBSP identifies self-referencing sectors, but this automatic
+    identification can be turned off -- for example, if it is proven buggy on some map.</p>
+
+    <p>VORTEX takes two arguments, each of them is sector lists
+like in INCLUDE. This sector lists will be marked as seeing
+each other (not within list, but across lists), and then
+everything that sees sectors in any list of any VORTEX
+option per previous reject processing stages, will additionally
+see every sector that can be seen from the other list of
+the same VORTEX option. Which reject processing stages are
+previous, though? Basically the entire reject sans
+INCLUDE or EXCLUDE, which have second and first priority
+respectively. So in VigilantBSP v0.91 where VORTEX is
+added, it has third priority and is thus priority over
+anything that is not VORTEX, INCLUDE or EXCLUDE.</p>
+
+<p>Since the meaning of VORTEX is "conduit visibility across
+the vortex both ways", care is taken by VigilantBSP
+to ensure that, for example, self-referencing sectors
+vortex-linked only with their respective wrapping normal
+sectors in separate VORTEX statements will be able to see
+each other if the sectors they are vortex-linked to can.</p>
+
+<p>That is, if 1 and 4 are self-referencing sectors,
+and 2 and 5 are normal ones, and 2 and 5 can see each other,
+then:</p>
+
+<p><strong>VORTEX 1 2</strong></p>
+
+<p><strong>VORTEX 5 4</strong></p>
+
+<p>will result in 1 and 4 also seeing each other, as well as 1
+seeing anything seen from 2 (and anything seeing 2 seeing 1),
+and 4 seeing anything seen from 5 (and anything seeing 5
+seeing 4). Changing the order of VORTEX statements won't
+undo this. Of course, when REJECT says "potentially visible"
+the engine will still do the real check of visibility, so this
+won't make things visible across true walls (no reject hack can,
+through RMB or otherwise). But if engine has portals, for example,
+then it might be seeing what reject builder normally would
+not, hence the utility of this hack.</p>
+
+<p>Note in above example there were implicit sector lists:</p>
+
+<p><strong>VORTEX (1) (2)</strong></p>
+
+<p><strong>VORTEX (5) (4)</strong></p>
+
+<p>and putting multiple sectors in one sector list won't
+mark them as visible from each other if it was determined
+they cannot -- VORTEX conduits positive visibility across
+lists both ways, but not within the list.</p>
+
+<p>VORTEXes do not implement explicit interoperation with
+DISTANCE or LENGTH options just like INCLUDE and EXCLUDE
+don't, because VORTEXes don't establish "neighborship"
+of sectors, they just hack visibility by applying certain
+rules. Other options executing before VORTEX (including
+DISTANCE and LENGTH) can affect the results of VORTEX
+(if anything is prevented seeing into / from any
+argument to VORTEX), but VORTEX won't enforce intended
+constraints of any other options, such as see "no further
+than this distance" etc. Implementing such support would
+amount to implementing all the visibility physics from
+all advanced engines, all their ways of doing 3D in
+2.5D etc -- so it is just not done and not planned to
+be done.</p>
+
     <h3><a name="section-3.3.">3.3 Combining Options</a></h3>
 
     <p>Most RMB options can be applied quite independently of other options. It is
@@ -1811,7 +1949,7 @@ next monster
     <p>In cases where an attempt is made to apply the same option to any
     particular sector in different ways, as here, for example:</p>
 
-    <p><strong>SAFE 2 3</strong><br>
+    <p><strong>SAFE 2 3</strong><br/>
     <strong>SAFE 0 3</strong></p>
 
     <p>it is only the last version that is applied. In this example, the SAFE 2
@@ -1825,7 +1963,7 @@ next monster
 
     <p>In this example:</p>
 
-    <p><strong>SAFE 1 3</strong><br>
+    <p><strong>SAFE 1 3</strong><br/>
     <strong>BLIND 0 3</strong></p>
 
     <p>the BLIND option will blind sector 3 from itself despite the SAFE option
@@ -1861,7 +1999,7 @@ next monster
 
     <p>This means that if you apply</p>
 
-    <p><strong>SAFE 0 (1 2 3)</strong><br>
+    <p><strong>SAFE 0 (1 2 3)</strong><br/>
     <strong>SAFE 1 (3 4 5)</strong></p>
 
     <p>The safe parameter for sector 3 will be overridden, and sector 3 becomes
@@ -1871,7 +2009,7 @@ next monster
     a &lt;SAFE/BLIND&gt; option for the same sector. The following is
     illegal:</p>
 
-    <p><strong>BAND BLIND 2 4 (3 5)</strong><br>
+    <p><strong>BAND BLIND 2 4 (3 5)</strong><br/>
     <strong>INV BLIND 0 (1 5)</strong></p>
 
     <p>Here a BLIND option is used twice for sector 5, which can cause
@@ -1882,7 +2020,7 @@ next monster
     as for the same sector)</p>
 
     <h2><a name="section-4.">4. TROUBLESHOOTING</a></h2>
-    <hr>
+    <hr/>
 
     <h3><a name="section-4.1.">RMB won't run</a></h3>
 
@@ -1903,7 +2041,7 @@ next monster
     because the .BGI files doesn't work with your graphics card. In the first
     case try to set the environment variable RMB:</p>
 
-    <p>set RMB=c:\RMBdir<br>
+    <p>set RMB=c:\RMBdir<br/>
     (Or wherever you want to store the BGI files)</p>
 
     <p>If RMB still won't display the graphics, you might as well make an
@@ -1915,7 +2053,8 @@ next monster
 
     <p>Send me a mail! My internet address is: hykkelbj@daimi.aau.dk. My snail
     mail address is:</p>
-<pre>        Jens Hykkelbjerg
+<pre>
+        Jens Hykkelbjerg
         Haslehoejvej 5 b
         8210 AArhus V.
         Denmark (DK)
@@ -1975,10 +2114,9 @@ next monster
     hacking this manual into its current form: if it's too long now, blame him.
     Send any moans, grumbles or suggestions for improvement that you may have
     about the documentation to him: email: S.Benner@lancaster.ac.uk</p>
-    <hr>
-    Jens Hykkelbjerg / Steve Benner<br>
+    <hr/>
+    Jens Hykkelbjerg / Steve Benner<br/>
     25 Jan 95
-  
+  </body>
+</html>
 
-
-<protonpass-root-62f8 data-protonpass-role="root" data-protonpass-theme="dark"></protonpass-root-62f8></body></html>
