@@ -1,0 +1,40 @@
+Changelog for VigilantBSP
+
+v0.75a (working name, unreleased) + linguortals 
+- New feature: an option to remove non-collideable lines from blockmap, disabled by default. Takes care not to destroy self-referencing sector effects, but still needs a lot of testing from users targeting non-Doom games or advanced engines
+- Fixed bug: Guardian of Steel, map05 of Hexen, had broken polyobject when rebuilt using default partitioner 
+- Sped up multi-tree just a bit 
+- Added hidden option to produce unreversed BSP nodes array, which might (or might not) offer performance benefits on old (486?) processors. See "Debug and other hidden parameters", "--unreversenodes".
+- Improvement: specifying an endgoal for blockmap in deterministic mode no longer cancels multi-threading
+- (Broken, incomplete) Support for a primitive version of linguortal (now with coordinate translation). Maps built with linguortals can have visual glitches, a lot of work remains to support proper linguortals 
+
+v0.74a
+- New feature: partial RMB support!
+- New feature: multi-tree! For now, it is simplest form of multi-tree (finding best BSP tree out of several) - where only root node is bruteforced among all possible choices. Credit: jerko for suggesting this.
+- Fixed severe bug in reject builder that sometimes prevented monsters from sighting the player
+- Stricter ordering of log output - output pertaining to the previous map is displayed strictly before one pertaining to next map
+- (Relevant to programmers) Can now build VigilantBSP on Go 1.15+ (was 1.17+). This is so you can build it on current Debian stable (bullseye) using Debian repository's version of Go
+- (Relevant to programmers) Refactored code for my future plans to implement Zdoom non-GL extended / compressed nodes generation support
+- Documentation: rewrited note about linedef specials that affect angle with more up-to-date knowledge on ports support and interaction with wall wiggle fix. Still could be improved, though.
+
+v0.72a
+- Fixed bug: some sectors wrongly considered compatible with each other and sector 0 in "advanced visplane reduction" algorithm 
+- Fixed bug: unlike what is written in documentation, specifying positive diagonal penalty didn't force enable it to all levels, now it does
+- Forced 64-bit math on 32-bit computers in critical areas of seg splitting code
+- Secondary score option changed to priority: split minimization or depth reduction. Some maps benefit from the former, other maps - from the latter.
+- Sped-up 32-bit Windows executable by making bsp tree builder codebase use fixed-point math for superblocks. This shouldn't introduce any errors 
+- Fixed bug that prevented VigilantBSP from recognising Doom 1 and Heretic levels (ExMy)
+- New option to build only specific levels rather than all levels
+
+v0.69a
+- Reformatted changelog
+- Added option named: "Use secondary score for partition selection"
+- Fixed bug: dummy linedefs created by nodebuilder to implement fast/remote scrolling shall not be added to blockmap and bsp tree
+- Introduced debug parameters intended for programmers and people who otherwise know programming and can analyze source code
+- Fixed bug: panic in blockmap builder due to linedef with max index was missing from bounds computation
+- Fixed bug: panic in reject builder due to out-of-bounds access to array of solid (1-sided) lines in certain circumstances
+
+v0.67a 
+- Initial alpha build
+
+

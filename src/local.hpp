@@ -24,7 +24,6 @@
 #pragma once
 
 #include "core.hpp"
-#include "elfbsp.hpp"
 
 #include <vector>
 
@@ -141,7 +140,7 @@ struct linedef_t
   size_t end_id;
 
   sidedef_t *right; // right sidedef
-  sidedef_t *left;  // left sidede, or nullptr if none
+  sidedef_t *left;  // left sidedef, or nullptr if none
 
   uint32_t flags;
   uint32_t special;
@@ -498,7 +497,7 @@ struct intersection_t
 seg_t *PickNode(quadtree_c *tree, int depth, double split_cost, bool fast);
 
 // take the given seg 'cur', compare it with the partition line, and
-// determine it's fate: moving it into either the left or right lists
+// determine its fate: moving it into either the left or right lists
 // (perhaps both, when splitting it in two).  Handles partners as
 // well.  Updates the intersection list if the seg lies on or crosses
 // the partition line.
@@ -528,10 +527,10 @@ quadtree_c *TreeFromSegList(seg_t *list);
 
 // takes the seg list and determines if it is convex.  When it is, the
 // segs are converted to a subsector, and '*S' is the new subsector
-// (and '*N' is set to nullptr).  Otherwise the seg list is divided into
+// (and '*N' is set to nullptr). Otherwise, the seg list is divided into
 // two halves, a node is created by calling this routine recursively,
 // and '*N' is the new node (and '*S' is set to nullptr).  Normally
-// returns BUILD_OK, or BUILD_Cancelled if user stopped it.
+// returns BUILD_OK.
 
 build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast,
                           bool analysis);

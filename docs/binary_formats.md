@@ -3,7 +3,7 @@ The "binary space partition" tree is the core data structure used in Doom's [sof
 Compiled after the mapper-facing data for the level has already been put together (i.e. Things, Vertexes, Lines, Sides and Sectors).
 It is comprised of Nodes, SubSectors and Segments -- the renderer recursively traversees the Nodes tree, until encoutering a SubSector, then drawing its associated Segments.
 
-| BSP tree type | ZIP compressed version | Lump lagic number   | ZIP lump magic number |
+| BSP tree type | ZIP compressed version | Lump magic header   | ZIP lump magic header |
 |---------------|------------------------|---------------------|-----------------------|
 | Vanilla       |                        |                     |                       |
 | DeepBSP       |                        | "`xNd4\0\0\0\0`"    |                       |

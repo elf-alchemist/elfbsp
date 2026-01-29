@@ -22,10 +22,7 @@
 //------------------------------------------------------------------------------
 
 #include "core.hpp"
-#include "elfbsp.hpp"
 #include "local.hpp"
-#include "parse.hpp"
-#include "wad.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -1397,7 +1394,7 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
 
   short_angle_t result = short_angle_t(floor(angle * 65536.0 / 360.0 + 0.5));
 
-  if (lev_format != MAPF_Doom)
+  if (lev_format != MapFormat_Doom)
   {
     return result;
   }
@@ -2387,7 +2384,7 @@ void LoadLevel(void)
   num_new_vert = 0;
   num_real_lines = 0;
 
-  if (lev_format == MAPF_UDMF)
+  if (lev_format == MapFormat_UDMF)
   {
     ParseUDMF();
   }
@@ -2397,7 +2394,7 @@ void LoadLevel(void)
     GetSectors();
     GetSidedefs();
 
-    if (lev_format == MAPF_Hexen)
+    if (lev_format == MapFormat_Hexen)
     {
       GetLinedefsHexen();
       GetThingsHexen();
@@ -2427,10 +2424,10 @@ void LoadLevel(void)
   // -JL- Find sectors containing polyobjs
   switch (lev_format)
   {
-    case MAPF_Hexen:
+    case MapFormat_Hexen:
       DetectPolyobjSectors(false);
       break;
-    case MAPF_UDMF:
+    case MapFormat_UDMF:
       DetectPolyobjSectors(true);
       break;
     default:
@@ -2602,7 +2599,7 @@ Lump_c *CreateLevelLump(const char *name, size_t max_size)
 
     // in UDMF maps, insert before the ENDMAP lump, otherwise insert
     // after the last known lump of the level.
-    if (lev_format != MAPF_UDMF)
+    if (lev_format != MapFormat_UDMF)
     {
       last_idx += 1;
     }
@@ -2739,11 +2736,11 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
 
     switch (lev_format)
     {
-      case MAPF_Doom:
-      case MAPF_Hexen:
+      case MapFormat_Doom:
+      case MapFormat_Hexen:
         ret = SaveBinaryFormatLevel(root_node);
         break;
-      case MAPF_UDMF:
+      case MapFormat_UDMF:
         ret = SaveTextMapLevel(root_node);
         break;
       default:

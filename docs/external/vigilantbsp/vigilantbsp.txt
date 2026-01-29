@@ -1,0 +1,1640 @@
+Author
+======
+
+(c) 2022 VigilantDoomer
+
+Document note
+=============
+This document is currently under construction. Information may be
+missing, and some text may be hard to comprehend. 
+
+Description
+===========
+
+VigilantBSP is a multi-threaded polyobject-aware 
+node / blockmap / reject builder (also called "nodebuilder" for 
+brevity) for Doom / Doom 2 / Heretic / Hexen. 
+
+Index
+=====
+
+01. Project goals
+02. Basic usage
+03. Features
+04. Custom linedef specials and tags
+05. Blockmap build options
+06. Determinism option
+07. Nodes builder
+08. Reject builder
+09. Option -m: Rebuild only specific maps
+10. Debug and other hidden parameters
+11. Changelog
+12. Operating system and platform availability
+13. Other node builders
+
+Section 01: Project goals
+=========================
+
+VigilantBSP intends to fulfill several ambitious goals:
+
+1. Fast build times for maps without sacrificing support for 
+special effects like self-referencing sectors. Use parallelism
+where possible to achieve faster builds on multi-core computers.
+2. Support for Heretic and Hexen games being as robust as support
+for Doom / Doom 2.
+3. Features that help get maps within vanilla limits are researched
+and implemented, without getting in the way of support for maps 
+targeting advanced engines (Boom, etc.)
+4. Make self-referencing sector effects easy to use for mappers,
+preferably without need for mappers to mark them manually.
+Default settings should already support self-referencing sector
+effects very well. Monsters in self-referencing sectors shall
+be able to see, hear and attack the player.
+5. Special effects provided by other nodebuilders (horizon effect
+and "precious" linedefs from BSP v5.2, faster scrollers from 
+ZokumBSP) are also getting implemented.
+
+In future, support for GL nodes / UDMF format MAY be considered
+as well. 
+
+Partial support for RMB effects is already implemented since
+version 0.74a. Eventually, most RMB effects are going to be
+supported.
+
+Section 02: Basic usage
+=======================
+
+VigilantBSP is a console, rather than GUI, program. If you want
+to run it manually (and in some cases you really have to!), rather
+than from map editor such as GzdoomBuilder, you need to run it 
+from a terminal (GNU/Linux) or the command shell (cmd.exe in Win32). 
+
+NOTE: Applying RMB effects will likely require you to run VigilantBSP
+manually indeed.
+
+The command-line looks like the following:
+vigilantbsp {-options} filename.wad {-o output.wad}
+
+where
+1. Options is an optional list of options as seen below
+2. Filename.wad is a single input wad file name and is required.
+Use quotes "" to specify filename if it contains spaces
+3. Output.wad is an optional output wad file name
+
+To launch VigilantBSP on a file called "filename.wad" with 
+default options, type:
+	vigilantbsp filename.wad
+As the result of execution, filename.wad will be read and 
+then updated. 
+
+If you rather not overwrite input wad, you type:
+	vigilantbsp input.wad -o output.wad
+	
+Note: when you don't specify an output file, a temporary file
+is created, then deleted when the execution ends.
+
+Important node about options. Although they do resemble POSIX
+syntax (for those who know what it is), they are rather modelled
+after the options format as used by another nodebuilder ZokumBSP.
+For example, choosing 8,8 offset for blockmap is done by entering
+the following line:
+	vigilantbsp -bo=1 input.wad
+ 
+Complete list of options follows, where tabs means that this option
+is either a suboption of option above it, or a possible value:
+
+-b Rebuild BLOCKMAP.
+	o= Offset configuration
+		0 0,0 offset BLOCKMAP (Zennode preset)
+		1 8,8 offset BLOCKMAP (BSP v5.2 preset)
+		2 Best of 36 offset combinations (default)
+		3 Heuristic method to reduce from 65536 offsets
+		4 Best of all 65536 offset combinations
+		x,y Specify specific offsets
+	r Remove non-collideable lines from blockmap (default: disabled)
+		This option is experimental and is likely to break
+		non-vanilla or non-Doom maps. Enable at your own risk
+	s Subset compress BLOCKMAP.
+	a Aggressive subset compression. If enabled, overrides s.
+	z= Zero/dummy header configuration
+		0 No dummy header
+		1 Use dummy header, but not necessary zero (default)
+		2 Use linedef #0 as dummy header
+	t= Number of cores to use when trying multiple offsets
+		(defaults to number of cores available)
+	e= Endgoal for multiple offsets
+		0 Smallest blockmap size (default)
+		1 Blockmap fits vanilla limits is enough
+		2 Blockmap works in limit-removing ports is enough
+
+-d Deterministic output (default: disabled)
+
+-n Rebuild NODES.
+	a= Partition selection algorithm.
+		0 Seg balancing only
+		1 Visplane reduction per Lee Killough
+		2 Advanced visplane reduction
+		3 Maelstrom - fastest build speed
+	p= Priority for partition selection.
+		0 Split minimization
+		1 Depth reduction
+	m= Multi-tree mode (experimental, SLOW).
+		0 Don't use, build single tree (default)
+		1 Try every one-sided linedef as a possible root node
+		2 Try every two-sided linedef as a possible root node
+		3 Try every linedef as a possible root node
+	t= Number of threads to use for multi-tree
+		(defaults to number of cores available)
+	i= Cull (don't create segs from) invisible linedefs.
+		0 Don't cull (default)
+		1 Cull, use faulty check to preserve self-referencing sectors.
+		2 Cull, robust preservation of self-referencing sectors.
+	c= NODES format compatibility
+		v Vanilla format which all software ports recognise
+		d Deep nodes format (limited recognition)
+	f= Tuning factor (seg split cost, etc.)
+		17 - default seg split cost
+	d= Penalty factor for _diagonal_ lines
+		34 - default for Hexen format levels, for others 0 (disabled)
+		Explicitly specifying non-zero value will enable it for all levels,
+		while explicitly specifying 0 will disable it even for Hexen levels		
+
+-r Rebuild REJECT resource.
+	z Insert zero-filled REJECT resource
+	g Use graphs to reduce LOS calculations (default: enabled)
+	s= If 2-sided lines have same sector on both sides
+		0 Mark such sectors as always visible (default)
+		1 Mark visible only when self-referencing sector effects are detected
+		2 Be pedantic about self-referencing sector visibility
+	m Process RMB option file (.rej)
+		
+-m (example -m:map01+map03) Rebuild only specific maps
+		
+-v Add verbosity to text output. Use multiple times for increased verbosity.
+
+These options are going to be covered in further sections.
+
+Section 03: Features
+====================
+
+03:01 Parallelism
+-----------------
+
+One of innovative features of VigilantBSP is parallelism: nodes, blockmap
+and reject are built in parallel to each other, rather than sequentially.
+Though this parallelism is per level, the overall build time can be
+(sometimes significantly) less than with hitherto dominant
+'sequential execution' design for such programs.
+
+VigilantBSP also - like another popular nodebuilder called ZokumBSP -
+supports the ability to build multiple BLOCKMAPs, each with different
+offsets, and write the smallest one to wad file. This process can be
+(and is, by default) also parallelized.
+
+03:02 Self-referencing sector support
+-------------------------------------
+
+VigilantBSP takes care not to destroy self-referencing sector effects
+or cause issues (such as monsters not seeing or attacking the player) 
+when mapper is using self-referencing sectors with either default or
+non-default options. 
+
+For example, in a wad built by Zennode, monsters would not be able 
+to attack the player from self-referencing sector unless the wad
+was built with zero-filled REJECT lump. In a wad built by VigilantBSP,
+monsters will correctly be able to attack the player when they have 
+a line of sight, even when REJECT is conventionally built. Also, 
+both Zennode and VigilantBSP have option to not create segs from
+some "invisible" linedefs - in VigilantBSP, this option will not
+cause self-referencing sectors to be destroyed in-game.
+
+In order to identify self-referencing sectors automatically for things
+such as "not skipping seg creation in error" or "not hiding this sector
+in error", there is a need to be able to tell the outer perimeter of the 
+sector. A blueprint for finding a perimeter is available, although not 
+without limitations: it may fail in case of overlapping/intersecting lines,
+report bogus self-referencing sectors because of nested perimeters 
+found within the same sectors, or some other fairly complicated
+configurations. However, most of computations requiring this algorithm
+are optional, or not expected to present a detrimental effect on overall
+results even in case of failure.
+
+Support for RMB options file (*.rej) also places demand to identify
+self-referencing secgtors and their surroundings rather robustly,
+to make sure RMB effects that depend on distance between sectors 
+to be applied correctly.
+
+03:03 Tackling vanilla and port limits
+--------------------------------------
+
+VigilantBSP implements several features to help produce more complex
+maps under vanilla limits than hitherto possible. Some of these features
+are opt-in, disabled by default because they can cause problem with
+some versions of advanced source ports, or because they can increase
+build-time significantly. It also has features for advanced ports,
+such as support of DeepBSP ("standard V4") nodes format, "maelstrom"
+ - very fast but not visplane- or seg-savvy mode which builds nodes
+ real fast and can enable frustration-free editing of big complex maps.
+ 
+VigilantBSP uses several techniques (some are built-in, others are
+opt-in or opt-out) to increase the chance that blockmaps will work
+under either vanilla or limit-removing port, when blockmap is closer
+to limit. 
+
+03:04 Continuing research on reducing visplanes
+--------------------------------------
+
+VigilantBSP reimplements both the Lee Killough's partition selection 
+algorithm (as implemented in BSP v5.2) and a new variation of it that
+intends to lower the number of simultaneously visible visplanes and so 
+reduce the chance of VPO in vanilla engine. The second algorithm is
+implemented in VigilantBSP for the first time. It was inspired by 
+obvious inaccuracies in the first algorithm, as well as notes by 
+Lee Killough on what he thought could be useful, but was/seemed hard 
+to do at the time. 
+
+It is intended that this new algorithm be updated from version to 
+version of VigilantBSP to improve accuracy and incorporate new research
+on reducing visplanes.
+
+03:05 Sharing lump space for REJECT lumps filled with zeroes
+------------------------------------------------------------
+
+Computing a proper REJECT lump is often the slowest process. VigilantBSP
+can be instructed to create zero-filled REJECT lumps instead. If done so,
+these REJECT lumps will be written so that they overlap between each other
+and possibly even contiguous block of zeroes in some other wad data, which
+decreases wad size.
+
+This technique has no detrimental effect on either vanilla engine or advanced
+ports. However, because some editors - such as SLADE3 - have (or had, at the 
+time of this writing) misguided algorithm to disable loading overlapping lumps 
+if they start on the same offset (which "defense measure against troll wads" 
+had also impact on some other legitimate tools, such as the one to shrink wad
+size), VigilantBSP uses a countermeasure to bypass this detection by making 
+zero-filled REJECT lumps still overlap, but start on different offsets. The
+offsets are picked so that the savings are maximized.
+
+03:06 Polyobject awareness
+--------------------------
+
+In Hexen wad format, polyobjects can be constructed, and they require special
+care. I ported some relevant code from AJ-BSP into VigilantBSP, and intend to
+do more (testers needed, and possibly people in the know).
+
+In VigilantBSP v0.75a, a number of adjustments were made to partitioners that
+may increase BSP tree size for Hexen maps but nonetheless will prevent more
+sectors with polyobjects from getting split into multiple subsectors 
+instead of one. For example, one of polyobjects in map05 of Hexen, Guardian
+of Steel, used to get broken when hexen.wad was rebuilt using seg balancing,
+default partitioner, BEFORE the adjustments were made. Even visplane-aware
+partitioners used to split that sector into 2 subsectors, but the update now
+causes entire sector in question in that map to be covered with 1 subsector
+(finally!), which is preferable for sectors involved in polyobjects.
+
+03:07 Linguortal support
+------------------------
+
+Linguortal support is still under development and has lots of bugs and
+limitations. This unofficial release of development version of 0.75a allows
+some people to experiment with it nonetheless.
+
+The currently "supported" version doesn't move segs but instead tries to
+reuse node built for off-map linguortal destination in another place,
+which might or might not come with acceptable limitations.
+
+To use linguortal effect in your own map - assuming you are using
+the appropriate version of VigilantBSP - you need to make an "island" 
+(surrounded by void only and not inside some other geometry) OFF MAP.
+Then, to view that island, you need to tag one of linedefs belonging to
+it with an unique tag (but not put a special), then you put the same
+tag AND special number 1097 on linedef from whose back you want to see
+that destination you drew earlier off map.
+
+You will likely need to experiment with building the same map with different
+partition algorithms so that one of them would provide somewhat acceptable
+results, as the research on implementation is still ongoing.
+
+Section 04: Custom linedef specials and tags
+============================================
+
+This entire section applies only to Doom/Doom 2 and Heretic maps, but not 
+to maps for Hexen or in Hexen format. Most numbers mentioned here simply
+cannot be specified in Hexen format because the size of tag (arg 1) and action
+is only 1 byte (unsigned 1 byte would allow only integers in range 0..255).
+All action numbers have different meanings in Hexen as well.
+
+Certain linedef specials and tag numbers have special meaning in VigilantBSP.
+Most of these were appropriated from another nodebuilder, ZokumBSP. 
+Additionally, horizon effect and setting linedef to be precious (protected
+from splits when creating segs and nodes) from BSP v5.2 are supported.
+
+Action (linedef special type) with special meanings:
+48      Exactly like regular Doom (or Heretic), except tag decides scroll speed.
+1048    Remote scroll nearest wall with same tag. Scroll speed is defined
+		by two last digits of the tag.
+1078    Not yet supported (ZokumBSP implements this, we do not - yet)
+1079    Not yet supported (ZokumBSP implements this, we do not - yet)
+1080    Rotate the rendered wall N degrees, where degrees is taken from tag.**
+1081    Set the wall rotation to a hardcoded degree, degree taken from tag.**
+1082    Rotate the rendered wall N BAMs, BAMs taken from tag.**
+1083    Set the wall rotation to a hardcoded BAM, taken from tag.**
+1084    Do not render seg on the second side of a linedef.
+1085    Do not render seg on the front side of a linedef.
+1086    Do not render segs on any side of a linedef.
+
+Linedef tags with special meanings:
+>=900*	Precious linedef: avoid splitting seg when building nodes
+998   	Do not render this linedef.
+999   	Do not add this linedef to the blockmap. Additionally, if line is 
+        one-sided, rotate the rendered wall N degrees, where degrees
+        is taken from tag.**
+* excluding 998 and 999
+** This can be used to produce horizon and infinite ocean effect when angle
+in degrees = 180, see 
+https://www.doomworld.com/forum/topic/94604-horizon-effect-in-vanilla-only/
+(credit: Bzzrak). However, historically, most limit-removing and advanced
+ports wouldn't display this effect correctly, if they chose to override angle
+with a more precise computation required for wall wiggle fix (TODO add link)
+UNCONDITIONALLY. Preventing wall wiggle does NOT have to break this effect, 
+but historically used implementations did, and most versions of such popular 
+ports as  Crispy-Doom and PrBoom-Plus WERE affected by this. This is beginning
+to change as developers are now made aware of this effect, and so explicitly
+reenable its support even while wall wiggle fix is implemented. Newest versions
+of Crispy-Doom will render this effect correctly and still fix wall wiggle,
+whereas newest version of Sprinkled Doom will support this effect without 
+implementing wall wiggle fix as the latter not compatible with the goals of that
+project. Ports such as Chocolate Doom and CnDoom (as well as outdated versions 
+of Sprinkled Doom when it was more of limit-raising rather than limit-removing port) 
+always supported this effect.
+
+Linedef tags >=900 and the rotation part for tag 999 effect originate from BSP
+nodebuilder. 
+
+04:01 Seg manipulation specials
+-------------------------------
+
+This feature, as well as documentation for it, originated in ZokumBSP 
+version 1.0.10+ and is reimplemented in VigilantBSP as well.
+
+"
+The following four additional linedef specials allow you to change the angle
+of the rendered wall. This can be useful for special effects like subtly
+changed secret doors.
+
+BAM (Binary Angle Measurement) is the internal degree system used in the Doom 
+engine games. They use 16 bits to differentiate up to 65536 different angles.
+
+There is support for both BAMs and the more familiar 360 degree system. The
+tag tells the node builder how many degrees clockwise the wall should be
+rotated.
+
+Numeric Effect
+1080    Rotate the rendered wall N degrees, where degrees is taken from tag.
+1081    Set the wall rotation to a hardcoded degree, degree taken from tag.
+1082    Rotate the rendered wall N BAMs, BAMs taken from tag.
+1083    Set the wall rotation to a hardcoded BAM, taken from tag.
+
+1084    Do not render seg on the second side of a linedef.
+1085    Do not render seg on the front side of a lindedef.
+1086    Do not render segs on any side of a linedef.
+"
+
+04:02 Scrolling wall specials / changes
+---------------------------------------
+
+This feature, as well as documentation for it, also originated in
+ZokumBSP version 1.0.10+ and is reimplemented in VigilantBSP as well.
+
+Technical details: to implement this effect, nodebuilder has to create
+a number of dummy _linedefs_ with action '48'. Most, if not all, current
+editors will show these linedefs after map is reloaded (they are 
+completely overlapping the linedef onto which 'the effect' is applied on, 
+so if you select that linedef with a range selection tool, you will see you
+selected multiple linedefs). These linedefs may be inadvertently destroyed 
+when dragging geometry.
+
+Note: the dummy linedef count is matched to effect strength (specified by
+tag) only when both blockmap AND nodes are getting rebuilt (by default they
+do, but user can suppress this). This is because both structures use 
+linedef indices which may become invalid when those dummy linedefs are 
+deleted.
+
+There is a maximum limit (in vanilla at least) of 64 scrolling walls in
+a map. Speeding it up to 3x uses three times as many of the 64 maximum 
+entries.
+
+'48' Scrolling wall, in addition tag sets speed.
+
+In addition to the normal behaviour of a scrolling wall, one can now adjust
+the scrool speed by setting the tag of the wall. Setting it to two will make
+it scroll twice as fast as a normal scroller, 3x 3 times as fast etc.
+
+'1048' Remote scroll nearest wall with same tag.
+
+This one works similar to the regular scroller, 48, except it allows for that
+wall to have an special. One can make scrolling doors, switches etc. The
+chosen lindef is the one that is nearest the linedef with the 1048 type. The
+distance is the absolute distance from the starting vertex. The scroll speed
+is affected only by two last digits of the tag, not by the entire tag value.
+
+TODO Add section about sector tags as well (>=900 for "make subsector out of
+several sectors" for transparent door effect). Originates from BSP, supported
+in AJ-BSP as well.
+
+Section 05: Blockmap build options
+============================
+
+The blockmap is a data structure that is part of the map format. It is a
+lookup table the engine uses to quickly see which lines are in a given area
+when performing collision detection.
+
+All blockmap parameters must follow after the main -b parameter. Typically
+something like -bo=1az=2.
+
+The blockmap is rebuilt by default, to turn this off, invoke VigilantBSP
+with the parameter "-b-". 
+
+The blockmap consists of a small header that gives the dimensions and
+coordinate system of the map, a set of 2-byte values that represent a grid of
+128 by 128 game units with the values being addresses of a list of linedefs
+that exist in that specific block.
+
+It is possible to exceed the maximum size of a classic Doom blockmap purely by
+having a too large grid. The exact size of the blockmap is undefined, due to
+the addresses of the start of the list can only be within 65536 bytes (for
+advanced ports treating the offsets as unsigned integers) or 32768 bytes
+(for vanilla engine because it uses signed integers). A list can be of variable 
+length, with the list entries extending beyond the above limits.
+
+To decrease blockmap size, various techniques can be considered. One of them
+- merging identical lists - is present in almost every nodebuilder. This basic
+compression technique is always used in VigilantBSP and cannot be disabled.
+
+Another built-in, always on technique is to place the largest list at the
+end of blockmap, so as to decrease the largest offset - which increases its
+chance to fit within either vanilla or limit-removing port limit.
+
+Furthermore, when blockmap is so large that offsets cannot be correctly
+represented anymore, the blockmap lump is left blank. Some ports are able
+to recognise this condition and produce their own blockmap representation
+on-the-fly so that map may be playable in them.
+
+NOTE code which decides which linedefs belong into which block was taken
+from ZDBSP and not Zennode/ZokumBSP, so while the option set is similar
+to ZokumBSP, you won't be getting the same results for the same options
+selected in ZokumBSP and VigilantBSP.
+
+05:01 'o' - Offset configuration.
+--------------------------------
+
+Note: this is a reimplementation of the option originated in ZokumBSP. The
+documentation is based on documentation of the same option in ZokumBSP, with
+necessary edits.
+
+The 128x128 grid offset can start at any arbitrary location, but due to the
+size, anything more than 127 game units more than the leftmost or bottom most
+vertice, will lead to the same grid as a different offset, but with more grid
+data. The smallest possible offset, 0,0 is what ZenNode had at its basic
+offset. DoomBSP from Id, as well as BSP, set it to 8,8. This minor safety 
+margin is not needed.
+
+Different offsets can line up the data in blockmap grids in different ways,
+allowing for smaller or bigger total size. You can specify how many or which
+offsets to use.
+
+It should be noted that due to bugs in the collission detection algorithms in
+Doom, collissions are aparently slightly different when a line is exactly on
+the edge of a grid. This is seen in the near-exit jump on Doom 2 map14 which
+is a jump that is longer than expected.
+
+o=0 - ZenNode 0,0 offset BLOCKMAP.
+
+This is the same offset configuration that ZenNode and probably many other
+node builders use. Use this if you want a quickly built blockmap.
+
+o=1 - DooMBSP / BSP 8,8 offset BLOCKMAP.
+
+An offset of 8,8 is used by DoomBSP. This has a slightly higher chance than
+0,0 to build bigger blockmaps due to an increased risk of a bigger grid. 
+
+o=2 - Best of 36 offset combinations.
+
+This is the default configuration for VigilantBSP. 36 offsets will be tested,
+from 0 to 40 along both axises,in increments of 8. It will test (0,0), (0,8),
+(0,16) ... (0,40), (8,0), (8,8), (8,16) ... (40,40)
+
+This is a reasonable compromise between speed and thoroughness of offset
+variations that will yield a smaller total result for most maps than a single
+offset.
+
+This option was pioneered by ZokumBSP nodebuilder. VigilantBSP will use 
+multiple threads by default to construct blockmaps from different offsets
+in parallel.
+
+o=3 - Heuristic method to reduce from 65536 offsets.
+
+In this configuration, a lot more offsets will be tested, all the way from 0 to
+127 for both X and Y. The Heuristic to decrease the time spent is to avoid
+computing blockmaps if a combination of X and Y yields both an extra row of
+grid and an extra column. If the map boundary is close to square, all of 
+65536 offsets will have to be tried.
+
+This option was pioneered by ZokumBSP nodebuilder. VigilantBSP will use 
+multiple threads by default to construct blockmaps from different offsets
+in parallel.
+
+o=4 - Best of all 65536 offset combinations.
+
+This is the same algorithm as approach as o=3, except without the heuristic. It
+is possible, although unlikely, that this can give a better result than the
+approach using the heuristic.
+
+This option was pioneered by ZokumBSP nodebuilder. VigilantBSP will use 
+multiple threads by default to construct blockmaps from different offsets
+in parallel.
+
+o=x,y - Specify specific offsets.
+
+This setting allows you to select a custom set of offsets. This can be useful
+if you are creating a map where a specific jump or some other blockmap related
+artifact requires a specific setting. Apparently the collision detection
+algorithm performs differently when linedefs are on the exact edge of a grid in
+the blockmap.
+
+05:02 'r' - Remove non-collideable lines from blockmap 
+------------------------------------------------------
+
+Note: this feature also originated in ZokumBSP. It was first introduced
+to VigilantBSP in v0.75a version, and unlike ZokumBSP, defaults to
+DISABLED and there are no plans to ever change this default.
+
+ZokumBSP supports feature of removing lines from the blockmap if they 
+cannot be interacted with - to reduce blockmap size and potentially fit
+it under limits when it wouldn't otherwise. Although nice in theory,
+this requires knowledge of all the actions that can be supported in
+a source port, including, but not limited to, Boom format maps,
+non-Doom maps and advanced port extensions (especially hard to 
+support). When it was *first* implemented in ZokumBSP, an oversight 
+caused Boom maps to not function correctly. It then was fixed, 
+however still misses certain stuff for Heretic, nevermind Hexen 
+games, as well as not being friendly to self-referencing sector
+effects.
+
+VigilantBSP considers support for advanced ports (so long as they
+use traditional Doom format) and Heretic and Hexen games as first
+class as its support for vanilla Doom. The way this feature is
+implemented in VigilantBSP should preserve self-referencing sectors
+(because special care is taken to discover self-referencing sectors
+and to prevent their perimeters from being removed from blockmap),
+as well as being at least a bit safer to use with Heretic maps and
+Hexen format maps. The feature still requires a lot of feedback
+from people who map for non-Doom games or advanced ports.
+
+Which lines are considered non-collideable? Let's see a list:
+1. Two-sided lines with same sector on both sides (but not making
+up the perimeter of self-referencing sector), not marked impassable
+and not blocking monsters, and not having any action set
+2. Two-sided lines with different sectors, not marked impassable
+and not blocking monsters, having no action set, floor height of both
+sectors is equal, ceiling height of both sectors is equal, both sectors
+are untagged, both sectors do not "timed doors" special AND there are
+no linedefs with types that act on multiple sectors anywhere on the 
+map (such types are donuts and stair builders, including Boom ones). Unlike
+ZokumBSP, VigilantBSP also prohibits such lines to be removed in Hexen 
+format AT ALL - because in Hexen format, stair actions on multiple sectors
+can be performed via ACS - indeed the original Hexen game does so.
+3. (ZokumBSP only, not YET implemented in VigilantBSP) Boundary walls
+in sectors that have 0 height, not tagged, not a door. ZokumBSP always
+forces this, even if "remove non-collideable" option is disabled.
+VigilantBSP plans to incorporate this later.
+
+Besides reducing blockmap size, removing non-collideable lines can
+help remove/reduce chance of intercepts overflow. I have a map (which
+might later be edited into example) where I have built a cage as an 
+invisible elevated platform (self-referencing sector) with "bottom"
+built from lots of linedefs inside it. This setup can't work in vanilla
+or even limit-removing (-complevel 2) maps without triggering intercepts
+overflow unless this option is used, and since all this linedef-intensive
+stuff is placed in self-referencing sector, using this option in 
+VigilantBSP is the only way to prevent that and still render it properly
+(tagging hundreds of linedefs with "remove from blockmap" tag would be
+exhaustive), as VigilantBSP will preserve perimeter of self-referencing
+sector in blockmap but remove inner lines from it. So this option is 
+practically useful, although has to be used with care as ZokumBSP
+insights never took into account games other than Doom, and Boom is not 
+the most advanced port there is.
+
+I expect that this option doesn't play nice with Edge programmable actions
+for linedefs, but I don't have much experience working with Edge or other
+source ports. 
+
+05:03 'z' - Zero/dummy header configuration
+-------------------------------------------
+
+Note: this feature also originated in ZokumBSP.
+
+"
+
+Id's DoomBSP would originally added a small 00 header in each list. This is a
+bug. The engine does not parse this correctly, and sees it as a reference to
+linedef 0. This increases the size of the blockmap and slows down the run time
+speed. Additional linedefs not present in the block can in some rare cases
+lead to faulty collission detection. This option controls whether blockmap
+lists should have this header in some ports which will skip the first entry in
+a blockmap list regardless of it being a 0-header or not.
+
+The approach taken in MBF, to skip this redundant header, was a bad fix. The
+fix should instead have been done in the node builders. Due to the fact that
+skipping this header is needed for demo compatibility, many ports have this as
+a togglable option in the code anyway.
+
+Hopefully, ports will include a fix for this bug, but due to demo
+compatibility, older versions will have to emulate this behaviour to properly
+play back demos recorded with this bad optimization in place.
+
+"
+
+z=0 - No dummy header.
+
+This option produces a smaller blockmap. This works flawlessly, in fact
+better, when maps are played in the original engine and Chocolate Doom. There
+is however a known bug in some ports, like MBF, and those based on this port
+where a poor optimization will skip this header without actually checking that
+it is a zero-header. Such ports will have very faulty collision detection in
+every area in the map. If one is aiming for newer ports where this has been
+fixed, classic Doom or Chocolate Doom, this option is generally safe. There is
+a fix for this header in newer versions of the Eternity Engine. GZdoom
+generally ignores the blockmap, and should work fine with or without this
+option.
+
+z=1 - Use dummy header, but not necessary zero (default)
+
+Due to many ports with a faulty header optimization, universally compatible
+blockmap needs to present a dummy linedef at the beginning of every list. 
+However, this linedef doesn't need to be number zero. VigilantBSP will 
+automatically pick a linedef to insert into every list (which creates 2 bytes
+of overhead per list) so that 2 bytes can be reclaimed back, if that is
+possible. The technique to achieve so is called "byte stealing", and uses
+the fact that the offset of last block can, under certain circumstances, be
+the offset of the beginning of its list and concide with a linedef number.
+
+z=2 Use linedef #0 as dummy header
+Just like option z=1, this also results in blockmaps universally supported
+by Doom engines. It also adds about 2 bytes of overhead per list in the 
+blockmap, but the possibility of saving 2 bytes overall via "byte stealing"
+is lost.
+
+05:04 's' - Subset compress BLOCKMAP.
+-------------------------------------
+
+This option will merge every list in the blockmap that is a sub set of
+another big list into the tail of that latter list, as long as it is 
+possible. This will decrease blockmap size, at the cost of increased 
+blockmap build time. 
+
+This option will not cause vanilla engine to perform any extra checks 
+compared to not using subset compression. This is unlike the similarly 
+named 'subset compression' of ZokumBSP, which is also implemented in 
+VigilantBSP under a different name: 'aggressive subset compression' 
+(see below).
+
+05:05 'a' - Aggressive subset compression
+-----------------------------------------
+
+This option, when enabled, completely overrides 's' whether that was
+set or not.
+
+This option causes VigilantBSP to replace a block pointer to list 
+(when that list is a subset of another bigger list) with the pointer to
+that bigger list. All lists that were subset of any other list are 
+getting omitted, blocks made to reference only those lists that aren't
+subset of any other list. The engine will have to perform more checks
+than before.
+
+This will achieve even smaller blockmap size than regular (proper) subset
+compression, BUT also WILL result in ALL engines performing extra collision
+checks when using such blockmap in game.
+
+This is what ZokumBSP calls "subset compression" but I would rather call
+it "subset elimination" instead, or you could call it lossy compression
+(think of how WAV compresses into MP3 rather than into FLAC - the process
+is not reversible and involves loss of precision)
+
+05:06 't' - Number of cores to use when trying multiple offsets
+---------------------------------------------------------------
+
+When trying multiple offsets in a search for smaller blockmap (blockmap 
+option 'o'), it is useful to distribute the workload onto multiple cores
+or threads.
+
+The default value is '0' which has a special meaning of "the number of 
+threads to create = the number of threads reported by the system".
+
+Specifying a different value will cause that exact number of threads to
+be used instead.
+
+Obviously, when blockmap is created for only one fixed offset, this
+option is ignored.
+
+05:07 'e' - Endgoal for multiple offsets
+----------------------------------------
+
+Because searching for smallest blockmap can be slow on some maps 
+even when using multiple cores, this option allows to settle for
+'small enough' blockmap that works on the target of user's choice
+(vanilla or advanced engine) instead. 
+
+After all, "smallest possible" is just stupid number crunching,
+in reality you just want your map to work in intended source port.
+
+e=0 Smallest blockmap size 
+Or don't settle for 'small enough', but pick the smallest 
+possible. This is the default.
+
+Note: as was mentioned earlier, it is not the size but rather
+the last offset of blockmap which needs to fit under 
+either 32768 or 65536 byte limit. In event when largest list 
+offset in blockmap of larger size will fit under the limit,
+it will be preferred over blockmap of smaller size which doesn't
+fit under that limit. Both limits are considered in this case:
+if this search can result in a blockmap that works in vanilla,
+it will be picked, even if it is larger (most likely only 
+marginally) than some blockmap that works only in limit-removing 
+port.
+
+e=1 Blockmap fits vanilla limits is enough
+As soon as the largest list in blockmap starts within 32768 bytes
+of blockmap lump, that blockmap is chosen to be written into the wad.
+
+e=2 Blockmap works in limit-removing ports is enough
+As soon as the largest list in blockmap starts within 65536 bytes
+of blockmap lump, that blockmap is chosen to be written into the wad.
+
+Caveat emptor: because of parallelism, the blockmap size or contents
+will often vary from one run to another. This is because threads can
+get ahead of each other. Consistency can be achieved by enabling
+determinism via option that will be covered later. In versions
+prior to VigilantBSP v0.75a, if this option was not set to zero,
+and determinism was enabled, only one thread was used to try 
+all blockmap offsets. This limitation was finally lifted in 
+VigilantBSP v0.75a, resulting in greatly improved performance when 
+the number of offsets to try is high or if endgoal is impossible 
+with all offsets.
+
+Section 06: Determinism option
+==============================
+
+The parallelism VigilantBSP has made it possible to produce distinct
+(but still equally valid) outputs for the same input. When building
+blockmaps out of multiple offsets, there is a possibility of threads
+getting ahead of each other. Thus the order in which blockmaps are
+found is not necessary the same in one run from another, and some of 
+these blockmaps can have equal size meaning that the choice of the 
+minimum size does not necessary have one candidate.
+
+Another example, is that the order of data referenced by lumps needs 
+not be the same as the order in which lumps are listed in "wad's 
+directory" - which is the name of data structure that represents a list
+of lumps is called. 
+
+Option -d can be used to enable determinism so that running on the same
+input file with the same option list in the same version of VigilantBSP
+is guaranteed to produce the same byte-for-byte output file. This will
+generally increase running time, however, so is not enabled by default.
+
+Starting with VigilantBSP v0.75a, you CAN use multiple threads in
+deterministic mode with non-zero endgoal for blockmap and multiple 
+offsets to be tried. Prior versions of VigilantBSP forced single-threaded
+mode for computing blockmaps (even if user explicitly requested the
+number of threads to use for blockmap building), this limitation has
+been lifted.
+
+Section 07: Nodes builder
+=========================
+
+By nodes we actually mean a data structure representing BSP (binary space 
+partition) tree which is distributed across three lumps: SEGS, SSECTORS, 
+NODES. Rebuilding nodes causes all three lumps to be written/modified, as 
+well as vertices added to VERTEXES lump. This is because vertices are used
+not only in LINEDEFS but also SEGS.
+
+BSP has always a single root node. Each node, including the root one,
+is recursively subdivided into two children which can be either nodes or
+subsectors. Subsectors are therefore leaf elements of nodes tree, and they
+also must be necessary convex polygons (polygons are formed by one or more 
+segs, parent node boundaries and partition line of the parent node)
+
+SEGS are line segments created from linedefs which (I mean segs here) are
+then used to form subsectors (SSECTORS lump).
+
+To achieve significant savings in time required to build nodes, VigilantBSP 
+takes inspiration across the pool of best speeding up techniques found in
+nodebuilders, such as:
+- partner segs. These are a pair of segs created from 2-sided linedefs,
+tracking each other;
+- aliases. An abstraction of all segs parallel to each other. Zennode's
+innovation, in VigilantBSP these are created and propagated dynamically
+rather than being starting point of the node building process;
+- superblocks. A generalization of blockmap, represented as a binary 
+tree of root block subdivided recursively into further blocks, with each
+seg hosted in the smallest block that completely surrounds it. AJ-BSP's
+innovation, I have not yet realized its full potential in VigilantBSP
+but even in current state it is already a decent optimization.
+
+All parameters related to creating this BSP tree must follow after the
+main -n parameter. Typically something like -na=2i=2c=d etc.
+
+The BSP tree is rebuilt by default, to turn this off, invoke VigilantBSP
+with the paramter "-n-". 
+
+07:01 'a' - Partition selection algorithm
+-----------------------------------------
+
+For almost every map, there are countless possible valid BSP trees. Each
+tree is having impact on both engine static and dynamic limits, such
+as visplanes, drawsegs, etc. 
+
+Unfortunately, there is not a definite algorithm to achieve best possible
+tree, and even good ones may take sometimes long times to compute. The 
+general approach is to present an algorithm that should produce "good" 
+BSP tree iteratively, using algorithm-dependent choice of metric(s) to
+evaluate each partition line among those considered on every iteration.
+
+To accomodate for demands of both vanilla mapping and of those who create
+very complex maps for advanced ports, VigilantBSP allows to choose from
+several algorithms:
+
+a=0 - Seg balancing only (default)
+
+This algorithm is built around measuring the number of segs within the 
+current node on each side of partition line, and trying to keep this
+number balanced, as well as not splitting too many segs. This is roughly
+the same algorithm BSP v5.2 uses by default, although with improvements
+to both speed and accuracy. For the record, VigilantBSP *does* update
+angle (as well as other attributes, some for internal use) of the segs 
+created from being split, while BSP v5.2 didn't.
+
+This algorithm is the default one because it is neither too slow on
+large complex wads that would only ever work in advanced ports, nor does
+give too poor results for vanilla maps. It is not, however, optimal on 
+both counts either.
+
+a=1 - Visplane reduction per Lee Killough
+
+As observed by Lee Killough back in 1997, trying to balance the number of
+sectors rather than the number of segs tends to reduce the number of
+visplanes in view at once in various spots around the level, reducing the
+chance of encountering a visplane overflows when playing the map in 
+vanilla engine. This is roughly the same algorithm BSP v5.2 offers as 
+alternative for the goal of reducing visplanes.
+
+This algorithm may be slow when used on maps that only work in advanced ports.
+
+a=2 - Advanced visplane reduction
+
+This is a modification of the previous algorithm that debutes in VigilantBSP.
+It improves its accuracy as well as using sector equivalencies (compatible
+sectors whose visplanes might under certain condition merge) instead of
+sectors, etc. It is capable of removing more VPOs in some maps than the 
+previous one, but takes even more time to run and still needs to be 
+perfected. Future versions are going to see this algorithm updated as
+research is ongoing. 
+
+TODO there is a lot to say on this algorithm, actually. I am rushing for
+the world to see alpha version though.
+
+a=3 - Maelstrom - fastest build speed
+
+This algorithm is modelled after the fast mode found in AJ-BSP nodebuilder. 
+It produces worse results limit-wise than even the "seg balancing only"
+algorithm, but it achieves graceful running times even on very large and
+complex levels.
+
+07:02 'p' - Priority for partition selection
+--------------------------------------------
+Note: this option was introduced in v0.69a of VigilantBSP, under the
+name "Use secondary score for partition selection". It has been since
+effectively overwritten, old options are no longer valid. It may be
+overwritten once again or removed in future versions.
+
+This experimental option allows to make slight alterations to partition
+selection algorithm. Currently it only has effect when na=2 (advanced
+visplane reduction) is selected, for performance as well as other reasons.
+It may result in more effecient tree built (less deep and/or fewer segs
+overall), but which exact option will yield better/worse result is
+specific to each map.
+
+It exists because it has been reported to me that ZokumBSP produces
+similar visplane results but with less segs/drawsegs. Hopefully, this
+new addition will make the efficiency gap a bit smaller.
+
+Also, it is important to note that since the metric is applied on each
+partition iteration, it cannot really guarantee the best outcome after
+many of those iteration run. It just tries to do so on best effort
+basis. Thus, if you really are struggling with getting particular
+map under limits, you might want to experiment with setting different
+values to this option.
+
+p=0 Split minimization
+
+This gives priority to avoiding sector splits. Technically, it does
+not count sector splits directly but rather the number of groups of
+sectors whose flats and ceilings are visplane-compatible that have
+been split. The penalty factor is then applied per each group that
+has been split.
+
+This behavior was common to all versions of VigilantBSP up to
+and including v0.69a. Additionally, this now enforces secondary
+metric that VigilantBSP v0.69a had by default, as it was determined
+as most efficient.
+
+p=1 Depth reduction
+
+This moves "avoiding sector splits" lower in priority list, thus
+increasing the priority of balance between both segs and sectors.
+
+Contrary to the option's name, it will not necessarily produce
+less deep / smaller trees or result in more splits. It may have 
+something to do with bugs in advanced visplane reduction 
+algorithm, such as within the part of it that computes partition
+candidate line length without segments that cross the void, or
+something else. 
+
+I have tried to use Zennode's approach to reduce depth, but, being
+applied after visplane-sensitive algorithm, it didn't produce 
+results distinct from what is currently implemented. 
+
+07:03 'm' -  Multi-tree mode (experimental, SLOW)
+-------------------------------------------------
+Note: this option was introduced in VigilantBSP v0.74a
+
+This feature is implemented per suggestion of user with nickname
+Jerko, who asked on doomer boards if I could implement it. To
+make it active as well as get practical results from it, 
+you want to set it to non-zero value, and set partition selection 
+to 1 (Killough's visplane reduction) or 2 (advanced visplane
+reduction). This option is recommended to use on vanilla maps
+only and only with the above partition selection algorithms.
+
+What it will do then, is to create multiple trees and pick "best",
+which "best" would _hopefully_ mean less visplanes / VPOs. Unlike
+ZokumBSP's multi-tree algorithm, which running time scales 
+exponentially with complexity of the level, the algorithm Jerko
+suggested results in running time scaling linearly with the number
+of linedefs, as only root node is bruteforced among all possible
+variants (the pool of variants depends on option value). This
+makes it less effective than ZokumBSP's one but more practical
+to run.
+
+Since this creates several trees, it will take significant time
+to run and for this reason should not be used when invoked from
+editor (SLADE3, GzDoomBuilder, etc.)
+
+Eventually, version analogous to ZokumBSP one is going to be 
+implemented too, but the timeline for its implementation is
+currently unknown.
+
+m=0 - Don't use, build single tree (default)
+
+You can disable multi-tree mode explicitly if you want, although
+it defaults to disabled anyway.
+
+m=1 - Try every one-sided linedef as a possible root partition
+
+VigilantBSP will create as many trees as there are one-sided
+linedefs, trying each one-sided linedef for root node partition,
+and then pick the best tree. If possible, VigilantBSP will try
+to speed up process by using multiple threads, see also -nt option
+to control exactly how many threads VigilantBSP will use, as each
+threads adds to memory consumption.
+
+Using linedefs specials that tell not to render seg on one side
+of two-sided linedef will cause that linedef to be considered as
+part of this search. Linedefs that are not rendered at all will
+be skipped over.
+
+m=2 - Try every two-sided linedef as a possible root partition
+
+Similar to m=1, but TWO-sided linedefs instead of one-sided.
+
+Using linedefs specials that tell not to render seg on one side
+of two-sided linedef will cause that linedef to be NOT considered 
+as part of this search. Also, linedefs that are not rendered at 
+all will be skipped over.
+
+m=3 = Try every linedef as a possible root partition
+
+Will create tree for every linedef and pick best.
+
+If linedef is completely omitted from rendering (via linedef specials
+or special "BSPNOSEG" texture), it will not be used for partition 
+selection.
+
+
+Actually, in all cases VigilantBSP will not try _literally_
+every linedef, as a good number of them are collinear with each 
+other. Within a group of linedefs that are all collinear with
+each other, VigilantBSP will pick exactly one, as all collinear
+linedefs would produce the same root node. This helps speed up
+search without affecting the results. 
+
+Also, if you cull linedefs with -ni= option, only those linedefs
+from which segs are created will be considered, so that will also
+reduce running time for multi-tree (but results will be affected,
+for better or for worse).
+
+Example of use:
+vigilantbsp -na=2m=3 somefile.wad -o somefile_builtwithmultitree.wad
+This tells to build tree with every linedef in the map as root (except
+for not rendered ones), and use advanced visplane reduction for all 
+nodes in each trees except the root one. Note that it is really important
+to tell VigilantBSP to use visplane reduction via n=2, unless, I dunno,
+you are trying to reduce segs but not do anything about visplanes, or
+just benchmarking things. 
+
+How exactly "best" tree is selected might change from version to version,
+as of v0.74a it does this in this order:
+1) least total amount of subsectors (highest priority)
+2) least difference in BSP tree height between left subtree and right 
+subtree of root node
+3) least maximum height in BSP tree
+4) least total amount of segs
+5) (technical, you can ignore it if you don't understand) tree came
+from linedef earlier in the initially constructed list of linedefs
+to be considered (ensures the process is deterministic, note to still
+use -d explicitly if entire output file needs to be build 
+deterministically and not just nodes)
+
+This approach might miss condition when some VPO spot in the map could 
+be eliminated by raising visplane count (but not reaching visplane 
+limit) elsewhere, so this is why we should call this "best" and not 
+best. Improving on it is the task for the future, I can tell you that 
+computing visplanes for all spots in entire map at once is hard task,
+and even Visplane Explorer doesn't provide 100% accuracy as far as I
+know (not to say that if I were to implement something similar, may
+be difficult to define which is "best" really unless there is 
+clear-as-day improvement). ZokumBSP doesn't compute visplanes either,
+and there are other areas to fix or improve in VigilantBSP beside
+multi-tree that will have an effect on this.
+
+By the way, you CAN actually use this mode even with partition 
+selection other than visplane reduction types, and also can use it to
+generate DeeP nodes or on non-vanilla maps, but doing this has little 
+practical value. This mode was designed for vanilla maps and advanced
+visplane reduction (or at least Killough's).
+
+07:04 't' - Number of threads to use for multi-tree
+---------------------------------------------------
+Note: this option was introduced in VigilantBSP v0.74a. 
+
+This option controls how many threads to use when multi-tree mode
+is active for building all trees. It is only in effect when multi-tree
+mode is active (not 0 or unset). 
+
+The default value is '0', which has a special meaning of "the number of 
+threads to create = the number of threads reported by the system". 
+
+Specifying a non-zero value directly is useful if:
+1) you discovered that a lower value than the number of cores is more
+ effective
+2) VigilantBSP runs out of memory with the number of threads it 
+allocates automatically, so you have to explicitly tell it to use less
+threads
+3) your machine has more than 16 threads, but VigilantBSP doesn't use 
+that many by default, unless higher number is explicitly specified
+
+Specifying a different value will cause that exact number of threads to
+be used instead. 
+
+It should be noted that when this is not set, or set to 0, and so the number
+of threads is picked automatically, the cap of 16 threads is applied. This
+is because each thread allocates a lot of memory, and the higher the thread
+count, the higher memory usage in multi-tree mode.
+
+07:05 'i' - Cull (don't create segs from) invisible linedefs
+------------------------------------------------------------
+
+This option is similar to option "Ignore invisible linedefs" in Zennode
+and serves the same purpose: allow to avoid creating segs (and thus reaching
+limits faster) for linedefs that don't need them. The difference is accuracy
+in identifying when that is not safe to do: Zennode, for example, was not 
+terribly accurate, and would classify lines creating "self-referencing sector"
+as "invisible".
+
+i=0 - Don't cull (default)
+
+For risk-aversive people like myself, it is better not to try to remove stuff
+that might be needed to work. This option value will make segs to be created 
+from all linedefs except those explicitly marked by the mapper via certain
+linedef specials/tags documented in "Section 4: Custom linedef specials 
+and tags"
+
+i=1 - Cull, use faulty check to preserve self-referencing sectors.
+
+Sometimes not keeping the unused clutter may be the difference between a map
+that will fit into the limits and the map that doesn't. This one does job 
+quickly, but dirty and may occassionally err. 
+
+Known false positives include monster teleport setups, 2-sided linedef 
+running across the whole sector, and then there is a false negative I don't
+believe people will be running into, which is why I choose to present this
+algorithm as a viable option. The false negative case is when joining sectors
+is abused so that self-referencing sector is joined to two sectors which are
+positioned in such manner that the rectangle that would contain those two 
+sectors completely wraps around the self-referencing sector and ends up
+having it strictly inside. Or, simply speaking, two sectors linked to 
+self-referencing sector are on the opposite side of it (one entirely to 
+the left, and the other entirely to the right, etc.)
+
+The use of this algorithm is therefore not recommended unless the next one
+is performing slow or giving errors.
+
+i=2 - Cull, robust preservation of self-referencing sectors.
+
+This serves the same purpose as previous, but the algorithm is better. 
+Some sectors that are not self-referencing may still get their linedefs
+preserved instead of culled (there are false positives), but the reverse
+- the loss of important linedefs - should never happen (there are no false 
+negatives). This works by identifying sector's perimeter, and refusing to
+remove any lines inside it that would otherwise qualify for removal. 
+In the event of failure to compute the perimeter lines are simply not
+getting removed anyway.
+
+The algorithm to compute the perimeter of a polygon is based on the
+one found here: https://arienryderflex.com/polygon_perimeter . Since
+sectors are not necessary polygons, the self-referencing sector detector
+begins with determining which polygons sector is compromised of (treating
+sector's linedef as a graph, and components as potential polygons, with
+non-polygons being thrown away). In event of doubt or failure within 
+perimiter computation algorithm (the code in VigilantBSP misses some part
+of original because of the rush to release it), linedefs are preserved.
+
+07:06 'c' - NODES format compatibility
+--------------------------------------
+
+There are various BSP tree formats even for "software" (non-GL) nodes. 
+Some of them aim at raising the limits and/or improving accuracy of seg 
+splits (coordinates being fixed point instead of integer).
+
+And then some are supported by VigilantBSP. 
+
+c=v - Vanilla format which all software ports recognise
+
+This is the default, original nodes format. Every port is going to support
+this if it uses non-GL nodes at all.
+
+c=d - Deep nodes format (limited recognition)
+
+Also called "standard V4", this is the format invented by DeepBSP, it is
+supported by at least PrBoom-Plus (todo: which version it began
+supporting it?) and Risen3D. It raises the number of segs and subsectors
+which can be referenced by BSP tree, but doesn't improve accuracy.
+
+There are plans to also support Zdoom extended nodes format and their
+compressed variant, which has the benefit of greater accuracy as well
+as raising limits as well. The exact reason the support is not yet
+implemented is that the BSP tree algorithm is currently performing the
+good deal of the computation using integer math, the accuracy thus missing
+in computation. Implementing format support for the sake of raising limits 
+alone (without accuracy benefit) would be possible, but could delude 
+people into thinking the accuracy is being provided when it is not. When
+the computation accuracy will be raised, the format support will be 
+implemented.
+
+07:07 'f' - Tuning factor (seg split cost, etc.)
+------------------------------------------------
+
+This factor is a constant that is used in partition selection evaluation
+process. Since the code in two algorithms for partition selection
+is roughly based on BSP v5.2 one, the meaning is the same as the factor
+in BSP v5.2. Specifically, it is the cost/penalty for splitting a seg,
+and also some other (depends on algorithm) undesirable choices. On each
+iteration of partitioning process, the candidate partition line with the
+lowest cost wins. 
+
+This factor affects only the primary cost. It doesn't change the 
+secondary cost evaluation affected by np=x parameter.
+
+Since there are other contributors to that cost, altering this value
+will change its relative contribution and the resulting node tree will
+be different.
+
+Default value is 17, same as BSP v5.2
+
+07:08 'd' - Penalty factor for diagonal lines
+---------------------------------------------
+
+Similar to the previous parameter, but this is penalty factor
+for specifically not axis-aligned lines. It is only used in Hexen
+format maps by default, where it has number of 34. The reason to use
+it in Hexen maps is that it reduces the chance of splitting a 
+polyobject, as polyobjects will only function if located within a 
+single subsector if I understood correctly.
+
+Using it in Doom maps will generally increase the overall seg count.
+Whether it can be benefits, has not been yet confirmed.
+
+Explicitly specifying non-zero value will enable it for all levels,
+while explicitly specifying 0 will disable it even for Hexen levels.
+
+07:09 Ongoing research
+----------------------
+
+Besides the need to eliminate more VPOs still, there is a need to
+achieve smaller lump sizes (fewer segs, lower BSP tree depth) to
+improve both performance (which can be useful for advanced ports
+as well) and keep map under the limits more often. ZokumBSP 
+currently beats VigilantBSP in that department. My own experimental
+adjustments to advanced visplane reduction algorithm were able to
+get some progress in that regard but negatively affected the
+visplane count - increasing it in some areas - which led me to
+so far discard those adjustments as VPO reducing is a priority. 
+After more tweaking, I decided to implement "secondary score 
+selection" for advanced visplane reduction algorithm ONLY in 
+v0.69a, but my satisfaction with it remains low. The insight can't
+be easily gained from studying ZokumBSP either, because the source
+code of that nodebuilder is very hard to comprehend.
+
+I am not giving up on it but will have to invent something really
+novel it seems, maybe using the results of reject computation (and
+that one, even with its slowness, has still areas where it's 
+accuracy can be improved)
+
+Section 08: Reject builder
+==========================
+
+A reject lump data is what idTech1 engine uses to skip testing
+for visibility between two sectors which clearly cannot see each other.
+It is a sequence of bits for each sector x sector in the map, where
+1 means "definitely cannot see" and 0 means "need to check". Its size,
+in bits, is equal to the square number of sectors, and to get it in 
+bytes you need to divide it by 8 but round up.
+
+The algorithm as used by VigilantBSP is, at its core, the same one as in
+Zennode/ZokumBSP. However, some bugs where discovered and fixed, memory
+usage decreased, etc. 
+
+The RMB option file is not currently supported, but this support is 
+planned in future versions of VigilantBSP.
+
+08:01 'z' - Insert empty REJECT resource
+----------------------------------------
+
+This will insert a REJECT table where all the lookup values are zero. This
+means the engine has to do all the checks during regular gameplay. This is a
+very fast way to build a compliant reject lump for a map, but the performance
+will be low if there are monsters or other things that perform line of sight
+calculations. However, building a proper reject is what would usually take
+the longest amount of time, so this is very useful for testing the map as
+it is edited/developed.
+
+08:02 'g' - Use graphs to reduce LOS calculations
+-------------------------------------------------
+
+Use this for a quicker built reject table. The idea is that if a sector A
+cannot see into sector B at all, then any sector where the line of sight has
+to go through sector B will also not see into sector A.
+
+This is enabled by default anyway, and there is little reason to ever 
+disable it. The amount of time to build reject lump with it disabled is
+obscene.
+
+Also, contrary to documentation on Zennode that can be found online,
+graphs don't get in the way of self-referencing sector effect support. 
+Rather, that was a bug at the core of Zennode's algorithm of computing 
+visibility, in the starting point before it begins actually computing it,
+and so was present even with graphs disabled. See next option for how it
+was tackled.
+
+08:03 's' - If 2-sided lines have same sector on both sides
+-----------------------------------------------------------
+
+The algorithm as invented by Zennode is built upon collecting
+solid (1-sided) lines and transient lines (2-sided lines with DIFFERENT
+sectors on either side). Lines that don't fit into either definitions
+were being ignored. Two sectors that have transient line referencing
+both are neighbors and definitely able to see each other. Then solid
+lines are visibility-blocking whereas transient lines are what propagates
+the visibility. 
+
+Then Zennode reasons that sectors without neighbors are always hidden
+for all sectors. Because some lines were ignored - and lines that create
+self-referencing sector were always being ignored - such sectors were
+always considered hidden from any sector, monsters not able to see, hear
+and even attack the player located in any other sector. (Or the contrary,
+player in self-referencing sector would be hidden from monster attacks
+until monster navigates to that sector)
+
+You see, Zennode's model introduces problem with self-referencing 
+sectors. Their boundary is defined by 2-sided lines referencing the same
+sector on both sides, so the real neighbor is not referenced by lines
+Zennode would call transient. 
+
+Two options - if we are to avoid reinventing the algorithm from scratch
+- can be considered: either identify real neighbor somehow, or just mark
+all sectors with 2-sided lines having same sector on both sides as always
+visible which results in REJECT lump that is correct but no so efficient
+(still damn more effecient than zero-filled though)
+
+s=0 Mark such sectors as always visible (default)
+
+Things can't possibly go wrong if we follow the latter approach. Just
+mark all sectors with damn 2-sided lines as potentially visible from
+every sector, and also potentially having a sight into every sector.
+The engine would compute visibility based on geometry. 
+
+One can indeed verify that even Zennode can make monsters in 
+self-referencing sectors attack the player when instructed to build
+zero-filled REJECT lump.
+
+Anyway, when using this option, the resulting REJECT is correct, 
+just as zero-filled REJECT ("see everything from everything") would
+be correct, but is more efficient than zero-filled REJECT.
+
+A good choice to fallback on if a bug is discovered within the next two,
+currently it is also the default.
+
+s=1 Mark visible only when self-referencing sector effects are detected
+
+2-sided lines with same sector on both sides don't necessarily mean a 
+self-referencing sector. We can try to compute the perimeter of this
+sector - just like we do with culling "invisible" lines in nodes 
+builder. If it (perimeter) has one of those lines, sector is considered
+self-referencing and marked always visible.
+
+The problem is that sector can have multiple perimeters, so we still
+getting false positives at least (which are not bad, the reject still
+going to be correct in this cases). I am not 100% sure about false
+negatives being absent in some really fucked maps where lines are
+intersecting (I have seen it in some DBP map in production). That is
+the reason it is not default.
+
+s=2 Be pedantic about self-referencing sector visibility
+
+The ultimate solution, if it were not for having more points of 
+possible failure, would be to establish transience for self-refencing
+sector effect lines as well. That is, to represent such linedefs as 
+a transient line, where one side references the self-referencing
+sector, the other - the sector that surrounds it. This is attempted 
+when this option is selected. This requires more code after the 
+perimeter computation is done, hence more points of possible failure.
+
+If code can't reach certainty, it will fallback to marking sector
+always visible just in case.
+
+There are plans to improve accuracy in these algos in future versions.
+
+08:04 'm' - Load and apply RMB options file (*.rej)
+---------------------------------------------------
+
+Note: partial RMB support was first introduced in v0.74a
+of VigilantBSP. The manual for original RMB program (whose
+author I am in no way affiliated with) is now packaged 
+with VigilantBSP (just like it was packaged with Zennode
+and ZokumBSP nodebuilders) - see rmb-manual.html - but 
+only a limited number of options discussed there is 
+supported. You will find the list of supported options
+below.
+
+There once existed a program called Reject Map Builder,
+or RMB, that could apply special effects to reject file,
+making monsters not see/attack player when they are/player
+is in specific sector. An options file with extension *.rej
+could have been provided to it, containing commands that
+dictated what effects need to be applied on top of normally
+computed reject, in plain text.
+
+Since RMB program was written for DOS, has stopped updating
+and its source code is unavailable, some nodebuilders 
+(Zennode, etc.) opted to provide support for *.rej options
+file.
+
+This option (-rm) will make VigilantBSP find *.rej file in 
+the same directory as INPUT wad file, with same filename as 
+INPUT file (sans the extension) and extension of *.rej
+(tried first) or *.REJ (tried last). On case-sensitive 
+systems, the case of INPUT wad filename and *.rej file
+to find MUST match, i.e. on GNU/Linux and ext4
+filesystem this:
+
+vigilantbsp -rm someWad.wad
+
+will look for someWad.rej or someWad.REJ but not for
+somewad.rej, SOMEWAD.REJ or someWad.rEj . If both
+someWad.rej and someWad.REJ happen to exist,
+someWad.rej will be loaded.
+
+BEWARE Users that want to apply RMB effects through
+VigilantBSP will likely have to run VigilantBSP manually
+instead of from their wad editor of choice. The reason is
+that when nodebuilder is invoked automatically by editing
+program (such as GzDoomBuilder of Slade) and not by user,
+it is likely given a temporary copy of a specific map being 
+edited WITHOUT rmb file being copied along or even the rest
+of the wad data, which will cause *.rej to be "ignored" as
+if it didn't exist. That is, assumptions made by wad editing
+programs may not expect nodebuilder to do certain things
+like accessing similarly named files, making use of RMB
+rather inconvenient. 
+
+The support is currently work in progress and as such
+should be considered experimental. Only some options
+are implemented as of yet, notably:
+BAND
+BLIND
+DISTANCE
+EXCLUDE
+INCLUDE
+INVERT
+LENGTH
+REPORT
+SAFE
+
+map markers and comments. All other options are ignored
+as of yet. Future versions of VigilantBSP intend to 
+support more options.
+
+NOTE options that rely on sector distances in 
+sector count units (example: BAND, BLIND, LENGTH, SAFE)
+or map units (DISTANCE) will force -rs=2 (pedantic
+determination of self-referencing sectors visibility)
+as well.
+
+NOTE File produced by report option looks a bit differently,
+specifically: there is additional comment line
+specifying version of VigilantBSP, every map
+is processed and the list of sector pairs relevant
+for each map is preceeded by a comment line specifying
+which map it is, sector pairs are sorted by sector
+numbers (I am not aware how RMB sorts them), etc.
+
+Section 09: Option -m: Rebuild only specific maps
+=================================================
+
+Since version 0.72a, VigilantBSP supports rebuilding only some 
+- rather than all - maps, a feature also found in ZenNode and ZokumBSP
+nodebuilders. When this option is used, only those maps that were 
+specified are rebuilt, all other maps and lumps are copied from input to
+output with no changes.
+
+Examples:
+
+1) vigilantbsp mylvlset.wad -m:e1m1 
+
+rebuilds only E1M1 map in mylvlset.wads
+
+2) vigilantbsp D2lvlset.wad -m:map03+map05+map07 -o testD2.wad
+
+copies contents from D2lvlset.wad to testD2.wad but rebuilds
+maps MAP03, MAP05, MAP07, while others remain intact.
+
+NOTE: building a mapset in deterministic mode and then rebuilding
+only one map, also in deterministic mode, even with the same arguments,
+may not produce the same byte-for-byte results, although lump
+content is identical. This has to do with the order in which lumps
+are written (not the order in which they are listed, but the actual
+byte regions referenced by those lumps), this order being different
+for rebuilt levels from how lumps are listed when you open wad in editor
+such as SLADE3. This issue is minor, it is not going to affect how 
+the wad plays in ANY source port, because the content of each 
+respective lump is still identical in this case. 
+
+Section 10: Debug and other hidden parameters
+=============================================
+
+Some parameters are not shown in the list. They are either:
+1) used for debugging purposes by programmers and testers capable of
+understanding program code, and might require familiarity with
+Go toolset. 
+2) have really niche uses that can be confusing to users
+All such parameters start with double hyphen ('--' 
+rather than single hyphen ('-').
+
+The following parameters are currently supported:
+--cpuprofile <filename>
+A debug option.
+Write cpu profile to the file described by filename following
+the parameter after a space. If file exists already, it will be
+overwritten. The result file contains data on how much each function
+call within program has taken and is supported by Go profiling 
+analysing tool such as "go tool pprof <filename>". 
+
+It is recommended to give this file an extension of ".prof"
+
+Also, see comments closing this section.
+
+--memprofile <filename>
+A debug option.
+Write memory allocations profile to  the file described by
+filename forllowing the parameter after a space. If file
+exists already, it will be overwritten. The result file contains
+data on how much each function call within program has allocated
+(above a certain threshold IIRC) and is supported by Go profiling
+analysing tool such as "go tool pprof <filename>".
+
+It is recommended to give this file an extension of ".prof"
+
+Also, see comments closing this section.
+
+--unreversenodes
+A niche use option.
+Linguica discovered (see https://www.doomworld.com/forum/topic/74354-stupid-bsp-tricks/?do=findComment&comment=1524479)
+that default, standard order in which nodes are stored may have not
+be the effective one for the processors of the time. The distinguishing
+feature of the standard order is that it is reversed: all child nodes
+have indices that precede (are less than), rather than follow (are 
+greater then), the index of the node referencing them. When this option
+is supplied, child nodes will be placed at greater indices than their
+parents, with exception of root node, which MUST be placed at last
+index still (all ports and vanilla expect to find root node at that
+exact place). The order is thus the reverse of the traditional, or
+ - as I prefer to call it - unreversed, since the traditional already
+ included reversal. In the chart produced on above link, "normal" means
+ what I call "traditional" (this option NOT specified), and "reversed"
+ means what I call "unreversed"  (this option specified).
+
+Since the link to the original algorithm Linguica produces has expired,
+it cannot be verified that the algorithm used by VigilantBSP is the
+same. Since even the original produced benefits only in some cases,
+this option is probably condemned to obscurity.
+
+Closing comments in regards to --memprofile and --cpuprofile options:
+
+You might need to supply Go tools (not to VigilantBSP) 
+path to the source code of VigilantBSP if using an official version 
+of VigilantBSP or you built it with Makefile provided or stripped 
+this information from the VigilantBSP executable otherwise. Be sure
+to have checked out the source for that specific version! The 
+executables themselves and the profiles never contain source code.
+
+Just as a side note, the source to "go tool pprof ..." can be
+provided when already inside the pprof program, by typing
+
+source_path = /home/user/go/src
+
+for GNU/Linux system where go is installed into default location
+for user 'user', and the go module "github.com/vigilantdoomer/vigilantbsp"
+checked out inside that source_path. If you checked out vigilantbsp
+in some other location (and if you are doing report against a release,
+or some previous state of vigilantbsp main branch, you most likely did),
+you will need to provide a different source_path of course, and possibly
+also omit a part of relative path via something like:
+
+trim_path = github.com/vigilantdoomer/vigilantbsp/
+
+so your entire path to the folder with VigilantBSP sources matching
+your executables will need to be in source_path instead.
+
+Section 11: Changelog
+=====================
+
+See file named 'changelog.txt'. 
+
+Section 12: Operating system and platform availability
+======================================================
+
+VigilantBSP is intended to be run on both Windows and GNU/Linux
+operating systems on both x86 (32-bit) and x86-64 (64-bit) platforms.
+
+The Go programming language infastructure allows building VigilantBSP
+on each one of those systems/platforms for each target.
+
+Other targets are not tested, and DOS support isn't even considered.
+
+Section 13: Other node builders
+===============================
+
+13:01 Regular node builders
+-------------------------------
+
+* AJBSP *
+https://gitlab.com/andwj/ajbsp
+
+* BSP *
+http://games.moria.org.uk/doom/bsp/
+
+* DoomBSP / IdBSP *
+https://www.doomworld.com/idgames/utils/level_edit/node_builders/ibsp102d
+
+* ZDBSP *
+https://zdoom.org/wiki/ZDBSP
+
+* ZenNode *
+http://www.mrousseau.org/programs/ZenNode/
+
+* ZokumBSP *
+https://doom2.net/zokum/zokumbsp
+
+13:02 GL Node builders
+----------------------
+
+* AJBSP *
+https://gitlab.com/andwj/ajbsp
+
+* glBSP *
+http://glbsp.sourceforge.net/
+
+* ZDBSP *
+https://zdoom.org/wiki/ZDBSP
+

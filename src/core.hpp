@@ -23,14 +23,16 @@
 //------------------------------------------------------------------------------
 
 #pragma once
+#include <string>
+#include <vector>
 
-static constexpr const char *PROJECT_COMPANY = "Guilherme Miranda, et al";
-static constexpr const char *PROJECT_COPYRIGHT = "Copyright (C) 1994-2026";
-static constexpr const char *PROJECT_LICENSE = "GNU General Public License, version 2";
+constexpr auto PROJECT_COMPANY = "Guilherme Miranda, et al";
+constexpr auto PROJECT_COPYRIGHT = "Copyright (C) 1994-2026";
+constexpr auto PROJECT_LICENSE = "GNU General Public License, version 2";
 
-static constexpr const char *PROJECT_NAME = "ELFBSP";
-static constexpr const char *PROJECT_VERSION = "v1.1";
-static constexpr const char *PROJECT_STRING = "ELFBSP v1.1";
+constexpr auto PROJECT_NAME = "ELFBSP";
+constexpr auto PROJECT_VERSION = "v1.1";
+constexpr auto PROJECT_STRING = "ELFBSP v1.1";
 
 /*
  *  Standard headers
@@ -59,26 +61,26 @@ static constexpr const char *PROJECT_STRING = "ELFBSP v1.1";
     #define WIN32
   #endif
 
-static constexpr bool WINDOWS = true;
-static constexpr bool MACOS = false;
-static constexpr bool LINUX = false;
+constexpr auto WINDOWS = true;
+constexpr auto MACOS = false;
+constexpr auto LINUX = false;
 
 #elif defined(__APPLE__)
 
-static constexpr bool WINDOWS = false;
-static constexpr bool MACOS = true;
-static constexpr bool LINUX = false;
+constexpr auto WINDOWS = false;
+constexpr auto MACOS = true;
+constexpr auto LINUX = false;
 
 #elif defined(linux) || defined(__linux) || defined(__linux__) || defined(__gnu_linux__)
 
-static constexpr bool WINDOWS = false;
-static constexpr bool MACOS = false;
-static constexpr bool LINUX = true;
+constexpr auto WINDOWS = false;
+constexpr auto MACOS = false;
+constexpr auto LINUX = true;
 
 #endif
 
-static constexpr char PATH_SEP_CH = (WINDOWS) ? ';' : ':';
-static constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
+constexpr char PATH_SEP_CH = (WINDOWS) ? ';' : ':';
+constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
 
 //
 // The packed attribute forces structures to be packed into the minimum
@@ -111,10 +113,10 @@ static constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
 #endif
 
 // endianness
-static constexpr bool ENDIAN_BIG = (std::endian::native == std::endian::big);
-static constexpr bool ENDIAN_LITTLE = !ENDIAN_BIG;
+constexpr auto ENDIAN_BIG = (std::endian::native == std::endian::big);
+constexpr auto ENDIAN_LITTLE = !ENDIAN_BIG;
 
-template <typename T> static inline constexpr T byteswap(T value) noexcept
+template <typename T> constexpr T byteswap(T value) noexcept
 {
   static_assert(std::is_integral_v<T>, "byteswap: integral required");
   static_assert(sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "byteswap: only 16/32/64-bit supported");
@@ -133,7 +135,7 @@ template <typename T> static inline constexpr T byteswap(T value) noexcept
   }
 }
 
-template <typename T> static inline constexpr T GetLittleEndian(T value)
+template <typename T> constexpr T GetLittleEndian(T value)
 {
   if constexpr (ENDIAN_BIG)
   {
@@ -145,7 +147,7 @@ template <typename T> static inline constexpr T GetLittleEndian(T value)
   }
 }
 
-template <typename T> static inline constexpr T GetBigEndian(T value)
+template <typename T> constexpr T GetBigEndian(T value)
 {
   if constexpr (ENDIAN_LITTLE)
   {
@@ -166,60 +168,60 @@ using short_angle_t = uint16_t;
 using lump_t = char[8];
 
 // misc constants
-static constexpr long_angle_t LONG_ANGLE_45 = 0x20000000;
-static constexpr long_angle_t LONG_ANGLE_1 = (LONG_ANGLE_45 / 45);
+constexpr long_angle_t LONG_ANGLE_45 = 0x20000000;
+constexpr long_angle_t LONG_ANGLE_1 = (LONG_ANGLE_45 / 45);
 
-static constexpr uint32_t FRACBITS = 16;
-static constexpr fixed_t FRACUNIT = (1 << FRACBITS);
-static constexpr double FRACFACTOR = static_cast<double>(FRACUNIT);
+constexpr uint32_t FRACBITS = 16;
+constexpr fixed_t FRACUNIT = (1 << FRACBITS);
+constexpr double FRACFACTOR = FRACUNIT;
 
-static constexpr size_t NO_INDEX = static_cast<size_t>(-1);
-static constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
-static constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
+constexpr size_t NO_INDEX = static_cast<size_t>(-1);
+constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
+constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
 
-static constexpr size_t WAD_LUMP_NAME = 8;
+constexpr size_t WAD_LUMP_NAME = 8;
 
-static constexpr size_t MSG_BUFFER_LENGTH = 1024;
+constexpr size_t MSG_BUFFER_LENGTH = 1024;
 
 // bitflags
-static inline constexpr uint32_t BIT(uint32_t x)
+constexpr uint32_t BIT(const uint32_t x)
 {
   return (1u << x);
 }
 
-static inline constexpr bool HAS_BIT(uint32_t x, uint32_t y)
+constexpr bool HAS_BIT(const uint32_t x, const uint32_t y)
 {
   return (x & y) != 0;
 }
 
 // doom's 32bit 16.16 fixed point
-static inline constexpr fixed_t IntToFixed(int32_t x)
+constexpr fixed_t IntToFixed(const int32_t x)
 {
   return x << FRACBITS;
 }
 
-static inline constexpr int32_t FixedToInt(fixed_t x)
+constexpr int32_t FixedToInt(const fixed_t x)
 {
   return x >> FRACBITS;
 }
 
-static inline constexpr double FixedToFloat(fixed_t x)
+constexpr double FixedToFloat(const fixed_t x)
 {
   return (static_cast<double>(x) / FRACFACTOR);
 }
 
-static inline constexpr fixed_t FloatToFixed(double x)
+constexpr fixed_t FloatToFixed(double x)
 {
   return static_cast<fixed_t>(x * FRACFACTOR);
 }
 
 // binary angular measurement, BAM!
-static inline constexpr long_angle_t DegreesToLongBAM(uint16_t x)
+constexpr long_angle_t DegreesToLongBAM(const uint16_t x)
 {
   return static_cast<long_angle_t>(LONG_ANGLE_1 * x);
 }
 
-static inline constexpr short_angle_t DegreesToShortBAM(uint16_t x)
+constexpr short_angle_t DegreesToShortBAM(const uint16_t x)
 {
   return static_cast<short_angle_t>((LONG_ANGLE_1 * x) >> FRACBITS);
 }
@@ -231,9 +233,9 @@ static inline constexpr short_angle_t DegreesToShortBAM(uint16_t x)
 using log_level_t = enum
 {
   LOG_NORMAL,
-  LOG_ERROR,
-  LOG_WARN,
   LOG_DEBUG,
+  LOG_WARN,
+  LOG_ERROR,
 };
 
 using debug_t = enum : uint32_t
@@ -256,44 +258,28 @@ using debug_t = enum : uint32_t
 };
 
 // Safe, portable vsnprintf().
-static inline int32_t PRINTF_ATTR(3, 0) M_vsnprintf(char *buf, size_t buf_len, const char *s, va_list args)
+inline int32_t PRINTF_ATTR(2, 0) M_vsnprintf(char *buf, const char *s, va_list args)
 {
-  if (buf_len < 1)
-  {
-    return 0;
-  }
-
   // Windows (and other OSes?) has a vsnprintf() that doesn't always
   // append a trailing \0. So we must do it, and write into a buffer
   // that is one byte shorter; otherwise this function is unsafe.
-  int32_t result = vsnprintf(buf, buf_len, s, args);
+  int32_t result = vsnprintf(buf, MSG_BUFFER_LENGTH, s, args);
 
   // If truncated, change the final char in the buffer to a \0.
-  // A negative resultindicates a truncated buffer on Windows.
-  if (result < 0 || result >= static_cast<int32_t>(buf_len))
+  // A negative result indicates a truncated buffer on Windows.
+  if (result < 0 || result >= static_cast<int32_t>(MSG_BUFFER_LENGTH))
   {
-    buf[buf_len - 1] = '\0';
-    result = static_cast<int32_t>(buf_len) - 1;
+    buf[MSG_BUFFER_LENGTH - 1] = '\0';
+    result = static_cast<int32_t>(MSG_BUFFER_LENGTH) - 1;
   }
 
-  return result;
-}
-
-// Safe, portable snprintf().
-static inline int32_t PRINTF_ATTR(3, 4) M_snprintf(char *buf, size_t buf_len, const char *s, ...)
-{
-  va_list args;
-  int result;
-  va_start(args, s);
-  result = M_vsnprintf(buf, buf_len, s, args);
-  va_end(args);
   return result;
 }
 
 //
 //  show a message
 //
-static inline void PRINTF_ATTR(2, 3) PrintLine(log_level_t level, const char *fmt, ...)
+inline void PRINTF_ATTR(2, 3) PrintLine(const log_level_t level, const char *fmt, ...)
 {
   FILE *const stream = (level == LOG_NORMAL) ? stdout : stderr;
   char buffer[MSG_BUFFER_LENGTH];
@@ -301,7 +287,7 @@ static inline void PRINTF_ATTR(2, 3) PrintLine(log_level_t level, const char *fm
   va_list arg_ptr;
 
   va_start(arg_ptr, fmt);
-  M_vsnprintf(buffer, MSG_BUFFER_LENGTH - 1, fmt, arg_ptr);
+  M_vsnprintf(buffer, fmt, arg_ptr);
   va_end(arg_ptr);
 
   buffer[MSG_BUFFER_LENGTH - 1] = '\0';
@@ -328,7 +314,7 @@ static inline void PRINTF_ATTR(2, 3) PrintLine(log_level_t level, const char *fm
 //
 // Allocate memory with error checking.  Zeros the memory.
 //
-template <typename T> static inline constexpr T *UtilCalloc(size_t size)
+template <typename T> constexpr T *UtilCalloc(const size_t size)
 {
   T *ret = static_cast<T *>(calloc(1, size));
 
@@ -343,7 +329,7 @@ template <typename T> static inline constexpr T *UtilCalloc(size_t size)
 //
 // Reallocate memory with error checking.
 //
-template <typename T> static inline constexpr T *UtilRealloc(T *old, size_t size)
+template <typename T> constexpr T *UtilRealloc(T *old, const size_t size)
 {
   T *ret = static_cast<T *>(realloc(old, size));
 
@@ -358,7 +344,7 @@ template <typename T> static inline constexpr T *UtilRealloc(T *old, size_t size
 //
 // Free the memory with error checking.
 //
-template <typename T> static inline constexpr void UtilFree(T *data)
+template <typename T> constexpr void UtilFree(T *data)
 {
   if (data == nullptr)
   {
@@ -372,20 +358,18 @@ template <typename T> static inline constexpr void UtilFree(T *data)
 // FILE MANAGEMENT
 //------------------------------------------------------------------------
 
-static inline void FileClear(const char *filename)
+inline void FileClear(const char *filename)
 {
-  FILE *fp = fopen(filename, "w");
-  if (fp)
+  if (FILE *fp = fopen(filename, "w"))
   {
     fclose(fp);
   }
 }
 
-static inline bool FileExists(const char *filename)
+inline bool FileExists(const char *filename)
 {
-  FILE *fp = fopen(filename, "rb");
 
-  if (fp)
+  if (FILE *fp = fopen(filename, "rb"))
   {
     fclose(fp);
     return true;
@@ -394,7 +378,7 @@ static inline bool FileExists(const char *filename)
   return false;
 }
 
-static inline bool FileCopy(const char *src_name, const char *dest_name)
+inline bool FileCopy(const char *src_name, const char *dest_name)
 {
   char buffer[MSG_BUFFER_LENGTH];
 
@@ -441,7 +425,7 @@ static inline bool FileCopy(const char *src_name, const char *dest_name)
 //
 // a case-insensitive compare
 //
-static inline int32_t StringCaseCmp(const char *s1, const char *s2)
+inline int32_t StringCaseCmp(const char *s1, const char *s2)
 {
   SYS_ASSERT(s1 && s2);
   return strcasecmp(s1, s2);
@@ -450,7 +434,7 @@ static inline int32_t StringCaseCmp(const char *s1, const char *s2)
 //
 // a case-insensitive compare
 //
-static inline int32_t StringCaseCmpMax(const char *s1, const char *s2, size_t len)
+inline int32_t StringCaseCmpMax(const char *s1, const char *s2, size_t len)
 {
   SYS_ASSERT(s1 && s2 && len);
   return strncasecmp(s1, s2, len);
@@ -460,7 +444,7 @@ static inline int32_t StringCaseCmpMax(const char *s1, const char *s2, size_t le
 //  FILENAMES
 //------------------------------------------------------------------------
 
-static inline bool HasExtension(const char *filename)
+inline bool HasExtension(const char *filename)
 {
   const size_t len = strlen(filename);
   if (len == 0)
@@ -505,7 +489,7 @@ static inline bool HasExtension(const char *filename)
 //
 // When ext is nullptr, checks if the file has no extension.
 //
-static inline bool MatchExtension(const char *filename, const char *ext)
+inline bool MatchExtension(const char *filename, const char *ext)
 {
   if (!ext || !*ext)
   {
@@ -531,7 +515,7 @@ static inline bool MatchExtension(const char *filename, const char *ext)
 //
 // Return offset of the '.', or NO_INDEX when no extension was found.
 //
-static inline size_t FindExtension(const char *filename)
+inline size_t FindExtension(const char *filename)
 {
   const size_t len = strlen(filename);
   if (len == 0)
@@ -541,7 +525,7 @@ static inline size_t FindExtension(const char *filename)
 
   for (size_t pos = len; pos-- > 0;)
   {
-    char ch = filename[pos];
+    const char ch = filename[pos];
 
     if (ch == '.')
     {
@@ -573,7 +557,7 @@ static inline size_t FindExtension(const char *filename)
 // Compute angle of line from (0,0) to (dx,dy).
 // Result is degrees, where 0 is east and 90 is north, and so on.
 //
-static inline double ComputeAngle(double dx, double dy)
+inline double ComputeAngle(double dx, double dy)
 {
   if (dx == 0)
   {
@@ -611,11 +595,11 @@ using raw_wad_entry_t = struct raw_wad_entry_s
 
 using map_format_t = enum map_format_e
 {
-  MAPF_INVALID = 0,
+  MapFormat_INVALID = 0,
 
-  MAPF_Doom,
-  MAPF_Hexen,
-  MAPF_UDMF
+  MapFormat_Doom,
+  MapFormat_Hexen,
+  MapFormat_UDMF,
 };
 
 // Lump order in a map WAD: each map needs a couple of lumps
@@ -727,11 +711,11 @@ using bsp_type_t = enum bsp_type_e : uint8_t
 };
 
 // Obviously, vanilla did not include any magic headers
-static constexpr const char *BSP_MAGIC_DEEPBSPV4 = "xNd4\0\0\0\0";
-static constexpr const char *BSP_MAGIC_XNOD = "XNOD";
-static constexpr const char *BSP_MAGIC_XGLN = "XGLN";
-static constexpr const char *BSP_MAGIC_XGL2 = "XGL2";
-static constexpr const char *BSP_MAGIC_XGL3 = "XGL3";
+constexpr auto BSP_MAGIC_DEEPBSPV4 = "xNd4\0\0\0\0";
+constexpr auto BSP_MAGIC_XNOD = "XNOD";
+constexpr auto BSP_MAGIC_XGLN = "XGLN";
+constexpr auto BSP_MAGIC_XGL2 = "XGL2";
+constexpr auto BSP_MAGIC_XGL3 = "XGL3";
 
 // Upper-most bit is used for distinguishing tree children as either nodes or sub-sectors
 // All known non-vanilla formats are know to use 32bit indexes
@@ -982,10 +966,10 @@ using zdoom_lineflag_t = enum zdoom_lineflag_e : uint16_t
   MLF_ZDOOM_BLOCKEVERYTHING = BIT(15),
 };
 
-static constexpr uint32_t BOOM_GENLINE_FIRST = 0x2f80;
-static constexpr uint32_t BOOM_GENLINE_LAST = 0x7fff;
+constexpr uint32_t BOOM_GENLINE_FIRST = 0x2f80;
+constexpr uint32_t BOOM_GENLINE_LAST = 0x7fff;
 
-static inline constexpr bool IsGeneralizedSpecial(uint32_t special)
+constexpr bool IsGeneralizedSpecial(uint32_t special)
 {
   return special >= BOOM_GENLINE_FIRST && special <= BOOM_GENLINE_LAST;
 }
@@ -1005,22 +989,22 @@ using bsp_specials_t = enum bsp_specials_e : uint32_t
 {
   Special_VanillaScroll = 48,
 
-  Special_RemoteScroll = 1048, // potentialy lossy? -- i.e alters user-provided lumps?
+  Special_RemoteScroll = 1048,
 
   Special_ChangeStartVertex = 1078,
   Special_ChangeEndVertex,
 
-  Special_RotateDegrees,     // only vanilla segs encode angle
+  Special_RotateDegrees,     // currently only vanilla & deepbspv4 segs encode angle
   Special_RotateDegreesHard, //
   Special_RotateAngleT,      //
   Special_RotateAngleTHard,  //
 
-  Special_DoNotRenderBackSeg,  // not supported on SSECTORS' XGL nodes
-  Special_DoNotRenderFrontSeg, //
-  Special_DoNotRenderAnySeg,   //
+  Special_DoNotRenderBackSeg,
+  Special_DoNotRenderFrontSeg,
+  Special_DoNotRenderAnySeg,
 
-  Special_Unknown1, // related to splitting?
-  Special_Unknown2, // line tag value becomes seg's associated line index? why?
+  Special_DoNotSplitSeg,
+  Special_Unknown2, // line tag value becomes seg's associated line index?
 };
 
 using bsp_tags_t = enum bsp_tags_e
@@ -1048,8 +1032,8 @@ using compatible_sectorflag_t = enum compatible_sectorflag_e : uint16_t
   SF_MonsterDeath = BIT(13),
 };
 
-static constexpr uint32_t SF_BoomFlags = SF_DamageMask | SF_Secret | SF_Friction | SF_Wind;
-static constexpr uint32_t SF_MBF21Flags = SF_DamageMask | SF_Secret | SF_Friction | SF_Wind | SF_AltDeathMode | SF_MonsterDeath;
+constexpr uint32_t SF_BoomFlags = SF_DamageMask | SF_Secret | SF_Friction | SF_Wind;
+constexpr uint32_t SF_MBF21Flags = SF_DamageMask | SF_Secret | SF_Friction | SF_Wind | SF_AltDeathMode | SF_MonsterDeath;
 
 //
 // Thing attributes.
@@ -1068,8 +1052,8 @@ using thing_option_t = enum thing_option_e : uint16_t
   MTF_Friend = BIT(7),
 };
 
-static constexpr uint32_t MTF_EXFLOOR_MASK = 0x3C00;
-static constexpr uint32_t MTF_EXFLOOR_SHIFT = 10;
+constexpr uint32_t MTF_EXFLOOR_MASK = 0x3C00;
+constexpr uint32_t MTF_EXFLOOR_SHIFT = 10;
 
 using hexen_option_t = enum hexen_option_e : uint16_t
 {
@@ -1091,15 +1075,379 @@ using hexen_option_t = enum hexen_option_e : uint16_t
 //
 // Polyobject stuff
 //
-static constexpr uint32_t HEXTYPE_POLY_START = 1;
-static constexpr uint32_t HEXTYPE_POLY_EXPLICIT = 5;
+constexpr uint32_t HEXTYPE_POLY_START = 1;
+constexpr uint32_t HEXTYPE_POLY_EXPLICIT = 5;
 
 // -JL- Hexen polyobj thing types
-static constexpr uint32_t PO_ANCHOR_TYPE = 3000;
-static constexpr uint32_t PO_SPAWN_TYPE = 3001;
-static constexpr uint32_t PO_SPAWNCRUSH_TYPE = 3002;
+constexpr uint32_t PO_ANCHOR_TYPE = 3000;
+constexpr uint32_t PO_SPAWN_TYPE = 3001;
+constexpr uint32_t PO_SPAWNCRUSH_TYPE = 3002;
 
 // -JL- ZDoom polyobj thing types
-static constexpr uint32_t ZDOOM_PO_ANCHOR_TYPE = 9300;
-static constexpr uint32_t ZDOOM_PO_SPAWN_TYPE = 9301;
-static constexpr uint32_t ZDOOM_PO_SPAWNCRUSH_TYPE = 9302;
+constexpr uint32_t ZDOOM_PO_ANCHOR_TYPE = 9300;
+constexpr uint32_t ZDOOM_PO_SPAWN_TYPE = 9301;
+constexpr uint32_t ZDOOM_PO_SPAWNCRUSH_TYPE = 9302;
+
+//
+// File handling
+//
+
+struct Lump_c;
+
+struct Wad_file
+{
+  char mode; // mode value passed to ::Open()
+
+  FILE *fp;
+
+  char kind; // 'P' for PWAD, 'I' for IWAD
+
+  // zero means "currently unknown", which only occurs after a
+  // call to BeginWrite() and before any call to AddLump() or
+  // the finalizing EndWrite().
+  off_t total_size;
+
+  std::vector<Lump_c *> directory;
+
+  size_t dir_start;
+  size_t dir_count;
+
+  // these are lump indices (into 'directory' vector)
+  std::vector<size_t> levels;
+  std::vector<size_t> patches;
+  std::vector<size_t> sprites;
+  std::vector<size_t> flats;
+  std::vector<size_t> tx_tex;
+
+  bool begun_write;
+  size_t begun_max_size;
+
+  // when >= 0, the next added lump is placed _before_ this
+  size_t insert_point;
+
+  // constructor is private
+  Wad_file(const char *_name, char _mode, FILE *_fp);
+  ~Wad_file(void);
+
+  // open a wad file.
+  //
+  // mode is similar to the fopen() function:
+  //   'r' opens the wad for reading ONLY
+  //   'a' opens the wad for appending (read and write)
+  //   'w' opens the wad for writing (i.e. create it)
+  //
+  // Note: if 'a' is used and the file is read-only, it will be
+  //       silently opened in 'r' mode instead.
+  //
+  static Wad_file *Open(const char *filename, char mode = 'a');
+
+  [[nodiscard]] bool IsReadOnly(void) const
+  {
+    return mode == 'r';
+  }
+
+  [[nodiscard]] size_t NumLumps(void) const
+  {
+    return directory.size();
+  }
+
+  Lump_c *GetLump(size_t index);
+
+  [[nodiscard]] size_t LevelCount(void) const
+  {
+    return levels.size();
+  }
+
+  size_t LevelHeader(size_t lev_num);
+  size_t LevelLastLump(size_t lev_num);
+
+  // returns a lump index, -1 if not found
+  size_t LevelLookupLump(size_t lev_num, const char *name);
+
+  map_format_t LevelFormat(size_t lev_num);
+
+  void SortLevels(void);
+
+  // all changes to the wad must occur between calls to BeginWrite()
+  // and EndWrite() methods.  the on-disk wad directory may be trashed
+  // during this period, it will be re-written by EndWrite().
+  void BeginWrite(void);
+  void EndWrite(void);
+
+  // remove the given lump(s)
+  // this will change index numbers on existing lumps
+  // (previous results of FindLumpNum or LevelHeader are invalidated).
+  void RemoveLumps(size_t index, size_t count = 1);
+
+  // removes any ZNODES lump from a UDMF level.
+  void RemoveZNodes(size_t lev_num);
+
+  // insert a new lump.
+  // The second form is for a level marker.
+  // The 'max_size' parameter (if >= 0) specifies the most data
+  // you will write into the lump -- writing more will corrupt
+  // something else in the WAD.
+  Lump_c *AddLump(const char *name, size_t max_size = NO_INDEX);
+
+  // setup lump to write new data to it.
+  // the old contents are lost.
+  void RecreateLump(Lump_c *lump, size_t max_size = NO_INDEX);
+
+  // set the insertion point -- the next lump will be added *before*
+  // this index, and it will be incremented so that a sequence of
+  // AddLump() calls produces lumps in the same order.
+  //
+  // passing a negative value or invalid index will reset the
+  // insertion point -- future lumps get added at the END.
+  // RemoveLumps(), RemoveLevel() and EndWrite() also reset it.
+  void InsertPoint(size_t index = NO_INDEX);
+
+  static Wad_file *Create(const char *filename, char mode);
+
+  // read the existing directory.
+  void ReadDirectory(void);
+
+  void DetectLevels(void);
+  void ProcessNamespaces(void);
+
+  // look at all the lumps and determine the lowest offset from
+  // start of file where we can write new data.  The directory itself
+  // is ignored for this.
+  size_t HighWaterMark(void);
+
+  // look at all lumps in directory and determine the lowest offset
+  // where a lump of the given length will fit.  Returns same as
+  // HighWaterMark() when no largest gaps exist.  The directory itself
+  // is ignored since it will be re-written at EndWrite().
+  size_t FindFreeSpace(size_t length);
+
+  // find a place (possibly at end of WAD) where we can write some
+  // data of max_size (-1 means unlimited), and seek to that spot
+  // (possibly writing some padding zeros -- the difference should
+  // be no more than a few bytes).  Returns new position.
+  size_t PositionForWrite(size_t max_size = NO_INDEX);
+
+  bool FinishLump(size_t final_size);
+  size_t WritePadding(size_t count);
+
+  // write the new directory, updating the dir_xxx variables
+  void WriteDirectory(void);
+
+  void FixGroup(std::vector<size_t> &group, size_t index, size_t num_added, size_t num_removed);
+};
+
+struct Lump_c
+{
+  struct Wad_file *parent;
+
+  std::string lumpname;
+
+  size_t l_start;
+  size_t l_length;
+
+  void MakeEntry(raw_wad_entry_t *entry);
+
+  [[nodiscard]] const char *Name(void) const
+  {
+    return lumpname.c_str();
+  }
+
+  [[nodiscard]] size_t Length(void) const
+  {
+    return l_length;
+  }
+
+  // case-insensitive match on the lump name
+  [[nodiscard]] bool Match(const char *s) const
+  {
+    return (0 == StringCaseCmp(lumpname.c_str(), s));
+  }
+
+  // ensure lump name is uppercase
+  void Rename(const char *new_name)
+  {
+    lumpname.clear();
+
+    for (const char *s = new_name; *s != 0; s++)
+    {
+      lumpname.push_back(static_cast<char>(toupper(*s)));
+    }
+  }
+
+  // attempt to seek to a position within the lump (default is
+  // the beginning).  Returns true if OK, false on error.
+  [[nodiscard]] bool Seek(const size_t offset) const
+  {
+    return (fseeko(parent->fp, static_cast<off_t>(l_start + offset), SEEK_SET) == 0);
+  }
+
+  // read some data from the lump, returning true if OK.
+  [[nodiscard]] bool Read(void *data, const size_t len) const
+  {
+    SYS_ASSERT(data && len > 0);
+    return (fread(data, len, 1, parent->fp) == 1);
+  }
+
+  // write some data to the lump.  Only the lump which had just
+  // been created with Wad_file::AddLump() or RecreateLump() can be
+  // written to.
+  bool Write(const void *data, const size_t len)
+  {
+    SYS_ASSERT(data && len > 0);
+    l_length += len;
+    return (fwrite(data, len, 1, parent->fp) == 1);
+  }
+
+  // mark the lump as finished (after writing data to it).
+  bool Finish(void)
+  {
+    if (l_length == 0)
+    {
+      l_start = 0;
+    }
+
+    return parent->FinishLump(l_length);
+  }
+};
+
+//
+// Parsing
+//
+
+enum token_kind_e
+{
+  TOK_EOF = 0,
+  TOK_ERROR,
+
+  TOK_Ident,
+  TOK_Symbol,
+  TOK_Number,
+  TOK_String
+};
+
+struct lexer_c
+{
+  explicit lexer_c(const std::string &_data) : data(_data)
+  {
+  }
+
+  ~lexer_c(void) = default;
+
+  // parse the next token, storing contents into given string.
+  // returns TOK_EOF at the end of the data, and TOK_ERROR when a
+  // problem is encountered (s will be an error message).
+  token_kind_e Next(std::string &s);
+
+  // check if the next token is an identifier or symbol matching the
+  // given string.  the match is not case-sensitive.  if it matches,
+  // the token is consumed and true is returned.  if not, false is
+  // returned and the position is unchanged.
+  bool Match(const char *s);
+
+  // rewind to the very beginning.
+  void Rewind(void);
+
+  const std::string &data;
+
+  size_t pos = 0;
+  size_t line = 1;
+
+  void SkipToNext();
+
+  token_kind_e ParseIdentifier(std::string &s);
+  token_kind_e ParseNumber(std::string &s);
+  token_kind_e ParseString(std::string &s);
+
+  void ParseEscape(std::string &s);
+};
+
+// helpers for converting numeric tokens.
+size_t LEX_Index(const std::string &s);
+int16_t LEX_Int16(const std::string &s);
+int32_t LEX_Int(const std::string &s);
+uint32_t LEX_UInt(const std::string &s);
+double LEX_Double(const std::string &s);
+bool LEX_Boolean(const std::string &s);
+
+//
+// Node Build Information Structure
+//
+
+constexpr double SPLIT_COST_MIN = 1.0;
+constexpr double SPLIT_COST_DEFAULT = 11.0;
+constexpr double SPLIT_COST_MAX = 32.0;
+
+using buildinfo_t = struct buildinfo_s;
+
+extern buildinfo_t config;
+
+struct buildinfo_s
+{
+  // use a faster method to pick nodes
+  bool fast = false;
+  bool backup = false;
+  // write out CSV for data analysis and visualization
+  bool analysis = false;
+
+  bsp_type_t bsp_type = BSP_VANILLA;
+
+  double split_cost = SPLIT_COST_DEFAULT;
+
+  // this affects how some messages are shown
+  bool verbose = false;
+
+  // from here on, various bits of internal state
+  size_t total_warnings = 0;
+
+  uint32_t debug = DEBUG_NONE;
+};
+
+constexpr const char PRINT_HELP[] = "\n"
+                                    "Usage: elfbsp [options...] FILE...\n"
+                                    "\n"
+                                    "Available options are:\n"
+                                    "    -v --verbose       Verbose output, show all warnings\n"
+                                    "    -b --backup        Backup input files (.bak extension)\n"
+                                    "    -f --fast          Faster partition selection\n"
+                                    "    -m --map   XXXX    Control which map(s) are built\n"
+                                    "    -c --cost  ##      Cost assigned to seg splits (1-32)\n"
+                                    "\n"
+                                    "    -x --xnod          Use XNOD format in NODES lump\n"
+                                    "    -s --ssect         Use XGL3 format in SSECTORS lump\n"
+                                    "\n"
+                                    "Short options may be mixed, for example: -fbv\n"
+                                    "Long options must always begin with a double hyphen\n"
+                                    "\n"
+                                    "Map names should be full, like E1M3 or MAP24, but a list\n"
+                                    "and/or ranges can be specified: MAP01,MAP04-MAP07,MAP12\n";
+
+using build_result_t = enum build_result_e
+{
+  // everything went peachy keen
+  BUILD_OK = 0,
+
+  // when saving the map, one or more lumps overflowed
+  BUILD_LumpOverflow
+};
+
+// attempt to open a wad.  on failure, the FatalError method in the
+// buildinfo_t interface is called.
+void OpenWad(const char *filename);
+
+// close a previously opened wad.
+void CloseWad(void);
+
+// give the number of levels detected in the wad.
+size_t LevelsInWad(void);
+
+// retrieve the name of a particular level.
+const char *GetLevelName(size_t lev_idx);
+
+// build the nodes of a particular level. otherwise the wad
+// is updated to store the new lumps and returns either BUILD_OK or
+// BUILD_LumpOverflow if some limits were exceeded.
+build_result_e BuildLevel(size_t lev_idx, const char *filename);
+
+void WriteAnalysis(const char *filename);
+void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes,
+                      int32_t left_size, int32_t right_size);

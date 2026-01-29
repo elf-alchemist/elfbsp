@@ -1,6 +1,9 @@
-Changes since ELFBSP 1.0
+Changes since ELFBSP 1.1
 ========================
 
-Bugfixes:
-* Fixed a bug where freshly created Doom/Hexen maps would be built with incorrect lump orders
-* i.e. SECTORS would not be placed between NODES and REJECT, but would remain placed right after VERTEXES
+New features:
+* Added `--analysis` CLI parameter for BSP tree data analysis and visualization
+* Added `--debug-*` CLI parameters for runtime debugging, previously a compile-time directive, now a runtime option
+
+BUgfixes:
+* Improved correctness for certain special effects, numerical effects of number 998 & 999 are now read from the line's tag instead of line's special

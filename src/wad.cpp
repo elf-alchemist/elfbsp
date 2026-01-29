@@ -19,8 +19,7 @@
 //
 //------------------------------------------------------------------------------
 
-#include "wad.hpp"
-#include "elfbsp.hpp"
+#include "core.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -289,7 +288,7 @@ size_t Wad_file::LevelLastLump(size_t lev_num)
   size_t count = 1;
 
   // UDMF level?
-  if (LevelFormat(lev_num) == MAPF_UDMF)
+  if (LevelFormat(lev_num) == MapFormat_UDMF)
   {
     while (count < MAX_LUMPS_IN_A_LEVEL && start + count < NumLumps())
     {
@@ -330,7 +329,7 @@ map_format_e Wad_file::LevelFormat(size_t lev_num)
 
     if (StringCaseCmp(name, "TEXTMAP") == 0)
     {
-      return MAPF_UDMF;
+      return MapFormat_UDMF;
     }
   }
 
@@ -340,11 +339,11 @@ map_format_e Wad_file::LevelFormat(size_t lev_num)
 
     if (StringCaseCmp(name, "BEHAVIOR") == 0)
     {
-      return MAPF_Hexen;
+      return MapFormat_Hexen;
     }
   }
 
-  return MAPF_Doom;
+  return MapFormat_Doom;
 }
 
 void Wad_file::ReadDirectory(void)

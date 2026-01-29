@@ -19,7 +19,6 @@
 //
 //------------------------------------------------------------------------------
 
-#include "parse.hpp"
 #include "core.hpp"
 
 #include <cinttypes>
@@ -36,7 +35,7 @@ token_kind_e lexer_c::Next(std::string &s)
     return TOK_EOF;
   }
 
-  byte ch = static_cast<byte>(data[pos]);
+  const auto ch = static_cast<byte>(data[pos]);
 
   if (ch == '"')
   {
