@@ -20,6 +20,7 @@ AlignTrailingComments:
   Kind: Always
 AllowAllArgumentsOnNextLine: false
 AllowAllParametersOfDeclarationOnNextLine: false
+AlwaysBreakTemplateDeclarations: true
 AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortEnumsOnASingleLine: false

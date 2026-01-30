@@ -24,8 +24,6 @@
 #include "core.hpp"
 
 #include <cstring>
-#include <format>
-#include <fstream>
 #include <string>
 #include <vector>
 
@@ -48,74 +46,8 @@ struct map_range_t
 };
 
 static std::vector<map_range_t> map_list;
-static std::vector<std::string> analysis_csv;
 
 buildinfo_t config;
-
-//------------------------------------------------------------------------
-void AnalysisSetupFile(const char * filepath)
-{
-  auto csv_path = std::string(filepath);
-
-  auto ext_pos = FindExtension(filepath);
-  if (ext_pos > 0)
-  {
-    csv_path.resize(ext_pos);
-  }
-
-  csv_path += ".csv";
-  FileClear(csv_path.c_str());
-
-  analysis_csv.push_back("map_name,is_fast,split_cost,old_vertex,lines,sides,sectors,new_vertex,nodes,subsecs,segs,splits,left_"
-                         "depth,right_depth,average_depth,"
-                         "optimal_depth,tree_balance,worst_case_ratio,tree_quality");
-}
-
-// HOLY MOTHER OF ALL DATA POINTS
-void AnalysisPushLine(size_t level_index, bool is_fast, AnalysisLine line)
-{
-  std::string line_csv =
-      std::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}", GetLevelName(level_index), is_fast, line.split_cost,
-                  line.old_vertex, line.lines, line.sides, line.sectors, line.new_vertex, line.nodes, line.subsecs, line.segs,
-                  line.splits, line.left_depth, line.right_depth, line.average_depth, line.optimal_depth, line.tree_balance,
-                  line.worst_case_ratio, line.tree_quality);
-  analysis_csv.push_back(line_csv);
-}
-
-// writes out for current file
-// expects AnalysisPushLine to have been called with all 0-32 split costs during node-building
-void WriteAnalysis(const char *filename)
-{
-  auto csv_path = std::string(filename);
-
-  if (const auto ext_pos = FindExtension(filename); ext_pos > 0)
-  {
-    csv_path.resize(ext_pos);
-  }
-
-  csv_path += ".csv";
-
-  // Append to fresh CSV
-  auto csv_file = std::ofstream(csv_path.c_str(), std::ios::app);
-
-  if (!csv_file.is_open())
-  {
-    PrintLine(LOG_WARN, "[%s] Couldn't open file %s for writing.", __func__, csv_path.c_str());
-    return;
-  }
-
-  for (const auto& line : analysis_csv)
-  {
-    csv_file << line << '\n';
-  }
-
-  csv_file.close();
-
-  // Flush out from memory
-  analysis_csv.clear();
-
-  PrintLine(LOG_NORMAL, "[%s] Successfully finished writing data to CSV file %s.", __func__, csv_path.c_str());
-}
 
 //------------------------------------------------------------------------
 
@@ -295,7 +227,7 @@ void VisitFile(const char *filename)
 
   if (config.analysis)
   {
-    AnalysisSetupFile(filename);
+    // AnalysisSetupFile(filename);
   }
 
   PrintLine(LOG_NORMAL, "Building %s", filename);

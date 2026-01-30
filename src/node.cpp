@@ -1636,8 +1636,7 @@ subsec_t *CreateSubsec(quadtree_c *tree)
   return sub;
 }
 
-build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast,
-                          bool analysis)
+void BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast, bool analysis)
 {
   *N = nullptr;
   *S = nullptr;
@@ -1670,7 +1669,7 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, su
     *S = CreateSubsec(tree);
     delete tree;
 
-    return BUILD_OK;
+    return;
   }
 
   if (HAS_BIT(config.debug, DEBUG_BUILDER))
@@ -1715,14 +1714,8 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, su
     PrintLine(LOG_DEBUG, "[%s] Going LEFT", __func__);
   }
 
-  build_result_e ret;
-
   // recursively build the left side
-  ret = BuildNodes(lefts, depth + 1, &node->l.bounds, &node->l.node, &node->l.subsec, split_cost, fast, analysis);
-  if (ret != BUILD_OK)
-  {
-    return ret;
-  }
+  BuildNodes(lefts, depth + 1, &node->l.bounds, &node->l.node, &node->l.subsec, split_cost, fast, analysis);
 
   if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {
@@ -1730,18 +1723,12 @@ build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, su
   }
 
   // recursively build the right side
-  ret = BuildNodes(rights, depth + 1, &node->r.bounds, &node->r.node, &node->r.subsec, split_cost, fast, analysis);
-  if (ret != BUILD_OK)
-  {
-    return ret;
-  }
+  BuildNodes(rights, depth + 1, &node->r.bounds, &node->r.node, &node->r.subsec, split_cost, fast, analysis);
 
   if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {
     PrintLine(LOG_DEBUG, "[%s] DONE", __func__);
   }
-
-  return BUILD_OK;
 }
 
 void ClockwiseBspTree(void)

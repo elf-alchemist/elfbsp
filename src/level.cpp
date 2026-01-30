@@ -2668,124 +2668,17 @@ const char *GetLevelName(size_t lev_idx)
   return cur_wad->GetLump(lump_idx)->Name();
 }
 
-void ComputeBspDepth(const node_t *node, size_t depth, double &leaf_depth_sum)
-{
-  if (!node)
-  {
-    return;
-  }
-
-  depth++;
-
-  if (!node->l.node)
-  {
-    leaf_depth_sum += static_cast<double>(depth);
-  }
-  else
-  {
-    ComputeBspDepth(node->l.node, depth, leaf_depth_sum);
-  }
-
-  if (!node->r.node)
-  {
-    leaf_depth_sum += static_cast<double>(depth);
-  }
-  else
-  {
-    ComputeBspDepth(node->r.node, depth, leaf_depth_sum);
-  }
-}
-
-size_t ComputeSubtreeDepth(const node_t *node)
+size_t ComputeTreeDepth(const node_t *node)
 {
   if (node == nullptr)
   {
     return 0;
   }
 
-  size_t right = ComputeSubtreeDepth(node->r.node);
-  size_t left = ComputeSubtreeDepth(node->l.node);
+  size_t right = ComputeTreeDepth(node->r.node);
+  size_t left = ComputeTreeDepth(node->l.node);
 
   return std::max(left, right) + 1;
-}
-
-void AnalysisBSP(void)
-{
-  node_t *analysis_node = nullptr;
-  subsec_t *analysis_sub = nullptr;
-
-  AnalysisLine data;
-  data.old_vertex = num_old_vert;
-  data.lines = lev_linedefs.size();
-  data.sides = lev_sidedefs.size();
-  data.sectors = lev_sectors.size();
-
-  // normal mode, across all default costs
-  for (int32_t is_fast = 0; is_fast <= 1; is_fast++)
-  {
-    for (double split_cost = 1.0; split_cost <= 32.0; split_cost++)
-    {
-      // Using these 'double's to get around strict type casting
-      // and implicit conversion warnings
-      double left_size = 0.0;
-      double right_size = 0.0;
-      double total_depth_sum = 0.0;
-
-      double num_leafs = 0.0;
-      double optimal_depth_max_leafs = 0.0;
-      double optimal_depth = 0.0;
-
-      // external path length
-      double min_epl = 0.0;
-      double max_epl = 0.0;
-
-      bbox_t dummy;
-      analysis_node = nullptr;
-      analysis_sub = nullptr;
-
-      data.split_cost = static_cast<size_t>(split_cost);
-
-      BuildNodes(CreateSegs(), 0, &dummy, &analysis_node, &analysis_sub, split_cost, is_fast != 0, true);
-
-      data.new_vertex = num_new_vert;
-      data.nodes = lev_nodes.size();
-      data.subsecs = lev_subsecs.size();
-      data.segs = lev_segs.size();
-
-      // TODO: sidedef math must account for non-seg-generating sides, actually
-      data.splits = lev_segs.size() - lev_sidedefs.size();
-      num_leafs = static_cast<double>(data.subsecs);
-
-      ComputeBspDepth(analysis_node, 0, total_depth_sum);
-      data.left_depth = ComputeSubtreeDepth(analysis_node->l.node);
-      data.right_depth = ComputeSubtreeDepth(analysis_node->r.node);
-
-      left_size = static_cast<double>(data.left_depth);
-      right_size = static_cast<double>(data.right_depth);
-
-      data.average_depth = total_depth_sum / num_leafs;
-
-      optimal_depth = ceil(log2(num_leafs));
-
-      data.optimal_depth = static_cast<size_t>(optimal_depth);
-      data.tree_balance = (left_size < right_size) ? left_size / right_size : right_size / left_size;
-
-      // math pulled from ZenNode/ZokumBSP's BSPInfo utility
-      optimal_depth_max_leafs = 1u << data.optimal_depth; // equals to "pow(2, optimal_depth);"
-      min_epl = num_leafs * (optimal_depth + 1) - optimal_depth_max_leafs;
-      max_epl = num_leafs * ((num_leafs - 1) / 2 + 1) - 1;
-      data.worst_case_ratio = min_epl / max_epl;
-      data.tree_quality = ((min_epl / total_depth_sum) - data.worst_case_ratio) / (1 - data.worst_case_ratio);
-
-      AnalysisPushLine(lev_current_idx, is_fast != 0, data);
-
-      FreeNodes();
-      FreeSubsecs();
-      FreeSegs();
-      ClearNewVertices();
-      num_new_vert = 0;
-    }
-  }
 }
 
 /* ----- build nodes for a single level ----- */
@@ -2803,64 +2696,50 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
 
   InitBlockmap();
 
-  build_result_e ret = BUILD_OK;
-
   if (num_real_lines > 0)
   {
     if (config.analysis)
     {
-      AnalysisBSP();
+      AnalysisBSP(filename);
     }
 
     bbox_t dummy;
     // recursively create nodes
-    ret = BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, config.split_cost, config.fast, false);
+    BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, config.split_cost, config.fast, false);
   }
 
-  if (ret == BUILD_OK)
+  if (config.verbose)
+  {
+    PrintLine(LOG_NORMAL, "Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES", lev_nodes.size(), lev_subsecs.size(),
+              lev_segs.size(), num_old_vert + num_new_vert);
+  }
+
+  if (root_node != nullptr)
   {
     if (config.verbose)
     {
-      PrintLine(LOG_NORMAL, "Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES", lev_nodes.size(), lev_subsecs.size(),
-                lev_segs.size(), num_old_vert + num_new_vert);
-    }
-
-    if (root_node != nullptr)
-    {
-      if (config.verbose)
-      {
-        PrintLine(LOG_NORMAL, "Heights of subtrees: %zu / %zu", ComputeSubtreeDepth(root_node->l.node),
-                  ComputeSubtreeDepth(root_node->r.node));
-      }
-    }
-
-    ClockwiseBspTree();
-
-    switch (lev_format)
-    {
-      case MapFormat_Doom:
-      case MapFormat_Hexen:
-        ret = SaveLevel(root_node);
-        break;
-      case MapFormat_UDMF:
-        ret = SaveUDMF(root_node);
-        break;
-      default:
-        break;
+      PrintLine(LOG_NORMAL, "Heights of subtrees: %zu / %zu", ComputeTreeDepth(root_node->l.node),
+                ComputeTreeDepth(root_node->r.node));
     }
   }
-  else
+
+  ClockwiseBspTree();
+
+  build_result_t ret = BUILD_OK;
+  switch (lev_format)
   {
-    /* build was Cancelled by the user */
+    case MapFormat_Doom:
+    case MapFormat_Hexen:
+      ret = SaveLevel(root_node);
+      break;
+    case MapFormat_UDMF:
+      ret = SaveUDMF(root_node);
+      break;
+    default:
+      break;
   }
 
   FreeLevel();
-
-
-  if (config.analysis)
-  {
-    WriteAnalysis(filename);
-  }
 
   return ret;
 }

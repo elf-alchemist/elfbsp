@@ -23,8 +23,6 @@
 //------------------------------------------------------------------------------
 
 #pragma once
-#include <string>
-#include <vector>
 
 constexpr auto PROJECT_COMPANY = "Guilherme Miranda, et al";
 constexpr auto PROJECT_COPYRIGHT = "Copyright (C) 1994-2026";
@@ -48,7 +46,8 @@ constexpr auto PROJECT_STRING = "ELFBSP v1.1";
 #include <cstring>
 
 #include <bit>
-
+#include <string>
+#include <vector>
 //
 //  OS support
 //
@@ -116,7 +115,8 @@ constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
 constexpr auto ENDIAN_BIG = (std::endian::native == std::endian::big);
 constexpr auto ENDIAN_LITTLE = !ENDIAN_BIG;
 
-template <typename T> constexpr T byteswap(T value) noexcept
+template <typename T>
+constexpr T byteswap(T value) noexcept
 {
   static_assert(std::is_integral_v<T>, "byteswap: integral required");
   static_assert(sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "byteswap: only 16/32/64-bit supported");
@@ -135,7 +135,8 @@ template <typename T> constexpr T byteswap(T value) noexcept
   }
 }
 
-template <typename T> constexpr T GetLittleEndian(T value)
+template <typename T>
+constexpr T GetLittleEndian(T value)
 {
   if constexpr (ENDIAN_BIG)
   {
@@ -147,7 +148,8 @@ template <typename T> constexpr T GetLittleEndian(T value)
   }
 }
 
-template <typename T> constexpr T GetBigEndian(T value)
+template <typename T>
+constexpr T GetBigEndian(T value)
 {
   if constexpr (ENDIAN_LITTLE)
   {
@@ -314,7 +316,8 @@ inline void PRINTF_ATTR(2, 3) PrintLine(const log_level_t level, const char *fmt
 //
 // Allocate memory with error checking.  Zeros the memory.
 //
-template <typename T> constexpr T *UtilCalloc(const size_t size)
+template <typename T>
+constexpr T *UtilCalloc(const size_t size)
 {
   T *ret = static_cast<T *>(calloc(1, size));
 
@@ -329,7 +332,8 @@ template <typename T> constexpr T *UtilCalloc(const size_t size)
 //
 // Reallocate memory with error checking.
 //
-template <typename T> constexpr T *UtilRealloc(T *old, const size_t size)
+template <typename T>
+constexpr T *UtilRealloc(T *old, const size_t size)
 {
   T *ret = static_cast<T *>(realloc(old, size));
 
@@ -344,7 +348,8 @@ template <typename T> constexpr T *UtilRealloc(T *old, const size_t size)
 //
 // Free the memory with error checking.
 //
-template <typename T> constexpr void UtilFree(T *data)
+template <typename T>
+constexpr void UtilFree(T *data)
 {
   if (data == nullptr)
   {
@@ -1357,6 +1362,10 @@ constexpr double SPLIT_COST_MIN = 1.0;
 constexpr double SPLIT_COST_DEFAULT = 11.0;
 constexpr double SPLIT_COST_MAX = 32.0;
 
+// 32 levels of split cost, 1-32
+// 2 modes, normal and fast
+constexpr size_t ANALYSIS_TOTAL = 32 * 2;
+
 using buildinfo_t = struct buildinfo_s;
 
 extern buildinfo_t config;
@@ -1383,29 +1392,29 @@ struct buildinfo_s
   uint32_t debug = DEBUG_NONE;
 };
 
-struct AnalysisLine
-{
-  size_t split_cost = 0.0; // Compare trees of various different costs
+extern size_t lev_current_idx;
 
-  size_t old_vertex = 0; // Original set of vertices
-  size_t lines = 0; // Original set of linedefs
-  size_t sides = 0; // Original set of sidedefs
+struct AnalysisData
+{
+  size_t vertex = 0;  // Original set of vertices
+  size_t lines = 0;   // Original set of linedefs
+  size_t sides = 0;   // Original set of sidedefs
   size_t sectors = 0; // Original set of sectors
 
-  size_t new_vertex = 0; // BSP-generated set of vertices
-  size_t nodes = 0; // Each node of BSP tree
-  size_t subsecs = 0; // Leaves of the BSP, points to a set of segs
-  size_t segs = 0; // Segments, actually used for rendering
-  size_t splits = 0; // Difference between segments and sidedefs
+  size_t bsp_vertex = 0; // BSP-generated set of vertices
+  size_t nodes = 0;      // Each node of BSP tree, bounding box for culling
+  size_t subsecs = 0;    // Leaves of the tree, points to a set of segs
+  size_t segs = 0;       // Segments, actually used for rendering
+  size_t splits = 0;     // Difference between segments and sidedefs
 
-  size_t left_depth = 0; // Maximum depth on the left side of the tree
-  size_t right_depth = 0; // Maximum depth on the right side of the tree
+  size_t left_depth = 0;      // Maximum depth on the left side of the tree
+  size_t right_depth = 0;     // Maximum depth on the right side of the tree
   double average_depth = 0.0; // Arithmetic mean depth
-  size_t optimal_depth = 0; // Optimal depth for a tree of N leaves
-  double tree_balance = 0.0; // Balance factor
+  size_t optimal_depth = 0;   // Optimal depth for a tree of N leaves
+  double tree_balance = 0.0;  // Balance factor
 
-  double worst_case_ratio = 0; // Best possible tree
-  double tree_quality = 0; // Tree's actual figure of merit
+  double worst_case_ratio = 0.0; // Best possible tree
+  double tree_quality = 0.0;     // Tree's actual figure of merit
 };
 
 constexpr const char PRINT_HELP[] = "\n"
@@ -1454,5 +1463,4 @@ const char *GetLevelName(size_t lev_idx);
 // BUILD_LumpOverflow if some limits were exceeded.
 build_result_e BuildLevel(size_t lev_idx, const char *filename);
 
-void WriteAnalysis(const char *filename);
-void AnalysisPushLine(size_t level_index, bool is_fast, AnalysisLine line);
+void AnalysisBSP(const char *filename);

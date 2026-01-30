@@ -533,8 +533,7 @@ quadtree_c *TreeFromSegList(seg_t *list);
 // and '*N' is the new node (and '*S' is set to nullptr).  Normally
 // returns BUILD_OK.
 
-build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast,
-                          bool analysis);
+void BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast, bool analysis);
 
 // put all the segs in each subsector into clockwise order, and renumber
 // the seg indices.
@@ -553,3 +552,5 @@ void NormaliseBspTree(void);
 // vertices to integer coordinates (for example, removing segs whose
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree(void);
+
+size_t ComputeTreeDepth(const node_t *node);
