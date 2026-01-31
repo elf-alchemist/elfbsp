@@ -53,7 +53,7 @@ static std::vector<std::string> analysis_csv;
 buildinfo_t config;
 
 //------------------------------------------------------------------------
-void AnalysisSetupFile(const char * filepath)
+void AnalysisSetupFile(const char *filepath)
 {
   auto csv_path = std::string(filepath);
 
@@ -70,11 +70,11 @@ void AnalysisSetupFile(const char * filepath)
   analysis_csv.push_back(line);
 }
 
-void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes, int32_t left_size,
-                      int32_t right_size)
+void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes,
+                      int32_t left_size, int32_t right_size)
 {
-  std::string line =
-      std::format("{},{},{},{},{},{},{},{}", GetLevelName(level_index), is_fast, split_cost, segs, subsecs, nodes, left_size, right_size);
+  std::string line = std::format("{},{},{},{},{},{},{},{}", GetLevelName(level_index), is_fast, split_cost, segs, subsecs,
+                                 nodes, left_size, right_size);
   analysis_csv.push_back(line);
 }
 
@@ -100,7 +100,7 @@ void WriteAnalysis(const char *filename)
     return;
   }
 
-  for (const auto& line : analysis_csv)
+  for (const auto &line : analysis_csv)
   {
     csv_file << line << '\n';
   }
@@ -145,7 +145,7 @@ bool CheckMapInMapList(const size_t lev_idx)
 
   const char *name = GetLevelName(lev_idx);
 
-  for (auto & map : map_list)
+  for (auto &map : map_list)
   {
     if (CheckMapInRange(&map, name))
     {
@@ -603,11 +603,11 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
   }
   else if (strcmp(name, "--xnod") == 0)
   {
-    config.bsp_type = BSP_XNOD;
+    config.bsp_type = std::max(config.bsp_type, BSP_XNOD);
   }
   else if (strcmp(name, "--ssect") == 0)
   {
-    config.bsp_type = BSP_XGL3;
+    config.bsp_type = std::max(config.bsp_type, BSP_XGL3);
   }
   else if (strcmp(name, "--cost") == 0)
   {
@@ -787,7 +787,7 @@ int32_t main(const int32_t argc, const char *argv[])
     }
   }
 
-  for (const auto & wad : wad_list)
+  for (const auto &wad : wad_list)
   {
     VisitFile(wad);
   }

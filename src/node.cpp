@@ -1864,12 +1864,12 @@ void RoundOff(subsec_t *subsec)
   seg_t *new_head = nullptr;
   seg_t *new_tail = nullptr;
 
-  seg_t *seg;
+  seg_t *seg = nullptr;
   seg_t *last_real_degen = nullptr;
 
   int real_total = 0;
-
   int degen_total = 0;
+
   if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
     PrintLine(LOG_DEBUG, "[%s] Rounding off %zu", __func__, subsec->index);
@@ -1889,10 +1889,7 @@ void RoundOff(subsec_t *subsec)
         last_real_degen = seg;
       }
 
-      if (HAS_BIT(config.debug, DEBUG_SUBSEC))
-      {
-        degen_total++;
-      }
+      degen_total++;
 
       continue;
     }

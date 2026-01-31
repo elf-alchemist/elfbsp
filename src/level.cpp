@@ -1836,6 +1836,10 @@ static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
   return static_cast<uint32_t>(v->index);
 }
 
+//
+// Vanilla nodes
+//
+
 static void PutSegs_Vanilla(void)
 {
   // this size is worst-case scenario
@@ -1914,18 +1918,16 @@ static void PutSubsecs_Vanilla(void)
   lump->Finish();
 }
 
-static size_t node_cur_index;
-
-static void PutOneNode_Vanilla(node_t *node, Lump_c *lump)
+static void PutOneNode_Vanilla(node_t *node, size_t &node_cur_index, Lump_c *lump)
 {
   if (node->r.node)
   {
-    PutOneNode_Vanilla(node->r.node, lump);
+    PutOneNode_Vanilla(node->r.node, node_cur_index, lump);
   }
 
   if (node->l.node)
   {
-    PutOneNode_Vanilla(node->l.node, lump);
+    PutOneNode_Vanilla(node->l.node, node_cur_index, lump);
   }
 
   node->index = node_cur_index++;
@@ -1987,14 +1989,12 @@ static void PutNodes_Vanilla(node_t *root)
 {
   // this can be bigger than the actual size, but never smaller
   size_t max_size = (lev_nodes.size() + 1) * sizeof(raw_node_vanilla_t);
-
+  size_t node_cur_index = 0;
   Lump_c *lump = CreateLevelLump("NODES", max_size);
-
-  node_cur_index = 0;
 
   if (root != nullptr)
   {
-    PutOneNode_Vanilla(root, lump);
+    PutOneNode_Vanilla(root, node_cur_index, lump);
   }
 
   lump->Finish();
@@ -2010,6 +2010,161 @@ static void PutNodes_Vanilla(node_t *root)
     MarkOverflow(LIMIT_NODES);
   }
 }
+
+//
+// DeepBSPV4 format
+//
+
+static void PutSegs_DeepBSPV4(void)
+{
+  // this size is worst-case scenario
+  size_t size = lev_segs.size() * sizeof(raw_seg_deepbspv4_t);
+  Lump_c *lump = CreateLevelLump("SEGS", size);
+
+  for (size_t i = 0; i < lev_segs.size(); i++)
+  {
+    raw_seg_deepbspv4_t raw;
+
+    const seg_t *seg = lev_segs[i];
+
+    raw.start = GetLittleEndian(static_cast<uint32_t>(seg->start->index));
+    raw.end = GetLittleEndian(static_cast<uint32_t>(seg->end->index));
+    raw.angle = GetLittleEndian(VanillaSegAngle(seg));
+    raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef->index));
+    raw.flip = GetLittleEndian(seg->side);
+    raw.dist = GetLittleEndian(VanillaSegDist(seg));
+
+    lump->Write(&raw, sizeof(raw));
+
+    if (HAS_BIT(config.debug, DEBUG_BSP))
+    {
+      PrintLine(LOG_DEBUG, "[%s] %zu  Vert %04X->%04X  Line %04X %s  Angle %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__,
+                seg->index, GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef),
+                seg->side ? "L" : "R", GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
+    }
+  }
+
+  lump->Finish();
+}
+
+static void PutSubsecs_DeepBSPV4(void)
+{
+  size_t size = lev_subsecs.size() * sizeof(raw_subsec_deepbspv4_t);
+
+  Lump_c *lump = CreateLevelLump("SSECTORS", size);
+
+  for (size_t i = 0; i < lev_subsecs.size(); i++)
+  {
+    raw_subsec_deepbspv4_t raw;
+
+    const subsec_t *sub = lev_subsecs[i];
+
+    raw.first = GetLittleEndian(static_cast<uint16_t>(sub->seg_list->index));
+    raw.num = GetLittleEndian(static_cast<uint16_t>(sub->seg_count));
+
+    lump->Write(&raw, sizeof(raw));
+
+    if (HAS_BIT(config.debug, DEBUG_BSP))
+    {
+      PrintLine(LOG_DEBUG, "[%s] %zu  First %04X  Num %04X", __func__, sub->index, GetLittleEndian(raw.first),
+                GetLittleEndian(raw.num));
+    }
+  }
+
+  lump->Finish();
+}
+
+static void PutOneNode_DeepBSPV4(node_t *node, size_t node_cur_index, Lump_c *lump)
+{
+  if (node->r.node)
+  {
+    PutOneNode_DeepBSPV4(node->r.node, node_cur_index, lump);
+  }
+
+  if (node->l.node)
+  {
+    PutOneNode_DeepBSPV4(node->l.node, node_cur_index, lump);
+  }
+
+  node->index = node_cur_index++;
+
+  raw_node_deepbspv4_t raw;
+
+  // note that x/y/dx/dy are always integral in non-UDMF maps
+  raw.x = GetLittleEndian(static_cast<int16_t>(floor(node->x)));
+  raw.y = GetLittleEndian(static_cast<int16_t>(floor(node->y)));
+  raw.dx = GetLittleEndian(static_cast<int16_t>(floor(node->dx)));
+  raw.dy = GetLittleEndian(static_cast<int16_t>(floor(node->dy)));
+
+  raw.b1.minx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.minx));
+  raw.b1.miny = GetLittleEndian(static_cast<int16_t>(node->r.bounds.miny));
+  raw.b1.maxx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxx));
+  raw.b1.maxy = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxy));
+
+  raw.b2.minx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.minx));
+  raw.b2.miny = GetLittleEndian(static_cast<int16_t>(node->l.bounds.miny));
+  raw.b2.maxx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxx));
+  raw.b2.maxy = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxy));
+
+  if (node->r.node)
+  {
+    raw.right = GetLittleEndian(static_cast<uint16_t>(node->r.node->index));
+  }
+  else if (node->r.subsec)
+  {
+    raw.right = GetLittleEndian(static_cast<uint16_t>(node->r.subsec->index | 0x8000));
+  }
+  else
+  {
+    PrintLine(LOG_ERROR, "Bad right child in node %zu", node->index);
+  }
+
+  if (node->l.node)
+  {
+    raw.left = GetLittleEndian(static_cast<uint16_t>(node->l.node->index));
+  }
+  else if (node->l.subsec)
+  {
+    raw.left = GetLittleEndian(static_cast<uint16_t>(node->l.subsec->index | 0x8000));
+  }
+  else
+  {
+    PrintLine(LOG_ERROR, "Bad left child in node %zu", node->index);
+  }
+
+  lump->Write(&raw, sizeof(raw));
+
+  if (HAS_BIT(config.debug, DEBUG_BSP))
+  {
+    PrintLine(LOG_DEBUG, "[%s] %zu  Left %04X  Right %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, node->index,
+              GetLittleEndian(raw.left), GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
+  }
+}
+
+static void PutNodes_DeepBSPV4(node_t *root)
+{
+  // this can be bigger than the actual size, but never smaller
+  // 8 bytes for BSP_MAGIC_DEEPBSPV4 header
+  size_t max_size = 8 + (lev_nodes.size() + 1) * sizeof(raw_node_deepbspv4_t);
+  size_t node_cur_index = 0;
+  Lump_c *lump = CreateLevelLump("NODES", max_size);
+
+  if (root != nullptr)
+  {
+    PutOneNode_DeepBSPV4(root, node_cur_index, lump);
+  }
+
+  lump->Finish();
+
+  if (node_cur_index != lev_nodes.size())
+  {
+    PrintLine(LOG_ERROR, "PutNodes miscounted (%zu != %zu)", node_cur_index, lev_nodes.size());
+  }
+}
+
+//
+// Check Limits
+//
 
 static void CheckBinaryFormatLimits(void)
 {
@@ -2043,7 +2198,7 @@ static void CheckBinaryFormatLimits(void)
     {
       PrintLine(LOG_NORMAL, "WARNING: Forcing XNOD format nodes due to overflows.");
       config.total_warnings++;
-      config.bsp_type = BSP_XNOD;
+      config.bsp_type = std::max(config.bsp_type, BSP_XNOD);
     }
   }
 }
@@ -2197,18 +2352,18 @@ static void PutSegs_Xgl2(Lump_c *lump)
   }
 }
 
-static void PutOneNode_Xnod(Lump_c *lump, node_t *node, bool xgl3)
+static void PutOneNode_Xnod(Lump_c *lump, node_t *node, size_t &node_cur_index, bool xgl3)
 {
   raw_xgl3_node_t raw;
 
   if (node->r.node)
   {
-    PutOneNode_Xnod(lump, node->r.node, xgl3);
+    PutOneNode_Xnod(lump, node->r.node, node_cur_index, xgl3);
   }
 
   if (node->l.node)
   {
-    PutOneNode_Xnod(lump, node->l.node, xgl3);
+    PutOneNode_Xnod(lump, node->l.node, node_cur_index, xgl3);
   }
 
   node->index = node_cur_index++;
@@ -2289,14 +2444,13 @@ static void PutOneNode_Xnod(Lump_c *lump, node_t *node, bool xgl3)
 
 static void PutNodes_Xnod(Lump_c *lump, node_t *root)
 {
+  size_t node_cur_index = 0;
   size_t raw_num = GetLittleEndian(lev_nodes.size());
   lump->Write(&raw_num, 4);
 
-  node_cur_index = 0;
-
   if (root)
   {
-    PutOneNode_Xnod(lump, root, false);
+    PutOneNode_Xnod(lump, root, node_cur_index, false);
   }
 
   if (node_cur_index != lev_nodes.size())
@@ -2307,14 +2461,13 @@ static void PutNodes_Xnod(Lump_c *lump, node_t *root)
 
 static void PutNodes_Xgl3(Lump_c *lump, node_t *root)
 {
+  size_t node_cur_index = 0;
   size_t raw_num = GetLittleEndian(lev_nodes.size());
   lump->Write(&raw_num, 4);
 
-  node_cur_index = 0;
-
   if (root)
   {
-    PutOneNode_Xnod(lump, root, true);
+    PutOneNode_Xnod(lump, root, node_cur_index, true);
   }
 
   if (node_cur_index != lev_nodes.size())
@@ -2491,42 +2644,75 @@ build_result_e SaveBinaryFormatLevel(node_t *root_node)
   CheckBinaryFormatLimits();
 
   /* --- Normal nodes --- */
-  if (config.bsp_type == BSP_XGL3 && num_real_lines > 0)
+  switch (config.bsp_type)
   {
-    // leave SEGS empty
-    CreateLevelLump("SEGS")->Finish();
-    Lump_c *lump = CreateLevelLump("SSECTORS");
-    SaveFormat_Xgl3(lump, root_node);
-    CreateLevelLump("NODES")->Finish();
-  }
-  else if (config.bsp_type == BSP_XNOD && num_real_lines > 0)
-  {
-    CreateLevelLump("SEGS")->Finish();
-    CreateLevelLump("SSECTORS")->Finish();
-
-    // remove all the mini-segs from subsectors
-    NormaliseBspTree();
-
-    Lump_c *lump = CreateLevelLump("NODES", CalcXnodNodesSize());
-    SaveFormat_Xnod(lump, root_node);
-  }
-  else
-  {
-    // remove all the mini-segs from subsectors
-    NormaliseBspTree();
-
-    // reduce vertex precision for classic DOOM nodes.
-    // some segs can become "degenerate" after this, and these
-    // are removed from subsectors.
-    RoundOffBspTree();
-
-    SortSegs();
-
-    PutVertices();
-
-    PutSegs_Vanilla();
-    PutSubsecs_Vanilla();
-    PutNodes_Vanilla(root_node);
+  case BSP_XGL3:
+    {
+      // leave SEGS empty
+      CreateLevelLump("SEGS")->Finish();
+      Lump_c *lump = CreateLevelLump("SSECTORS");
+      SaveFormat_Xgl3(lump, root_node);
+      CreateLevelLump("NODES")->Finish();
+      break;
+    }
+  case BSP_XGL2:
+    {
+      // leave SEGS empty
+      CreateLevelLump("SEGS")->Finish();
+      Lump_c *lump = CreateLevelLump("SSECTORS");
+      SaveFormat_Xgl2(lump, root_node);
+      CreateLevelLump("NODES")->Finish();
+      break;
+    }
+  case BSP_XGLN:
+    {
+      // leave SEGS empty
+      CreateLevelLump("SEGS")->Finish();
+      Lump_c *lump = CreateLevelLump("SSECTORS");
+      SaveFormat_Xgln(lump, root_node);
+      CreateLevelLump("NODES")->Finish();
+      break;
+    }
+  case BSP_XNOD:
+    {
+      CreateLevelLump("SEGS")->Finish();
+      CreateLevelLump("SSECTORS")->Finish();
+      // remove all the mini-segs from subsectors
+      NormaliseBspTree();
+      Lump_c *lump = CreateLevelLump("NODES", CalcXnodNodesSize());
+      SaveFormat_Xnod(lump, root_node);
+      break;
+    }
+  case BSP_DEEPBSPV4:
+    {
+      // remove all the mini-segs from subsectors
+      NormaliseBspTree();
+      // reduce vertex precision for classic DOOM nodes.
+      // some segs can become "degenerate" after this, and these
+      // are removed from subsectors.
+      RoundOffBspTree();
+      SortSegs();
+      PutVertices();
+      PutSegs_DeepBSPV4();
+      PutSubsecs_DeepBSPV4();
+      PutNodes_DeepBSPV4(root_node);
+      break;
+    }
+  case BSP_VANILLA:
+    {
+      // remove all the mini-segs from subsectors
+      NormaliseBspTree();
+      // reduce vertex precision for classic DOOM nodes.
+      // some segs can become "degenerate" after this, and these
+      // are removed from subsectors.
+      RoundOffBspTree();
+      SortSegs();
+      PutVertices();
+      PutSegs_Vanilla();
+      PutSubsecs_Vanilla();
+      PutNodes_Vanilla(root_node);
+      break;
+    }
   }
 
   PutBlockmap();
@@ -2753,7 +2939,6 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
   }
 
   FreeLevel();
-
 
   if (config.analysis)
   {
