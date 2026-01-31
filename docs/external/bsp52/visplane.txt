@@ -1,0 +1,305 @@
+[See the web page below for the most up-to-date version. killough 2/23/98]
+
+The Facts about Visplane Overflows                               09/20/1997
+
+Lee Killough
+killough@rsn.hp.com
+http://classicgaming.com/doom
+--------------------------------------------------------------------------
+
+Visplane overflows have long been a mystery (and a source of controversy)
+in the Doom editing community.
+
+Here's my best theory to-date about the real cause of visplane overflows:
+
+Too many changing ssectors (sub-sectors) in view at once, with different
+floor and/or ceiling properties. Floors and ceilings count separately
+towards the limit, and only when each is actually visible to the player.
+Two flats are considered compatible if they have the same texture, the same
+lighting level, and the same height (unless the texture is F_SKY1, in which
+case height does not matter). If two visible flats are compatible, and they
+are only separated by a 2s linedef or by flats that are not visible, then
+the visible flats are merged into the same visplane.
+
+However, there are some limiting factors -- factors that the number of
+visplanes cannot exceed a constant multiple of:
+
+1. Number of 2s linedefs in view with different flats properties on
+   either side of the linedef.
+2. Number of distinct floor sub-sectors + distinct ceiling subsectors
+   in view.
+
+If you reduce either of these, you lower the maximum (not actual) number
+of visplanes that can be generated, but neither of these factors are the
+sole causes of visplane overflows.
+
+Also, there is direct evidence that a node builder can make a difference,
+and thus, how ssectors are built can make a difference. When a node line
+cuts across a wide open sector, splitting it into two sectors, this usually
+increases the visplane count. A Doom node builder is free to choose any node
+line, as long as there is at least one seg on either side of it, so there is
+considerable freedom to choose node lines and to minimize splitting large
+sectors with node lines.
+
+From direct evidence, I know that:
+
+1. Visplane overflows are not simply caused by too many linedefs (or their
+sidedefs) in view at once. This can cause HOM, and if the limit is greatly
+exceeded, can cause seg overflow leading to Doom crashing, but it does not
+directly cause visplane overflows.
+
+2. Visplane overflows are not simply caused by too many different sectors
+in view at once -- you can make a wad with only two sectors (but many sub-
+sectors) and cause visplane overflows:
+
+     --- --- --- --- --- ---
+    | A | B | A | B | A | B |
+     --- --- --- --- --- ---
+    | B | A | B | A | B | A |
+     --- --- --- --- --- ---  . . .
+    | A | B | A | B | A | B |
+     --- --- --- --- --- ---
+    | B | A | B | A | B | A |
+     --- --- --- --- --- ---
+                .
+		.
+		.
+
+3. Visplane overflows are not simply caused by too many changing sub-sectors
+in view at once -- how these ssectors are in relation to others is important,
+too. For example, two sectors which have compatible flats, and which are
+separated only by sectors which are not visible, usually get merged into the
+same visplane. Example:
+
+    -----------
+   |     A     |
+    -----------
+   |     B     |
+    -----------
+   |     A     |
+    -----------
+   |     B     |
+    -----------
+   |     A     |
+    -----------
+   |     B     |
+    -----------
+   |     A     |
+    -----------
+         .
+	 .
+	 .
+
+In the figure above, if all of the sectors marked 'B' do not have visible
+flats because their floors (ceilings) are too low (high), then all sectors
+marked 'A' can be merged into the same visplane if they are compatible. It
+is even possible for visplanes to be merged even if it requires them to
+cross:
+
+     --- --- ---
+    | B | C | B |
+     --- --- ---
+    | A | B | A |
+     --- --- ---
+    | B | C | B |
+     --- --- ---
+
+In the figure above, if the sub-sectors marked 'B' do not have visible
+flats, then the sub-sectors marked 'A' and the sub-sectors marked 'C',
+will each merge with their own kind, despite the merged 'A' and 'C'
+visplanes crossing:
+
+          |
+     --- --- ---                    --- --- ---
+    | B | C | B |                  | B | C | B |
+     --- --- ---                    --- --- ---
+    | A | C | A |                --| A | A | A |--
+     --- --- ---                    --- --- ---
+    | B | C | B |                  | B | C | B |
+     --- --- ---                    --- --- ---
+          |
+
+      C's merge                      A's merge
+
+One theory I've come up with is that sectors with invisible flats act as
+"conduits" for visible flats, and as long as two visible flats which are
+compatible are not separated by a visible non-compatible flat, then they
+are merged into the same visplane. A more reasonable theory is that
+invisible flats are areas of the framebuffer which are already drawn by
+upper, lower, and 1s normal textures (during the front-to-back rendering),
+and that Doom is able to ignore those already-drawn areas of the
+framebuffer for the purposes of flats drawing.
+
+I have one example wad in which visplane overflows occur when sector B's
+flats are made visible, even when the flats are the same as either A's or
+C's -- this is direct evidence of multiple merges being able to take place
+across invisible regions. If B is made visible and made to look like A,
+then you basically have:
+
+     --- --- ---
+    | A | C | A |
+     --- --- ---
+    | A | A | A |
+     --- --- ---
+    | A | C | A |
+     --- --- ---
+
+... which, if repeated enough, can cause visplane overflows because of A and
+C not merging, even though no visplane overflow occurs when B is invisible,
+because then apparently B's sub-sectors act as multiple "conduits" for both
+A and C, while making B visible and the same as A or C is not enough.
+Invisible ssectors are "wildcards" for the purposes of visplane compatibility.
+
+See CONDUITS.WAD for an example. No visplane overflows occur despite the
+differences in floor textures and the rapidity of their change, until the
+'conduit' sectors are raised (central switch), and this occurs even though
+the raised sector has the same floor texture as one of the adjacent ones.
+The visplane overflow occurs because the visibility of the raised sector
+removes its ability to act as a conduit for all the other sectors.
+
+4. That a node builder can make a difference and sometimes prevent visplane
+overflows. Why this is true, I have not quite figured out, but based on a lot
+of experience fiddling with nodes and trying to come up with exact causes of
+visplane overflows, I have come up with a heuristic which decreases the
+chances of visplane overflows from happening. It has actually removed the
+visplane overflows in over 5 real wads.
+
+The heuristic attempts to balance the number of sectors (rather than the
+number of segs) on either side of a node line, and also tries to avoid
+picking node lines which cut across wide open areas. This leads to another
+observation I have made: visplane overflows can sometimes be introduced by a
+node builder picking node lines that cut across a wide open area. The best
+theory I have to explain this, is that during back-to-front rendering of
+flats, some static information is kept and as you move from one sub-sector
+to another, changes in flats tend to increase the visplane count. A node
+line cutting across a wide open area, makes one side of the node line get
+drawn first, then the other side, and if the node line cuts across a sector
+in that wide open area, it can artificially break up an otherwise single
+visplane into multiple visplanes because of the resulting order in which
+the flats are drawn. Here's an example:
+
+     ---------------
+    |       |       |
+    |   A   |   B   |    ----
+    |       |       |   |    |
+     ---------------     ----
+
+Suppose the linedef on the top right is chosen as the node line. Then you
+get an extension node line which looks like:
+
+     ---------------
+    |       |       |
+....|...A...|...B...|....----......>  node line
+    |       |     * |   |    |
+     ---------------     ----
+
+* = player            If no node line splits room: draw A, then B.
+                      If node line splits room: draw back of A, then
+		      back of B, then front of A, then front of B,
+		      causing flats to alternate more often.
+
+This node line cuts sectors A and B, which are wide open areas. Suppose you
+are viewing sectors A and B. Then the addition of the node line affects the
+order in which Doom draws the flats for sectors A and B.
+
+Had the node line not been added in this way, cutting across sectors A and
+B, then sectors A and B might have been sub-sectors and Doom could simply
+draw each one once. But since there is this extra node line, Doom must draw
+all of the back side first, which involves drawing part of A and then part
+of B, and then the front part, which again involves drawing part of A and
+part of B. This causes the flats being drawn to change more rapidly in the
+standard BSP ordering, which seems to be another factor contributing to
+visplane overflows. The more rapidly the flats change during BSP traversal,
+the greater the chances of visplane overflows.
+
+This suggests that node lines should be chosen in such a way that they do
+not cause splits in sectors. Already most node builders try to avoid
+splitting segs, but this is apparently not as important for visplane
+overflows, as trying to avoid splitting a sector. Therefore, BSP has been
+modified to optionally use sectors, rather than segs, as the main criterion
+for choosing a node line. The -vp option selects this alternative.
+
+The heuristic used in BSP to detect cuts across wide open areas is the
+proportion of the node line which is incident with existing segs, relative
+to its total length inside the bounding box, which is simply the sum of the
+lengths of all segs incident to the node line, divided by the total length
+of the node line inside the current bounding box. BSP considers more costly
+the node lines which make this ratio small, since a smaller value is
+correlated with a higher probability of splitting a wide open area. However,
+there's no easy way I can think of, to tell null space apart from normal
+space, at this stage in the node building process, so sometimes a node line
+will be rejected even though it cuts across null space, which is not
+important.
+
+Note: I have tried measuring sector splits by considering them as happening
+when one or more linedefs that share the same sector are split by a node
+line, but this does not appear to be the correct measure to reduce visplane
+overflows. The best heuristic I've come up with to date is the one above,
+and since it has removed visplane overflows in at least 5 wads, I see no
+reason to change it, even though it is not easily explained why it works.
+
+Known problems / outstanding issues with current version of BSP:
+
+1. Visplane overflow detector overcounts on some wads, especially ones with
+   special effects. The -vpmark option can be used to filter out a lot of
+   multiple visplane overflow reports, since it only adds a new player 1
+   start if there's not already one within 64 units of it.
+
+2. For efficiency, visplane overflow detector uses segs as a way to
+   determine viewpoints when considering visplane overflow. This may fail
+   to detect visplane overflows at odd angles, and it tends to make lots
+   of visplane overflows get reported for one small area. Scanning for
+   visplane overflows pixel-by-pixel, like a ray-tracer, would be slower,
+   but could be more accurate, and could be used to generate an image of
+   the map (perhaps color coded with green, yellow, and red based on the
+   number of visplanes). BTW, this was actually tried but rejected by me
+   as being too slow to be practical.
+
+3. Visplane overflow detector does not detect all cases of v.p. overflow
+   consisting of lots of ssectors, but few sectors, and it does not
+   exhaustively consider height. Head-bopping and Arch-Vile attacks, or
+   free-fall, may well cause the player to exceed the limit in mid-air.
+
+4. All of these methods have been tried unsuccessfully to improve
+   preciseness:
+
+   a. Considering invisible ssectors to be "conduits" which all visplanes
+      can merge across (see above), by using depth-first-search techniques
+      on adjacency graphs of the ssectors (this method probably fails
+      because two ssectors separated only by a node line are not being
+      considered adjacent -- more complicated techniques must be used to
+      determine adjacency).
+   b. Considering flats themselves as blocking visibility (seems to mess up
+      visplane calculations, although it doesn't add up with the evidence
+      that flats do indeed block).
+   c. Computing visibility with _correct_ vertical angles (limits the count
+      too much for an unexplained reason -- probably due to the simplistic
+      calculation of visibility).
+   d. Modelling visplanes as flats triangles and merging them dynamically
+      when they touch or are completely covered by previous triangles in
+      either a front-to-back or back-to-front traversal of the nodes.
+   e. Counting visplanes as the number of deltas in the flats when drawing
+      them in back-to-front BSP order (motivated by evidence that the nodes
+      make a difference).
+   f. Considering visplanes to be equivalence classes that ssectors belong
+      to if they are compatible and are neighbors according to certain
+      criteria (such as whether they touch).
+   g. Trying to reverse-engineer Doom.exe using a disassembler. Too hard to
+      make sense out of Watcom C++ generated assembly, without a specialty
+      Watcom commercial disassembler -- compiler-generated code is always
+      harder to read than handwritten assembly!!!. Sourcer and nearly all
+      freeware/shareware/public domain disassemblers could not crack it.
+   h. Many combinations of the above, and other models.
+
+See VISAREA.WAD for player visibility metrics.
+
+Since the Doom source code may be released soon, and this visplane overflow
+limit will either be removed or will be fully understood, I am going to go
+ahead and release this version of BSP now. Keep in mind that the detector is
+not perfect, and that it's only the result of around 4 months of part-time
+work. I only wish I had done this two or three years ago...
+
+----------------------------------------------------------------------------
+Lee Killough
+killough@rsn.hp.com
+http://classicgaming.com/doom
