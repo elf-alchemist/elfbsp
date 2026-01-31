@@ -436,68 +436,68 @@ void ParseShortArgument(const char *arg)
 
     switch (c)
     {
-      case 'h':
-        opt_help = true;
-        continue;
-      case 'b':
-        config.backup = true;
-        continue;
+    case 'h':
+      opt_help = true;
+      continue;
+    case 'b':
+      config.backup = true;
+      continue;
 
-      case 'v':
-        config.verbose = true;
-        continue;
-      case 'f':
-        config.fast = true;
-        continue;
-      case 'x':
-        config.bsp_type = BSP_XNOD;
-        continue;
-      case 's':
-        config.bsp_type = BSP_XGL3;
-        continue;
-      case 'a':
-        config.analysis = true;
-        continue;
+    case 'v':
+      config.verbose = true;
+      continue;
+    case 'f':
+      config.fast = true;
+      continue;
+    case 'x':
+      config.bsp_type = std::max(config.bsp_type, BSP_XNOD);
+      continue;
+    case 's':
+      config.bsp_type = std::max(config.bsp_type, BSP_XGL3);
+      continue;
+    case 'a':
+      config.analysis = true;
+      continue;
 
-      case 'm':
-      case 'o':
-        PrintLine(LOG_ERROR, "cannot use option '-%c' like that", c);
-        return;
+    case 'm':
+    case 'o':
+      PrintLine(LOG_ERROR, "cannot use option '-%c' like that", c);
+      return;
 
-      case 'c':
-        if (*arg == 0 || !isdigit(*arg))
-        {
-          PrintLine(LOG_ERROR, "missing value for '-c' option");
-        }
+    case 'c':
+      if (*arg == 0 || !isdigit(*arg))
+      {
+        PrintLine(LOG_ERROR, "missing value for '-c' option");
+      }
 
-        // we only accept one or two digits here
-        val = *arg - '0';
+      // we only accept one or two digits here
+      val = *arg - '0';
+      arg++;
+
+      if (*arg && isdigit(*arg))
+      {
+        val = (val * 10) + (*arg - '0');
         arg++;
+      }
 
-        if (*arg && isdigit(*arg))
-        {
-          val = (val * 10) + (*arg - '0');
-          arg++;
-        }
+      if (val < SPLIT_COST_MIN || val > SPLIT_COST_MAX)
+      {
+        PrintLine(LOG_ERROR, "illegal value for '-c' option");
+      }
 
-        if (val < SPLIT_COST_MIN || val > SPLIT_COST_MAX)
-        {
-          PrintLine(LOG_ERROR, "illegal value for '-c' option");
-        }
+      config.split_cost = val;
+      continue;
 
-        config.split_cost = val;
-        continue;
-
-      default:
-        if (isprint(c) && !isspace(c))
-        {
-          PrintLine(LOG_ERROR, "unknown short option: '-%c'", c);
-        }
-        else
-        {
-          PrintLine(LOG_ERROR, "illegal short option (ascii code %d)", static_cast<unsigned char>(c));
-        }
-        return;
+    default:
+      if (isprint(c) && !isspace(c))
+      {
+        PrintLine(LOG_ERROR, "unknown short option: '-%c'", c);
+      }
+      else
+      {
+        PrintLine(LOG_ERROR, "illegal short option (ascii code %d)", static_cast<unsigned char>(c));
+      }
+      return;
     }
   }
 }

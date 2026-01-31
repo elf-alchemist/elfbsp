@@ -1544,23 +1544,23 @@ static void ParseUDMF_Block(lexer_c &lex, int cur_type)
 
   switch (cur_type)
   {
-    case UDMF_VERTEX:
-      vertex = NewVertex();
-      break;
-    case UDMF_THING:
-      thing = NewThing();
-      break;
-    case UDMF_SECTOR:
-      sector = NewSector();
-      break;
-    case UDMF_SIDEDEF:
-      side = NewSidedef();
-      break;
-    case UDMF_LINEDEF:
-      line = NewLinedef();
-      break;
-    default:
-      break;
+  case UDMF_VERTEX:
+    vertex = NewVertex();
+    break;
+  case UDMF_THING:
+    thing = NewThing();
+    break;
+  case UDMF_SECTOR:
+    sector = NewSector();
+    break;
+  case UDMF_SIDEDEF:
+    side = NewSidedef();
+    break;
+  case UDMF_LINEDEF:
+    line = NewLinedef();
+    break;
+  default:
+    break;
   }
 
   for (;;)
@@ -1604,24 +1604,24 @@ static void ParseUDMF_Block(lexer_c &lex, int cur_type)
 
     switch (cur_type)
     {
-      case UDMF_VERTEX:
-        ParseVertexField(vertex, key, tok, value);
-        break;
-      case UDMF_THING:
-        ParseThingField(thing, key, tok, value);
-        break;
-      case UDMF_SECTOR:
-        ParseSectorField(sector, key, tok, value);
-        break;
-      case UDMF_SIDEDEF:
-        ParseSidedefField(side, key, tok, value);
-        break;
-      case UDMF_LINEDEF:
-        ParseLinedefField(line, key, tok, value);
-        break;
+    case UDMF_VERTEX:
+      ParseVertexField(vertex, key, tok, value);
+      break;
+    case UDMF_THING:
+      ParseThingField(thing, key, tok, value);
+      break;
+    case UDMF_SECTOR:
+      ParseSectorField(sector, key, tok, value);
+      break;
+    case UDMF_SIDEDEF:
+      ParseSidedefField(side, key, tok, value);
+      break;
+    case UDMF_LINEDEF:
+      ParseLinedefField(line, key, tok, value);
+      break;
 
-      default: /* just skip it */
-        break;
+    default: /* just skip it */
+      break;
     }
   }
 
@@ -2424,14 +2424,14 @@ void LoadLevel(void)
   // -JL- Find sectors containing polyobjs
   switch (lev_format)
   {
-    case MapFormat_Hexen:
-      DetectPolyobjSectors(false);
-      break;
-    case MapFormat_UDMF:
-      DetectPolyobjSectors(true);
-      break;
-    default:
-      break;
+  case MapFormat_Hexen:
+    DetectPolyobjSectors(false);
+    break;
+  case MapFormat_UDMF:
+    DetectPolyobjSectors(true);
+    break;
+  default:
+    break;
   }
 }
 
@@ -2736,15 +2736,15 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
 
     switch (lev_format)
     {
-      case MapFormat_Doom:
-      case MapFormat_Hexen:
-        ret = SaveBinaryFormatLevel(root_node);
-        break;
-      case MapFormat_UDMF:
-        ret = SaveTextMapLevel(root_node);
-        break;
-      default:
-        break;
+    case MapFormat_Doom:
+    case MapFormat_Hexen:
+      ret = SaveBinaryFormatLevel(root_node);
+      break;
+    case MapFormat_UDMF:
+      ret = SaveTextMapLevel(root_node);
+      break;
+    default:
+      break;
     }
   }
   else
