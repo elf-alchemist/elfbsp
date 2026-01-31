@@ -39,7 +39,7 @@ BreakStringLiterals: true
 ColumnLimit: 128
 IncludeBlocks: Preserve
 IndentCaseBlocks: true
-IndentCaseLabels: true
+IndentCaseLabels: false
 IndentPPDirectives: BeforeHash
 IndentWidth: 2
 IndentWrappedFunctionNames: false
