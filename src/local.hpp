@@ -409,15 +409,6 @@ void FreeNodes(void);
 Lump_c *CreateLevelLump(const char *name, size_t max_size = NO_INDEX);
 Lump_c *FindLevelLump(const char *name);
 
-/* limit flags, to show what went wrong */
-static constexpr uint32_t LIMIT_VERTEXES = BIT(0);
-static constexpr uint32_t LIMIT_SECTORS = BIT(1);
-static constexpr uint32_t LIMIT_SIDEDEFS = BIT(2);
-static constexpr uint32_t LIMIT_LINEDEFS = BIT(3);
-static constexpr uint32_t LIMIT_SEGS = BIT(4);
-static constexpr uint32_t LIMIT_SSECTORS = BIT(5);
-static constexpr uint32_t LIMIT_NODES = BIT(6);
-
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
 //------------------------------------------------------------------------
@@ -555,3 +546,10 @@ void NormaliseBspTree(void);
 // vertices to integer coordinates (for example, removing segs whose
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree(void);
+
+void SaveFormat_Vanilla(node_t *root_node);
+void SaveFormat_DeepBSPV4(node_t *root_node);
+void SaveFormat_Xnod(node_t *root_node);
+void SaveFormat_Xgln(node_t *root_node);
+void SaveFormat_Xgl2(node_t *root_node);
+void SaveFormat_Xgl3(node_t *root_node);

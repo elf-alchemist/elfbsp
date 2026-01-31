@@ -159,6 +159,12 @@ template <typename T> constexpr T GetBigEndian(T value)
   }
 }
 
+template <typename T>
+constexpr void RaiseValue(T& var, T value)
+{
+  var = std::max(var, value);
+}
+
 // sized types
 using byte = uint8_t;
 using args_t = uint8_t[5];
@@ -1429,6 +1435,8 @@ using build_result_t = enum build_result_e
   // when saving the map, one or more lumps overflowed
   BUILD_LumpOverflow
 };
+
+extern bool lev_overflows;
 
 // attempt to open a wad.  on failure, the FatalError method in the
 // buildinfo_t interface is called.

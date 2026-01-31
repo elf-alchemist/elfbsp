@@ -450,10 +450,10 @@ void ParseShortArgument(const char *arg)
       config.fast = true;
       continue;
     case 'x':
-      config.bsp_type = std::max(config.bsp_type, BSP_XNOD);
+      RaiseValue(config.bsp_type, BSP_XNOD);
       continue;
     case 's':
-      config.bsp_type = std::max(config.bsp_type, BSP_XGL3);
+      RaiseValue(config.bsp_type, BSP_XGL3);
       continue;
     case 'a':
       config.analysis = true;
@@ -603,11 +603,11 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
   }
   else if (strcmp(name, "--xnod") == 0)
   {
-    config.bsp_type = std::max(config.bsp_type, BSP_XNOD);
+    RaiseValue(config.bsp_type, BSP_XNOD);
   }
   else if (strcmp(name, "--ssect") == 0)
   {
-    config.bsp_type = std::max(config.bsp_type, BSP_XGL3);
+    RaiseValue(config.bsp_type, BSP_XGL3);
   }
   else if (strcmp(name, "--cost") == 0)
   {

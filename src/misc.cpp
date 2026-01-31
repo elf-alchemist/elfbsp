@@ -402,12 +402,9 @@ void PruneVerticesAtEnd(void)
 
   size_t unused = old_num - lev_vertices.size();
 
-  if (unused > 0)
+  if (unused > 0 && config.verbose)
   {
-    if (config.verbose)
-    {
-      PrintLine(LOG_NORMAL, "Pruned %zu unused vertices at end", unused);
-    }
+    PrintLine(LOG_NORMAL, "Pruned %zu unused vertices at end", unused);
   }
 
   num_old_vert = lev_vertices.size();

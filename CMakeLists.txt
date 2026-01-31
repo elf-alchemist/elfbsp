@@ -52,6 +52,7 @@ if(SAN_COUNT GREATER 0)
 endif()
 
 add_executable(elfbsp
+    src/bsp.cpp
     src/elfbsp.cpp
     src/level.cpp
     src/node.cpp
