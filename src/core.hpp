@@ -714,6 +714,9 @@ using bsp_type_t = enum bsp_type_e : uint8_t
   BSP_XGLN,
   BSP_XGL2,
   BSP_XGL3,
+
+  BSP_MIN = BSP_VANILLA,
+  BSP_MAX = BSP_XGL3,
 };
 
 // Obviously, vanilla did not include any magic headers
@@ -723,11 +726,14 @@ constexpr auto BSP_MAGIC_XGLN = "XGLN";
 constexpr auto BSP_MAGIC_XGL2 = "XGL2";
 constexpr auto BSP_MAGIC_XGL3 = "XGL3";
 
-// Upper-most bit is used for distinguishing tree children as either nodes or sub-sectors
+// Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
+constexpr uint32_t NF_SUBSECTOR = UINT32_C(0x80000000);
+
 // All known non-vanilla formats are know to use 32bit indexes
-static constexpr size_t LIMIT_VANILLA_NODE = INT16_MAX;
-static constexpr size_t LIMIT_VANILLA_SUBSEC = INT16_MAX;
-static constexpr size_t LIMIT_VANILLA_SEG = UINT16_MAX;
+constexpr uint16_t NF_SUBSECTOR_VANILLA = UINT16_C(0x8000);
+constexpr size_t LIMIT_VANILLA_NODE = INT16_MAX;
+constexpr size_t LIMIT_VANILLA_SUBSEC = INT16_MAX;
+constexpr size_t LIMIT_VANILLA_SEG = UINT16_MAX - 1;
 
 //
 // Vanilla blockmap

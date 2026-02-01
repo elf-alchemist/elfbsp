@@ -449,18 +449,13 @@ void ParseShortArgument(const char *arg)
     case 'f':
       config.fast = true;
       continue;
-    case 'x':
-      RaiseValue(config.bsp_type, BSP_XNOD);
-      continue;
-    case 's':
-      RaiseValue(config.bsp_type, BSP_XGL3);
-      continue;
     case 'a':
       config.analysis = true;
       continue;
 
     case 'm':
     case 'o':
+    case 't':
       PrintLine(LOG_ERROR, "cannot use option '-%c' like that", c);
       return;
 
@@ -601,13 +596,22 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
 
     used = 1;
   }
-  else if (strcmp(name, "--xnod") == 0)
+  else if (strcmp(name, "--type") == 0)
   {
-    RaiseValue(config.bsp_type, BSP_XNOD);
-  }
-  else if (strcmp(name, "--ssect") == 0)
-  {
-    RaiseValue(config.bsp_type, BSP_XGL3);
+    if (argc < 1 || !isdigit(argv[0][0]))
+    {
+      PrintLine(LOG_ERROR, "missing value for '--type' option");
+    }
+
+    int32_t val = std::stoi(argv[0]);
+
+    if (val < BSP_MIN || val > BSP_MAX)
+    {
+      PrintLine(LOG_ERROR, "illegal value for '--type' option");
+    }
+
+    RaiseValue(config.bsp_type, static_cast<bsp_type_t>(val));
+    used = 1;
   }
   else if (strcmp(name, "--cost") == 0)
   {
@@ -701,6 +705,10 @@ void ParseCommandLine(int32_t argc, const char *argv[])
     }
 
     // handle short args which are isolate and require a value
+    if (strcmp(arg, "-t") == 0)
+    {
+      arg = "--type";
+    }
     if (strcmp(arg, "-c") == 0)
     {
       arg = "--cost";

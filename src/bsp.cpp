@@ -165,12 +165,6 @@ static void PutSegs_Vanilla(void)
     raw.flip = GetLittleEndian(seg->side);
     raw.dist = GetLittleEndian(VanillaSegDist(seg));
 
-    // -Elf- ZokumBSP
-    if ((seg->linedef->dont_render_back && seg->side) || (seg->linedef->dont_render_front && !seg->side))
-    {
-      raw = {};
-    }
-
     lump->Write(&raw, sizeof(raw));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
@@ -183,7 +177,7 @@ static void PutSegs_Vanilla(void)
 
   lump->Finish();
 
-  if (lev_segs.size() > 65534)
+  if (lev_segs.size() > LIMIT_VANILLA_SEG)
   {
     PrintLine(LOG_NORMAL, "FAILURE: Number of segs has overflowed.");
     lev_overflows = true;
@@ -214,7 +208,7 @@ static void PutSubsecs_Vanilla(void)
     }
   }
 
-  if (lev_subsecs.size() > 32767)
+  if (lev_subsecs.size() > LIMIT_VANILLA_SUBSEC)
   {
     PrintLine(LOG_NORMAL, "FAILURE: Number of subsectors has overflowed.");
     lev_overflows = true;
@@ -223,16 +217,16 @@ static void PutSubsecs_Vanilla(void)
   lump->Finish();
 }
 
-static void PutOneNode_Vanilla(node_t *node, size_t &node_cur_index, Lump_c *lump)
+static void PutOneNode_Vanilla(Lump_c *lump, node_t *node, size_t &node_cur_index)
 {
   if (node->r.node)
   {
-    PutOneNode_Vanilla(node->r.node, node_cur_index, lump);
+    PutOneNode_Vanilla(lump, node->r.node, node_cur_index);
   }
 
   if (node->l.node)
   {
-    PutOneNode_Vanilla(node->l.node, node_cur_index, lump);
+    PutOneNode_Vanilla(lump, node->l.node, node_cur_index);
   }
 
   node->index = node_cur_index++;
@@ -261,7 +255,7 @@ static void PutOneNode_Vanilla(node_t *node, size_t &node_cur_index, Lump_c *lum
   }
   else if (node->r.subsec)
   {
-    raw.right = GetLittleEndian(static_cast<uint16_t>(node->r.subsec->index | 0x8000));
+    raw.right = GetLittleEndian(static_cast<uint16_t>(node->r.subsec->index | NF_SUBSECTOR_VANILLA));
   }
   else
   {
@@ -274,7 +268,7 @@ static void PutOneNode_Vanilla(node_t *node, size_t &node_cur_index, Lump_c *lum
   }
   else if (node->l.subsec)
   {
-    raw.left = GetLittleEndian(static_cast<uint16_t>(node->l.subsec->index | 0x8000));
+    raw.left = GetLittleEndian(static_cast<uint16_t>(node->l.subsec->index | NF_SUBSECTOR_VANILLA));
   }
   else
   {
@@ -290,16 +284,16 @@ static void PutOneNode_Vanilla(node_t *node, size_t &node_cur_index, Lump_c *lum
   }
 }
 
-static void PutNodes_Vanilla(node_t *root)
+static void PutNodes_Vanilla(node_t *root_node)
 {
   // this can be bigger than the actual size, but never smaller
   size_t max_size = (lev_nodes.size() + 1) * sizeof(raw_node_vanilla_t);
   size_t node_cur_index = 0;
   Lump_c *lump = CreateLevelLump("NODES", max_size);
 
-  if (root != nullptr)
+  if (root_node != nullptr)
   {
-    PutOneNode_Vanilla(root, node_cur_index, lump);
+    PutOneNode_Vanilla(lump, root_node, node_cur_index);
   }
 
   lump->Finish();
@@ -379,16 +373,16 @@ static void PutSubsecs_DeepBSPV4(void)
   lump->Finish();
 }
 
-static void PutOneNode_DeepBSPV4(node_t *node, size_t node_cur_index, Lump_c *lump)
+static void PutOneNode_DeepBSPV4(Lump_c *lump, node_t *node, size_t &node_cur_index)
 {
   if (node->r.node)
   {
-    PutOneNode_DeepBSPV4(node->r.node, node_cur_index, lump);
+    PutOneNode_DeepBSPV4(lump, node->r.node, node_cur_index);
   }
 
   if (node->l.node)
   {
-    PutOneNode_DeepBSPV4(node->l.node, node_cur_index, lump);
+    PutOneNode_DeepBSPV4(lump, node->l.node, node_cur_index);
   }
 
   node->index = node_cur_index++;
@@ -413,11 +407,11 @@ static void PutOneNode_DeepBSPV4(node_t *node, size_t node_cur_index, Lump_c *lu
 
   if (node->r.node)
   {
-    raw.right = GetLittleEndian(static_cast<uint16_t>(node->r.node->index));
+    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.node->index));
   }
   else if (node->r.subsec)
   {
-    raw.right = GetLittleEndian(static_cast<uint16_t>(node->r.subsec->index | 0x8000));
+    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -426,11 +420,11 @@ static void PutOneNode_DeepBSPV4(node_t *node, size_t node_cur_index, Lump_c *lu
 
   if (node->l.node)
   {
-    raw.left = GetLittleEndian(static_cast<uint16_t>(node->l.node->index));
+    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.node->index));
   }
   else if (node->l.subsec)
   {
-    raw.left = GetLittleEndian(static_cast<uint16_t>(node->l.subsec->index | 0x8000));
+    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -446,19 +440,19 @@ static void PutOneNode_DeepBSPV4(node_t *node, size_t node_cur_index, Lump_c *lu
   }
 }
 
-static void PutNodes_DeepBSPV4(node_t *root)
+static void PutNodes_DeepBSPV4(node_t *root_node)
 {
   // this can be bigger than the actual size, but never smaller
   // 8 bytes for BSP_MAGIC_DEEPBSPV4 header
-  size_t max_size = 8 + (lev_nodes.size() + 1) * sizeof(raw_node_deepbspv4_t);
+  // size_t max_size = 8 + (lev_nodes.size() + 1) * sizeof(raw_node_deepbspv4_t);
   size_t node_cur_index = 0;
 
-  Lump_c *lump = CreateLevelLump("NODES", max_size);
-  lump->Write(BSP_MAGIC_DEEPBSPV4, 4);
+  Lump_c *lump = CreateLevelLump("NODES");
+  lump->Write(BSP_MAGIC_DEEPBSPV4, 8);
 
-  if (root != nullptr)
+  if (root_node != nullptr)
   {
-    PutOneNode_DeepBSPV4(root, node_cur_index, lump);
+    PutOneNode_DeepBSPV4(lump, root_node, node_cur_index);
   }
 
   lump->Finish();
@@ -605,7 +599,7 @@ static void PutOneNode_Xnod(Lump_c *lump, node_t *node, size_t &node_cur_index)
   }
   else if (node->r.subsec)
   {
-    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.subsec->index | 0x80000000U));
+    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -618,7 +612,7 @@ static void PutOneNode_Xnod(Lump_c *lump, node_t *node, size_t &node_cur_index)
   }
   else if (node->l.subsec)
   {
-    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.subsec->index | 0x80000000U));
+    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -661,8 +655,8 @@ static size_t CalcXnodNodesSize(void)
 
   size += 8 + lev_vertices.size() * sizeof(raw_xnod_vertex_t);
   size += 4 + lev_subsecs.size() * sizeof(raw_xnod_subsec_t);
-  size += 4 + lev_segs.size() * sizeof(raw_xnod_seg_t);
-  size += 4 + lev_nodes.size() * sizeof(raw_xnod_node_t);
+  size += 4 + lev_segs.size() * sizeof(raw_xgl2_seg_t);
+  size += 4 + lev_nodes.size() * sizeof(raw_xgl3_node_t);
 
   return size;
 }
@@ -770,7 +764,7 @@ static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
   }
   else if (node->r.subsec)
   {
-    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.subsec->index | 0x80000000U));
+    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -783,7 +777,7 @@ static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
   }
   else if (node->l.subsec)
   {
-    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.subsec->index | 0x80000000U));
+    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.subsec->index | NF_SUBSECTOR));
   }
   else
   {
