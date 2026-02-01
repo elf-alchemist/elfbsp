@@ -1,0 +1,117 @@
+This ChangeLog contains a history of changes and development from v5 onward.
+
+2006/08/12
+
+I have pulled the CVS from sourceforge, and converted as much as I can to a
+bzr repository - I plan not to distribute via sourceforge anymore (since I
+could not get bsp.sourceforge.net, I was never keen on hosting there).
+
+I have copied over the latest set of gcc warning options from PrBoom, and 
+fixed the resulting compiler warnings. 
+
+2006/08/07
+
+Finally, I have decided to prepare a new release. I have freshened the
+configure script, and fixed some compilation problems on amd64. But I need
+to sort out which is the current development tree, and get away from using
+CVS hosted at sourceforge - waiting for the network to do a diff is no longer
+acceptable in the days of subversion and bazaar.
+
+2003/03/03
+
+Changes from Hirogen2:
+- compiling with more warning flags
+- bsp.c: preserve Hexen lumps
+- endian.c: depending on the size of "int", swapshort() or swaplong() is
+  called. This fixes a possible stack corruption on big-endian systems where
+  "int" is 2 bytes, as swapint() converted (always) 4 bytes.
+- level.c, makenode.c: minor prototype & type cleanups
+
+2002/05/04
+
+It seems my initial assessment of the fragglescript problem was well short. 
+Simply not zeroing the length field for the lump is not enough - BSP overloads
+the lumplist->data field for both lump data and level data (i.e. the linked
+list of level lumps).
+
+It's a classic case of field overloading with a flag field (in this case
+lumplist->islevel) which is a horrid form of programming. So I replaced
+->islevel with ->level, a dedicated field for holding the linked list of level
+lumps (and which can be used in place of ->islevel for boolean tests). This
+frees ->data for its intended use so it can hold the lump data for map lumps.
+Tested on HR.WAD and seems to work fine.
+
+2002/04/07
+
+Ok, Andre took the updated man page and reorganised it; merged his improved
+version.
+
+2002/04/06
+
+At Andre's insistence, I updated the man page for bsp. I'd forgotten there was
+a man page actually. It wasn't being installed, so I added it to the
+Makefile.am.
+
+2002/04/06
+
+Ok, crude approximation of a Zennode-like progress bar in place.
+
+2000/08/27
+
+Fixed up a large number of memory leaks. Basically BSP was designed to do 
+one level only, and the multi-level support was an afterthought. It 
+did multiple levels, but memory-wise it assumed it needn't bother to 
+free one level's stuff before moving on the the next. Since it's easy to 
+fix, I fixed it. It's now practical to use it for multi-level PWADs.
+Builds doom.wad in < 1.5megs now (as compared to 15megs before).
+
+Added big endian support. Imported the extra code from the xwadtools 
+version. I rely on autoconf to detect if the machine is big endian. 
+No adverse affects on x86 - I also verified that it compiles if 
+WORDS_BIGENDIAN is defined. Can't do a real test myself though.
+
+2000/08/26
+
+Support for pipes and stuff was today's business. Added the isatty() 
+test from the yadex version of BSP that supresses the spinning 
+progress thingy when stdout is redirected.
+
+Added support for input being from a pipe. I'm writing for UNIX damnit, 
+so it ought to be usable like other UNIX programs! :-)
+
+For input pipes, it just reads to a temp file, then reads back from the 
+temp file. For output I was less sure what to do: there are 3 
+senarios:
+
+1) output to a file that either doesn't exist, or can be overwritten in any 
+ case.
+2) output to a file which we only want overwritten once the build is complete 
+ and sucessful (e.g. writing the output back to the input filename)
+3) output to a pipe
+
+For (3), we need to write to a temp file then copy to the pipe, because 
+we have to be able to fseek(3) on the output file to write a Doom WAD.
+For (2), we need to write to a temp file then copy to the output when 
+we're done.
+
+In the end, I went for an easy compromise. If the output file already 
+exists (includes the case of a pipe), then we write the WAD to a temporary 
+file, then copy it to the real output file once we're done. That copes 
+with (2) and (3) fine.
+
+2000/08/25
+
+Made a makefile to built the test wads. I copied the test WADs to another 
+machine, and ran original DOS BSP 3.0 on them, then made a note of the MD5 
+sums of the resulting files. Using these I can check that my version is still 
+producing identical results to the original v3.0.
+
+2000/08/23
+
+Checked in the BSP 3.0 source. Immediately ditched the existing makefiles and 
+created GNU autoconf/automake ones - much less messy.
+
+First major problem to overcome was the crude existing build system - all the 
+.c files were #include'd into bsp.c, which was kinda ugly. And whoever wrote 
+this had an obsession with labelling everything "static" even though there was 
+only one source file. Fun.
