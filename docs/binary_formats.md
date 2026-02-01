@@ -129,7 +129,7 @@ Differences from the vanilla BSP data include:
 * each version is built on top of the previous, replacing the predecessor's given struct type
 * the removal of angles and offsets from Segments
 * higher precision data types for fractional coordinates
-* "mini-segs", indicated by `NO_INDEX`, to be skipped by the renderer, but needed for traversal
+* "minisegs", indicated by `NO_INDEX`, to be skipped by the renderer, but needed for traversal
 * "linear" storage of Seg indexes on subsectors, see above
 
 ### XNOD vertex (`xnod_vertex_t`), 8 bytes
@@ -165,7 +165,7 @@ Differences from the vanilla BSP data include:
 |------------|-------------|
 | `uint32_t` | Index of starting vertex |
 | `uint32_t` | Index of ending vertex |
-| `uint16_t` | Index of associated linedef, `NO_INDEX` if mini-seg |
+| `uint16_t` | Index of associated linedef, `NO_INDEX` if miniseg |
 | `uint8_t`  | False (0) if on the same side as linedef, true (1) if oppposite side |
 
 ### XGLN segment (`xgln_seg_t`), 11 bytes
@@ -174,7 +174,7 @@ Differences from the vanilla BSP data include:
 |------------|-------------|
 | `uint32_t` | Index of starting vertex |
 | `uint32_t` | Index of ending vertex (Unused, due to the linearity of the subsector structure) |
-| `uint16_t` | Index of associated linedef, `NO_INDEX` if mini-seg |
+| `uint16_t` | Index of associated linedef, `NO_INDEX` if miniseg |
 | `uint8_t`  | False (0) if on the same side as linedef, true (1) if oppposite side |
 
 ### XGL2 segment (`xgl2_seg_t`), 13 bytes
@@ -183,7 +183,7 @@ Differences from the vanilla BSP data include:
 |------------|-------------|
 | `uint32_t` | Index of starting vertex |
 | `uint32_t` | Index of ending vertex (Unused, due to the linearity of the subsector structure) |
-| `uint32_t` | Index of associated linedef, `NO_INDEX` if mini-seg |
+| `uint32_t` | Index of associated linedef, `NO_INDEX` if miniseg |
 | `uint8_t`  | False (0) if on the same side as linedef, true (1) if oppposite side |
 
 ### XGL3 node (`xgl3_node_t`), 40 bytes

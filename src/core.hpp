@@ -843,21 +843,18 @@ using raw_xnod_seg_t = struct raw_xnod_seg_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-// XGLN segs use the same type definition as XNOD segs, with slightly
-// different semantics for mini-segs
-
 using raw_xgln_seg_t = struct raw_xgln_seg_s
 {
-  uint32_t vertex;  // from this vertex...
-  uint32_t partner; // ... to this vertex
+  uint32_t vertex;  // from this vertex ... to the next
+  uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
   uint16_t linedef; // linedef that this seg goes along, or NO_INDEX
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
 using raw_xgl2_seg_t = struct raw_xgl2_seg_s
 {
-  uint32_t vertex;  // from this vertex...
-  uint32_t partner; // ... to this vertex
+  uint32_t vertex;  // from this vertex ... to the next
+  uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
   uint32_t linedef; // linedef that this seg goes along, or NO_INDEX
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;

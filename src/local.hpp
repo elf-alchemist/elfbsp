@@ -346,7 +346,7 @@ struct quadtree_c
   // 256x512).
   quadtree_c *subs[2];
 
-  // count of real/mini segs contained in this node AND ALL CHILDREN.
+  // count of real/minisegs contained in this node AND ALL CHILDREN.
   size_t real_num;
   size_t mini_num;
 

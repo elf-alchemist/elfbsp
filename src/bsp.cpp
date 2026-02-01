@@ -816,7 +816,7 @@ static void PutNodes_Xgl3(Lump_c *lump, node_t *root)
 
 void SaveFormat_Vanilla(node_t *root_node)
 {
-  // remove all the mini-segs from subsectors
+  // remove all the minisegs from subsectors
   NormaliseBspTree();
   // reduce vertex precision for classic DOOM nodes.
   // some segs can become "degenerate" after this, and these
@@ -831,7 +831,7 @@ void SaveFormat_Vanilla(node_t *root_node)
 
 void SaveFormat_DeepBSPV4(node_t *root_node)
 {
-  // remove all the mini-segs from subsectors
+  // remove all the minisegs from subsectors
   NormaliseBspTree();
   // reduce vertex precision for classic DOOM nodes.
   // some segs can become "degenerate" after this, and these
@@ -848,7 +848,7 @@ void SaveFormat_Xnod(node_t *root_node)
 {
   CreateLevelLump("SEGS")->Finish();
   CreateLevelLump("SSECTORS")->Finish();
-  // remove all the mini-segs from subsectors
+  // remove all the minisegs from subsectors
   NormaliseBspTree();
   SortSegs();
 
