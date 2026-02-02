@@ -102,7 +102,7 @@ static void PutVertices_Vanilla(void)
     raw.x = GetLittleEndian(static_cast<int16_t>(floor(vert->x)));
     raw.y = GetLittleEndian(static_cast<int16_t>(floor(vert->y)));
 
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, sizeof(raw_vertex_t));
 
     count++;
   }
@@ -165,7 +165,7 @@ static void PutSegs_Vanilla(void)
     raw.flip = GetLittleEndian(seg->side);
     raw.dist = GetLittleEndian(VanillaSegDist(seg));
 
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, sizeof(raw_seg_vanilla_t));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -199,7 +199,7 @@ static void PutSubsecs_Vanilla(void)
     raw.first = GetLittleEndian(static_cast<uint16_t>(sub->seg_list->index));
     raw.num = GetLittleEndian(static_cast<uint16_t>(sub->seg_count));
 
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, sizeof(raw_subsec_vanilla_t));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -275,7 +275,7 @@ static void PutOneNode_Vanilla(Lump_c *lump, node_t *node, size_t &node_cur_inde
     PrintLine(LOG_ERROR, "Bad left child in node %zu", node->index);
   }
 
-  lump->Write(&raw, sizeof(raw));
+  lump->Write(&raw, sizeof(raw_node_vanilla_t));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
@@ -333,7 +333,7 @@ static void PutSegs_DeepBSPV4(void)
     raw.flip = GetLittleEndian(seg->side);
     raw.dist = GetLittleEndian(VanillaSegDist(seg));
 
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, sizeof(raw_seg_deepbspv4_t));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -361,7 +361,7 @@ static void PutSubsecs_DeepBSPV4(void)
     raw.first = GetLittleEndian(static_cast<uint32_t>(sub->seg_list->index));
     raw.num = GetLittleEndian(static_cast<uint16_t>(sub->seg_count));
 
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, sizeof(raw_subsec_deepbspv4_t));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -431,7 +431,7 @@ static void PutOneNode_DeepBSPV4(Lump_c *lump, node_t *node, size_t &node_cur_in
     PrintLine(LOG_ERROR, "Bad left child in node %zu", node->index);
   }
 
-  lump->Write(&raw, sizeof(raw));
+  lump->Write(&raw, sizeof(raw_node_deepbspv4_t));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
@@ -490,7 +490,7 @@ static void PutVertices_Xnod(Lump_c *lump)
     raw.x = GetLittleEndian(static_cast<int32_t>(floor(vert->x * 65536.0)));
     raw.y = GetLittleEndian(static_cast<int32_t>(floor(vert->y * 65536.0)));
 
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, sizeof(raw_xnod_vertex_t));
 
     count++;
   }
@@ -558,7 +558,7 @@ static void PutSegs_Xnod(Lump_c *lump)
     raw.end = GetLittleEndian(VertexIndex_XNOD(seg->end));
     raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef->index));
     raw.side = seg->side;
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, sizeof(raw_xnod_seg_t));
   }
 }
 
@@ -686,7 +686,7 @@ static void PutSegs_Xgln(Lump_c *lump)
     raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, sizeof(raw_xgln_seg_t));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -717,7 +717,7 @@ static void PutSegs_Xgl2(Lump_c *lump)
     raw.linedef = GetLittleEndian(static_cast<uint32_t>(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
-    lump->Write(&raw, sizeof(raw));
+    lump->Write(&raw, sizeof(raw_xgl2_seg_t));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
