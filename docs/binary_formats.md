@@ -173,8 +173,8 @@ Differences from the vanilla BSP data include:
 | Type       | Description |
 |------------|-------------|
 | `uint32_t` | Index of starting vertex |
-| `uint32_t` | Index of partner segment (Unused in most ports outside of U/G/ZDoom |
-| `uint16_t` | Index of associated linedef, `NO_INDEX` if miniseg |
+| `uint32_t` | Index of partner segment (Unused in most ports outside of U/G/ZDoom) |
+| `uint16_t` | Index of associated linedef, `NO_INDEX` if mini-seg |
 | `uint8_t`  | False (0) if on the same side as linedef, true (1) if oppposite side |
 
 ### XGL2 segment (`xgl2_seg_t`), 13 bytes
@@ -183,7 +183,7 @@ Differences from the vanilla BSP data include:
 |------------|-------------|
 | `uint32_t` | Index of starting vertex |
 | `uint32_t` | Index of partner segment (Unused in most ports outside of U/G/ZDoom) |
-| `uint32_t` | Index of associated linedef, `NO_INDEX` if miniseg |
+| `uint32_t` | Index of associated linedef, `NO_INDEX` if mini-seg |
 | `uint8_t`  | False (0) if on the same side as linedef, true (1) if oppposite side |
 
 ### XGL3 node (`xgl3_node_t`), 40 bytes
