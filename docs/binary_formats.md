@@ -3,14 +3,14 @@ The "binary space partition" tree is the core data structure used in Doom's [sof
 Compiled after the mapper-facing data for the level has already been put together (i.e. Things, Vertexes, Lines, Sides and Sectors).
 It is comprised of Nodes, SubSectors and Segments -- the renderer recursively traversees the Nodes tree, until encoutering a SubSector, then drawing its associated Segments.
 
-| BSP tree type | ZIP compressed version | Lump magic header   | ZIP lump magic header |
-|---------------|------------------------|---------------------|-----------------------|
-| Vanilla       |                        |                     |                       |
-| DeepBSP       |                        | "`xNd4\0\0\0\0`"    |                       |
-| XNOD          | ZNOD                   | "`XNOD`"            | "`ZNOD`"              |
-| XGLN          | ZGLN                   | "`XGLN`"            | "`ZGLN`"              |
-| XGL2          | ZGL2                   | "`XGL2`"            | "`ZGL2`"              |
-| XGL3          | ZGL3                   | "`XGL3`"            | "`ZGL3`"              |
+| BSP tree type | Lump magic header   | Lump where header is found |
+|---------------|---------------------|----------------------------|
+| Vanilla       |                     |                            |
+| DeepBSPV4     | "`xNd4\0\0\0\0`"    | `NODES`                    |
+| XNOD          | "`XNOD`"            | `NODES`                    |
+| XGLN          | "`XGLN`"            | `SSECTORS`                 |
+| XGL2          | "`XGL2`"            | `SSECTORS`                 |
+| XGL3          | "`XGL3`"            | `SSECTORS`                 |
 
 Despite the confusing nomenclture, the XGL/ZGL types have nothing to do with OpenGL rendering -- hardware rendering data follows a difference structure entirely.
 
@@ -85,12 +85,12 @@ Pulled from the Doomwiki page on the [SEGS]( https://doomwiki.org/wiki/Seg) lump
 | `uint16_t` | False (0) if on the same side as linedef, true (1) if oppposite side |
 | `uint16_t` | Offset from starting point to ending point |
 
-## DeepSea BSP structures
+## DeepSea BSP, DeepBSPV4, structures
 These are the data structure definitions associated with the DeepSea editor's BSP format extension.
 The sole difference from the vanilla BSP types, is that the types referring to indexes are now 32bit instead of 16bit, but are otherwise indentical.
 Pulled from the official [DeepBSPV4 webpage spec](https://www.sbsoftware.com/files/DeePBSPV4specs.txt).
 
-### BeepBSP node (`deep_node_t`), 32 bytes
+### BeepBSPV4 node (`deep_node_t`), 32 bytes
 
 | Type       | Description |
 |------------|-------------|
@@ -103,14 +103,14 @@ Pulled from the official [DeepBSPV4 webpage spec](https://www.sbsoftware.com/fil
 | `uint32_t` | Child node index for right side -- if higest bit is set, is a subsector |
 | `uint32_t` | Child node index for left side -- if higest bit is set, is a subsector |
 
-### BeepBSP subsector (`deep_subsec_t`), 6 bytes
+### BeepBSPV4 subsector (`deep_subsec_t`), 6 bytes
 
 | Type       | Description |
 |------------|-------------|
 | `uint16_t` | Number of segments in this subsector |
 | `uint32_t` | Index of first segment |
 
-### BeepBSP segment (`deep_seg_t`), 16 bytes
+### BeepBSPV4 segment (`deep_seg_t`), 16 bytes
 
 | Type       | Description |
 |------------|-------------|
@@ -165,7 +165,7 @@ Differences from the vanilla BSP data include:
 |------------|-------------|
 | `uint32_t` | Index of starting vertex |
 | `uint32_t` | Index of ending vertex |
-| `uint16_t` | Index of associated linedef, `NO_INDEX` if mini-seg |
+| `uint16_t` | Index of associated linedef |
 | `uint8_t`  | False (0) if on the same side as linedef, true (1) if oppposite side |
 
 ### XGLN segment (`xgln_seg_t`), 11 bytes
@@ -173,7 +173,7 @@ Differences from the vanilla BSP data include:
 | Type       | Description |
 |------------|-------------|
 | `uint32_t` | Index of starting vertex |
-| `uint32_t` | Index of ending vertex (Unused, due to the linearity of the subsector structure) |
+| `uint32_t` | Index of partner segment (Unused in most ports outside of U/G/ZDoom) |
 | `uint16_t` | Index of associated linedef, `NO_INDEX` if mini-seg |
 | `uint8_t`  | False (0) if on the same side as linedef, true (1) if oppposite side |
 
@@ -182,7 +182,7 @@ Differences from the vanilla BSP data include:
 | Type       | Description |
 |------------|-------------|
 | `uint32_t` | Index of starting vertex |
-| `uint32_t` | Index of ending vertex (Unused, due to the linearity of the subsector structure) |
+| `uint32_t` | Index of partner segment (Unused in most ports outside of U/G/ZDoom) |
 | `uint32_t` | Index of associated linedef, `NO_INDEX` if mini-seg |
 | `uint8_t`  | False (0) if on the same side as linedef, true (1) if oppposite side |
 

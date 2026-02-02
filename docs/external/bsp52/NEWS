@@ -1,0 +1,222 @@
+-------------------------------------------------------------------------------
+Changes in v5.2 - Colin Phipps, 2006/08/12:
+
+- Fix trivial compile error on big-endian systems.
+- Fix various problems for 64 bit systems.
+- Fix compilation warnings, general code tidy-up.
+
+-------------------------------------------------------------------------------
+Changes in v5.1 - Colin Phipps, 7/2002:
+
+- Compressed blockmap support, contributed by Simon "fraggle" Howard. Not
+  enabled by default, but might be in a future version.
+- No longer strips 0-length lines - these are a legitimate editing feature;
+if your level editor makes them when you don't want it to, then fix your editor.
+- No longer removes the content of MAPxx or ExMx lumps (these are used by some
+  ports to contain extended data e.g. Fragglescript)
+- fixes to big endian support, from Oliver Kraus
+
+-------------------------------------------------------------------------------
+Changes in v5.0 - Colin Phipps, 8/2000:
+
+Based on BSP v3.0, this version brings together a number of enhancements to
+BSP that have been floating around by various people.
+
+There is no significant difference, in terms of the nodes produced, between
+this version and BSP v3.0. In fact on my computer (FreeBSD 4.1-STABLE, PII),
+the output is byte-for-byte identical with BSP v3.0. This is not true for the
+binary DOS and Win32 versions I'm distributing though, because they are linked
+against a different math library, but they are still effectively identical to
+BSP v3.0 I believe.
+
+So what changes are there you ask? Well...
+
+- better UNIX support, from Udo Monk and Andre Majorel
+- big endian support, from Oliver Kraus
+- from myself:
+  - major clean-up of the source code, splitting some stuff out into separate
+   files so there is less mixing of unrelated code.
+  - vastly more memory-efficient when working on large multi-level WADs
+  - more flexibility about input and output 
+    - can read from and write to pipes on UNIX systems
+    - output file can be the same as the input file
+  - Win32 version
+
+-------------------------------------------------------------------------------
+Changes in 3.0x:
+
+Lee Killough 9/98:
+
+Fixed many cases of slime lines by going back to using slightly slower BSP21x
+splitting algorithm.
+
+Removed approximate visplane overflow detection code, as being too inaccurate
+to be useful. If visplane overflows need to be detected, then modifying the
+Doom source code to display them exactly in real-time would be a better idea.
+The visplane counting code in BSP22x and BSP23x was never 100% accurate, but
+was about as close as I could make it based solely on empirical evidence.
+
+NOTE: this change does not remove the -vp option, which attempts to reduce
+the chances of visplane overflows by using a special node line heuristic, and
+which is the more useful of the visplane-related options. This change only
+removes the -vpwarn and -vpmark options, which attempted to detect where
+visplane overflows occurred, but which were too crude. Exact detection of
+visplane overflows is unnecessary to remove them, because techniques are
+available which reduce the probability of visplane overflows without having
+to know whether they actually occur.
+
+-------------------------------------------------------------------------------
+Changes in 2.3x:
+
+Lee Killough 2/98:
+
+Fixed a minor bug which caused textures to bleed sometimes.
+Thanks to Jonathan Campbell (joncamp@tiac.net) for finding it.
+
+Switched from djgpp v1.12 to v2.01.
+
+Linux builds now supported (thanks to Andre Majorel for the port).
+
+Possible future enhancement:
+
+>64K blockmap support (requires changes in Doom source code as well).
+
+-------------------------------------------------------------------------------
+Changes in 2.2x:
+
+Lee Killough 10/97:
+
+Added -vp option to reduce the chances of visplane overflows, without loss
+of detail. Using -vp causes node line picker to choose node lines in a way
+that is empirically known to reduce or eliminate visplane overflows (see
+visplane.txt). No guarantees, though!!!
+
+Added -vpwarn option to warn about possible visplane overflows (see
+visplane.txt).
+
+-vpmark option also added, which leaves permanent marks in the form of player
+1 starts. It's a good idea to write to a separate output file when using this
+option!!!  You can then use an editor, play each alternate player start, and
+see if each one causes visplane overflows, and then remove it. Usually no-
+clipping must be used, at least to step out from the wall, since it inserts
+player starts without regard to collisions, and it uses walls as a basis for
+visplane calculations.
+
+Added -noreject option, to allow building nodes without messing up an
+already-built reject map.
+
+Added -thold option to change the visplane threshold. May be used to report
+more potential visplane overflows if the -vpwarn or -vpmark approximations
+estimate too few visplanes. Default threshold is 128.
+
+Changed the way level markers in the lump directory are handled, to
+accomodate DCK3.61, EdMap, and perhaps other editors. Some editors, such
+as DCK3.61, do not always set the length field in a level marker to 0, and
+EdMap requires that the offset field in a level marker be equal to the
+offset of the first resource.
+
+-------------------------------------------------------------------------------
+Changes in 2.1x:
+
+Lee Killough 06/97
+
+Fixed design bug which caused invisible barriers or disappearing Things.
+Problem was in how segs incident to a partitioning node line were
+partitioned -- they were partitioned according to sidedef, rather than
+vertex, orientation w.r.t. the node line. Flipping the affected seg's
+linedef usually fixed the problem. Now an incident seg is properly
+partitioned either on the left or right side of a node line depending
+on whether the two segs are in the same direction or not, not whether
+they are both flipped or not.
+
+Added special effects features:
+
+If a linedef has a sector tag >= 900, then it is treated as "precious"
+and will not be split unless absolutely necessary. This is good to use
+around borders of deep water, invisible stairs, etc.
+
+Furthermore, just for grins, if the linedef's tag is 999, then the sidedefs'
+x-offsets set an angle adjustment in degrees to be applied -- you can look
+straight at a wall, but it might come right at you on both sides and
+"stretch".
+
+-----------------------------------------------------------
+
+New to 2.0x:
+
+Multilevel support!!!  Automatically builds all levels in wad.
+
+Does not strip textures or other lumps from wads anymore!!!
+
+Supports HOM-free transparent doors:
+
+  Simply make the sector referenced by the doortracks have a
+  sector tag of >= 900. No need to remember sector numbers
+  and type them in on a command line -- just use any sector
+  tag >= 900 to permanently mark the sector special.
+
+  See TRANSDOR.WAD for an example of sector tags in the 900's
+  being used to create HOM-free transparent door effects.
+
+-----------------------------------------------------------
+
+Changes from 1.4x to 1.5x:
+
+Replaced GO32.EXE with newer version, to support Windows
+and DPMI.
+
+-----------------------------------------------------------
+
+Changes from 1.3x to 1.4x:
+
+Lee Killough:
+
+Fixed bug which caused BSP to "do nothing" on systems where
+GO32.EXE was not in the user's path.
+
+Added -factor option to allow changing the heuristic used by the
+node picker. Factor can be any positive integer, and the larger
+the factor, the more costly seg splits are. A factor of 17 is the
+default and behaves just like earlier versions of BSP. Changing the
+factor can sometimes prevent visplane overflows in wads. But then
+again, some wads have just too many visible 2s linedefs for the
+node builder to make a difference. If you have visplane overflows,
+experiment with the -factor option before giving up.
+
+-----------------------------------------------------------
+
+Changes from 1.2x to 1.3x:
+
+New version due to performance enhancements by Lee Killough
+(killough@rsn.hp.com).
+
+Runs at least 3 times as fast as before, due to changes in PickNode.
+Same results are obtained, but with greater speed. Differences from
+1.2x:
+
+     PickNode() rewritten to maximize performance. New PickNode()
+     algorithm features pruning strategy which allows inner loop
+     to exit as soon as a seg is detected as being worse than the
+     best so far.
+
+     All floating-point arithmetic inside inner loop has been eliminated.
+
+     GetVertexes() changed and Reference() removed, replaced with a
+     faster vertex renumbering algorithm which also removes lines of
+     length zero.
+
+     IsLineDefInside() tuned by eliminating bit mask variable.
+
+     Functions are static, to reduce code size by permitting total
+     inlining.
+
+     Various other minor performance enhancements
+
+-----------------------------------------------------------
+
+Changes from 1.1 to 1.2x:
+
+New version 1.2 due to bug found by Mark Harrison that caused some
+problems with flipped segs having their textures buggered up.
+
+The GO32 dos extender has been pre-pended to the executable.

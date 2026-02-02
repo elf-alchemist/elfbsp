@@ -402,31 +402,31 @@ void lexer_c::ParseEscape(std::string &s)
 
   switch (ch)
   {
-    case 'a':
-      s.push_back('\a');
-      break; // bell
-    case 'b':
-      s.push_back('\b');
-      break; // backspace
-    case 'f':
-      s.push_back('\f');
-      break; // form feed
-    case 'n':
-      s.push_back('\n');
-      break; // newline
-    case 't':
-      s.push_back('\t');
-      break; // tab
-    case 'r':
-      s.push_back('\r');
-      break; // carriage return
-    case 'v':
-      s.push_back('\v');
-      break; // vertical tab
+  case 'a':
+    s.push_back('\a');
+    break; // bell
+  case 'b':
+    s.push_back('\b');
+    break; // backspace
+  case 'f':
+    s.push_back('\f');
+    break; // form feed
+  case 'n':
+    s.push_back('\n');
+    break; // newline
+  case 't':
+    s.push_back('\t');
+    break; // tab
+  case 'r':
+    s.push_back('\r');
+    break; // carriage return
+  case 'v':
+    s.push_back('\v');
+    break; // vertical tab
 
-    // the default is to reproduce the same character
-    default:
-      s.push_back(ch);
-      break;
+  // the default is to reproduce the same character
+  default:
+    s.push_back(ch);
+    break;
   }
 }

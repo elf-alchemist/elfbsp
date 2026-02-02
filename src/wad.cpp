@@ -652,21 +652,21 @@ void Wad_file::ProcessNamespaces(void)
 
       switch (active)
       {
-        case 'P':
-          patches.push_back(k);
-          break;
-        case 'S':
-          sprites.push_back(k);
-          break;
-        case 'F':
-          flats.push_back(k);
-          break;
-        case 'T':
-          tx_tex.push_back(k);
-          break;
+      case 'P':
+        patches.push_back(k);
+        break;
+      case 'S':
+        sprites.push_back(k);
+        break;
+      case 'F':
+        flats.push_back(k);
+        break;
+      case 'T':
+        tx_tex.push_back(k);
+        break;
 
-        default:
-          PrintLine(LOG_ERROR, "ProcessNamespaces: active = 0x%02x", active);
+      default:
+        PrintLine(LOG_ERROR, "ProcessNamespaces: active = 0x%02x", active);
       }
     }
   }
