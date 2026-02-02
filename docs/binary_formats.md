@@ -165,7 +165,7 @@ Differences from the vanilla BSP data include:
 |------------|-------------|
 | `uint32_t` | Index of starting vertex |
 | `uint32_t` | Index of ending vertex |
-| `uint16_t` | Index of associated linedef, `NO_INDEX` if miniseg |
+| `uint16_t` | Index of associated linedef |
 | `uint8_t`  | False (0) if on the same side as linedef, true (1) if oppposite side |
 
 ### XGLN segment (`xgln_seg_t`), 11 bytes
@@ -173,7 +173,7 @@ Differences from the vanilla BSP data include:
 | Type       | Description |
 |------------|-------------|
 | `uint32_t` | Index of starting vertex |
-| `uint32_t` | Index of ending vertex (Unused, due to the linearity of the subsector structure) |
+| `uint32_t` | Index of partner segment (Unused in most ports outside of U/G/ZDoom |
 | `uint16_t` | Index of associated linedef, `NO_INDEX` if miniseg |
 | `uint8_t`  | False (0) if on the same side as linedef, true (1) if oppposite side |
 
@@ -182,7 +182,7 @@ Differences from the vanilla BSP data include:
 | Type       | Description |
 |------------|-------------|
 | `uint32_t` | Index of starting vertex |
-| `uint32_t` | Index of ending vertex (Unused, due to the linearity of the subsector structure) |
+| `uint32_t` | Index of partner segment (Unused in most ports outside of U/G/ZDoom) |
 | `uint32_t` | Index of associated linedef, `NO_INDEX` if miniseg |
 | `uint8_t`  | False (0) if on the same side as linedef, true (1) if oppposite side |
 
