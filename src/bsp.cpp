@@ -743,8 +743,8 @@ static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
 
   node->index = node_cur_index++;
 
-  raw.x = GetLittleEndian(static_cast<int32_t>(floor(node->x) * 65536.0));
-  raw.y = GetLittleEndian(static_cast<int32_t>(floor(node->y) * 65536.0));
+  raw.x = GetLittleEndian(static_cast<int32_t>(floor(node->x * 65536.0)));
+  raw.y = GetLittleEndian(static_cast<int32_t>(floor(node->y * 65536.0)));
   raw.dx = GetLittleEndian(static_cast<int32_t>(floor(node->dx * 65536.0)));
   raw.dy = GetLittleEndian(static_cast<int32_t>(floor(node->dy * 65536.0)));
 
@@ -871,7 +871,7 @@ void SaveFormat_Xgln(node_t *root_node)
   SortSegs();
 
   // WISH : compute a max_size
-  Lump_c *lump = CreateLevelLump("SSECTORS");
+  Lump_c *lump = CreateLevelLump("SSECTORS", CalcXnodNodesSize());
   lump->Write(BSP_MAGIC_XGLN, 4);
   PutVertices_Xnod(lump);
   PutSubsecs_Xnod(lump);
@@ -893,7 +893,7 @@ void SaveFormat_Xgl2(node_t *root_node)
   SortSegs();
 
   // WISH : compute a max_size
-  Lump_c *lump = CreateLevelLump("SSECTORS");
+  Lump_c *lump = CreateLevelLump("SSECTORS", CalcXnodNodesSize());
   lump->Write(BSP_MAGIC_XGL2, 4);
   PutVertices_Xnod(lump);
   PutSubsecs_Xnod(lump);
@@ -915,7 +915,7 @@ void SaveFormat_Xgl3(node_t *root_node)
   SortSegs();
 
   // WISH : compute a max_size
-  Lump_c *lump = CreateLevelLump("SSECTORS");
+  Lump_c *lump = CreateLevelLump("SSECTORS", CalcXnodNodesSize());
   lump->Write(BSP_MAGIC_XGL3, 4);
   PutVertices_Xnod(lump);
   PutSubsecs_Xnod(lump);

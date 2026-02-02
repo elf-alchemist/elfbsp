@@ -204,7 +204,7 @@ struct seg_t
   linedef_t *linedef;
 
   // 0 for right, 1 for left
-  bool side;
+  bool side = false;
 
   // seg on other side, or nullptr if one-sided.  This relationship is
   // always one-to-one -- if one of the segs is split, the partner seg
@@ -214,7 +214,7 @@ struct seg_t
   // seg index.  Only valid once the seg has been added to a
   // subsector.  A negative value means it is invalid -- there
   // shouldn't be any of these once the BSP tree has been built.
-  size_t index;
+  size_t index = NO_INDEX;
 
   // when true, this seg has become zero length (integer rounding of the
   // start and end vertices produces the same location).  It should be

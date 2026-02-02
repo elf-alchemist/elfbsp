@@ -30,8 +30,6 @@ constexpr auto PROJECT_COMPANY = "Guilherme Miranda, et al";
 constexpr auto PROJECT_COPYRIGHT = "Copyright (C) 1994-2026";
 constexpr auto PROJECT_LICENSE = "GNU General Public License, version 2";
 
-constexpr auto PROJECT_NAME = "ELFBSP";
-constexpr auto PROJECT_VERSION = "v1.1";
 constexpr auto PROJECT_STRING = "ELFBSP v1.1";
 
 /*

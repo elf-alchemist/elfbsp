@@ -1012,7 +1012,7 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
 
     seg->index = buddy->index = NO_INDEX;
     seg->linedef = buddy->linedef = nullptr;
-    seg->side = buddy->side = 0;
+    seg->side = buddy->side = false;
 
     seg->source_line = buddy->source_line = part->linedef;
 
@@ -1059,7 +1059,7 @@ void SetPartition(node_t *node, const seg_t *part)
 {
   SYS_ASSERT(part->linedef);
 
-  if (part->side == 0)
+  if (part->side == false)
   {
     node->x = part->linedef->start->x;
     node->y = part->linedef->start->y;
@@ -1277,7 +1277,7 @@ int OnLineSide(quadtree_c *quadtree, const seg_t *part)
   return p1;
 }
 
-seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *side, int what_side)
+seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *side, bool what_side)
 {
   seg_t *seg = NewSeg();
 
@@ -1354,7 +1354,7 @@ seg_t *CreateSegs(void)
 
     if (line->right != nullptr)
     {
-      right = CreateOneSeg(line, line->start, line->end, line->right, 0);
+      right = CreateOneSeg(line, line->start, line->end, line->right, false);
       ListAddSeg(&list, right);
     }
     else
@@ -1365,7 +1365,7 @@ seg_t *CreateSegs(void)
 
     if (line->left != nullptr)
     {
-      left = CreateOneSeg(line, line->end, line->start, line->left, 1);
+      left = CreateOneSeg(line, line->end, line->start, line->left, true);
       ListAddSeg(&list, left);
 
       if (right != nullptr)
