@@ -21,16 +21,17 @@
 //
 //------------------------------------------------------------------------------
 
-#include "core.hpp"
-
 #include <cstring>
 #include <format>
 #include <fstream>
 #include <string>
 #include <vector>
 
+#include "core.hpp"
+
 static bool opt_help = false;
 static bool opt_version = false;
+static bool opt_view = false;
 
 static std::string opt_output;
 
@@ -574,6 +575,10 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
   {
     opt_version = true;
   }
+  else if (strcmp(name, "--view") == 0)
+  {
+    opt_view = true;
+  }
   else if (strcmp(name, "--analysis") == 0)
   {
     config.analysis = true;
@@ -738,9 +743,15 @@ int32_t main(const int32_t argc, const char *argv[])
 {
   ParseCommandLine(argc, argv);
 
+  if (opt_view)
+  {
+    EnterGUI();
+    return 0;
+  }
+
   if (opt_version)
   {
-    PrintLine(LOG_NORMAL, PROJECT_STRING);
+    PrintLine(LOG_NORMAL, "%s %s", PROJECT_NAME, PROJECT_VERSION);
     return 0;
   }
 

@@ -66,7 +66,6 @@ add_library(imgui STATIC
 
 target_include_directories(imgui PUBLIC
     library/imgui
-    library/imgui/backends
 )
 
 target_link_libraries(imgui PUBLIC SDL3::SDL3)
@@ -77,6 +76,7 @@ add_executable(elfbsp
     src/node.cpp
     src/misc.cpp
     src/parse.cpp
+    src/view.cpp
     src/wad.cpp
 )
 

@@ -26,14 +26,15 @@
 #include <string>
 #include <vector>
 
-constexpr auto PROJECT_COMPANY = "Guilherme Miranda, et al";
-constexpr auto PROJECT_COPYRIGHT = "Copyright (C) 1994-2026";
 constexpr auto PROJECT_LICENSE = "GNU General Public License, version 2";
 
 constexpr auto PROJECT_NAME = "ELFBSP";
 constexpr auto PROJECT_VERSION = "v1.1";
-constexpr auto PROJECT_STRING = "ELFBSP v1.1";
-
+constexpr auto PROJECT_APPID = "io.github.";
+constexpr auto PROJECT_COMPANY = "elf-alchemist";
+constexpr auto PROJECT_COPYRIGHT = "Copyright (C) 1994-2026 - Guilherme Miranda, et al";
+constexpr auto PROJECT_URL = "https://github.com/elf-alchemist/elfbsp";
+constexpr auto PROJECT_TYPE = "application";
 /*
  *  Standard headers
  */
@@ -1432,3 +1433,5 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename);
 void WriteAnalysis(const char *filename);
 void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes,
                       int32_t left_size, int32_t right_size);
+
+void EnterGUI(void);
