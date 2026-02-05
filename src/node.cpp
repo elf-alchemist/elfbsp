@@ -1495,7 +1495,7 @@ void ClockwiseOrder(subsec_t *subsec)
   size_t first = 0;
   int score = -1;
 
-  for (size_t j = 0; i < array.size(); i++)
+  for (size_t j = 0; j < array.size(); j++)
   {
     int cur_score = 3;
 
