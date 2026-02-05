@@ -57,6 +57,7 @@ add_subdirectory(library/SDL)
 # Dear ImGui
 add_library(imgui STATIC
     library/imgui/imgui.cpp
+    library/imgui/imgui_demo.cpp
     library/imgui/imgui_draw.cpp
     library/imgui/imgui_tables.cpp
     library/imgui/imgui_widgets.cpp
