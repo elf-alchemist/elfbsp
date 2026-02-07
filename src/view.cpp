@@ -4,7 +4,6 @@
 #include "SDL3/SDL_dialog.h"
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_init.h"
-#include "SDL3/SDL_log.h"
 #include "SDL3/SDL_render.h"
 #include "SDL3/SDL_video.h"
 
@@ -13,6 +12,7 @@
 #include "imgui.h"
 
 #include "core.hpp"
+#include "local.hpp"
 
 namespace fs = std::filesystem;
 
@@ -44,10 +44,30 @@ struct ViewContext_t
   std::string wad_name = "";
   size_t wad_levels = 0;
   Job wad_build_state = Job::IDLE;
+  ImGuiTextBuffer logger;
+  bool scroll_to_bottom = true;
 
   // Abort
   bool active = true;
 } ViewContext;
+
+//------------------------------------------------------------------------------
+
+void PRINTF_ATTR(2, 3) PrintLineGUI(const log_level_t level, const char *fmt, ...)
+{
+  char buffer[MSG_BUFFER_LENGTH];
+
+  va_list arg_ptr;
+
+  va_start(arg_ptr, fmt);
+  M_vsnprintf(buffer, fmt, arg_ptr);
+  va_end(arg_ptr);
+
+  buffer[MSG_BUFFER_LENGTH - 1] = '\0';
+
+  ViewContext.logger.appendf("%s\n", buffer);
+  ViewContext.scroll_to_bottom = true; // Signal the UI to scroll
+}
 
 //------------------------------------------------------------------------------
 
@@ -99,10 +119,14 @@ static void SystemInit(ViewContext_t &ctx)
 
   ImGui_ImplSDL3_InitForSDLRenderer(ctx.window, ctx.renderer);
   ImGui_ImplSDLRenderer3_Init(ctx.renderer);
+
+  PrintLine = PrintLineGUI;
 }
 
 static void SystemShutdown(ViewContext_t &ctx)
 {
+  PrintLine = PrintLineCLI;
+
   CloseWad();
 
   ImGui_ImplSDLRenderer3_Shutdown();
@@ -126,19 +150,19 @@ void WadFileDialog(ViewContext_t &ctx)
   {
     if (!filelist)
     {
-      SDL_Log("An error ocurred: %s", SDL_GetError());
+      PrintLine(LOG_WARN, "An error ocurred: %s", SDL_GetError());
       return;
     }
 
     if (!*filelist)
     {
-      SDL_Log("Dialog canceled.");
+      PrintLine(LOG_WARN, "Dialog canceled.");
       return;
     }
 
     for (int i = 0; filelist[i] != NULL; i++)
     {
-      SDL_Log("Selected file: %s", filelist[i]);
+      PrintLine(LOG_NORMAL, "Selected file: %s", filelist[i]);
       auto *ctx = static_cast<ViewContext_t *>(userdata);
       ctx->wad_path_from_dialog = filelist[i];
     }
@@ -194,7 +218,7 @@ void ProcessEvents(ViewContext_t &ctx)
 
 //------------------------------------------------------------------------------
 
-static auto MainDialog = [](ViewContext_t &ctx) -> void
+static auto MainWindow = [](ViewContext_t &ctx) -> void
 {
   ImGui::SetNextWindowSizeConstraints(ImVec2(200, -1), ImVec2(800, -1));
   ImGui::Begin("ELFBSP", &ctx.active, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysAutoResize);
@@ -240,6 +264,68 @@ static auto MainDialog = [](ViewContext_t &ctx) -> void
     {
       ctx.build_all_levels = true;
     }
+  }
+
+  ImGui::End();
+};
+
+static auto WadWindow = [](ViewContext_t &ctx) -> void
+{
+  // GOD THIS SUCKS I NEED CONTEXT STRUCTS
+  if (ctx.wad_levels == 0 && lev_current_idx >= 0)
+  {
+    return;
+  }
+  ImGui::Begin("Currently loaded", &ctx.active, ImGuiWindowFlags_AlwaysAutoResize);
+
+  ImGui::Text("Level: %s", GetLevelName(lev_current_idx));
+
+  ImGui::Text("Vertices: %zu", lev_vertices.size());
+  ImGui::Text("Lines: %zu", lev_linedefs.size());
+  ImGui::Text("Sides: %zu", lev_sidedefs.size());
+  ImGui::Text("Sectors: %zu", lev_sectors.size());
+  ImGui::Text("Things: %zu", lev_things.size());
+
+  ImGui::Text("Walltips: %zu", lev_walltips.size());
+
+  ImGui::Text("Nodes: %zu", lev_nodes.size());
+  ImGui::Text("Subsectors: %zu", lev_subsecs.size());
+  ImGui::Text("Segments: %zu", lev_segs.size());
+
+  ImGui::End();
+};
+
+static auto ConfigWindow = [](ViewContext_t &ctx) -> void
+{
+  ImGui::Begin("Settings and debug logging", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+  if (ImGui::BeginTable("ConfigWindow", 2, ImGuiTableFlags_BordersInnerV))
+  {
+    ImGui::TableNextColumn();
+
+    ImGui::InputDouble("Segment split cost", &config.split_cost, 1.0, 1.0, "%.0f");
+    ImGui::Checkbox("Use faster node-picking algorithm", &config.fast);
+    ImGui::Checkbox("Make backup of loaded WAD", &config.backup);
+    ImGui::Checkbox("Analisys mode", &config.analysis);
+    ImGui::Checkbox("Verbose logging", &config.verbose);
+
+    ImGui::TableNextColumn();
+
+    ImGui::CheckboxFlags("BLOCKMAP generation", &config.debug, DEBUG_BLOCKMAP);
+    ImGui::CheckboxFlags("REJECT generation", &config.debug, DEBUG_REJECT);
+    ImGui::CheckboxFlags("Map data loading", &config.debug, DEBUG_LOAD);
+    ImGui::CheckboxFlags("BSP lump writing", &config.debug, DEBUG_BSP);
+    ImGui::CheckboxFlags("Walltips calculation", &config.debug, DEBUG_WALLTIPS);
+    ImGui::CheckboxFlags("PolyObjs marking", &config.debug, DEBUG_POLYOBJ);
+    ImGui::CheckboxFlags("Vertices overlapping", &config.debug, DEBUG_OVERLAPS);
+    ImGui::CheckboxFlags("Node-picking steps", &config.debug, DEBUG_PICKNODE);
+    ImGui::CheckboxFlags("Segment splitting", &config.debug, DEBUG_SPLIT);
+    ImGui::CheckboxFlags("Cut list and minisegs", &config.debug, DEBUG_CUTLIST);
+    ImGui::CheckboxFlags("Node builder", &config.debug, DEBUG_BUILDER);
+    ImGui::CheckboxFlags("Cloackwise segment sorting", &config.debug, DEBUG_SORTER);
+    ImGui::CheckboxFlags("Subsector generation", &config.debug, DEBUG_SUBSEC);
+    ImGui::CheckboxFlags("WAD loading", &config.debug, DEBUG_WAD);
+
+    ImGui::EndTable();
   }
 
   ImGui::End();
@@ -323,7 +409,9 @@ static void SystemLoop(ViewContext_t &ctx)
     ImGui::NewFrame();
 
     // UI
-    MainDialog(ctx);
+    MainWindow(ctx);
+    WadWindow(ctx);
+    ConfigWindow(ctx);
 
     // Render
     ImGui::Render();

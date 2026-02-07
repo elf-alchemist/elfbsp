@@ -280,27 +280,9 @@ inline int32_t PRINTF_ATTR(2, 0) M_vsnprintf(char *buf, const char *s, va_list a
 //
 //  show a message
 //
-inline void PRINTF_ATTR(2, 3) PrintLine(const log_level_t level, const char *fmt, ...)
-{
-  FILE *const stream = (level == LOG_NORMAL) ? stdout : stderr;
-  char buffer[MSG_BUFFER_LENGTH];
-
-  va_list arg_ptr;
-
-  va_start(arg_ptr, fmt);
-  M_vsnprintf(buffer, fmt, arg_ptr);
-  va_end(arg_ptr);
-
-  buffer[MSG_BUFFER_LENGTH - 1] = '\0';
-
-  fprintf(stream, "%s\n", buffer);
-  fflush(stream);
-
-  if (level == LOG_ERROR)
-  {
-    exit(3);
-  }
-}
+extern void PRINTF_ATTR(2, 3) (*PrintLine)(const log_level_t level, const char *fmt, ...);
+extern void PRINTF_ATTR(2, 3) PrintLineGUI(const log_level_t level, const char *fmt, ...);
+extern void PRINTF_ATTR(2, 3) PrintLineCLI(const log_level_t level, const char *fmt, ...);
 
 //
 // Assertion macros

@@ -555,3 +555,5 @@ void NormaliseBspTree(void);
 // vertices to integer coordinates (for example, removing segs whose
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree(void);
+
+extern size_t lev_current_idx;

@@ -72,8 +72,10 @@ target_include_directories(imgui PUBLIC
 target_link_libraries(imgui PUBLIC SDL3::SDL3)
 
 add_executable(elfbsp
+    src/core.hpp
     src/elfbsp.cpp
     src/level.cpp
+    src/local.hpp
     src/node.cpp
     src/misc.cpp
     src/parse.cpp
