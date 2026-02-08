@@ -204,7 +204,7 @@ struct seg_t
   linedef_t *linedef;
 
   // 0 for right, 1 for left
-  bool side;
+  bool side = false;
 
   // seg on other side, or nullptr if one-sided.  This relationship is
   // always one-to-one -- if one of the segs is split, the partner seg
@@ -214,7 +214,7 @@ struct seg_t
   // seg index.  Only valid once the seg has been added to a
   // subsector.  A negative value means it is invalid -- there
   // shouldn't be any of these once the BSP tree has been built.
-  size_t index;
+  size_t index = NO_INDEX;
 
   // when true, this seg has become zero length (integer rounding of the
   // start and end vertices produces the same location).  It should be
@@ -346,7 +346,7 @@ struct quadtree_c
   // 256x512).
   quadtree_c *subs[2];
 
-  // count of real/mini segs contained in this node AND ALL CHILDREN.
+  // count of real/minisegs contained in this node AND ALL CHILDREN.
   size_t real_num;
   size_t mini_num;
 
@@ -408,15 +408,6 @@ void FreeNodes(void);
 
 Lump_c *CreateLevelLump(const char *name, size_t max_size = NO_INDEX);
 Lump_c *FindLevelLump(const char *name);
-
-/* limit flags, to show what went wrong */
-static constexpr uint32_t LIMIT_VERTEXES = BIT(0);
-static constexpr uint32_t LIMIT_SECTORS = BIT(1);
-static constexpr uint32_t LIMIT_SIDEDEFS = BIT(2);
-static constexpr uint32_t LIMIT_LINEDEFS = BIT(3);
-static constexpr uint32_t LIMIT_SEGS = BIT(4);
-static constexpr uint32_t LIMIT_SSECTORS = BIT(5);
-static constexpr uint32_t LIMIT_NODES = BIT(6);
 
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
@@ -555,3 +546,10 @@ void NormaliseBspTree(void);
 // vertices to integer coordinates (for example, removing segs whose
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree(void);
+
+void SaveFormat_Vanilla(node_t *root_node);
+void SaveFormat_DeepBSPV4(node_t *root_node);
+void SaveFormat_Xnod(node_t *root_node);
+void SaveFormat_Xgln(node_t *root_node);
+void SaveFormat_Xgl2(node_t *root_node);
+void SaveFormat_Xgl3(node_t *root_node);

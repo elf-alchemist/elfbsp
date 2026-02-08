@@ -30,8 +30,6 @@ constexpr auto PROJECT_COMPANY = "Guilherme Miranda, et al";
 constexpr auto PROJECT_COPYRIGHT = "Copyright (C) 1994-2026";
 constexpr auto PROJECT_LICENSE = "GNU General Public License, version 2";
 
-constexpr auto PROJECT_NAME = "ELFBSP";
-constexpr auto PROJECT_VERSION = "v1.1";
 constexpr auto PROJECT_STRING = "ELFBSP v1.1";
 
 /*
@@ -157,6 +155,11 @@ template <typename T> constexpr T GetBigEndian(T value)
   {
     return value;
   }
+}
+
+template <typename T> constexpr void RaiseValue(T &var, T value)
+{
+  var = std::max(var, value);
 }
 
 // sized types
@@ -697,11 +700,54 @@ using raw_hexen_thing_t = struct raw_hexen_thing_s
 // BSP TREE STRUCTURES
 //------------------------------------------------------------------------
 
-constexpr auto DEEP_MAGIC = "xNd4\0\0\0\0";
-constexpr auto XNOD_MAGIC = "XNOD";
-constexpr auto XGLN_MAGIC = "XGLN";
-constexpr auto XGL2_MAGIC = "XGL2";
-constexpr auto XGL3_MAGIC = "XGL3";
+//
+// We do not write ZIP-compressed ZDoom nodes
+//
+using bsp_type_t = enum bsp_type_e : uint8_t
+{
+  BSP_VANILLA,
+  BSP_DEEPBSPV4,
+  BSP_XNOD,
+  BSP_XGLN,
+  BSP_XGL2,
+  BSP_XGL3,
+
+  BSP_MIN = BSP_VANILLA,
+  BSP_MAX = BSP_XGL3,
+};
+
+// Obviously, vanilla did not include any magic headers
+constexpr auto BSP_MAGIC_DEEPBSPV4 = "xNd4\0\0\0\0";
+constexpr auto BSP_MAGIC_XNOD = "XNOD";
+constexpr auto BSP_MAGIC_XGLN = "XGLN";
+constexpr auto BSP_MAGIC_XGL2 = "XGL2";
+constexpr auto BSP_MAGIC_XGL3 = "XGL3";
+
+// Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
+constexpr uint16_t NF_SUBSECTOR_VANILLA = UINT16_C(0x8000);
+constexpr uint32_t NF_SUBSECTOR = UINT32_C(0x80000000);
+
+//
+// Binary format upper bounds.
+// Some of these, namely the BSP tree indexes, are addressed by using later formats, such as DeepBSPV4, etc
+//
+// * No known ports seem to reserve 0xFFFF for vertices
+// * The linedef index 0xFFFF is reserved for minisegs in XGLN/XGL2/XGL3 nodes
+// * The sidedef index 0xFFFF is reserved to mean "no side" in DOOM map format
+// * No known ports seem to reserve 0xFFFF for sectors
+//
+// * Nodes and subsectors share the same index slot, distinguished only by the high bit
+// * No known additional limits exist for segments
+//
+
+constexpr size_t LIMIT_VERT = UINT16_MAX;
+constexpr size_t LIMIT_LINE = UINT16_MAX - 1;
+constexpr size_t LIMIT_SIDE = UINT16_MAX - 1;
+constexpr size_t LIMIT_SECTOR = UINT16_MAX;
+
+constexpr size_t LIMIT_NODE = INT16_MAX;
+constexpr size_t LIMIT_SUBSEC = INT16_MAX;
+constexpr size_t LIMIT_SEG = UINT16_MAX;
 
 //
 // Vanilla blockmap
@@ -723,7 +769,7 @@ using raw_blockmap_header_t = struct raw_blockmap_header_s
 //
 // Vanilla BSP
 //
-using raw_node_t = struct raw_node_s
+using raw_node_vanilla_t = struct raw_node_vanilla_s
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
@@ -731,27 +777,27 @@ using raw_node_t = struct raw_node_s
   uint16_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-using raw_subsec_t = struct raw_subsec_s
+using raw_subsec_vanilla_t = struct raw_subsec_vanilla_s
 {
   uint16_t num;   // number of Segs in this Sub-Sector
   uint16_t first; // first Seg
 } PACKEDATTR;
 
-using raw_seg_t = struct raw_seg_s
+using raw_seg_vanilla_t = struct raw_seg_vanilla_s
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
   uint16_t angle;   // angle (0 = east, 16384 = north, ...)
   uint16_t linedef; // linedef that this seg goes along
   uint16_t flip;    // true if not the same direction as linedef
-  uint16_t dist;    // distance from starting point
+  int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
 //
 // DeepSea BSP
 // * compared to vanilla, some types were raise to 32bit
 //
-using raw_node_deep_t = struct raw_node_deep_s
+using raw_node_deepbspv4_t = struct raw_node_deepbspv4_s
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
@@ -759,20 +805,20 @@ using raw_node_deep_t = struct raw_node_deep_s
   uint32_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-using raw_subsec_deep_t = struct raw_subsec_deep_s
+using raw_subsec_deepbspv4_t = struct raw_subsec_deepbspv4_s
 {
   uint16_t num;   // number of Segs in this Sub-Sector
   uint32_t first; // first Seg
 } PACKEDATTR;
 
-using raw_seg_deep_t = struct raw_seg_deep_s
+using raw_seg_deepbspv4_t = struct raw_seg_deepbspv4_s
 {
   uint32_t start;   // from this vertex...
   uint32_t end;     // ... to this vertex
   uint16_t angle;   // angle (0 = east, 16384 = north, ...)
   uint16_t linedef; // linedef that this seg goes along
   uint16_t flip;    // true if not the same direction as linedef
-  uint16_t dist;    // distance from starting point
+  int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
 //
@@ -811,21 +857,18 @@ using raw_xnod_seg_t = struct raw_xnod_seg_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-// XGLN segs use the same type definition as XNOD segs, with slightly
-// different semantics for mini-segs
-
 using raw_xgln_seg_t = struct raw_xgln_seg_s
 {
-  uint32_t vertex;  // from this vertex...
-  uint32_t partner; // ... to this vertex
+  uint32_t vertex;  // from this vertex ... to the next
+  uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
   uint16_t linedef; // linedef that this seg goes along, or NO_INDEX
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
 using raw_xgl2_seg_t = struct raw_xgl2_seg_s
 {
-  uint32_t vertex;  // from this vertex...
-  uint32_t partner; // ... to this vertex
+  uint32_t vertex;  // from this vertex ... to the next
+  uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
   uint32_t linedef; // linedef that this seg goes along, or NO_INDEX
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
@@ -1369,8 +1412,7 @@ struct buildinfo_s
   // write out CSV for data analysis and visualization
   bool analysis = false;
 
-  bool force_xnod = false;
-  bool ssect_xgl3 = false;
+  bsp_type_t bsp_type = bsp_type_t::BSP_VANILLA;
 
   double split_cost = SPLIT_COST_DEFAULT;
 
@@ -1410,6 +1452,8 @@ using build_result_t = enum build_result_e
   // when saving the map, one or more lumps overflowed
   BUILD_LumpOverflow
 };
+
+extern bool lev_overflows;
 
 // attempt to open a wad.  on failure, the FatalError method in the
 // buildinfo_t interface is called.

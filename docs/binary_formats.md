@@ -129,7 +129,7 @@ Differences from the vanilla BSP data include:
 * each version is built on top of the previous, replacing the predecessor's given struct type
 * the removal of angles and offsets from Segments
 * higher precision data types for fractional coordinates
-* "mini-segs", indicated by `NO_INDEX`, to be skipped by the renderer, but needed for traversal
+* "minisegs", indicated by `NO_INDEX`, to be skipped by the renderer, but needed for traversal
 * "linear" storage of Seg indexes on subsectors, see above
 
 ### XNOD vertex (`xnod_vertex_t`), 8 bytes
