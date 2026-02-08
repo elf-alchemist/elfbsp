@@ -53,10 +53,10 @@ endif()
 
 add_executable(elfbsp
     src/bsp.cpp
-    src/elfbsp.cpp
     src/level.cpp
-    src/node.cpp
+    src/main.cpp
     src/misc.cpp
+    src/node.cpp
     src/parse.cpp
     src/wad.cpp
 )
