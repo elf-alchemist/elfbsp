@@ -1717,44 +1717,45 @@ void ParseUDMF(void)
 // Check Limits
 //
 
-static void CheckBinaryFormatLimits(bsp_type_t &bsp_type)
+static void CheckBinaryFormatLimits(void)
 {
-  // this could potentially be 65536, since there are no reserved values
-  // for sectors, but there may be source ports or tools treating 0xFFFF
-  // as a special value, so we are extra cautious here (and in some of
-  // the other checks below, like the vertex counts).
-  if (lev_sectors.size() > 65535)
+  if (lev_sectors.size() > LIMIT_SECTOR)
   {
     PrintLine(LOG_NORMAL, "FAILURE: Map has too many sectors.");
     lev_overflows = true;
   }
 
-  // the sidedef 0xFFFF is reserved to mean "no side" in DOOM map format
-  if (lev_sidedefs.size() > 65535)
+  if (lev_sidedefs.size() > LIMIT_SIDE)
   {
     PrintLine(LOG_NORMAL, "FAILURE: Map has too many sidedefs.");
     lev_overflows = true;
   }
 
-  // the linedef 0xFFFF is reserved for minisegs in GL nodes
-  if (lev_linedefs.size() > 65535)
+  if (lev_linedefs.size() > LIMIT_LINE)
   {
     PrintLine(LOG_NORMAL, "FAILURE: Map has too many linedefs.");
     lev_overflows = true;
   }
 }
 
-void RaiseBSPFormat(bsp_type_t &bsp_type)
+bsp_type_t CheckFormatBSP(void)
 {
-  if (config.bsp_type < BSP_XNOD)
+  if (lev_vertices.size() > LIMIT_VERT)
   {
-    if (num_old_vert > 32767 || num_new_vert > 32767 || lev_segs.size() > 32767 || lev_nodes.size() > 32767)
-    {
-      PrintLine(LOG_NORMAL, "WARNING: Forcing DeepBSPV4 format nodes due to overflows.");
-      config.total_warnings++;
-      RaiseValue(config.bsp_type, BSP_DEEPBSPV4);
-    }
+    PrintLine(LOG_NORMAL, "WARNING: Vertex overflow. Forcing XNOD node format.");
+    config.total_warnings++;
+    return BSP_XNOD;
   }
+
+  if (lev_vertices.size() <= LIMIT_VERT
+      && (lev_segs.size() > LIMIT_SEG || lev_subsecs.size() > LIMIT_SUBSEC || lev_nodes.size() > LIMIT_NODE))
+  {
+    PrintLine(LOG_NORMAL, "WARNING: BSP overflow. Forcing DeepBSPV4 node format.");
+    config.total_warnings++;
+    return BSP_DEEPBSPV4;
+  }
+
+  return BSP_VANILLA;
 }
 
 /* ----- whole-level routines --------------------------- */
@@ -1873,11 +1874,12 @@ build_result_e SaveBinaryFormatLevel(node_t *root_node)
   AddMissingLump("BLOCKMAP", "REJECT");
 
   // check for overflows...
-  CheckBinaryFormatLimits(config.bsp_type);
-  RaiseBSPFormat(config.bsp_type);
+  CheckBinaryFormatLimits();
 
-  /* --- Normal nodes --- */
-  switch (config.bsp_type)
+  bsp_type_t level_type = CheckFormatBSP();
+  level_type = std::max(config.bsp_type, level_type);
+
+  switch (level_type)
   {
   case BSP_XGL3:
     {

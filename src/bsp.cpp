@@ -28,7 +28,7 @@ void SortSegs(void)
   }
 }
 
-static inline uint16_t VanillaSegDist(const seg_t *seg)
+static inline int16_t VanillaSegDist(const seg_t *seg)
 {
   double lx = seg->side ? seg->linedef->end->x : seg->linedef->start->x;
   double ly = seg->side ? seg->linedef->end->y : seg->linedef->start->y;
@@ -37,7 +37,7 @@ static inline uint16_t VanillaSegDist(const seg_t *seg)
   double sx = round(seg->start->x);
   double sy = round(seg->start->y);
 
-  return static_cast<uint16_t>(floor(hypot(sx - lx, sy - ly) + 0.5));
+  return static_cast<int16_t>(floor(hypot(sx - lx, sy - ly) + 0.5));
 }
 
 static inline short_angle_t VanillaSegAngle(const seg_t *seg)
@@ -121,16 +121,6 @@ static void PutVertices_Vanilla(void)
   }
 }
 
-static inline uint16_t VertexIndex16Bit(const vertex_t *v)
-{
-  if (v->is_new)
-  {
-    return static_cast<uint16_t>(v->index | 0x8000U);
-  }
-
-  return static_cast<uint16_t>(v->index);
-}
-
 static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
 {
   if (v->is_new)
@@ -158,8 +148,8 @@ static void PutSegs_Vanilla(void)
 
     const seg_t *seg = lev_segs[i];
 
-    raw.start = GetLittleEndian(VertexIndex16Bit(seg->start));
-    raw.end = GetLittleEndian(VertexIndex16Bit(seg->end));
+    raw.start = GetLittleEndian(static_cast<uint16_t>(seg->start->index));
+    raw.end = GetLittleEndian(static_cast<uint16_t>(seg->end->index));
     raw.angle = GetLittleEndian(VanillaSegAngle(seg));
     raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef->index));
     raw.flip = GetLittleEndian(seg->side);
@@ -177,7 +167,7 @@ static void PutSegs_Vanilla(void)
 
   lump->Finish();
 
-  if (lev_segs.size() > LIMIT_VANILLA_SEG)
+  if (lev_segs.size() > LIMIT_SEG)
   {
     PrintLine(LOG_NORMAL, "FAILURE: Number of segs has overflowed.");
     lev_overflows = true;
@@ -208,7 +198,7 @@ static void PutSubsecs_Vanilla(void)
     }
   }
 
-  if (lev_subsecs.size() > LIMIT_VANILLA_SUBSEC)
+  if (lev_subsecs.size() > LIMIT_SUBSEC)
   {
     PrintLine(LOG_NORMAL, "FAILURE: Number of subsectors has overflowed.");
     lev_overflows = true;

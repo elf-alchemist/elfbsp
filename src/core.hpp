@@ -157,8 +157,7 @@ template <typename T> constexpr T GetBigEndian(T value)
   }
 }
 
-template <typename T>
-constexpr void RaiseValue(T& var, T value)
+template <typename T> constexpr void RaiseValue(T &var, T value)
 {
   var = std::max(var, value);
 }
@@ -725,13 +724,30 @@ constexpr auto BSP_MAGIC_XGL2 = "XGL2";
 constexpr auto BSP_MAGIC_XGL3 = "XGL3";
 
 // Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
+constexpr uint16_t NF_SUBSECTOR_VANILLA = UINT16_C(0x8000);
 constexpr uint32_t NF_SUBSECTOR = UINT32_C(0x80000000);
 
-// All known non-vanilla formats are know to use 32bit indexes
-constexpr uint16_t NF_SUBSECTOR_VANILLA = UINT16_C(0x8000);
-constexpr size_t LIMIT_VANILLA_NODE = INT16_MAX;
-constexpr size_t LIMIT_VANILLA_SUBSEC = INT16_MAX;
-constexpr size_t LIMIT_VANILLA_SEG = UINT16_MAX - 1;
+//
+// Binary format upper bounds.
+// Some of these, namely the BSP tree indexes, are addressed by using later formats, such as DeepBSPV4, etc
+//
+// * No known ports seem to reserve 0xFFFF for vertices
+// * The linedef index 0xFFFF is reserved for minisegs in XGLN/XGL2/XGL3 nodes
+// * The sidedef index 0xFFFF is reserved to mean "no side" in DOOM map format
+// * No known ports seem to reserve 0xFFFF for sectors
+//
+// * Nodes and subsectors share the same index slot, distinguished only by the high bit
+// * No known additional limits exist for segments
+//
+
+constexpr size_t LIMIT_VERT = UINT16_MAX;
+constexpr size_t LIMIT_LINE = UINT16_MAX - 1;
+constexpr size_t LIMIT_SIDE = UINT16_MAX - 1;
+constexpr size_t LIMIT_SECTOR = UINT16_MAX;
+
+constexpr size_t LIMIT_NODE = INT16_MAX;
+constexpr size_t LIMIT_SUBSEC = INT16_MAX;
+constexpr size_t LIMIT_SEG = UINT16_MAX;
 
 //
 // Vanilla blockmap
@@ -774,7 +790,7 @@ using raw_seg_vanilla_t = struct raw_seg_vanilla_s
   uint16_t angle;   // angle (0 = east, 16384 = north, ...)
   uint16_t linedef; // linedef that this seg goes along
   uint16_t flip;    // true if not the same direction as linedef
-  uint16_t dist;    // distance from starting point
+  int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
 //
@@ -802,7 +818,7 @@ using raw_seg_deepbspv4_t = struct raw_seg_deepbspv4_s
   uint16_t angle;   // angle (0 = east, 16384 = north, ...)
   uint16_t linedef; // linedef that this seg goes along
   uint16_t flip;    // true if not the same direction as linedef
-  uint16_t dist;    // distance from starting point
+  int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
 //
@@ -1396,7 +1412,7 @@ struct buildinfo_s
   // write out CSV for data analysis and visualization
   bool analysis = false;
 
-  bsp_type_t bsp_type = BSP_VANILLA;
+  bsp_type_t bsp_type = bsp_type_t::BSP_VANILLA;
 
   double split_cost = SPLIT_COST_DEFAULT;
 
