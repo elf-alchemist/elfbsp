@@ -71,34 +71,24 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
 
   double angle = ComputeAngle(dx, dy);
 
-  if (angle < 0)
-  {
-    angle += 360.0;
-  }
+  auto result = static_cast<short_angle_t>(floor(angle * 65536.0 / 360.0 + 0.5));
 
-  short_angle_t result = short_angle_t(floor(angle * 65536.0 / 360.0 + 0.5));
-
-  // TODO: make sure this works better -- Hexen, UDMF
-  // -Elf- ZokumBSP
-  // 1080 => Additive degrees stored in tag
-  // 1081 => Set to degrees stored in tag
-  // 1082 => Additive BAM stored in tag
-  // 1083 => Set to BAM stored in tag
-  if (seg->linedef->special == Special_RotateDegrees)
+  switch (seg->linedef->angle)
   {
-    result += DegreesToShortBAM(static_cast<uint16_t>(seg->linedef->tag));
-  }
-  else if (seg->linedef->special == Special_RotateDegreesHard)
-  {
-    result = DegreesToShortBAM(static_cast<uint16_t>(seg->linedef->tag));
-  }
-  else if (seg->linedef->special == Special_RotateAngleT)
-  {
-    result += static_cast<short_angle_t>(seg->linedef->tag);
-  }
-  else if (seg->linedef->special == Special_RotateAngleTHard)
-  {
-    result = static_cast<short_angle_t>(seg->linedef->tag);
+  case FX_RotateDegreesRelative:
+    result += DegreesToShortBAM(seg->linedef->tag);
+    break;
+  case FX_RotateDegreesAbsolute:
+    result = DegreesToShortBAM(seg->linedef->tag);
+    break;
+  case FX_RotateAngleRelative:
+    result += seg->linedef->tag;
+    break;
+  case FX_RotateAngleAbsolute:
+    result = seg->linedef->tag;
+    break;
+  default:
+    break;
   }
 
   return result;

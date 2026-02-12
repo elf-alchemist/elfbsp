@@ -197,6 +197,16 @@ constexpr bool HAS_BIT(const uint32_t x, const uint32_t y)
   return (x & y) != 0;
 }
 
+constexpr bool HAS_ALL(const uint32_t x, const uint32_t y)
+{
+  return (x & y) == y;
+}
+
+constexpr bool HAS_NONE(const uint32_t x, const uint32_t y)
+{
+  return (x & y) == 0;
+}
+
 // doom's 32bit 16.16 fixed point
 constexpr fixed_t IntToFixed(const int32_t x)
 {
@@ -219,14 +229,14 @@ constexpr fixed_t FloatToFixed(double x)
 }
 
 // binary angular measurement, BAM!
-constexpr long_angle_t DegreesToLongBAM(const uint16_t x)
+constexpr long_angle_t DegreesToLongBAM(const double x)
 {
   return static_cast<long_angle_t>(LONG_ANGLE_1 * x);
 }
 
-constexpr short_angle_t DegreesToShortBAM(const uint16_t x)
+constexpr short_angle_t DegreesToShortBAM(const double x)
 {
-  return static_cast<short_angle_t>((LONG_ANGLE_1 * x) >> FRACBITS);
+  return static_cast<short_angle_t>(static_cast<long_angle_t>(LONG_ANGLE_1 * x) >> FRACBITS);
 }
 
 //------------------------------------------------------------------------
@@ -567,9 +577,14 @@ inline double ComputeAngle(double dx, double dy)
     return (dy > 0) ? 90.0 : 270.0;
   }
 
-  const double angle = atan2(dy, dx) * 180.0 / M_PI;
+  double angle = atan2(dy, dx) * 180.0 / M_PI;
 
-  return (angle < 0) ? angle + 360.0 : angle;
+  if (angle < 0.0)
+  {
+    angle += 360.0;
+  }
+
+  return angle;
 }
 
 //------------------------------------------------------------------------
@@ -945,7 +960,7 @@ using patch_t = struct patch_s
 // LineDef attributes.
 //
 
-using compatible_lineflag_t = enum compatible_lineflag_e : uint16_t
+using vanilla_lineflag_t = enum vanilla_lineflag_e : uint16_t
 {
   MLF_BLOCKING = BIT(0),      // Solid, is an obstacle
   MLF_BLOCKMONSTERS = BIT(1), // Blocks monsters only
@@ -967,35 +982,51 @@ using compatible_lineflag_t = enum compatible_lineflag_e : uint16_t
   MLF_SOUNDBLOCK = BIT(6),    // Sound rendering: don't let sound cross two of these
   MLF_DONTDRAW = BIT(7),      // Don't draw on the automap at all
   MLF_MAPPED = BIT(8),        // Set as if already seen, thus drawn in automap
-  MLF_PASSUSE = BIT(9),       // Allow multiple lines to be pushed simultaneously.
-  MLF_3DMIDTEX = BIT(10),     // Solid middle texture
-  MLF_RESERVED = BIT(11),     // comp_reservedlineflag
-  MLF_BLOCKGROUND = BIT(12),  // Block Grounded Monster
-  MLF_BLOCKPLAYERS = BIT(13), // Block Players Only
 };
 
-// first few flags are same as DOOM above
-using hexen_lineflag_e = enum : uint16_t
+using boom_lineflag_t = enum boom_lineflag_e : uint16_t
 {
+  // Inherited from vanilla
+  MLF_BOOM_BLOCKING = MLF_BLOCKING,
+  MLF_BOOM_BLOCKMONSTERS = MLF_BLOCKMONSTERS,
+  MLF_BOOM_TWOSIDED = MLF_TWOSIDED,
+  MLF_BOOM_UPPERUNPEGGED = MLF_UPPERUNPEGGED,
+  MLF_BOOM_LOWERUNPEGGED = MLF_LOWERUNPEGGED,
+  MLF_BOOM_SECRET = MLF_SECRET,
+  MLF_BOOM_SOUNDBLOCK = MLF_SOUNDBLOCK,
+  MLF_BOOM_DONTDRAW = MLF_DONTDRAW,
+  MLF_BOOM_MAPPED = MLF_MAPPED,
+
+  // Boom lineage
+  MLF_BOOM_PASSUSE = BIT(9),       // Allow multiple lines to be pushed simultaneously.
+  MLF_BOOM_3DMIDTEX = BIT(10),     // Solid middle texture
+  MLF_BOOM_RESERVED = BIT(11),     // comp_reservedlineflag
+  MLF_BOOM_BLOCKGROUND = BIT(12),  // Block Grounded Monster
+  MLF_BOOM_BLOCKPLAYERS = BIT(13), // Block Players Only
+};
+
+using hexen_lineflag_t = enum hexen_lineflag_e : uint16_t
+{
+  // Inherited from vanilla Doom
+  MLF_HEXEN_BLOCKING = MLF_BLOCKING,
+  MLF_HEXEN_BLOCKMONSTERS = MLF_BLOCKMONSTERS,
+  MLF_HEXEN_TWOSIDED = MLF_TWOSIDED,
+  MLF_HEXEN_UPPERUNPEGGED = MLF_UPPERUNPEGGED,
+  MLF_HEXEN_LOWERUNPEGGED = MLF_LOWERUNPEGGED,
+  MLF_HEXEN_SECRET = MLF_SECRET,
+  MLF_HEXEN_SOUNDBLOCK = MLF_SOUNDBLOCK,
+  MLF_HEXEN_DONTDRAW = MLF_DONTDRAW,
+  MLF_HEXEN_MAPPED = MLF_MAPPED,
+
+  // Hexen-original
   MLF_HEXEN_REPEATABLE = BIT(9),
   MLF_HEXEN_ACTIVATION = BIT(10) | BIT(11) | BIT(12),
+
+  // Source ports, mostly ZDoom
+  MLF_HEXEN_MONCANACTIVATE = BIT(13),
+  MLF_HEXEN_BLOCKPLAYERS = BIT(14),
+  MLF_HEXEN_BLOCKEVERYTHING = BIT(15),
 };
-
-// these are supported by ZDoom (and derived ports)
-using zdoom_lineflag_t = enum zdoom_lineflag_e : uint16_t
-{
-  MLF_ZDOOM_MONCANACTIVATE = BIT(13),
-  MLF_ZDOOM_BLOCKPLAYERS = BIT(14),
-  MLF_ZDOOM_BLOCKEVERYTHING = BIT(15),
-};
-
-constexpr uint32_t BOOM_GENLINE_FIRST = 0x2f80;
-constexpr uint32_t BOOM_GENLINE_LAST = 0x7fff;
-
-constexpr bool IsGeneralizedSpecial(uint32_t special)
-{
-  return special >= BOOM_GENLINE_FIRST && special <= BOOM_GENLINE_LAST;
-}
 
 using hexen_activation_t = enum hexen_activation_e
 {
@@ -1008,19 +1039,19 @@ using hexen_activation_t = enum hexen_activation_e
 };
 
 // The power of node building manipulation!
-using bsp_specials_t = enum bsp_specials_e : uint32_t
+using bsp_specials_t = enum bsp_specials_e : int32_t
 {
-  Special_VanillaScroll = 48,
+  Special_Scroll = 48,
 
   Special_RemoteScroll = 1048,
 
   Special_ChangeStartVertex = 1078,
   Special_ChangeEndVertex,
 
-  Special_RotateDegrees,     // currently only vanilla & deepbspv4 segs encode angle
-  Special_RotateDegreesHard, //
-  Special_RotateAngleT,      //
-  Special_RotateAngleTHard,  //
+  Special_RotateDegreesRelative,
+  Special_RotateDegreesAbsolute,
+  Special_RotateAngleRelative,
+  Special_RotateAngleAbsolute,
 
   Special_DoNotRenderBackSeg,
   Special_DoNotRenderFrontSeg,
@@ -1030,10 +1061,36 @@ using bsp_specials_t = enum bsp_specials_e : uint32_t
   Special_Unknown2, // line tag value becomes seg's associated line index?
 };
 
-using bsp_tags_t = enum bsp_tags_e
+using bsp_tags_t = enum bsp_tags_e : uint16_t
 {
   Tag_DoNotRender = 998,
   Tag_NoBlockmap = 999,
+};
+
+using bsp_effects_t = enum bsp_effects_e : uint32_t
+{
+  FX_Nothing = 0,
+
+  // Segment generation
+  FX_DoNotRenderFront = BIT(28),
+  FX_DoNotRenderBack = BIT(29),
+
+  // Segment splitting
+  FX_DoNotSplitSeg = BIT(30),
+
+  // Blockmap
+  FX_NoBlockmap = BIT(31),
+};
+
+// Segment rotation
+// currently only vanilla & deepbspv4 segs encode angle
+using seg_rotation_t = enum seg_rotation_e : uint8_t
+{
+  FX_DoNotRotate = 0,
+  FX_RotateDegreesRelative,
+  FX_RotateDegreesAbsolute,
+  FX_RotateAngleRelative,
+  FX_RotateAngleAbsolute,
 };
 
 //
@@ -1098,8 +1155,8 @@ using hexen_option_t = enum hexen_option_e : uint16_t
 //
 // Polyobject stuff
 //
-constexpr uint32_t HEXTYPE_POLY_START = 1;
-constexpr uint32_t HEXTYPE_POLY_EXPLICIT = 5;
+constexpr int32_t HEXTYPE_POLY_START = 1;
+constexpr int32_t HEXTYPE_POLY_EXPLICIT = 5;
 
 // -JL- Hexen polyobj thing types
 constexpr uint32_t PO_ANCHOR_TYPE = 3000;

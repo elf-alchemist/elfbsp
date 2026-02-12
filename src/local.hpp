@@ -142,16 +142,12 @@ struct linedef_t
   sidedef_t *right; // right sidedef
   sidedef_t *left;  // left sidedef, or nullptr if none
 
-  uint32_t flags;
-  uint32_t special;
-  uint16_t tag;
+  int32_t special; //
+  uint16_t tag;    // 
+  uint16_t flags;  // currently we only care about two-sided lines, but knows
 
-  bool dont_render;
-  bool dont_render_front;
-  bool dont_render_back;
-
-  // line is marked two-sided
-  bool two_sided;
+  uint32_t effects = FX_Nothing;
+  seg_rotation_t angle = FX_DoNotRotate;
 
   // prefer not to split
   bool is_precious;
@@ -441,6 +437,9 @@ static constexpr double IFFY_LEN = 4.0;
 
 // smallest distance between two points before being considered equal
 static constexpr double DIST_EPSILON = (1.0 / 1024.0);
+
+// smallest distance between two points before being considered equal
+static constexpr double DIST_EPSILON_HI = (1.0 / 65536.0);
 
 // smallest degrees between two angles before being considered equal
 static constexpr double ANG_EPSILON = (1.0 / 1024.0);
