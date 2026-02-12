@@ -577,14 +577,9 @@ inline double ComputeAngle(double dx, double dy)
     return (dy > 0) ? 90.0 : 270.0;
   }
 
-  double angle = atan2(dy, dx) * 180.0 / M_PI;
+  const double angle = atan2(dy, dx) * 180.0 / M_PI;
 
-  if (angle < 0.0)
-  {
-    angle += 360.0;
-  }
-
-  return angle;
+  return angle + (angle < 0.0) * 360.0;
 }
 
 //------------------------------------------------------------------------
