@@ -116,7 +116,7 @@ jobs:
       - name: Extract Version Number (Development)
         if: "!contains(github.ref, 'tags')"
         shell: bash
-        run: echo "VERSION=dev-${GITHUB_SHA::7}" >> $GITHUB_ENV
+        run: echo "VERSION=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -137,7 +137,7 @@ jobs:
         if: ${{ !contains(github.ref, 'tags') }}
         uses: ncipollo/release-action@v1
         with:
-          name: ELFBSP ${{ env.VERSION }}
+          name: "[Nightly] ELFBSP ${{ env.VERSION }}"
           bodyFile: CHANGELOG.md
           tag: nightly
           prerelease: true
