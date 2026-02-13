@@ -12,6 +12,7 @@ set(CMAKE_C_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_INSTALL_DO_STRIP TRUE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
+set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
 
 # Set a default build type if none was specified
 set(default_build_type "RelWithDebInfo")
@@ -141,4 +142,27 @@ else()
     install(FILES elfbsp.cfg DESTINATION "share/doc/${PROJECT_NAME}")
     install(TARGETS elfbsp RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
+
+set(CPACK_PACKAGE_NAME "elfbsp")
+set(CPACK_PACKAGE_VENDOR "elfbsp")
+
+set(CPACK_PACKAGE_VERSION
+    "${CPACK_PACKAGE_VERSION}"
+    CACHE STRING "CPack version override")
+
+if(NOT CPACK_PACKAGE_VERSION)
+  set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+endif()
+
+if(WIN32)
+  set(CPACK_SYSTEM_NAME "windows_x86_64")
+elseif(APPLE)
+  set(CPACK_SYSTEM_NAME "macos_universal")
+elseif(UNIX)
+  set(CPACK_SYSTEM_NAME "linux_x86_64")
+endif()
+
+set(CPACK_PACKAGE_FILE_NAME
+    "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${CPACK_SYSTEM_NAME}")
+
 include(CPack)
