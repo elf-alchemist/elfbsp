@@ -8,8 +8,6 @@ on:
   pull_request:
     branches: [ main ]
     paths-ignore: ['**.md']
-  schedule:
-    - cron: "17 3 * * *" # Nightly
   workflow_dispatch:
 
 jobs:
@@ -120,11 +118,6 @@ jobs:
         shell: bash
         run: echo "VERSION=dev-${GITHUB_SHA::7}" >> $GITHUB_ENV
 
-      - name: Detect Nightly Build
-        if: github.event_name == 'schedule'
-        shell: bash
-        run: echo "VERSION=nightly-${GITHUB_SHA::7}" >> $GITHUB_ENV
-
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -141,10 +134,11 @@ jobs:
           artifacts: ${{ matrix.config.artifact_path }}
 
       - name: Nightly Pre-Release
-        if: github.event_name == 'schedule'
+        if: ${{ !contains(github.ref, 'tags') }}
         uses: ncipollo/release-action@v1
         with:
-          name: ELFBSP Nightly ${{ env.VERSION }}
+          name: ELFBSP ${{ env.VERSION }}
+          bodyFile: CHANGELOG.md
           tag: nightly
           prerelease: true
           allowUpdates: true
