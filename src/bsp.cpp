@@ -75,16 +75,16 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
 
   switch (seg->linedef->angle)
   {
-  case FX_RotateDegreesRelative:
+  case FX_RotateRelativeDegrees:
     result += DegreesToShortBAM(seg->linedef->tag);
     break;
-  case FX_RotateDegreesAbsolute:
+  case FX_RotateAbsoluteDegrees:
     result = DegreesToShortBAM(seg->linedef->tag);
     break;
-  case FX_RotateAngleRelative:
+  case FX_RotateRelativeBAM:
     result += seg->linedef->tag;
     break;
-  case FX_RotateAngleAbsolute:
+  case FX_RotateAbsoluteBAM:
     result = seg->linedef->tag;
     break;
   default:

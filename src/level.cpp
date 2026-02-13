@@ -1311,16 +1311,16 @@ static void GetLinedefs(void)
     switch (line->special)
     {
     case Special_RotateDegreesRelative:
-      line->angle = FX_RotateDegreesRelative;
+      line->angle = FX_RotateRelativeDegrees;
       break;
     case Special_RotateDegreesAbsolute:
-      line->angle = FX_RotateDegreesAbsolute;
+      line->angle = FX_RotateAbsoluteDegrees;
       break;
     case Special_RotateAngleRelative:
-      line->angle = FX_RotateAngleRelative;
+      line->angle = FX_RotateRelativeBAM;
       break;
     case Special_RotateAngleAbsolute:
-      line->angle = FX_RotateAngleAbsolute;
+      line->angle = FX_RotateAbsoluteBAM;
       break;
     case Special_DoNotRenderBackSeg:
       line->effects |= FX_DoNotRenderBack;

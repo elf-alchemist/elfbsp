@@ -1073,7 +1073,7 @@ using bsp_effects_t = enum bsp_effects_e : uint32_t
   // Segment splitting
   FX_DoNotSplitSeg = BIT(30),
 
-  // Blockmap
+  // Blockmap generation
   FX_NoBlockmap = BIT(31),
 };
 
@@ -1082,10 +1082,10 @@ using bsp_effects_t = enum bsp_effects_e : uint32_t
 using seg_rotation_t = enum seg_rotation_e : uint8_t
 {
   FX_DoNotRotate = 0,
-  FX_RotateDegreesRelative,
-  FX_RotateDegreesAbsolute,
-  FX_RotateAngleRelative,
-  FX_RotateAngleAbsolute,
+  FX_RotateRelativeDegrees,
+  FX_RotateAbsoluteDegrees,
+  FX_RotateRelativeBAM,
+  FX_RotateAbsoluteBAM,
 };
 
 //
