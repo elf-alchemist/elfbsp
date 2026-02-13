@@ -2,12 +2,12 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [ main ]
-    tags: ['*']
-    paths-ignore: ['**.md']
+    branches: [main]
+    tags: ["*"]
+    paths-ignore: ["**.md"]
   pull_request:
-    branches: [ main ]
-    paths-ignore: ['**.md']
+    branches: [main]
+    paths-ignore: ["**.md"]
   workflow_dispatch:
 
 jobs:
@@ -58,7 +58,7 @@ jobs:
 
           - name: Windows MinGW x86_64
             os: windows-latest
-            shell: 'msys2 {0}'
+            shell: "msys2 {0}"
             msystem: mingw64
             msys-env: mingw-w64-x86_64
             package_name: windows_x86_64
@@ -89,6 +89,16 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      - name: Extract Version Number (Release)
+        if: contains(github.ref, 'tags')
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF##*_}" >> $GITHUB_ENV
+
+      - name: Extract Version Number (Development)
+        if: "!contains(github.ref, 'tags')"
+        shell: bash
+        run: echo "VERSION=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: ${{ matrix.config.install }}
 
@@ -109,16 +119,6 @@ jobs:
           cd build
           cpack
 
-      - name: Extract Version Number (Release)
-        if: contains(github.ref, 'tags')
-        shell: bash
-        run: echo "VERSION=${GITHUB_REF##*_}" >> $GITHUB_ENV
-
-      - name: Extract Version Number (Development)
-        if: "!contains(github.ref, 'tags')"
-        shell: bash
-        run: echo "VERSION=${GITHUB_SHA::7}" >> $GITHUB_ENV
-
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -135,7 +135,7 @@ jobs:
           artifacts: ${{ matrix.config.artifact_path }}
 
       - name: Nightly Pre-Release
-        if: ${{ !contains(github.ref, 'tags') }}
+        if: ${{ !contains(github.ref, 'tags') }} && ${{ github.event_name != 'pull_request' }}
         uses: ncipollo/release-action@v1
         with:
           name: "[Nightly] ELFBSP ${{ env.VERSION }}"
