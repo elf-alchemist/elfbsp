@@ -2,12 +2,12 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [ main ]
-    tags: ['*']
-    paths-ignore: ['**.md']
+    branches: [main]
+    tags: ["*"]
+    paths-ignore: ["**.md"]
   pull_request:
-    branches: [ main ]
-    paths-ignore: ['**.md']
+    branches: [main]
+    paths-ignore: ["**.md"]
   workflow_dispatch:
 
 jobs:
@@ -42,7 +42,7 @@ jobs:
               -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
               -DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections"
 
-          - name: MacOS x86_64 and arm64
+          - name: MacOS Universal
             os: macos-latest
             shell: bash
             package_name: macos_universal
@@ -58,7 +58,7 @@ jobs:
 
           - name: Windows MinGW x86_64
             os: windows-latest
-            shell: 'msys2 {0}'
+            shell: "msys2 {0}"
             msystem: mingw64
             msys-env: mingw-w64-x86_64
             package_name: windows_x86_64
@@ -92,12 +92,23 @@ jobs:
       - name: Install dependencies
         run: ${{ matrix.config.install }}
 
-      - name: Configure
+      - name: Configure (Release)
+        if: ${{ contains(github.ref, 'tags') }}
         run: >-
           cmake
           -S .
           -B build
           -DCMAKE_BUILD_TYPE=Release
+          ${{ matrix.config.configure }}
+
+      - name: Configure (Nightly)
+        if: ${{ !contains(github.ref, 'tags') }}
+        run: >-
+          cmake
+          -S .
+          -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCPACK_PACKAGE_VERSION=nightly
           ${{ matrix.config.configure }}
 
       - name: Build
@@ -116,7 +127,7 @@ jobs:
       - name: Extract Version Number (Development)
         if: "!contains(github.ref, 'tags')"
         shell: bash
-        run: echo "VERSION=dev-${GITHUB_SHA::7}" >> $GITHUB_ENV
+        run: echo "VERSION=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -130,5 +141,16 @@ jobs:
         with:
           name: ELFBSP ${{ env.VERSION }}
           bodyFile: CHANGELOG.md
+          allowUpdates: true
+          artifacts: ${{ matrix.config.artifact_path }}
+
+      - name: Nightly Pre-Release
+        if: ${{ !contains(github.ref, 'tags') }} && ${{ github.event_name != 'pull_request' }}
+        uses: ncipollo/release-action@v1
+        with:
+          name: "[Nightly] ELFBSP ${{ env.VERSION }}"
+          bodyFile: CHANGELOG.md
+          tag: nightly
+          prerelease: true
           allowUpdates: true
           artifacts: ${{ matrix.config.artifact_path }}
