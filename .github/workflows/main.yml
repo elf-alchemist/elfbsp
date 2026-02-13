@@ -108,7 +108,7 @@ jobs:
           -S .
           -B build
           -DCMAKE_BUILD_TYPE=Release
-          -DCPACK_PACKAGE_VERSION=Nightly
+          -DCPACK_PACKAGE_VERSION=nightly
           ${{ matrix.config.configure }}
 
       - name: Build
