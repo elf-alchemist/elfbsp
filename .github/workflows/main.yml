@@ -145,7 +145,7 @@ jobs:
           artifacts: ${{ matrix.config.artifact_path }}
 
       - name: Nightly Pre-Release
-        if: ${{ !contains(github.ref, 'tags') }} && ${{ github.ref == 'refs/heads/main' }}
+        if: ${{ !contains(github.ref, 'tags') && github.ref == 'refs/heads/main' }}
         uses: ncipollo/release-action@v1
         with:
           name: "[Nightly] ELFBSP ${{ env.VERSION }}"
