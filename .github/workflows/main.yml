@@ -102,7 +102,7 @@ jobs:
           ${{ matrix.config.configure }}
 
       - name: Configure (Nightly)
-        if: ${{ contains(github.ref, 'tags') }}
+        if: ${{ !contains(github.ref, 'tags') }}
         run: >-
           cmake
           -S .
