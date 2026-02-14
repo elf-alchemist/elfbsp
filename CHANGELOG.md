@@ -13,4 +13,4 @@ Bugfixes:
 Meta:
 * Added nightly builds on the GitHub Releases page, for easy access to development builds
 * Ported various documenttaion files from other builders
-* Moved to only building with LLVM Clang on all supported systemsWindows
+* Moved to only building with LLVM Clang on all supported systems, now all three of the Windows, Mac OS and Linux builds use Clang.
