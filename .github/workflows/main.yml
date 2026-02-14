@@ -73,7 +73,8 @@ jobs:
                 mingw-w64-x86_64-clang-tools-extra \
                 mingw-w64-x86_64-lld \
                 mingw-w64-x86_64-cmake \
-                mingw-w64-x86_64-ninja
+                mingw-w64-x86_64-ninja \
+                mingw-w64-x86_64-git
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
@@ -148,6 +149,12 @@ jobs:
           bodyFile: CHANGELOG.md
           allowUpdates: true
           artifacts: ${{ matrix.config.artifact_path }}
+
+      - name: Update Nightly Tag
+        if: ${{ !contains(github.ref, 'tags') && github.ref == 'refs/heads/main' }}
+        run: |
+          git tag -f nightly
+          git push -f origin nightly
 
       - name: Nightly Pre-Release
         if: ${{ !contains(github.ref, 'tags') && github.ref == 'refs/heads/main' }}
