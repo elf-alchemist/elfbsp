@@ -165,5 +165,4 @@ jobs:
           commit: main
           prerelease: true
           allowUpdates: true
-          removeArtifacts: true
           artifacts: ${{ matrix.config.artifact_path }}
