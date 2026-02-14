@@ -1053,7 +1053,7 @@ using bsp_specials_t = enum bsp_specials_e : int32_t
   Special_DoNotRenderAnySeg,
 
   Special_DoNotSplitSeg,
-  Special_Unknown2, // line tag value becomes seg's associated line index?
+  Special_ChangeSegLine,
 };
 
 using bsp_tags_t = enum bsp_tags_e : uint16_t
