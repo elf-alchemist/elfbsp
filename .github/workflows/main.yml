@@ -1,5 +1,8 @@
 name: Continuous Integration
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [main]
@@ -88,6 +91,8 @@ jobs:
           update: true
 
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Required so we can move and push tags
 
       - name: Install dependencies
         run: ${{ matrix.config.install }}
@@ -144,6 +149,12 @@ jobs:
           allowUpdates: true
           artifacts: ${{ matrix.config.artifact_path }}
 
+      - name: Update Nightly Tag
+        if: ${{ !contains(github.ref, 'tags') && github.ref == 'refs/heads/main' }}
+        run: |
+          git tag -f nightly
+          git push -f origin nightly
+
       - name: Nightly Pre-Release
         if: ${{ !contains(github.ref, 'tags') && github.ref == 'refs/heads/main' }}
         uses: ncipollo/release-action@v1
@@ -151,6 +162,8 @@ jobs:
           name: "[Nightly] ELFBSP ${{ env.VERSION }}"
           bodyFile: CHANGELOG.md
           tag: nightly
+          commit: main
           prerelease: true
           allowUpdates: true
+          removeArtifacts: true
           artifacts: ${{ matrix.config.artifact_path }}
