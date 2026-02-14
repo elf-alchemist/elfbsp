@@ -962,6 +962,29 @@ static void FreeWallTips(void)
 
 /* ----- reading routines ------------------------------ */
 
+void ValidateLinedef(linedef_t *line)
+{
+  if (line->right || line->left)
+  {
+    num_real_lines++;
+  }
+
+  line->self_ref = line->left && line->right && line->left->sector == line->right->sector;
+
+  double deltax = line->start->x - line->end->x;
+  double deltay = line->start->y - line->end->y;
+
+  // check for extremely short lines
+  line->zero_len = (fabs(deltax) < DIST_EPSILON) && (fabs(deltay) < DIST_EPSILON);
+
+  // check for extremely long lines
+  if (hypot(deltax, deltay) >= 32000)
+  {
+    PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is VERY long, it may cause problems", line->index);
+    config.total_warnings++;
+  }
+}
+
 static vertex_t *SafeLookupVertex(size_t num)
 {
   if (num >= lev_vertices.size())
@@ -1251,50 +1274,66 @@ static void GetLinedefs(void)
       PrintLine(LOG_ERROR, "Error reading linedefs.");
     }
 
-    linedef_t *line;
-    size_t start_id = GetLittleEndian(raw.start);
-    size_t end_id = GetLittleEndian(raw.end);
+    linedef_t *line = NewLinedef();
 
-    vertex_t *start = SafeLookupVertex(start_id);
-    vertex_t *end = SafeLookupVertex(end_id);
+    line->start_id = GetLittleEndian(raw.start);
+    line->end_id = GetLittleEndian(raw.end);
+    line->flags = GetLittleEndian(raw.flags);
+    line->special = GetLittleEndian(raw.special);
+    line->tag = GetLittleEndian(raw.tag);
+    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
+    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
+
+    vertex_t *start = SafeLookupVertex(line->start_id);
+    vertex_t *end = SafeLookupVertex(line->end_id);
 
     start->is_used = true;
     end->is_used = true;
 
-    line = NewLinedef();
-
     line->start = start;
     line->end = end;
-    line->start_id = start_id;
-    line->end_id = end_id;
 
-    // check for zero-length line
-    line->zero_len = (fabs(start->x - end->x) < DIST_EPSILON) && (fabs(start->y - end->y) < DIST_EPSILON);
+    ValidateLinedef(line);
 
-    line->special = GetLittleEndian(raw.special);
-    line->tag = GetLittleEndian(raw.tag);
-    line->flags = GetLittleEndian(raw.flags);
-
-    line->two_sided = (line->flags & MLF_TWOSIDED) != 0;
-    line->is_precious = (line->tag >= 900 && line->tag < 1000);
-
-    line->dont_render = (line->tag == Tag_DoNotRender);
-
-    line->no_blockmap = (line->tag == Tag_NoBlockmap);
-
-    line->dont_render_front = (line->special == Special_DoNotRenderFrontSeg || line->special == Special_DoNotRenderAnySeg);
-
-    line->dont_render_back = (line->special == Special_DoNotRenderBackSeg || line->special == Special_DoNotRenderAnySeg);
-
-    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
-
-    if (line->right || line->left)
+    switch (line->tag)
     {
-      num_real_lines++;
+    case Tag_NoBlockmap:
+      line->no_blockmap |= true;
+      break;
+    case Tag_DoNotRender:
+      line->effects |= FX_DoNotRenderFront | FX_DoNotRenderBack;
+      break;
+    default:
+      line->is_precious |= (line->tag >= 900 && line->tag < 1000);
+      break;
     }
 
-    line->self_ref = (line->left && line->right && (line->left->sector == line->right->sector));
+    switch (line->special)
+    {
+    case Special_RotateDegreesRelative:
+      line->angle = FX_RotateRelativeDegrees;
+      break;
+    case Special_RotateDegreesAbsolute:
+      line->angle = FX_RotateAbsoluteDegrees;
+      break;
+    case Special_RotateAngleRelative:
+      line->angle = FX_RotateRelativeBAM;
+      break;
+    case Special_RotateAngleAbsolute:
+      line->angle = FX_RotateAbsoluteBAM;
+      break;
+    case Special_DoNotRenderBackSeg:
+      line->effects |= FX_DoNotRenderBack;
+      break;
+    case Special_DoNotRenderFrontSeg:
+      line->effects |= FX_DoNotRenderFront;
+      break;
+    case Special_DoNotRenderAnySeg:
+      line->effects |= FX_DoNotRenderFront | FX_DoNotRenderBack;
+      break;
+    default:
+      break;
+    }
   }
 }
 
@@ -1346,24 +1385,13 @@ static void GetLinedefsHexen(void)
     line->start = start;
     line->end = end;
 
-    // check for zero-length line
-    line->zero_len = (fabs(start->x - end->x) < DIST_EPSILON) && (fabs(start->y - end->y) < DIST_EPSILON);
-
     line->special = static_cast<uint8_t>(raw.special);
-    uint16_t flags = GetLittleEndian(raw.flags);
-
-    // -JL- Added missing twosided flag handling that caused a broken reject
-    line->two_sided = (flags & MLF_TWOSIDED) != 0;
+    line->flags = GetLittleEndian(raw.flags);
 
     line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
     line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
 
-    if (line->right || line->left)
-    {
-      num_real_lines++;
-    }
-
-    line->self_ref = (line->left && line->right && (line->left->sector == line->right->sector));
+    ValidateLinedef(line);
   }
 }
 
@@ -1440,12 +1468,15 @@ static void ParseLinedefField(linedef_t *line, const std::string &key, token_kin
 
   if (key == "special")
   {
-    line->special = LEX_UInt(value);
+    line->special = LEX_Int(value);
   }
 
   if (key == "twosided")
   {
-    line->two_sided = LEX_Boolean(value);
+    if (LEX_Boolean(value))
+    {
+      line->flags |= MLF_TWOSIDED;
+    };
   }
 
   if (key == "sidefront")
@@ -1577,12 +1608,7 @@ static void ParseUDMF_Block(lexer_c &lex, int cur_type)
       PrintLine(LOG_ERROR, "Linedef #%zu is missing a vertex!", line->index);
     }
 
-    if (line->right || line->left)
-    {
-      num_real_lines++;
-    }
-
-    line->self_ref = (line->left && line->right && (line->left->sector == line->right->sector));
+    ValidateLinedef(line);
   }
 }
 

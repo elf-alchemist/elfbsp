@@ -1339,53 +1339,35 @@ seg_t *CreateSegs(void)
       continue;
     }
 
-    // -Elf- ZokumBSP
-    if (line->dont_render)
+    if (line->right == nullptr)
     {
-      continue;
-    }
-
-    // check for extremely long lines
-    if (hypot(line->start->x - line->end->x, line->start->y - line->end->y) >= 32000)
-    {
-      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is VERY long, it may cause problems", line->index);
+      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu has no front/right sidedef!", line->index);
       config.total_warnings++;
     }
-
-    if (line->right != nullptr)
+    else if (line->right != nullptr && HAS_NONE(line->effects, FX_DoNotRenderFront))
     {
       right = CreateOneSeg(line, line->start, line->end, line->right, false);
       ListAddSeg(&list, right);
     }
-    else
+
+    if (line->left == nullptr && HAS_BIT(line->flags, MLF_TWOSIDED))
     {
-      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu has no right sidedef!", line->index);
+      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is 2s but has no back/left sidedef", line->index);
       config.total_warnings++;
     }
-
-    if (line->left != nullptr)
+    else if (line->left != nullptr && HAS_NONE(line->effects, FX_DoNotRenderBack))
     {
       left = CreateOneSeg(line, line->end, line->start, line->left, true);
       ListAddSeg(&list, left);
-
-      if (right != nullptr)
-      {
-        // -AJA- Partner segs.  These always maintain a one-to-one
-        //       correspondence, so if one of the gets split, the
-        //       other one must be split too.
-
-        left->partner = right;
-        right->partner = left;
-      }
     }
-    else
+
+    // -AJA- Partner segs.  These always maintain a one-to-one
+    //       correspondence, so if one of the gets split, the
+    //       other one must be split too.
+    if (right && left)
     {
-      if (line->two_sided)
-      {
-        PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is 2s but has no left sidedef", line->index);
-        config.total_warnings++;
-        line->two_sided = false;
-      }
+      left->partner = right;
+      right->partner = left;
     }
   }
 
