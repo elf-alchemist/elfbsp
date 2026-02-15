@@ -53,12 +53,6 @@ constexpr auto PROJECT_STRING = "ELFBSP v1.1";
 
 #if defined(WIN32) || defined(_WIN32) || defined(_WIN64)
 
-  #define WIN32_LEAN_AND_MEAN
-  #include <windows.h>
-  #if !defined(WIN32)
-    #define WIN32
-  #endif
-
 constexpr auto WINDOWS = true;
 constexpr auto MACOS = false;
 constexpr auto LINUX = false;
