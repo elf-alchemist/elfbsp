@@ -143,23 +143,11 @@ struct linedef_t
   sidedef_t *left;  // left sidedef, or nullptr if none
 
   int32_t special; //
-  uint16_t tag;    // 
-  uint16_t flags;  // currently we only care about two-sided lines, but knows
+  uint16_t flags;  // currently we only care about two-sided lines, but who knows
+  args_t args;     // Tag => arg0/id split
 
   uint32_t effects = FX_Nothing;
   seg_rotation_t angle = FX_DoNotRotate;
-
-  // prefer not to split
-  bool is_precious;
-
-  // zero length (line should be totally ignored)
-  bool zero_len;
-
-  // sector is the same on both sides
-  bool self_ref;
-
-  // do not add line to blockmap
-  bool no_blockmap;
 
   // normally nullptr, except when this linedef directly overlaps an earlier
   // one (a rarely-used trick to create higher mid-masked textures).
@@ -179,7 +167,7 @@ struct linedef_t
 struct thing_t
 {
   double x, y;
-  int16_t type;
+  doomednum_t type;
 
   // other info (angle, and hexen stuff) omitted.  We don't need to
   // write the THINGS lump, only read it.

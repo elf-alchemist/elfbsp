@@ -164,7 +164,7 @@ template <typename T> constexpr void RaiseValue(T &var, T value)
 
 // sized types
 using byte = uint8_t;
-using args_t = uint8_t[5];
+using args_t = int32_t[5];
 using fixed_t = int32_t;
 using long_angle_t = uint32_t;
 using short_angle_t = uint16_t;
@@ -1033,38 +1033,99 @@ using hexen_activation_t = enum hexen_activation_e
   SPAC_PCross = 5,  // when projectile crosses the line
 };
 
-// The power of node building manipulation!
-using bsp_specials_t = enum bsp_specials_e : int32_t
+using doom_special_t = enum doom_special_e : int32_t
 {
-  Special_Scroll = 48,
+  Special_ScrollLeft = 48,
+  Special_ScrollRight = 85,
 
-  Special_RemoteScroll = 1048,
+  Special_RemoteScrollLeft = 1048,
+  Special_RemoteScrollRight,
 
   Special_ChangeStartVertex = 1078,
   Special_ChangeEndVertex,
 
-  Special_RotateDegreesRelative,
-  Special_RotateDegreesAbsolute,
-  Special_RotateAngleRelative,
-  Special_RotateAngleAbsolute,
+  Special_RotateRelativeDegrees,
+  Special_RotateAbsoluteDegrees,
+  Special_RotateRelativeBAM,
+  Special_RotateAbsoluteBAM,
 
-  Special_DoNotRenderBackSeg,
-  Special_DoNotRenderFrontSeg,
-  Special_DoNotRenderAnySeg,
+  Special_DoNotRenderSegmentBack,
+  Special_DoNotRenderSegmentFront,
+  Special_DoNotRenderSegmentBoth,
 
   Special_DoNotSplitSeg,
   Special_ChangeSegLine,
 };
 
-using bsp_tags_t = enum bsp_tags_e : uint16_t
+using doom_tags_t = enum doom_tags_e : uint16_t
 {
   Tag_DoNotRender = 998,
   Tag_NoBlockmap = 999,
 };
 
+using hexen_special_t = enum hexen_special_e : int32_t
+{
+  // We need to be aware of parameterized actions 1 and 5
+  Polyobj_StartLine = 1,
+  Polyobj_RotateLeft,
+  Polyobj_RotateRight,
+  Polyobj_Move,
+  Polyobj_ExplicitLine,
+  Polyobj_MoveTimes8,
+  Polyobj_DoorSwing,
+  Polyobj_DoorSlide,
+
+  Polyobj_OR_MoveToSpot = 59,
+
+  PolyObj_MoveToSpot = 86,
+  PolyObj_Stop,
+  PolyObj_MoveTo,
+  PolyObj_OR_MoveTo,
+  PolyObj_OR_RotateLeft,
+  PolyObj_OR_RotateRight,
+  PolyObj_OR_Move,
+  PolyObj_OR_MoveTimes8,
+
+  Polyobj_StopSound = 283,
+
+  // Actual special effects
+  BSP_SpecialEffects = 108,
+
+  Unused141 = 141,
+  Unused142,
+  Unused143,
+  Unused144,
+  Unused145,
+  Unused146,
+  Unused147,
+  Unused148,
+  Unused149,
+  Unused150,
+  Unused151,
+  Unused152,
+  Unused153,
+
+  Unused155 = 155,
+
+  Unused161 = 161,
+  Unused162,
+  Unused163,
+  Unused164,
+  Unused165,
+  Unused166,
+  Unused167,
+};
+
+// The power of node building manipulation!
 using bsp_effects_t = enum bsp_effects_e : uint32_t
 {
   FX_Nothing = 0,
+
+  // Zero-length line
+  FX_ZeroLength = BIT(26),
+
+  // Self-referencing
+  FX_SelfReferencial = BIT(27),
 
   // Segment generation
   FX_DoNotRenderFront = BIT(28),
@@ -1114,7 +1175,7 @@ constexpr uint32_t SF_MBF21Flags = SF_DamageMask | SF_Secret | SF_Friction | SF_
 // Thing attributes.
 //
 
-using thing_option_t = enum thing_option_e : uint16_t
+using doom_mobj_option_t = enum doom_mobj_option_e : uint16_t
 {
   MTF_Easy = BIT(0),
   MTF_Medium = BIT(1),
@@ -1127,10 +1188,7 @@ using thing_option_t = enum thing_option_e : uint16_t
   MTF_Friend = BIT(7),
 };
 
-constexpr uint32_t MTF_EXFLOOR_MASK = 0x3C00;
-constexpr uint32_t MTF_EXFLOOR_SHIFT = 10;
-
-using hexen_option_t = enum hexen_option_e : uint16_t
+using hexen_mobj_option_t = enum hexen_mobj_option_e : uint16_t
 {
   MTF_Hexen_Easy = BIT(0),
   MTF_Hexen_Medium = BIT(1),
@@ -1147,21 +1205,20 @@ using hexen_option_t = enum hexen_option_e : uint16_t
   MTF_Hexen_DM = BIT(10),
 };
 
-//
-// Polyobject stuff
-//
-constexpr int32_t HEXTYPE_POLY_START = 1;
-constexpr int32_t HEXTYPE_POLY_EXPLICIT = 5;
+using doomednum_t = enum doomednum_e : int16_t
+{
+  // -JL- ZDoom polyobj thing types
+  PolyObj_Anchor = 9300,
+  PolyObj_Spawn = 9301,
+  PolyObj_SpawnCrush = 9302,
+  PolyObj_SpawnHurt = 9303,
 
-// -JL- Hexen polyobj thing types
-constexpr uint32_t PO_ANCHOR_TYPE = 3000;
-constexpr uint32_t PO_SPAWN_TYPE = 3001;
-constexpr uint32_t PO_SPAWNCRUSH_TYPE = 3002;
-
-// -JL- ZDoom polyobj thing types
-constexpr uint32_t ZDOOM_PO_ANCHOR_TYPE = 9300;
-constexpr uint32_t ZDOOM_PO_SPAWN_TYPE = 9301;
-constexpr uint32_t ZDOOM_PO_SPAWNCRUSH_TYPE = 9302;
+  // -JL- Hexen polyobj thing types
+  Hexen_PolyObj_Anchor = 3000,
+  Hexen_PolyObj_Spawn = 3001,
+  Hexen_PolyObj_SpawnCrush = 3002,
+  Hexen_PolyObj_SpawnHurt = 3003, // does any port actually handle this?
+};
 
 //
 // File handling

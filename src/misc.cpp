@@ -62,7 +62,7 @@ void MarkPolyobjSector(sector_t *sector)
 
     if ((L->right != nullptr && L->right->sector == sector) || (L->left != nullptr && L->left->sector == sector))
     {
-      L->is_precious = true;
+      L->effects |= FX_DoNotSplitSeg;
     }
   }
 }
@@ -232,7 +232,7 @@ void DetectPolyobjSectors(bool is_udmf)
   {
     linedef_t *L = lev_linedefs[i];
 
-    if (L->special == HEXTYPE_POLY_START || L->special == HEXTYPE_POLY_EXPLICIT)
+    if (L->special == Polyobj_StartLine || L->special == Polyobj_ExplicitLine)
     {
       break;
     }
@@ -256,7 +256,7 @@ void DetectPolyobjSectors(bool is_udmf)
   {
     thing_t *T = lev_things[j];
 
-    if (T->type == ZDOOM_PO_SPAWN_TYPE || T->type == ZDOOM_PO_SPAWNCRUSH_TYPE)
+    if (T->type == PolyObj_Anchor || T->type == PolyObj_SpawnCrush)
     {
       // -JL- A ZDoom style polyobj thing found
       hexen_style = false;
@@ -280,7 +280,7 @@ void DetectPolyobjSectors(bool is_udmf)
     if (hexen_style)
     {
       // -JL- Hexen style polyobj things
-      if (T->type != PO_SPAWN_TYPE && T->type != PO_SPAWNCRUSH_TYPE)
+      if (T->type != Hexen_PolyObj_Anchor && T->type != Hexen_PolyObj_SpawnCrush)
       {
         continue;
       }
@@ -288,7 +288,7 @@ void DetectPolyobjSectors(bool is_udmf)
     else
     {
       // -JL- ZDoom style polyobj things
-      if (T->type != ZDOOM_PO_SPAWN_TYPE && T->type != ZDOOM_PO_SPAWNCRUSH_TYPE)
+      if (T->type != PolyObj_Anchor && T->type != PolyObj_SpawnCrush)
       {
         continue;
       }
@@ -382,6 +382,8 @@ void DetectOverlappingVertices(void)
 
 void PruneVerticesAtEnd(void)
 {
+  // always prune vertices at end of lump, otherwise all the
+  // unused vertices from seg splits would keep accumulating.
   size_t old_num = lev_vertices.size();
 
   // scan all vertices.
@@ -530,7 +532,7 @@ void CalculateWallTips(void)
   {
     const linedef_t *L = lev_linedefs[i];
 
-    if (L->overlap || L->zero_len)
+    if (L->overlap || HAS_BIT(L->effects, FX_ZeroLength))
     {
       continue;
     }
