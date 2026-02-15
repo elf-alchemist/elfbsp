@@ -262,13 +262,7 @@ static void CreateBlockmap(void)
   {
     const linedef_t *L = lev_linedefs[i];
 
-    // ignore zero-length lines
-    if (L->zero_len)
-    {
-      continue;
-    }
-
-    if (L->no_blockmap)
+    if (HAS_BIT(L->effects, FX_NoBlockmap | FX_ZeroLength))
     {
       continue;
     }
@@ -517,44 +511,41 @@ static void FindBlockmapLimits(bbox_t *bbox)
   {
     const linedef_t *L = lev_linedefs[i];
 
-    if (L->no_blockmap)
+    if (HAS_BIT(L->effects, FX_NoBlockmap | FX_ZeroLength))
     {
       continue;
     }
 
-    if (!L->zero_len)
+    double x1 = L->start->x;
+    double y1 = L->start->y;
+    double x2 = L->end->x;
+    double y2 = L->end->y;
+
+    int32_t lx = static_cast<int32_t>(floor(std::min(x1, x2)));
+    int32_t ly = static_cast<int32_t>(floor(std::min(y1, y2)));
+    int32_t hx = static_cast<int32_t>(ceil(std::max(x1, x2)));
+    int32_t hy = static_cast<int32_t>(ceil(std::max(y1, y2)));
+
+    if (lx < bbox->minx)
     {
-      double x1 = L->start->x;
-      double y1 = L->start->y;
-      double x2 = L->end->x;
-      double y2 = L->end->y;
-
-      int32_t lx = static_cast<int32_t>(floor(std::min(x1, x2)));
-      int32_t ly = static_cast<int32_t>(floor(std::min(y1, y2)));
-      int32_t hx = static_cast<int32_t>(ceil(std::max(x1, x2)));
-      int32_t hy = static_cast<int32_t>(ceil(std::max(y1, y2)));
-
-      if (lx < bbox->minx)
-      {
-        bbox->minx = lx;
-      }
-      if (ly < bbox->miny)
-      {
-        bbox->miny = ly;
-      }
-      if (hx > bbox->maxx)
-      {
-        bbox->maxx = hx;
-      }
-      if (hy > bbox->maxy)
-      {
-        bbox->maxy = hy;
-      }
-
-      // compute middle of cluster
-      mid_x += (lx + hx) >> 1;
-      mid_y += (ly + hy) >> 1;
+      bbox->minx = lx;
     }
+    if (ly < bbox->miny)
+    {
+      bbox->miny = ly;
+    }
+    if (hx > bbox->maxx)
+    {
+      bbox->maxx = hx;
+    }
+    if (hy > bbox->maxy)
+    {
+      bbox->maxy = hy;
+    }
+
+    // compute middle of cluster
+    mid_x += (lx + hx) >> 1;
+    mid_y += (ly + hy) >> 1;
   }
 
   if (lev_linedefs.size() > 0)
@@ -969,13 +960,23 @@ void ValidateLinedef(linedef_t *line)
     num_real_lines++;
   }
 
-  line->self_ref = line->left && line->right && line->left->sector == line->right->sector;
+  if (line->left && line->right && line->left->sector == line->right->sector)
+  {
+    line->effects |= FX_SelfReferencial;
+    if (config.verbose)
+    {
+      PrintLine(LOG_NORMAL, "Linedef #%zu is self-referencing", line->index);
+    }
+  }
 
   double deltax = line->start->x - line->end->x;
   double deltay = line->start->y - line->end->y;
 
   // check for extremely short lines
-  line->zero_len = (fabs(deltax) < DIST_EPSILON) && (fabs(deltay) < DIST_EPSILON);
+  if ((fabs(deltax) < DIST_EPSILON) && (fabs(deltay) < DIST_EPSILON))
+  {
+    line->effects |= FX_ZeroLength;
+  }
 
   // check for extremely long lines
   if (hypot(deltax, deltay) >= 32000)
@@ -1026,7 +1027,7 @@ static inline sidedef_t *SafeLookupSidedef(uint16_t num)
   return lev_sidedefs[num];
 }
 
-static void GetVertices(void)
+static void GetVertices_Binary(void)
 {
   size_t count = 0;
 
@@ -1070,7 +1071,7 @@ static void GetVertices(void)
   num_old_vert = lev_vertices.size();
 }
 
-static void GetSectors(void)
+static void GetSectors_Binary(void)
 {
   size_t count = 0;
 
@@ -1112,7 +1113,7 @@ static void GetSectors(void)
   }
 }
 
-static void GetThings(void)
+static void GetThings_Doom(void)
 {
   size_t count = 0;
 
@@ -1151,11 +1152,11 @@ static void GetThings(void)
 
     thing->x = GetLittleEndian(raw.x);
     thing->y = GetLittleEndian(raw.y);
-    thing->type = GetLittleEndian(raw.type);
+    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
   }
 }
 
-static void GetThingsHexen(void)
+static void GetThings_Hexen(void)
 {
   size_t count = 0;
 
@@ -1194,11 +1195,11 @@ static void GetThingsHexen(void)
 
     thing->x = GetLittleEndian(raw.x);
     thing->y = GetLittleEndian(raw.y);
-    thing->type = GetLittleEndian(raw.type);
+    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
   }
 }
 
-static void GetSidedefs(void)
+static void GetSidedefs_Binary(void)
 {
   size_t count = 0;
 
@@ -1239,7 +1240,7 @@ static void GetSidedefs(void)
   }
 }
 
-static void GetLinedefs(void)
+static void GetLinedefs_Doom(void)
 {
   size_t count = 0;
 
@@ -1280,7 +1281,7 @@ static void GetLinedefs(void)
     line->end_id = GetLittleEndian(raw.end);
     line->flags = GetLittleEndian(raw.flags);
     line->special = GetLittleEndian(raw.special);
-    line->tag = GetLittleEndian(raw.tag);
+    line->args[0] = GetLittleEndian(raw.tag);
     line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
     line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
 
@@ -1295,41 +1296,45 @@ static void GetLinedefs(void)
 
     ValidateLinedef(line);
 
-    switch (line->tag)
+    // Line tags ( 900 <= x <=999 ) are considered "precious" and will, therefore, have a much higher seg split cost
+    switch (line->args[0])
     {
-    case Tag_NoBlockmap:
-      line->no_blockmap |= true;
+    case 900 ... 997:
+      line->effects |= FX_DoNotSplitSeg;
       break;
     case Tag_DoNotRender:
-      line->effects |= FX_DoNotRenderFront | FX_DoNotRenderBack;
+      line->effects |= FX_DoNotRenderFront | FX_DoNotRenderBack | FX_DoNotSplitSeg;
       break;
-    default:
-      line->is_precious |= (line->tag >= 900 && line->tag < 1000);
+    case Tag_NoBlockmap:
+      line->effects |= FX_NoBlockmap | FX_DoNotSplitSeg;
       break;
     }
 
     switch (line->special)
     {
-    case Special_RotateDegreesRelative:
+    case Special_RotateRelativeDegrees:
       line->angle = FX_RotateRelativeDegrees;
       break;
-    case Special_RotateDegreesAbsolute:
+    case Special_RotateAbsoluteDegrees:
       line->angle = FX_RotateAbsoluteDegrees;
       break;
-    case Special_RotateAngleRelative:
+    case Special_RotateRelativeBAM:
       line->angle = FX_RotateRelativeBAM;
       break;
-    case Special_RotateAngleAbsolute:
+    case Special_RotateAbsoluteBAM:
       line->angle = FX_RotateAbsoluteBAM;
       break;
-    case Special_DoNotRenderBackSeg:
+    case Special_DoNotRenderSegmentBack:
       line->effects |= FX_DoNotRenderBack;
       break;
-    case Special_DoNotRenderFrontSeg:
+    case Special_DoNotRenderSegmentFront:
       line->effects |= FX_DoNotRenderFront;
       break;
-    case Special_DoNotRenderAnySeg:
+    case Special_DoNotRenderSegmentBoth:
       line->effects |= FX_DoNotRenderFront | FX_DoNotRenderBack;
+      break;
+    case Special_DoNotSplitSeg:
+      line->effects |= FX_DoNotSplitSeg;
       break;
     default:
       break;
@@ -1337,7 +1342,7 @@ static void GetLinedefs(void)
   }
 }
 
-static void GetLinedefsHexen(void)
+static void GetLinedefs_Hexen(void)
 {
   size_t count = 0;
 
@@ -1385,7 +1390,12 @@ static void GetLinedefsHexen(void)
     line->start = start;
     line->end = end;
 
-    line->special = static_cast<uint8_t>(raw.special);
+    line->special = raw.special;
+    line->args[0] = raw.args[0];
+    line->args[1] = raw.args[1];
+    line->args[2] = raw.args[2];
+    line->args[3] = raw.args[3];
+    line->args[4] = raw.args[4];
     line->flags = GetLittleEndian(raw.flags);
 
     line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
@@ -1417,7 +1427,7 @@ static void ParseThingField(thing_t *thing, const std::string &key, token_kind_e
 
   if (key == "type")
   {
-    thing->type = LEX_Int16(value);
+    thing->type = static_cast<doomednum_t>(LEX_Int16(value));
   }
 }
 
@@ -1797,30 +1807,29 @@ void LoadLevel(void)
   num_new_vert = 0;
   num_real_lines = 0;
 
-  if (lev_format == MapFormat_UDMF)
+  switch (lev_format)
   {
+  case MapFormat_UDMF:
     ParseUDMF();
-  }
-  else
-  {
-    GetVertices();
-    GetSectors();
-    GetSidedefs();
-
-    if (lev_format == MapFormat_Hexen)
-    {
-      GetLinedefsHexen();
-      GetThingsHexen();
-    }
-    else
-    {
-      GetLinedefs();
-      GetThings();
-    }
-
-    // always prune vertices at end of lump, otherwise all the
-    // unused vertices from seg splits would keep accumulating.
+    break;
+  case MapFormat_Doom:
+    GetVertices_Binary();
+    GetSectors_Binary();
+    GetSidedefs_Binary();
+    GetLinedefs_Doom();
+    GetThings_Doom();
     PruneVerticesAtEnd();
+    break;
+  case MapFormat_Hexen:
+    GetVertices_Binary();
+    GetSectors_Binary();
+    GetSidedefs_Binary();
+    GetLinedefs_Hexen();
+    GetThings_Hexen();
+    PruneVerticesAtEnd();
+    break;
+  default:
+    break;
   }
 
   if (config.verbose)
@@ -1908,35 +1917,23 @@ build_result_e SaveBinaryFormatLevel(node_t *root_node)
   switch (level_type)
   {
   case BSP_XGL3:
-    {
-      SaveFormat_Xgl3(root_node);
-      break;
-    }
+    SaveFormat_Xgl3(root_node);
+    break;
   case BSP_XGL2:
-    {
-      SaveFormat_Xgl2(root_node);
-      break;
-    }
+    SaveFormat_Xgl2(root_node);
+    break;
   case BSP_XGLN:
-    {
-      SaveFormat_Xgln(root_node);
-      break;
-    }
+    SaveFormat_Xgln(root_node);
+    break;
   case BSP_XNOD:
-    {
-      SaveFormat_Xnod(root_node);
-      break;
-    }
+    SaveFormat_Xnod(root_node);
+    break;
   case BSP_DEEPBSPV4:
-    {
-      SaveFormat_DeepBSPV4(root_node);
-      break;
-    }
+    SaveFormat_DeepBSPV4(root_node);
+    break;
   case BSP_VANILLA:
-    {
-      SaveFormat_Vanilla(root_node);
-      break;
-    }
+    SaveFormat_Vanilla(root_node);
+    break;
   }
 
   PutBlockmap();

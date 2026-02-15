@@ -388,12 +388,9 @@ bool EvalPartitionWorker(quadtree_c *tree, seg_t *part, double best_cost, double
     //       DONT want to split, and the normal linedef-based checks
     //       may fail to detect the sector being cut in half.  Thanks
     //       to Janis Legzdinsh for spotting this obscure bug.
-    if (fa <= DIST_EPSILON || fb <= DIST_EPSILON)
+    if ((fa <= DIST_EPSILON || fb <= DIST_EPSILON) && check->linedef && HAS_BIT(check->linedef->effects, FX_DoNotSplitSeg))
     {
-      if (check->linedef != nullptr && check->linedef->is_precious)
-      {
-        info->cost += 40.0 * split_cost * PRECIOUS_MULTIPLY;
-      }
+      info->cost += 40.0 * split_cost * PRECIOUS_MULTIPLY;
     }
 
     /* check for right side */
@@ -463,7 +460,7 @@ bool EvalPartitionWorker(quadtree_c *tree, seg_t *part, double best_cost, double
     // it as precious; i.e. don't split it unless all other options
     // are exhausted.  This is used to protect deep water and invisible
     // lifts/stairs from being messed up accidentally by splits.
-    if (check->linedef && check->linedef->is_precious)
+    if (check->linedef && HAS_BIT(check->linedef->effects, FX_DoNotSplitSeg))
     {
       info->cost += 100.0 * split_cost * PRECIOUS_MULTIPLY;
     }
@@ -800,7 +797,7 @@ void DivideOneSeg(seg_t *seg, seg_t *part, seg_t **left_list, seg_t **right_list
   double a = part->PerpDist(seg->psx, seg->psy);
   double b = part->PerpDist(seg->pex, seg->pey);
 
-  bool self_ref = seg->linedef ? seg->linedef->self_ref : false;
+  bool self_ref = seg->linedef && HAS_BIT(seg->linedef->effects, FX_SelfReferencial);
 
   if (seg->source_line == part->source_line)
   {
@@ -1328,7 +1325,7 @@ seg_t *CreateSegs(void)
     seg_t *right = nullptr;
 
     // ignore zero-length lines
-    if (line->zero_len)
+    if (HAS_BIT(line->effects, FX_ZeroLength))
     {
       continue;
     }
@@ -1485,7 +1482,7 @@ void ClockwiseOrder(subsec_t *subsec)
     {
       cur_score = 0;
     }
-    else if (array[j]->linedef->self_ref)
+    else if (HAS_BIT(array[j]->linedef->effects, FX_SelfReferencial))
     {
       cur_score = 2;
     }
