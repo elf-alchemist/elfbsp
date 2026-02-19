@@ -60,7 +60,7 @@ void MarkPolyobjSector(sector_t *sector)
   {
     linedef_t *L = lev_linedefs[i];
 
-    if ((L->right != nullptr && L->right->sector == sector) || (L->left != nullptr && L->left->sector == sector))
+    if ((L->right && L->right->sector == sector) || (L->left && L->left->sector == sector))
     {
       L->effects |= FX_DoNotSplitSeg;
     }
@@ -96,12 +96,12 @@ void MarkPolyobjPoint(double x, double y)
         PrintLine(LOG_DEBUG, "[%s] Touching line was %zu", __func__, L->index);
       }
 
-      if (L->left != nullptr)
+      if (L->left)
       {
         MarkPolyobjSector(L->left->sector);
       }
 
-      if (L->right != nullptr)
+      if (L->right)
       {
         MarkPolyobjSector(L->right->sector);
       }

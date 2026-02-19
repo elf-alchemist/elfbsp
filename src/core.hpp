@@ -164,7 +164,6 @@ template <typename T> constexpr void RaiseValue(T &var, T value)
 
 // sized types
 using byte = uint8_t;
-using args_t = int32_t[5];
 using fixed_t = int32_t;
 using long_angle_t = uint32_t;
 using short_angle_t = uint16_t;
@@ -572,13 +571,7 @@ inline size_t FindExtension(const char *filename)
 //
 inline double ComputeAngle(double dx, double dy)
 {
-  if (dx == 0)
-  {
-    return (dy > 0) ? 90.0 : 270.0;
-  }
-
   const double angle = atan2(dy, dx) * 180.0 / M_PI;
-
   return angle + (angle < 0.0) * 360.0;
 }
 
@@ -657,7 +650,7 @@ using raw_hexen_linedef_t = struct raw_hexen_linedef_s
   uint16_t end;    // ... to this vertex
   uint16_t flags;  // linedef flags (impassible, etc)
   uint8_t special; // special type
-  args_t args;     // special arguments
+  uint8_t args[5]; // special arguments
   uint16_t right;  // right sidedef
   uint16_t left;   // left sidedef
 } PACKEDATTR;

@@ -124,6 +124,12 @@ struct sidedef_t
   // adjacent sector.  Can be nullptr (invalid sidedef)
   sector_t *sector;
 
+  double offset_x = 0.0;
+  double offset_y = 0.0;
+  char tex_upper[8];
+  char tex_middle[8];
+  char tex_lower[8];
+
   // sidedef index.  Always valid after loading & pruning.
   size_t index;
 };
@@ -136,15 +142,13 @@ struct linedef_t
   vertex_t *start; // from this vertex...
   vertex_t *end;   // ... to this vertex
 
-  size_t start_id;
-  size_t end_id;
-
   sidedef_t *right; // right sidedef
   sidedef_t *left;  // left sidedef, or nullptr if none
 
   int32_t special; //
   uint16_t flags;  // currently we only care about two-sided lines, but who knows
-  args_t args;     // Tag => arg0/id split
+  int32_t id;      // Tag => arg0/id split
+  int32_t args[5]; //
 
   uint32_t effects = FX_Nothing;
   seg_rotation_t angle = FX_DoNotRotate;

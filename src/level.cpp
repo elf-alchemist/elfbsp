@@ -25,6 +25,7 @@
 #include "local.hpp"
 
 #include <algorithm>
+#include <cstring>
 #include <utility>
 #include <vector>
 
@@ -969,6 +970,16 @@ void ValidateLinedef(linedef_t *line)
     }
   }
 
+  if (line->left && line->left->tex_lower[0] != '-' && memcmp(line->left->tex_lower, "BSPNOSEG", 8))
+  {
+    line->effects |= FX_DoNotRenderBack;
+  }
+
+  if (line->right && line->right->tex_lower[0] != '-' && memcmp(line->right->tex_lower, "BSPNOSEG", 8))
+  {
+    line->effects |= FX_DoNotRenderFront;
+  }
+
   double deltax = line->start->x - line->end->x;
   double deltay = line->start->y - line->end->y;
 
@@ -1236,6 +1247,11 @@ static void GetSidedefs_Binary(void)
 
     sidedef_t *side = NewSidedef();
 
+    side->offset_x = GetLittleEndian(raw.x_offset);
+    side->offset_y = GetLittleEndian(raw.y_offset);
+    memcpy(side->tex_upper, raw.upper_tex, 8);
+    memcpy(side->tex_lower, raw.lower_tex, 8);
+    memcpy(side->tex_middle, raw.mid_tex, 8);
     side->sector = SafeLookupSector(GetLittleEndian(raw.sector));
   }
 }
@@ -1277,22 +1293,16 @@ static void GetLinedefs_Doom(void)
 
     linedef_t *line = NewLinedef();
 
-    line->start_id = GetLittleEndian(raw.start);
-    line->end_id = GetLittleEndian(raw.end);
+    line->start = SafeLookupVertex(GetLittleEndian(raw.start));
+    line->end = SafeLookupVertex(GetLittleEndian(raw.end));
+    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
+    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
     line->flags = GetLittleEndian(raw.flags);
     line->special = GetLittleEndian(raw.special);
     line->args[0] = GetLittleEndian(raw.tag);
-    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
 
-    vertex_t *start = SafeLookupVertex(line->start_id);
-    vertex_t *end = SafeLookupVertex(line->end_id);
-
-    start->is_used = true;
-    end->is_used = true;
-
-    line->start = start;
-    line->end = end;
+    line->start->is_used = true;
+    line->end->is_used = true;
 
     ValidateLinedef(line);
 
@@ -1377,15 +1387,16 @@ static void GetLinedefs_Hexen(void)
       PrintLine(LOG_ERROR, "Error reading linedefs.");
     }
 
-    linedef_t *line;
+    linedef_t *line = NewLinedef();
 
     vertex_t *start = SafeLookupVertex(GetLittleEndian(raw.start));
     vertex_t *end = SafeLookupVertex(GetLittleEndian(raw.end));
+    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
+    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
+    line->flags = GetLittleEndian(raw.flags);
 
     start->is_used = true;
     end->is_used = true;
-
-    line = NewLinedef();
 
     line->start = start;
     line->end = end;
@@ -1396,10 +1407,6 @@ static void GetLinedefs_Hexen(void)
     line->args[2] = raw.args[2];
     line->args[3] = raw.args[3];
     line->args[4] = raw.args[4];
-    line->flags = GetLittleEndian(raw.flags);
-
-    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
 
     ValidateLinedef(line);
   }
