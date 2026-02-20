@@ -1201,10 +1201,10 @@ using hexen_mobj_option_t = enum hexen_mobj_option_e : uint16_t
 using doomednum_t = enum doomednum_e : int16_t
 {
   // -JL- ZDoom polyobj thing types
-  PolyObj_Anchor = 9300,
-  PolyObj_Spawn = 9301,
-  PolyObj_SpawnCrush = 9302,
-  PolyObj_SpawnHurt = 9303,
+  ZDoom_PolyObj_Anchor = 9300,
+  ZDoom_PolyObj_Spawn = 9301,
+  ZDoom_PolyObj_SpawnCrush = 9302,
+  ZDoom_PolyObj_SpawnHurt = 9303,
 
   // -JL- Hexen polyobj thing types
   Hexen_PolyObj_Anchor = 3000,
@@ -1515,6 +1515,14 @@ struct buildinfo_s
   bool analysis = false;
 
   bsp_type_t bsp_type = bsp_type_t::BSP_VANILLA;
+
+  struct
+  {
+    doomednum_t anchor = ZDoom_PolyObj_Anchor;
+    doomednum_t spawn = ZDoom_PolyObj_Spawn;
+    doomednum_t spawn_crush = ZDoom_PolyObj_SpawnCrush;
+    doomednum_t spawn_hurt = ZDoom_PolyObj_SpawnHurt;
+  } polyobj;
 
   double split_cost = SPLIT_COST_DEFAULT;
 

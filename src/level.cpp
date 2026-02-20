@@ -1854,10 +1854,8 @@ void LoadLevel(void)
   switch (lev_format)
   {
   case MapFormat_Hexen:
-    DetectPolyobjSectors(false);
-    break;
   case MapFormat_UDMF:
-    DetectPolyobjSectors(true);
+    DetectPolyobjSectors(config);
     break;
   default:
     break;

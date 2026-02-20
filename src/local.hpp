@@ -404,7 +404,7 @@ Lump_c *FindLevelLump(const char *name);
 // detection routines
 void DetectOverlappingVertices(void);
 void DetectOverlappingLines(void);
-void DetectPolyobjSectors(bool is_udmf);
+void DetectPolyobjSectors(buildinfo_t &config);
 
 // pruning routines
 void PruneVerticesAtEnd(void);
