@@ -1138,6 +1138,8 @@ using seg_rotation_t = enum seg_rotation_e : uint8_t
   FX_DoNotRotate = 0,
   FX_RotateRelativeDegrees,
   FX_RotateAbsoluteDegrees,
+  FX_RotateRelativeRatio,
+  FX_RotateAbsoluteRatio,
   FX_RotateRelativeBAM,
   FX_RotateAbsoluteBAM,
 };

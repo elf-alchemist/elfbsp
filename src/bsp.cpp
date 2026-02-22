@@ -81,6 +81,12 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
   case FX_RotateAbsoluteDegrees:
     result = DegreesToShortBAM(seg->linedef->args[0]);
     break;
+  case FX_RotateRelativeRatio:
+    result += DegreesToShortBAM((seg->linedef->args[0] / 255.0) * 360.0);
+    break;
+  case FX_RotateAbsoluteRatio:
+    result = DegreesToShortBAM((seg->linedef->args[0] / 255.0) * 360.0);
+    break;
   case FX_RotateRelativeBAM:
     result += static_cast<short_angle_t>(seg->linedef->args[0]);
     break;

@@ -1389,26 +1389,35 @@ static void GetLinedefs_Hexen(void)
 
     linedef_t *line = NewLinedef();
 
-    vertex_t *start = SafeLookupVertex(GetLittleEndian(raw.start));
-    vertex_t *end = SafeLookupVertex(GetLittleEndian(raw.end));
-    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
+    line->start = SafeLookupVertex(GetLittleEndian(raw.start));
+    line->end = SafeLookupVertex(GetLittleEndian(raw.end));
     line->flags = GetLittleEndian(raw.flags);
-
-    start->is_used = true;
-    end->is_used = true;
-
-    line->start = start;
-    line->end = end;
-
     line->special = raw.special;
     line->args[0] = raw.args[0];
     line->args[1] = raw.args[1];
     line->args[2] = raw.args[2];
     line->args[3] = raw.args[3];
     line->args[4] = raw.args[4];
+    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
+    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
+
+    line->start->is_used = true;
+    line->end->is_used = true;
 
     ValidateLinedef(line);
+
+    switch (line->special)
+    {
+    case BSP_SpecialEffects:
+      line->angle = FX_RotateRelativeRatio;
+      if (line->args[1]) line->effects |= FX_NoBlockmap;
+      if (line->args[2]) line->effects |= FX_DoNotSplitSeg;
+      if (line->args[3]) line->effects |= FX_DoNotRenderBack;
+      if (line->args[4]) line->effects |= FX_DoNotRenderFront;
+      break;
+    default:
+      break;
+    }
   }
 }
 
