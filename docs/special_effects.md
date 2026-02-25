@@ -32,4 +32,4 @@ This is used to protect deep water and invisible lifts/stairs from being messed 
 
 | #   | Name | Arg0 | Arg1 | Arg2 | Arg3 | Arg4 | Supported in ELFBSP? | Description |
 |-----|------|------|------|------|------|------|----------------------|-------------|
-| 108 | `BSP_SpecialEffects` | Seg Rotation (ratio of 0-255) | Do Not Add To Blockmap (boolean) | Do Not Split Seg (boolean) | Do Not Render Back Seg (boolean) | Do Not Render Front Seg (boolean) | :heavy_check_mark:   | Apply special effects during the BSP tree building process, must be otherwise ignored by ports. |
+| 108 | `BSP_SpecialEffects` | Relative Seg Rotation (ratio of 0-255) | Do Not Add To Blockmap (boolean) | Do Not Split Seg (boolean) | Do Not Render Back Seg (boolean) | Do Not Render Front Seg (boolean) | :heavy_check_mark:   | Apply special effects during the BSP tree building process, must be otherwise ignored by ports. |
