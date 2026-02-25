@@ -59,6 +59,7 @@ add_executable(elfbsp
     src/misc.cpp
     src/node.cpp
     src/parse.cpp
+    src/polyobj.cpp
     src/wad.cpp
 )
 

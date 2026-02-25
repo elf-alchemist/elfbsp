@@ -497,7 +497,7 @@ void ParseShortArgument(const char *arg)
   }
 }
 
-void ProcessDebugParam(const char *param, uint32_t &debug)
+bool ProcessDebugParam(const char *param, uint32_t &debug)
 {
   if (strcmp(param, "--debug-blockmap") == 0)
   {
@@ -555,6 +555,8 @@ void ProcessDebugParam(const char *param, uint32_t &debug)
   {
     debug |= DEBUG_WAD;
   }
+
+  return debug != 0;
 }
 
 int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv[])
@@ -630,6 +632,13 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
     config.split_cost = val;
     used = 1;
   }
+  else if (strcmp(name, "--polyobj") == 0)
+  {
+    config.polyobj.anchor = Hexen_PolyObj_Anchor;
+    config.polyobj.spawn = Hexen_PolyObj_Spawn;
+    config.polyobj.spawn_crush = Hexen_PolyObj_SpawnCrush;
+    config.polyobj.spawn_hurt = Hexen_PolyObj_SpawnHurt;
+  }
   else if (strcmp(name, "--output") == 0)
   {
     // this option is *only* for compatibility
@@ -649,7 +658,10 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
   }
   else if (strncmp(name, "--debug-", 8) == 0)
   {
-    ProcessDebugParam(name, config.debug);
+    if (!ProcessDebugParam(name, config.debug))
+    {
+      PrintLine(LOG_ERROR, "unknown debug parameter '%s'", name);
+    }
   }
   else
   {

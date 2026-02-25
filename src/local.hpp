@@ -124,6 +124,12 @@ struct sidedef_t
   // adjacent sector.  Can be nullptr (invalid sidedef)
   sector_t *sector;
 
+  double offset_x = 0.0;
+  double offset_y = 0.0;
+  char tex_upper[8];
+  char tex_middle[8];
+  char tex_lower[8];
+
   // sidedef index.  Always valid after loading & pruning.
   size_t index;
 };
@@ -136,30 +142,16 @@ struct linedef_t
   vertex_t *start; // from this vertex...
   vertex_t *end;   // ... to this vertex
 
-  size_t start_id;
-  size_t end_id;
-
   sidedef_t *right; // right sidedef
   sidedef_t *left;  // left sidedef, or nullptr if none
 
   int32_t special; //
-  uint16_t tag;    // 
-  uint16_t flags;  // currently we only care about two-sided lines, but knows
+  uint16_t flags;  // currently we only care about two-sided lines, but who knows
+  int32_t id;      // Tag => arg0/id split
+  int32_t args[5]; //
 
   uint32_t effects = FX_Nothing;
   seg_rotation_t angle = FX_DoNotRotate;
-
-  // prefer not to split
-  bool is_precious;
-
-  // zero length (line should be totally ignored)
-  bool zero_len;
-
-  // sector is the same on both sides
-  bool self_ref;
-
-  // do not add line to blockmap
-  bool no_blockmap;
 
   // normally nullptr, except when this linedef directly overlaps an earlier
   // one (a rarely-used trick to create higher mid-masked textures).
@@ -179,7 +171,7 @@ struct linedef_t
 struct thing_t
 {
   double x, y;
-  int16_t type;
+  doomednum_t type;
 
   // other info (angle, and hexen stuff) omitted.  We don't need to
   // write the THINGS lump, only read it.
@@ -412,7 +404,7 @@ Lump_c *FindLevelLump(const char *name);
 // detection routines
 void DetectOverlappingVertices(void);
 void DetectOverlappingLines(void);
-void DetectPolyobjSectors(bool is_udmf);
+void DetectPolyobjSectors(buildinfo_t &config);
 
 // pruning routines
 void PruneVerticesAtEnd(void);
