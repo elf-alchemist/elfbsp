@@ -124,6 +124,12 @@ struct sidedef_t
   // adjacent sector.  Can be nullptr (invalid sidedef)
   sector_t *sector;
 
+  double offset_x = 0.0;
+  double offset_y = 0.0;
+  char tex_upper[8];
+  char tex_middle[8];
+  char tex_lower[8];
+
   // sidedef index.  Always valid after loading & pruning.
   size_t index;
 };
@@ -136,34 +142,16 @@ struct linedef_t
   vertex_t *start; // from this vertex...
   vertex_t *end;   // ... to this vertex
 
-  size_t start_id;
-  size_t end_id;
-
   sidedef_t *right; // right sidedef
   sidedef_t *left;  // left sidedef, or nullptr if none
 
-  uint32_t flags;
-  uint32_t special;
-  uint16_t tag;
+  int32_t special; //
+  uint16_t flags;  // currently we only care about two-sided lines, but who knows
+  int32_t id;      // Tag => arg0/id split
+  int32_t args[5]; //
 
-  bool dont_render;
-  bool dont_render_front;
-  bool dont_render_back;
-
-  // line is marked two-sided
-  bool two_sided;
-
-  // prefer not to split
-  bool is_precious;
-
-  // zero length (line should be totally ignored)
-  bool zero_len;
-
-  // sector is the same on both sides
-  bool self_ref;
-
-  // do not add line to blockmap
-  bool no_blockmap;
+  uint32_t effects = FX_Nothing;
+  seg_rotation_t angle = FX_DoNotRotate;
 
   // normally nullptr, except when this linedef directly overlaps an earlier
   // one (a rarely-used trick to create higher mid-masked textures).
@@ -183,7 +171,7 @@ struct linedef_t
 struct thing_t
 {
   double x, y;
-  int16_t type;
+  doomednum_t type;
 
   // other info (angle, and hexen stuff) omitted.  We don't need to
   // write the THINGS lump, only read it.
@@ -204,7 +192,7 @@ struct seg_t
   linedef_t *linedef;
 
   // 0 for right, 1 for left
-  bool side;
+  bool side = false;
 
   // seg on other side, or nullptr if one-sided.  This relationship is
   // always one-to-one -- if one of the segs is split, the partner seg
@@ -214,7 +202,7 @@ struct seg_t
   // seg index.  Only valid once the seg has been added to a
   // subsector.  A negative value means it is invalid -- there
   // shouldn't be any of these once the BSP tree has been built.
-  size_t index;
+  size_t index = NO_INDEX;
 
   // when true, this seg has become zero length (integer rounding of the
   // start and end vertices produces the same location).  It should be
@@ -346,7 +334,7 @@ struct quadtree_c
   // 256x512).
   quadtree_c *subs[2];
 
-  // count of real/mini segs contained in this node AND ALL CHILDREN.
+  // count of real/minisegs contained in this node AND ALL CHILDREN.
   size_t real_num;
   size_t mini_num;
 
@@ -409,15 +397,6 @@ void FreeNodes(void);
 Lump_c *CreateLevelLump(const char *name, size_t max_size = NO_INDEX);
 Lump_c *FindLevelLump(const char *name);
 
-/* limit flags, to show what went wrong */
-static constexpr uint32_t LIMIT_VERTEXES = BIT(0);
-static constexpr uint32_t LIMIT_SECTORS = BIT(1);
-static constexpr uint32_t LIMIT_SIDEDEFS = BIT(2);
-static constexpr uint32_t LIMIT_LINEDEFS = BIT(3);
-static constexpr uint32_t LIMIT_SEGS = BIT(4);
-static constexpr uint32_t LIMIT_SSECTORS = BIT(5);
-static constexpr uint32_t LIMIT_NODES = BIT(6);
-
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
 //------------------------------------------------------------------------
@@ -425,7 +404,7 @@ static constexpr uint32_t LIMIT_NODES = BIT(6);
 // detection routines
 void DetectOverlappingVertices(void);
 void DetectOverlappingLines(void);
-void DetectPolyobjSectors(bool is_udmf);
+void DetectPolyobjSectors(buildinfo_t &config);
 
 // pruning routines
 void PruneVerticesAtEnd(void);
@@ -450,6 +429,9 @@ static constexpr double IFFY_LEN = 4.0;
 
 // smallest distance between two points before being considered equal
 static constexpr double DIST_EPSILON = (1.0 / 1024.0);
+
+// smallest distance between two points before being considered equal
+static constexpr double DIST_EPSILON_HI = (1.0 / 65536.0);
 
 // smallest degrees between two angles before being considered equal
 static constexpr double ANG_EPSILON = (1.0 / 1024.0);
@@ -557,3 +539,10 @@ void NormaliseBspTree(void);
 void RoundOffBspTree(void);
 
 extern size_t lev_current_idx;
+
+void SaveFormat_Vanilla(node_t *root_node);
+void SaveFormat_DeepBSPV4(node_t *root_node);
+void SaveFormat_Xnod(node_t *root_node);
+void SaveFormat_Xgln(node_t *root_node);
+void SaveFormat_Xgl2(node_t *root_node);
+void SaveFormat_Xgl3(node_t *root_node);

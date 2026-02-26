@@ -24,7 +24,7 @@ AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortEnumsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: None
-AllowShortIfStatementsOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: Always
 AllowShortLoopsOnASingleLine: false
 AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
@@ -43,7 +43,7 @@ IndentCaseLabels: false
 IndentPPDirectives: BeforeHash
 IndentWidth: 2
 IndentWrappedFunctionNames: false
-InsertBraces: true
+InsertBraces: false
 InsertNewlineAtEOF: true
 InsertTrailingCommas: None
 KeepEmptyLinesAtTheStartOfBlocks: true

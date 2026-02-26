@@ -56,12 +56,6 @@ constexpr auto PROJECT_TYPE = "application";
 
 #if defined(WIN32) || defined(_WIN32) || defined(_WIN64)
 
-  #define WIN32_LEAN_AND_MEAN
-  #include <windows.h>
-  #if !defined(WIN32)
-    #define WIN32
-  #endif
-
 constexpr auto WINDOWS = true;
 constexpr auto MACOS = false;
 constexpr auto LINUX = false;
@@ -160,9 +154,13 @@ template <typename T> constexpr T GetBigEndian(T value)
   }
 }
 
+template <typename T> constexpr void RaiseValue(T &var, T value)
+{
+  var = std::max(var, value);
+}
+
 // sized types
 using byte = uint8_t;
-using args_t = uint8_t[5];
 using fixed_t = int32_t;
 using long_angle_t = uint32_t;
 using short_angle_t = uint16_t;
@@ -195,6 +193,16 @@ constexpr bool HAS_BIT(const uint32_t x, const uint32_t y)
   return (x & y) != 0;
 }
 
+constexpr bool HAS_ALL(const uint32_t x, const uint32_t y)
+{
+  return (x & y) == y;
+}
+
+constexpr bool HAS_NONE(const uint32_t x, const uint32_t y)
+{
+  return (x & y) == 0;
+}
+
 // doom's 32bit 16.16 fixed point
 constexpr fixed_t IntToFixed(const int32_t x)
 {
@@ -217,14 +225,14 @@ constexpr fixed_t FloatToFixed(double x)
 }
 
 // binary angular measurement, BAM!
-constexpr long_angle_t DegreesToLongBAM(const uint16_t x)
+constexpr long_angle_t DegreesToLongBAM(const double x)
 {
   return static_cast<long_angle_t>(LONG_ANGLE_1 * x);
 }
 
-constexpr short_angle_t DegreesToShortBAM(const uint16_t x)
+constexpr short_angle_t DegreesToShortBAM(const double x)
 {
-  return static_cast<short_angle_t>((LONG_ANGLE_1 * x) >> FRACBITS);
+  return static_cast<short_angle_t>(static_cast<long_angle_t>(LONG_ANGLE_1 * x) >> FRACBITS);
 }
 
 //------------------------------------------------------------------------
@@ -542,14 +550,8 @@ inline size_t FindExtension(const char *filename)
 //
 inline double ComputeAngle(double dx, double dy)
 {
-  if (dx == 0)
-  {
-    return (dy > 0) ? 90.0 : 270.0;
-  }
-
   const double angle = atan2(dy, dx) * 180.0 / M_PI;
-
-  return (angle < 0) ? angle + 360.0 : angle;
+  return angle + (angle < 0.0) * 360.0;
 }
 
 //------------------------------------------------------------------------
@@ -627,7 +629,7 @@ using raw_hexen_linedef_t = struct raw_hexen_linedef_s
   uint16_t end;    // ... to this vertex
   uint16_t flags;  // linedef flags (impassible, etc)
   uint8_t special; // special type
-  args_t args;     // special arguments
+  uint8_t args[5]; // special arguments
   uint16_t right;  // right sidedef
   uint16_t left;   // left sidedef
 } PACKEDATTR;
@@ -680,11 +682,54 @@ using raw_hexen_thing_t = struct raw_hexen_thing_s
 // BSP TREE STRUCTURES
 //------------------------------------------------------------------------
 
-constexpr auto DEEP_MAGIC = "xNd4\0\0\0\0";
-constexpr auto XNOD_MAGIC = "XNOD";
-constexpr auto XGLN_MAGIC = "XGLN";
-constexpr auto XGL2_MAGIC = "XGL2";
-constexpr auto XGL3_MAGIC = "XGL3";
+//
+// We do not write ZIP-compressed ZDoom nodes
+//
+using bsp_type_t = enum bsp_type_e : uint8_t
+{
+  BSP_VANILLA,
+  BSP_DEEPBSPV4,
+  BSP_XNOD,
+  BSP_XGLN,
+  BSP_XGL2,
+  BSP_XGL3,
+
+  BSP_MIN = BSP_VANILLA,
+  BSP_MAX = BSP_XGL3,
+};
+
+// Obviously, vanilla did not include any magic headers
+constexpr auto BSP_MAGIC_DEEPBSPV4 = "xNd4\0\0\0\0";
+constexpr auto BSP_MAGIC_XNOD = "XNOD";
+constexpr auto BSP_MAGIC_XGLN = "XGLN";
+constexpr auto BSP_MAGIC_XGL2 = "XGL2";
+constexpr auto BSP_MAGIC_XGL3 = "XGL3";
+
+// Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
+constexpr uint16_t NF_SUBSECTOR_VANILLA = UINT16_C(0x8000);
+constexpr uint32_t NF_SUBSECTOR = UINT32_C(0x80000000);
+
+//
+// Binary format upper bounds.
+// Some of these, namely the BSP tree indexes, are addressed by using later formats, such as DeepBSPV4, etc
+//
+// * No known ports seem to reserve 0xFFFF for vertices
+// * The linedef index 0xFFFF is reserved for minisegs in XGLN/XGL2/XGL3 nodes
+// * The sidedef index 0xFFFF is reserved to mean "no side" in DOOM map format
+// * No known ports seem to reserve 0xFFFF for sectors
+//
+// * Nodes and subsectors share the same index slot, distinguished only by the high bit
+// * No known additional limits exist for segments
+//
+
+constexpr size_t LIMIT_VERT = UINT16_MAX;
+constexpr size_t LIMIT_LINE = UINT16_MAX - 1;
+constexpr size_t LIMIT_SIDE = UINT16_MAX - 1;
+constexpr size_t LIMIT_SECTOR = UINT16_MAX;
+
+constexpr size_t LIMIT_NODE = INT16_MAX;
+constexpr size_t LIMIT_SUBSEC = INT16_MAX;
+constexpr size_t LIMIT_SEG = UINT16_MAX;
 
 //
 // Vanilla blockmap
@@ -706,7 +751,7 @@ using raw_blockmap_header_t = struct raw_blockmap_header_s
 //
 // Vanilla BSP
 //
-using raw_node_t = struct raw_node_s
+using raw_node_vanilla_t = struct raw_node_vanilla_s
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
@@ -714,27 +759,27 @@ using raw_node_t = struct raw_node_s
   uint16_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-using raw_subsec_t = struct raw_subsec_s
+using raw_subsec_vanilla_t = struct raw_subsec_vanilla_s
 {
   uint16_t num;   // number of Segs in this Sub-Sector
   uint16_t first; // first Seg
 } PACKEDATTR;
 
-using raw_seg_t = struct raw_seg_s
+using raw_seg_vanilla_t = struct raw_seg_vanilla_s
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
   uint16_t angle;   // angle (0 = east, 16384 = north, ...)
   uint16_t linedef; // linedef that this seg goes along
   uint16_t flip;    // true if not the same direction as linedef
-  uint16_t dist;    // distance from starting point
+  int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
 //
 // DeepSea BSP
 // * compared to vanilla, some types were raise to 32bit
 //
-using raw_node_deep_t = struct raw_node_deep_s
+using raw_node_deepbspv4_t = struct raw_node_deepbspv4_s
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
@@ -742,20 +787,20 @@ using raw_node_deep_t = struct raw_node_deep_s
   uint32_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-using raw_subsec_deep_t = struct raw_subsec_deep_s
+using raw_subsec_deepbspv4_t = struct raw_subsec_deepbspv4_s
 {
   uint16_t num;   // number of Segs in this Sub-Sector
   uint32_t first; // first Seg
 } PACKEDATTR;
 
-using raw_seg_deep_t = struct raw_seg_deep_s
+using raw_seg_deepbspv4_t = struct raw_seg_deepbspv4_s
 {
   uint32_t start;   // from this vertex...
   uint32_t end;     // ... to this vertex
   uint16_t angle;   // angle (0 = east, 16384 = north, ...)
   uint16_t linedef; // linedef that this seg goes along
   uint16_t flip;    // true if not the same direction as linedef
-  uint16_t dist;    // distance from starting point
+  int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
 //
@@ -794,21 +839,18 @@ using raw_xnod_seg_t = struct raw_xnod_seg_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-// XGLN segs use the same type definition as XNOD segs, with slightly
-// different semantics for mini-segs
-
 using raw_xgln_seg_t = struct raw_xgln_seg_s
 {
-  uint32_t vertex;  // from this vertex...
-  uint32_t partner; // ... to this vertex
+  uint32_t vertex;  // from this vertex ... to the next
+  uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
   uint16_t linedef; // linedef that this seg goes along, or NO_INDEX
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
 using raw_xgl2_seg_t = struct raw_xgl2_seg_s
 {
-  uint32_t vertex;  // from this vertex...
-  uint32_t partner; // ... to this vertex
+  uint32_t vertex;  // from this vertex ... to the next
+  uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
   uint32_t linedef; // linedef that this seg goes along, or NO_INDEX
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
@@ -885,7 +927,7 @@ using patch_t = struct patch_s
 // LineDef attributes.
 //
 
-using compatible_lineflag_t = enum compatible_lineflag_e : uint16_t
+using vanilla_lineflag_t = enum vanilla_lineflag_e : uint16_t
 {
   MLF_BLOCKING = BIT(0),      // Solid, is an obstacle
   MLF_BLOCKMONSTERS = BIT(1), // Blocks monsters only
@@ -907,35 +949,51 @@ using compatible_lineflag_t = enum compatible_lineflag_e : uint16_t
   MLF_SOUNDBLOCK = BIT(6),    // Sound rendering: don't let sound cross two of these
   MLF_DONTDRAW = BIT(7),      // Don't draw on the automap at all
   MLF_MAPPED = BIT(8),        // Set as if already seen, thus drawn in automap
-  MLF_PASSUSE = BIT(9),       // Allow multiple lines to be pushed simultaneously.
-  MLF_3DMIDTEX = BIT(10),     // Solid middle texture
-  MLF_RESERVED = BIT(11),     // comp_reservedlineflag
-  MLF_BLOCKGROUND = BIT(12),  // Block Grounded Monster
-  MLF_BLOCKPLAYERS = BIT(13), // Block Players Only
 };
 
-// first few flags are same as DOOM above
-using hexen_lineflag_e = enum : uint16_t
+using boom_lineflag_t = enum boom_lineflag_e : uint16_t
 {
+  // Inherited from vanilla
+  MLF_BOOM_BLOCKING = MLF_BLOCKING,
+  MLF_BOOM_BLOCKMONSTERS = MLF_BLOCKMONSTERS,
+  MLF_BOOM_TWOSIDED = MLF_TWOSIDED,
+  MLF_BOOM_UPPERUNPEGGED = MLF_UPPERUNPEGGED,
+  MLF_BOOM_LOWERUNPEGGED = MLF_LOWERUNPEGGED,
+  MLF_BOOM_SECRET = MLF_SECRET,
+  MLF_BOOM_SOUNDBLOCK = MLF_SOUNDBLOCK,
+  MLF_BOOM_DONTDRAW = MLF_DONTDRAW,
+  MLF_BOOM_MAPPED = MLF_MAPPED,
+
+  // Boom lineage
+  MLF_BOOM_PASSUSE = BIT(9),       // Allow multiple lines to be pushed simultaneously.
+  MLF_BOOM_3DMIDTEX = BIT(10),     // Solid middle texture
+  MLF_BOOM_RESERVED = BIT(11),     // comp_reservedlineflag
+  MLF_BOOM_BLOCKGROUND = BIT(12),  // Block Grounded Monster
+  MLF_BOOM_BLOCKPLAYERS = BIT(13), // Block Players Only
+};
+
+using hexen_lineflag_t = enum hexen_lineflag_e : uint16_t
+{
+  // Inherited from vanilla Doom
+  MLF_HEXEN_BLOCKING = MLF_BLOCKING,
+  MLF_HEXEN_BLOCKMONSTERS = MLF_BLOCKMONSTERS,
+  MLF_HEXEN_TWOSIDED = MLF_TWOSIDED,
+  MLF_HEXEN_UPPERUNPEGGED = MLF_UPPERUNPEGGED,
+  MLF_HEXEN_LOWERUNPEGGED = MLF_LOWERUNPEGGED,
+  MLF_HEXEN_SECRET = MLF_SECRET,
+  MLF_HEXEN_SOUNDBLOCK = MLF_SOUNDBLOCK,
+  MLF_HEXEN_DONTDRAW = MLF_DONTDRAW,
+  MLF_HEXEN_MAPPED = MLF_MAPPED,
+
+  // Hexen-original
   MLF_HEXEN_REPEATABLE = BIT(9),
   MLF_HEXEN_ACTIVATION = BIT(10) | BIT(11) | BIT(12),
+
+  // Source ports, mostly ZDoom
+  MLF_HEXEN_MONCANACTIVATE = BIT(13),
+  MLF_HEXEN_BLOCKPLAYERS = BIT(14),
+  MLF_HEXEN_BLOCKEVERYTHING = BIT(15),
 };
-
-// these are supported by ZDoom (and derived ports)
-using zdoom_lineflag_t = enum zdoom_lineflag_e : uint16_t
-{
-  MLF_ZDOOM_MONCANACTIVATE = BIT(13),
-  MLF_ZDOOM_BLOCKPLAYERS = BIT(14),
-  MLF_ZDOOM_BLOCKEVERYTHING = BIT(15),
-};
-
-constexpr uint32_t BOOM_GENLINE_FIRST = 0x2f80;
-constexpr uint32_t BOOM_GENLINE_LAST = 0x7fff;
-
-constexpr bool IsGeneralizedSpecial(uint32_t special)
-{
-  return special >= BOOM_GENLINE_FIRST && special <= BOOM_GENLINE_LAST;
-}
 
 using hexen_activation_t = enum hexen_activation_e
 {
@@ -947,33 +1005,122 @@ using hexen_activation_t = enum hexen_activation_e
   SPAC_PCross = 5,  // when projectile crosses the line
 };
 
-// The power of node building manipulation!
-using bsp_specials_t = enum bsp_specials_e : uint32_t
+using doom_special_t = enum doom_special_e : int32_t
 {
-  Special_VanillaScroll = 48,
+  Special_ScrollLeft = 48,
+  Special_ScrollRight = 85,
 
-  Special_RemoteScroll = 1048,
+  Special_RemoteScrollLeft = 1048,
+  Special_RemoteScrollRight,
 
   Special_ChangeStartVertex = 1078,
   Special_ChangeEndVertex,
 
-  Special_RotateDegrees,     // currently only vanilla & deepbspv4 segs encode angle
-  Special_RotateDegreesHard, //
-  Special_RotateAngleT,      //
-  Special_RotateAngleTHard,  //
+  Special_RotateRelativeDegrees,
+  Special_RotateAbsoluteDegrees,
+  Special_RotateRelativeBAM,
+  Special_RotateAbsoluteBAM,
 
-  Special_DoNotRenderBackSeg,
-  Special_DoNotRenderFrontSeg,
-  Special_DoNotRenderAnySeg,
+  Special_DoNotRenderSegmentBack,
+  Special_DoNotRenderSegmentFront,
+  Special_DoNotRenderSegmentBoth,
 
   Special_DoNotSplitSeg,
-  Special_Unknown2, // line tag value becomes seg's associated line index?
+  Special_ChangeSegLine,
 };
 
-using bsp_tags_t = enum bsp_tags_e
+using doom_tags_t = enum doom_tags_e : uint16_t
 {
   Tag_DoNotRender = 998,
   Tag_NoBlockmap = 999,
+};
+
+using hexen_special_t = enum hexen_special_e : int32_t
+{
+  // We need to be aware of parameterized actions 1 and 5
+  Polyobj_StartLine = 1,
+  Polyobj_RotateLeft,
+  Polyobj_RotateRight,
+  Polyobj_Move,
+  Polyobj_ExplicitLine,
+  Polyobj_MoveTimes8,
+  Polyobj_DoorSwing,
+  Polyobj_DoorSlide,
+
+  Polyobj_OR_MoveToSpot = 59,
+
+  PolyObj_MoveToSpot = 86,
+  PolyObj_Stop,
+  PolyObj_MoveTo,
+  PolyObj_OR_MoveTo,
+  PolyObj_OR_RotateLeft,
+  PolyObj_OR_RotateRight,
+  PolyObj_OR_Move,
+  PolyObj_OR_MoveTimes8,
+
+  Polyobj_StopSound = 283,
+
+  // Actual special effects
+  BSP_SpecialEffects = 108,
+
+  Unused141 = 141,
+  Unused142,
+  Unused143,
+  Unused144,
+  Unused145,
+  Unused146,
+  Unused147,
+  Unused148,
+  Unused149,
+  Unused150,
+  Unused151,
+  Unused152,
+  Unused153,
+
+  Unused155 = 155,
+
+  Unused161 = 161,
+  Unused162,
+  Unused163,
+  Unused164,
+  Unused165,
+  Unused166,
+  Unused167,
+};
+
+// The power of node building manipulation!
+using bsp_effects_t = enum bsp_effects_e : uint32_t
+{
+  FX_Nothing = 0,
+
+  // Zero-length line
+  FX_ZeroLength = BIT(26),
+
+  // Self-referencing
+  FX_SelfReferencial = BIT(27),
+
+  // Segment generation
+  FX_DoNotRenderFront = BIT(28),
+  FX_DoNotRenderBack = BIT(29),
+
+  // Segment splitting
+  FX_DoNotSplitSeg = BIT(30),
+
+  // Blockmap generation
+  FX_NoBlockmap = BIT(31),
+};
+
+// Segment rotation
+// currently only vanilla & deepbspv4 segs encode angle
+using seg_rotation_t = enum seg_rotation_e : uint8_t
+{
+  FX_DoNotRotate = 0,
+  FX_RotateRelativeDegrees,
+  FX_RotateAbsoluteDegrees,
+  FX_RotateRelativeRatio,
+  FX_RotateAbsoluteRatio,
+  FX_RotateRelativeBAM,
+  FX_RotateAbsoluteBAM,
 };
 
 //
@@ -1002,7 +1149,7 @@ constexpr uint32_t SF_MBF21Flags = SF_DamageMask | SF_Secret | SF_Friction | SF_
 // Thing attributes.
 //
 
-using thing_option_t = enum thing_option_e : uint16_t
+using doom_mobj_option_t = enum doom_mobj_option_e : uint16_t
 {
   MTF_Easy = BIT(0),
   MTF_Medium = BIT(1),
@@ -1015,10 +1162,7 @@ using thing_option_t = enum thing_option_e : uint16_t
   MTF_Friend = BIT(7),
 };
 
-constexpr uint32_t MTF_EXFLOOR_MASK = 0x3C00;
-constexpr uint32_t MTF_EXFLOOR_SHIFT = 10;
-
-using hexen_option_t = enum hexen_option_e : uint16_t
+using hexen_mobj_option_t = enum hexen_mobj_option_e : uint16_t
 {
   MTF_Hexen_Easy = BIT(0),
   MTF_Hexen_Medium = BIT(1),
@@ -1035,21 +1179,20 @@ using hexen_option_t = enum hexen_option_e : uint16_t
   MTF_Hexen_DM = BIT(10),
 };
 
-//
-// Polyobject stuff
-//
-constexpr uint32_t HEXTYPE_POLY_START = 1;
-constexpr uint32_t HEXTYPE_POLY_EXPLICIT = 5;
+using doomednum_t = enum doomednum_e : int16_t
+{
+  // -JL- ZDoom polyobj thing types
+  ZDoom_PolyObj_Anchor = 9300,
+  ZDoom_PolyObj_Spawn = 9301,
+  ZDoom_PolyObj_SpawnCrush = 9302,
+  ZDoom_PolyObj_SpawnHurt = 9303,
 
-// -JL- Hexen polyobj thing types
-constexpr uint32_t PO_ANCHOR_TYPE = 3000;
-constexpr uint32_t PO_SPAWN_TYPE = 3001;
-constexpr uint32_t PO_SPAWNCRUSH_TYPE = 3002;
-
-// -JL- ZDoom polyobj thing types
-constexpr uint32_t ZDOOM_PO_ANCHOR_TYPE = 9300;
-constexpr uint32_t ZDOOM_PO_SPAWN_TYPE = 9301;
-constexpr uint32_t ZDOOM_PO_SPAWNCRUSH_TYPE = 9302;
+  // -JL- Hexen polyobj thing types
+  Hexen_PolyObj_Anchor = 3000,
+  Hexen_PolyObj_Spawn = 3001,
+  Hexen_PolyObj_SpawnCrush = 3002,
+  Hexen_PolyObj_SpawnHurt = 3003, // does any port actually handle this?
+};
 
 //
 // File handling
@@ -1352,8 +1495,15 @@ struct buildinfo_s
   // write out CSV for data analysis and visualization
   bool analysis = false;
 
-  bool force_xnod = false;
-  bool ssect_xgl3 = false;
+  bsp_type_t bsp_type = bsp_type_t::BSP_VANILLA;
+
+  struct
+  {
+    doomednum_t anchor = ZDoom_PolyObj_Anchor;
+    doomednum_t spawn = ZDoom_PolyObj_Spawn;
+    doomednum_t spawn_crush = ZDoom_PolyObj_SpawnCrush;
+    doomednum_t spawn_hurt = ZDoom_PolyObj_SpawnHurt;
+  } polyobj;
 
   double split_cost = SPLIT_COST_DEFAULT;
 
@@ -1393,6 +1543,8 @@ using build_result_t = enum build_result_e
   // when saving the map, one or more lumps overflowed
   BUILD_LumpOverflow
 };
+
+extern bool lev_overflows;
 
 // attempt to open a wad.  on failure, the FatalError method in the
 // buildinfo_t interface is called.

@@ -388,12 +388,9 @@ bool EvalPartitionWorker(quadtree_c *tree, seg_t *part, double best_cost, double
     //       DONT want to split, and the normal linedef-based checks
     //       may fail to detect the sector being cut in half.  Thanks
     //       to Janis Legzdinsh for spotting this obscure bug.
-    if (fa <= DIST_EPSILON || fb <= DIST_EPSILON)
+    if ((fa <= DIST_EPSILON || fb <= DIST_EPSILON) && check->linedef && HAS_BIT(check->linedef->effects, FX_DoNotSplitSeg))
     {
-      if (check->linedef != nullptr && check->linedef->is_precious)
-      {
-        info->cost += 40.0 * split_cost * PRECIOUS_MULTIPLY;
-      }
+      info->cost += 40.0 * split_cost * PRECIOUS_MULTIPLY;
     }
 
     /* check for right side */
@@ -463,7 +460,7 @@ bool EvalPartitionWorker(quadtree_c *tree, seg_t *part, double best_cost, double
     // it as precious; i.e. don't split it unless all other options
     // are exhausted.  This is used to protect deep water and invisible
     // lifts/stairs from being messed up accidentally by splits.
-    if (check->linedef && check->linedef->is_precious)
+    if (check->linedef && HAS_BIT(check->linedef->effects, FX_DoNotSplitSeg))
     {
       info->cost += 100.0 * split_cost * PRECIOUS_MULTIPLY;
     }
@@ -800,7 +797,7 @@ void DivideOneSeg(seg_t *seg, seg_t *part, seg_t **left_list, seg_t **right_list
   double a = part->PerpDist(seg->psx, seg->psy);
   double b = part->PerpDist(seg->pex, seg->pey);
 
-  bool self_ref = seg->linedef ? seg->linedef->self_ref : false;
+  bool self_ref = seg->linedef && HAS_BIT(seg->linedef->effects, FX_SelfReferencial);
 
   if (seg->source_line == part->source_line)
   {
@@ -1012,7 +1009,7 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
 
     seg->index = buddy->index = NO_INDEX;
     seg->linedef = buddy->linedef = nullptr;
-    seg->side = buddy->side = 0;
+    seg->side = buddy->side = false;
 
     seg->source_line = buddy->source_line = part->linedef;
 
@@ -1059,7 +1056,7 @@ void SetPartition(node_t *node, const seg_t *part)
 {
   SYS_ASSERT(part->linedef);
 
-  if (part->side == 0)
+  if (part->side == false)
   {
     node->x = part->linedef->start->x;
     node->y = part->linedef->start->y;
@@ -1277,7 +1274,7 @@ int OnLineSide(quadtree_c *quadtree, const seg_t *part)
   return p1;
 }
 
-seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *side, int what_side)
+seg_t *CreateOneSeg(linedef_t *line, vertex_t *start, vertex_t *end, sidedef_t *side, bool what_side)
 {
   seg_t *seg = NewSeg();
 
@@ -1328,7 +1325,7 @@ seg_t *CreateSegs(void)
     seg_t *right = nullptr;
 
     // ignore zero-length lines
-    if (line->zero_len)
+    if (HAS_BIT(line->effects, FX_ZeroLength))
     {
       continue;
     }
@@ -1339,53 +1336,35 @@ seg_t *CreateSegs(void)
       continue;
     }
 
-    // -Elf- ZokumBSP
-    if (line->dont_render)
+    if (line->right == nullptr)
     {
-      continue;
-    }
-
-    // check for extremely long lines
-    if (hypot(line->start->x - line->end->x, line->start->y - line->end->y) >= 32000)
-    {
-      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is VERY long, it may cause problems", line->index);
+      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu has no front/right sidedef!", line->index);
       config.total_warnings++;
     }
-
-    if (line->right != nullptr)
+    else if (line->right != nullptr && HAS_NONE(line->effects, FX_DoNotRenderFront))
     {
-      right = CreateOneSeg(line, line->start, line->end, line->right, 0);
+      right = CreateOneSeg(line, line->start, line->end, line->right, false);
       ListAddSeg(&list, right);
     }
-    else
+
+    if (line->left == nullptr && HAS_BIT(line->flags, MLF_TWOSIDED))
     {
-      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu has no right sidedef!", line->index);
+      PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is 2s but has no back/left sidedef", line->index);
       config.total_warnings++;
     }
-
-    if (line->left != nullptr)
+    else if (line->left != nullptr && HAS_NONE(line->effects, FX_DoNotRenderBack))
     {
-      left = CreateOneSeg(line, line->end, line->start, line->left, 1);
+      left = CreateOneSeg(line, line->end, line->start, line->left, true);
       ListAddSeg(&list, left);
-
-      if (right != nullptr)
-      {
-        // -AJA- Partner segs.  These always maintain a one-to-one
-        //       correspondence, so if one of the gets split, the
-        //       other one must be split too.
-
-        left->partner = right;
-        right->partner = left;
-      }
     }
-    else
+
+    // -AJA- Partner segs.  These always maintain a one-to-one
+    //       correspondence, so if one of the gets split, the
+    //       other one must be split too.
+    if (right && left)
     {
-      if (line->two_sided)
-      {
-        PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is 2s but has no left sidedef", line->index);
-        config.total_warnings++;
-        line->two_sided = false;
-      }
+      left->partner = right;
+      right->partner = left;
     }
   }
 
@@ -1503,7 +1482,7 @@ void ClockwiseOrder(subsec_t *subsec)
     {
       cur_score = 0;
     }
-    else if (array[j]->linedef->self_ref)
+    else if (HAS_BIT(array[j]->linedef->effects, FX_SelfReferencial))
     {
       cur_score = 2;
     }
@@ -1864,12 +1843,12 @@ void RoundOff(subsec_t *subsec)
   seg_t *new_head = nullptr;
   seg_t *new_tail = nullptr;
 
-  seg_t *seg;
+  seg_t *seg = nullptr;
   seg_t *last_real_degen = nullptr;
 
   int real_total = 0;
-
   int degen_total = 0;
+
   if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
     PrintLine(LOG_DEBUG, "[%s] Rounding off %zu", __func__, subsec->index);
@@ -1889,10 +1868,7 @@ void RoundOff(subsec_t *subsec)
         last_real_degen = seg;
       }
 
-      if (HAS_BIT(config.debug, DEBUG_SUBSEC))
-      {
-        degen_total++;
-      }
+      degen_total++;
 
       continue;
     }

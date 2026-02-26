@@ -30,279 +30,6 @@
 // ANALYZE : Analyzing level structures
 //------------------------------------------------------------------------
 
-static constexpr uint32_t POLY_BOX_SZ = 10;
-
-/* ----- polyobj handling ----------------------------- */
-
-void MarkPolyobjSector(sector_t *sector)
-{
-  if (sector == nullptr)
-  {
-    return;
-  }
-
-  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
-  {
-    PrintLine(LOG_DEBUG, "[%s] Marking Polyobj SECTOR %zu", __func__, sector->index);
-  }
-
-  /* already marked ? */
-  if (sector->has_polyobj)
-  {
-    return;
-  }
-
-  // mark all lines of this sector as precious, to prevent (ideally)
-  // the sector from being split.
-  sector->has_polyobj = true;
-
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
-  {
-    linedef_t *L = lev_linedefs[i];
-
-    if ((L->right != nullptr && L->right->sector == sector) || (L->left != nullptr && L->left->sector == sector))
-    {
-      L->is_precious = true;
-    }
-  }
-}
-
-void MarkPolyobjPoint(double x, double y)
-{
-  int inside_count = 0;
-
-  double best_dist = 999999;
-  const linedef_t *best_match = nullptr;
-  sector_t *sector = nullptr;
-
-  // -AJA- First we handle the "awkward" cases where the polyobj sits
-  //       directly on a linedef or even a vertex.  We check all lines
-  //       that intersect a small box around the spawn point.
-
-  int32_t bminx = static_cast<int32_t>(x - POLY_BOX_SZ);
-  int32_t bminy = static_cast<int32_t>(y - POLY_BOX_SZ);
-  int32_t bmaxx = static_cast<int32_t>(x + POLY_BOX_SZ);
-  int32_t bmaxy = static_cast<int32_t>(y + POLY_BOX_SZ);
-
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
-  {
-    const linedef_t *L = lev_linedefs[i];
-
-    if (CheckLinedefInsideBox(bminx, bminy, bmaxx, bmaxy, static_cast<int32_t>(L->start->x), static_cast<int32_t>(L->start->y),
-                              static_cast<int32_t>(L->end->x), static_cast<int32_t>(L->end->y)))
-    {
-      if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
-      {
-        PrintLine(LOG_DEBUG, "[%s] Touching line was %zu", __func__, L->index);
-      }
-
-      if (L->left != nullptr)
-      {
-        MarkPolyobjSector(L->left->sector);
-      }
-
-      if (L->right != nullptr)
-      {
-        MarkPolyobjSector(L->right->sector);
-      }
-
-      inside_count++;
-    }
-  }
-
-  if (inside_count > 0)
-  {
-    return;
-  }
-
-  // -AJA- Algorithm is just like in DEU: we cast a line horizontally
-  //       from the given (x,y) position and find all linedefs that
-  //       intersect it, choosing the one with the closest distance.
-  //       If the point is sitting directly on a (two-sided) line,
-  //       then we mark the sectors on both sides.
-
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
-  {
-    const linedef_t *L = lev_linedefs[i];
-
-    double x1 = L->start->x;
-    double y1 = L->start->y;
-    double x2 = L->end->x;
-    double y2 = L->end->y;
-
-    /* check vertical range */
-    if (fabs(y2 - y1) < DIST_EPSILON)
-    {
-      continue;
-    }
-
-    if ((y > (y1 + DIST_EPSILON) && y > (y2 + DIST_EPSILON)) || (y < (y1 - DIST_EPSILON) && y < (y2 - DIST_EPSILON)))
-    {
-      continue;
-    }
-
-    double x_cut = x1 + (x2 - x1) * (y - y1) / (y2 - y1) - x;
-
-    if (fabs(x_cut) < fabs(best_dist))
-    {
-      /* found a closer linedef */
-
-      best_match = L;
-      best_dist = x_cut;
-    }
-  }
-
-  if (best_match == nullptr)
-  {
-    PrintLine(LOG_NORMAL, "WARNING: Bad polyobj thing at (%1.0f,%1.0f).", x, y);
-    config.total_warnings++;
-    return;
-  }
-
-  double y1 = best_match->start->y;
-  double y2 = best_match->end->y;
-
-  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
-  {
-    PrintLine(LOG_DEBUG, "[%s] Closest line was %zu Y=%1.0f..%1.0f (dist=%1.1f)", __func__, best_match->index, y1, y2,
-              best_dist);
-  }
-
-  /* sanity check: shouldn't be directly on the line */
-  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
-  {
-    if (fabs(best_dist) < DIST_EPSILON)
-    {
-      PrintLine(LOG_DEBUG, "[%s] Polyobj directly on the line (%zu)", __func__, best_match->index);
-    }
-  }
-
-  /* check orientation of line, to determine which side the polyobj is
-   * actually on.
-   */
-  if ((y1 > y2) == (best_dist > 0))
-  {
-    sector = best_match->right ? best_match->right->sector : nullptr;
-  }
-  else
-  {
-    sector = best_match->left ? best_match->left->sector : nullptr;
-  }
-
-  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
-  {
-    PrintLine(LOG_DEBUG, "[%s] Sector %zu contains the polyobj.", __func__, sector ? sector->index : NO_INDEX);
-  }
-
-  if (sector == nullptr)
-  {
-    PrintLine(LOG_NORMAL, "WARNING: Invalid Polyobj thing at (%1.0f,%1.0f).", x, y);
-    config.total_warnings++;
-    return;
-  }
-
-  MarkPolyobjSector(sector);
-}
-
-//
-// Based on code courtesy of Janis Legzdinsh.
-//
-void DetectPolyobjSectors(bool is_udmf)
-{
-  // -JL- There's a conflict between Hexen polyobj thing types and Doom thing
-  //      types. In Doom type 3001 is for Imp and 3002 for Demon. To solve
-  //      this problem, first we are going through all lines to see if the
-  //      level has any polyobjs. If found, we also must detect what polyobj
-  //      thing types are used - Hexen ones or ZDoom ones. That's why we
-  //      are going through all things searching for ZDoom polyobj thing
-  //      types. If any found, we assume that ZDoom polyobj thing types are
-  //      used, otherwise Hexen polyobj thing types are used.
-
-  // -AJA- With UDMF there is an additional ambiguity, as line type 1 is a
-  //       very common door in Doom and Heretic namespaces, but it is also
-  //       the HEXTYPE_POLY_EXPLICIT special in Hexen and ZDoom namespaces.
-  //
-  //       Since the plain "Hexen" namespace is rare for UDMF maps, and ZDoom
-  //       ports prefer their own polyobj things, we disable the Hexen polyobj
-  //       things in UDMF maps.
-
-  // -JL- First go through all lines to see if level contains any polyobjs
-  size_t i;
-  for (i = 0; i < lev_linedefs.size(); i++)
-  {
-    linedef_t *L = lev_linedefs[i];
-
-    if (L->special == HEXTYPE_POLY_START || L->special == HEXTYPE_POLY_EXPLICIT)
-    {
-      break;
-    }
-  }
-
-  if (i == lev_linedefs.size())
-  {
-    // -JL- No polyobjs in this level
-    return;
-  }
-
-  // -JL- Detect what polyobj thing types are used - Hexen ones or ZDoom ones
-  bool hexen_style = true;
-
-  if (is_udmf)
-  {
-    hexen_style = false;
-  }
-
-  for (size_t j = 0; j < lev_things.size(); j++)
-  {
-    thing_t *T = lev_things[j];
-
-    if (T->type == ZDOOM_PO_SPAWN_TYPE || T->type == ZDOOM_PO_SPAWNCRUSH_TYPE)
-    {
-      // -JL- A ZDoom style polyobj thing found
-      hexen_style = false;
-      break;
-    }
-  }
-
-  if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
-  {
-    PrintLine(LOG_DEBUG, "[%s] Using %s style polyobj things", __func__, hexen_style ? "HEXEN" : "ZDOOM");
-  }
-
-  for (size_t j = 0; j < lev_things.size(); j++)
-  {
-    thing_t *T = lev_things[j];
-
-    double x = T->x;
-    double y = T->y;
-
-    // ignore everything except polyobj start spots
-    if (hexen_style)
-    {
-      // -JL- Hexen style polyobj things
-      if (T->type != PO_SPAWN_TYPE && T->type != PO_SPAWNCRUSH_TYPE)
-      {
-        continue;
-      }
-    }
-    else
-    {
-      // -JL- ZDoom style polyobj things
-      if (T->type != ZDOOM_PO_SPAWN_TYPE && T->type != ZDOOM_PO_SPAWNCRUSH_TYPE)
-      {
-        continue;
-      }
-    }
-
-    if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
-    {
-      PrintLine(LOG_DEBUG, "[%s] Thing %zu at (%1.0f,%1.0f) is a polyobj spawner.", __func__, i, x, y);
-    }
-
-    MarkPolyobjPoint(x, y);
-  }
-}
-
 /* ----- analysis routines ----------------------------- */
 
 bool Overlaps(const vertex_t *vertex, const vertex_t *other)
@@ -382,6 +109,8 @@ void DetectOverlappingVertices(void)
 
 void PruneVerticesAtEnd(void)
 {
+  // always prune vertices at end of lump, otherwise all the
+  // unused vertices from seg splits would keep accumulating.
   size_t old_num = lev_vertices.size();
 
   // scan all vertices.
@@ -402,12 +131,9 @@ void PruneVerticesAtEnd(void)
 
   size_t unused = old_num - lev_vertices.size();
 
-  if (unused > 0)
+  if (unused > 0 && config.verbose)
   {
-    if (config.verbose)
-    {
-      PrintLine(LOG_NORMAL, "Pruned %zu unused vertices at end", unused);
-    }
+    PrintLine(LOG_NORMAL, "Pruned %zu unused vertices at end", unused);
   }
 
   num_old_vert = lev_vertices.size();
@@ -533,7 +259,7 @@ void CalculateWallTips(void)
   {
     const linedef_t *L = lev_linedefs[i];
 
-    if (L->overlap || L->zero_len)
+    if (L->overlap || HAS_BIT(L->effects, FX_ZeroLength))
     {
       continue;
     }
