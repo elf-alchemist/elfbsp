@@ -970,12 +970,16 @@ void ValidateLinedef(linedef_t *line)
     }
   }
 
-  if (line->left && line->left->tex_lower[0] != '-' && memcmp(line->left->tex_lower, "BSPNOSEG", 8))
+  if (line->left                                                // Side exists ...
+      && line->left->tex_lower[0] != '-'                        // ... lower texture isn't empty ...
+      && StringCaseCmp(line->left->tex_lower, "BSPNOSEG") == 0) // ... lower texture is BSPNOSEG
   {
     line->effects |= FX_DoNotRenderBack;
   }
 
-  if (line->right && line->right->tex_lower[0] != '-' && memcmp(line->right->tex_lower, "BSPNOSEG", 8))
+  if (line->right                                                // Side exists ...
+      && line->right->tex_lower[0] != '-'                        // ... lower texture isn't empty ...
+      && StringCaseCmp(line->right->tex_lower, "BSPNOSEG") == 0) // ... lower texture is BSPNOSEG
   {
     line->effects |= FX_DoNotRenderFront;
   }
