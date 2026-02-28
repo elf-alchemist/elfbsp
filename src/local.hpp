@@ -538,6 +538,8 @@ void NormaliseBspTree(void);
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree(void);
 
+extern size_t lev_current_idx;
+
 void SaveFormat_Vanilla(node_t *root_node);
 void SaveFormat_DeepBSPV4(node_t *root_node);
 void SaveFormat_Xnod(node_t *root_node);

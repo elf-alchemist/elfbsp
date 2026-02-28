@@ -52,14 +52,37 @@ if(SAN_COUNT GREATER 0)
     endif()
 endif()
 
+# SDL3
+add_subdirectory(library/SDL)
+
+# Dear ImGui
+add_library(imgui STATIC
+    library/imgui/imgui.cpp
+    library/imgui/imgui_demo.cpp
+    library/imgui/imgui_draw.cpp
+    library/imgui/imgui_tables.cpp
+    library/imgui/imgui_widgets.cpp
+    library/imgui/backends/imgui_impl_sdl3.cpp
+    library/imgui/backends/imgui_impl_sdlrenderer3.cpp
+)
+
+target_include_directories(imgui PUBLIC
+    library/imgui
+)
+
+target_link_libraries(imgui PUBLIC SDL3::SDL3)
+
 add_executable(elfbsp
     src/bsp.cpp
+    src/core.hpp
     src/level.cpp
+    src/local.hpp
     src/main.cpp
     src/misc.cpp
     src/node.cpp
     src/parse.cpp
     src/polyobj.cpp
+    src/view.cpp
     src/wad.cpp
 )
 
@@ -83,6 +106,11 @@ target_compile_options(elfbsp PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
     $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
     $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
+)
+
+target_link_libraries(elfbsp PRIVATE
+    SDL3::SDL3
+    imgui
 )
 
 if(ENABLE_WERROR)

@@ -26,12 +26,15 @@
 #include <string>
 #include <vector>
 
-constexpr auto PROJECT_COMPANY = "Guilherme Miranda, et al";
-constexpr auto PROJECT_COPYRIGHT = "Copyright (C) 1994-2026";
 constexpr auto PROJECT_LICENSE = "GNU General Public License, version 2";
 
-constexpr auto PROJECT_STRING = "ELFBSP v1.1";
-
+constexpr auto PROJECT_NAME = "ELFBSP";
+constexpr auto PROJECT_VERSION = "v1.1";
+constexpr auto PROJECT_APPID = "io.github.";
+constexpr auto PROJECT_COMPANY = "elf-alchemist";
+constexpr auto PROJECT_COPYRIGHT = "Copyright (C) 1994-2026 - Guilherme Miranda, et al";
+constexpr auto PROJECT_URL = "https://github.com/elf-alchemist/elfbsp";
+constexpr auto PROJECT_TYPE = "application";
 /*
  *  Standard headers
  */
@@ -285,27 +288,9 @@ inline int32_t PRINTF_ATTR(2, 0) M_vsnprintf(char *buf, const char *s, va_list a
 //
 //  show a message
 //
-inline void PRINTF_ATTR(2, 3) PrintLine(const log_level_t level, const char *fmt, ...)
-{
-  FILE *const stream = (level == LOG_NORMAL) ? stdout : stderr;
-  char buffer[MSG_BUFFER_LENGTH];
-
-  va_list arg_ptr;
-
-  va_start(arg_ptr, fmt);
-  M_vsnprintf(buffer, fmt, arg_ptr);
-  va_end(arg_ptr);
-
-  buffer[MSG_BUFFER_LENGTH - 1] = '\0';
-
-  fprintf(stream, "%s\n", buffer);
-  fflush(stream);
-
-  if (level == LOG_ERROR)
-  {
-    exit(3);
-  }
-}
+extern void PRINTF_ATTR(2, 3) (*PrintLine)(const log_level_t level, const char *fmt, ...);
+extern void PRINTF_ATTR(2, 3) PrintLineGUI(const log_level_t level, const char *fmt, ...);
+extern void PRINTF_ATTR(2, 3) PrintLineCLI(const log_level_t level, const char *fmt, ...);
 
 //
 // Assertion macros
@@ -1582,3 +1567,5 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename);
 void WriteAnalysis(const char *filename);
 void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes,
                       int32_t left_size, int32_t right_size);
+
+void EnterGUI(void);
