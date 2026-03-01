@@ -16,7 +16,7 @@
 * `2010-04-17` — Graf adds the uncompressed versions, XNOD, XGLN and XGL2, to ZDoom/ZDBSP [^7]
 * `2010-04-18` — Andrey Budko adds support for XNOD [^8]
 * `2012-12-07` — Randi adds ZGL3 and XGL3 to ZDoom/ZDBSP, addressing coordinate precision on BSP nodes [^9]
-* `2019-06-14` — Fabian and Graf retroactively add XNOD support to PrBoom+um [^10]
+* `2019-06-14` — Fabian and Graf retroactively add ZNOD support to PrBoom+um [^10]
 * `2023-01-14` — Kraflab adds the reading of XGLN/ZGLN format in UDMF maps, without adding XGLN segs [^11]
 * `2023-01-23` — Kraflab implements code for parsing XGLN/ZGLN Segs support in DSDA [^12]
 * `2023-01-30` — Kraflab adds XGL2/ZGL2 and XGL3/ZGL3 support to DSDA, for UDMF maps [^13] and adds XGLN/2/3 node support to binary format maps [^14]
