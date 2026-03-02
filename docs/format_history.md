@@ -16,10 +16,12 @@
 * `2010-04-17` — Graf adds the uncompressed versions, XNOD, XGLN and XGL2, to ZDoom/ZDBSP [^7]
 * `2010-04-18` — Andrey Budko adds support for XNOD [^8]
 * `2012-12-07` — Randi adds ZGL3 and XGL3 to ZDoom/ZDBSP, addressing coordinate precision on BSP nodes [^9]
-* `2019-06-14` — Fabian and Graf retroactively add ZNOD support to PrBoom+um [^10]
-* `2023-01-14` — Kraflab adds the reading of XGLN/ZGLN format in UDMF maps, without adding XGLN segs [^11]
-* `2023-01-23` — Kraflab implements code for parsing XGLN/ZGLN Segs support in DSDA [^12]
-* `2023-01-30` — Kraflab adds XGL2/ZGL2 and XGL3/ZGL3 support to DSDA, for UDMF maps [^13] and adds XGLN/2/3 node support to binary format maps [^14]
+* `2015-02-10` — Fabian adds support for DeePBSPV4, XNOD and ZNOD formats to Crispy-Doom [^10]
+* `2019-06-14` — Fabian and Graf retroactively add ZNOD support to PrBoom+um [^11]
+* `2023-01-14` — Kraflab adds the reading of XGLN/ZGLN format in UDMF maps, without adding XGLN segs [^12]
+* `2023-01-23` — Kraflab implements code for parsing XGLN/ZGLN Segs support in DSDA [^13]
+* `2023-01-23` — Roman Fomin adds DeePBSPV4, XNOD and ZNOD formats to Crispy-Heretic [^14]
+* `2023-01-30` — Kraflab adds XGL2/ZGL2 and XGL3/ZGL3 support to DSDA, for UDMF maps [^15] and adds XGLN/2/3 node support to binary format maps [^16]
 
 [^1]: https://www.doomworld.com/forum/topic/23391-new-node-format/
 [^2]: https://web.archive.org/web/20041130085424/http://www.sbsoftware.com/
@@ -30,8 +32,10 @@
 [^7]: https://github.com/UZDoom/UZDoom/commit/c85a602546c59f5bfc939d609445f51a9b22036e
 [^8]: https://github.com/kraflab/dsda-doom/commit/8b481ebeb73a7f867e778a0ecffe474bc2d0784d
 [^9]: https://github.com/UZDoom/UZDoom/commit/d77297e969f138ed1249589b15f1833bce2bdc77
-[^10]: https://github.com/kraflab/dsda-doom/commit/aaa3877f83277a12bbcd8b14e8c204ed048066d2
-[^11]: https://github.com/kraflab/dsda-doom/commit/9caaa25824765338f631027d2ecd79cb8ee57a9d
-[^12]: https://github.com/kraflab/dsda-doom/commit/80a9b536be7437bdc31bdc0b283301f46f0108bb
-[^13]: https://github.com/kraflab/dsda-doom/commit/c79da61db00a97d69178090b42adf7fa309f1511
-[^14]: https://github.com/kraflab/dsda-doom/commit/20ff581810aabf6d3ec4825b5886a483df5d41e2
+[^10]: https://github.com/fabiangreffrath/crispy-doom/commit/9c108dc2b637fc4f3e7c1401637de54f075e6fd4
+[^11]: https://github.com/kraflab/dsda-doom/commit/aaa3877f83277a12bbcd8b14e8c204ed048066d2
+[^12]: https://github.com/kraflab/dsda-doom/commit/9caaa25824765338f631027d2ecd79cb8ee57a9d
+[^13]: https://github.com/kraflab/dsda-doom/commit/80a9b536be7437bdc31bdc0b283301f46f0108bb
+[^14]: https://github.com/fabiangreffrath/crispy-doom/commit/3a62c5364f8dfd73e958833f155e583a374ba472
+[^15]: https://github.com/kraflab/dsda-doom/commit/c79da61db00a97d69178090b42adf7fa309f1511
+[^16]: https://github.com/kraflab/dsda-doom/commit/20ff581810aabf6d3ec4825b5886a483df5d41e2
