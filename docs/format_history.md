@@ -24,7 +24,7 @@
 * `2023-01-30` — Kraflab adds XGL2/ZGL2 and XGL3/ZGL3 support to DSDA, for UDMF maps [^dsda-xgl-part3] and adds XGLN/2/3 node support to binary format maps [^dsda-xgl-part4]
 
 [^deepbsp-origin]: https://www.doomworld.com/forum/topic/23391-new-node-format/
-[deepbspv4-release]: https://web.archive.org/web/20041130085424/http://www.sbsoftware.com/
+[^deepbspv4-release]: https://web.archive.org/web/20041130085424/http://www.sbsoftware.com/
 [^zdoom-zgl2]: https://github.com/UZDoom/UZDoom/commit/314216343dae34a70993803375dfce8ebe7090fb
 [^sunder-deepbspv4]: https://www.doomworld.com/forum/post/867492
 [^prboom-deepbspv4]: https://github.com/kraflab/dsda-doom/commit/42972ed42d3a54bc9ac0636e17f3db1b2ee7aaa9
