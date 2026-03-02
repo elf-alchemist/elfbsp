@@ -6,7 +6,7 @@
 * `2003-09-24` — (from Randi's devlog) adds support for ZNOD on ZDoom
 * `2003-09-27` — (from Randi's devlog) adds support for ZGLN on ZDoom??  
 ???
-* `2004-04-30` — Deep (Jack) discusses on Doomworld the creation and design of a new node format [^deepbsp-origin]
+* `2004-04-30` — Deep (Jack) discusses on Doomworld the creation and design of a new node format [^deepbspv4-origin]
 * `2004-10-09` — DeePsea 11.92f (quietly) releases with DeePBSPV4 and GL V4 node support [^deepbspv4-release]
 * `2006-02-24` — earliest SVN revision of ZDoom, already supports ZNOD and ZGLN nodes
 * `2009-03-17` — Randi adds ZGL2 (with 32bit sidedef indexes to address large UDMF maps) to ZDoom/ZDBSP [^zdoom-zgl2]
@@ -23,7 +23,7 @@
 * `2023-01-23` — Roman Fomin adds DeePBSPV4, XNOD and ZNOD formats to Crispy-Heretic [^crispy-heretic-extnodes]
 * `2023-01-30` — Kraflab adds XGL2/ZGL2 and XGL3/ZGL3 support to DSDA, for UDMF maps [^dsda-xgl-part3] and adds XGLN/2/3 node support to binary format maps [^dsda-xgl-part4]
 
-[^deepbsp-origin]: https://www.doomworld.com/forum/topic/23391-new-node-format/
+[^deepbspv4-origin]: https://www.doomworld.com/forum/topic/23391-new-node-format/
 [^deepbspv4-release]: https://web.archive.org/web/20041130085424/http://www.sbsoftware.com/
 [^zdoom-zgl2]: https://github.com/UZDoom/UZDoom/commit/314216343dae34a70993803375dfce8ebe7090fb
 [^sunder-deepbspv4]: https://www.doomworld.com/forum/post/867492
