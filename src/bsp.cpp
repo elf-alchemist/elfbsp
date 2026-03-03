@@ -185,12 +185,6 @@ static void PutSegs_Vanilla(void)
   }
 
   lump->Finish();
-
-  if (lev_segs.size() > LIMIT_SEG)
-  {
-    PrintLine(LOG_NORMAL, "FAILURE: Number of segs has overflowed.");
-    lev_overflows = true;
-  }
 }
 
 static void PutSubsecs_Vanilla(void)
@@ -215,12 +209,6 @@ static void PutSubsecs_Vanilla(void)
       PrintLine(LOG_DEBUG, "[%s] %zu  First %04X  Num %04X", __func__, sub->index, GetLittleEndian(raw.first),
                 GetLittleEndian(raw.num));
     }
-  }
-
-  if (lev_subsecs.size() > LIMIT_SUBSEC)
-  {
-    PrintLine(LOG_NORMAL, "FAILURE: Number of subsectors has overflowed.");
-    lev_overflows = true;
   }
 
   lump->Finish();
