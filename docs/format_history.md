@@ -8,6 +8,7 @@
 ???
 * `2004-04-30` — Deep (Jack) discusses on Doomworld the creation and design of a new node format [^deepbspv4-origin]
 * `2004-10-09` — DeePsea 11.92f (quietly) releases with DeePBSPV4 and GL V4 node support [^deepbspv4-release]
+* `2005-05-20` — glBSP adds V5 GL Nodes [^glbsp-v5]
 * `2006-02-24` — earliest SVN revision of ZDoom, already supports ZNOD and ZGLN nodes
 * `2009-03-17` — Randi adds ZGL2 (with 32bit sidedef indexes to address large UDMF maps) to ZDoom/ZDBSP [^zdoom-zgl2]
 * `2010-04-12` — Sunder's development unearths the DeePBSPV4 format and triggers a discussion for its wider adoption [^sunder-deepbspv4] as well as the issues of the compressed ZDoom nodes
@@ -25,6 +26,7 @@
 
 [^deepbspv4-origin]: https://www.doomworld.com/forum/topic/23391-new-node-format/
 [^deepbspv4-release]: https://web.archive.org/web/20041130085424/http://www.sbsoftware.com/
+[^glbsp-v5]: https://github.com/elf-alchemist/glbsp-archive/commit/182c158da4aa918eccd2d25b42c7f3d4c2e5eec8
 [^zdoom-zgl2]: https://github.com/UZDoom/UZDoom/commit/314216343dae34a70993803375dfce8ebe7090fb
 [^sunder-deepbspv4]: https://www.doomworld.com/forum/post/867492
 [^prboom-deepbspv4]: https://github.com/kraflab/dsda-doom/commit/42972ed42d3a54bc9ac0636e17f3db1b2ee7aaa9
