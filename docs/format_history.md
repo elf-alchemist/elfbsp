@@ -2,7 +2,7 @@
 
 * `1999-09` — Andrew Apted starts working on glBSP and designing the earliest spec for GL nodes
 * `2000-06` — releases EDGE, with support for GL nodes, rebuilding with internal builder if not present
-* `2000-09-04` — Earliest SVN revision of glBSP, already contains V1 and V2 GL nodes  
+* `2000-09-04` — Earliest SVN revision of glBSP, already contains V1 and V2 GL nodes [^glbsp-v1-v2]  
 ???
 * `2003-09-24` — (from Randi's devlog) adds support for ZNOD on ZDoom
 * `2003-09-27` — (from Randi's devlog) adds support for ZGLN on ZDoom??  
@@ -26,6 +26,7 @@
 * `2023-01-23` — Roman Fomin adds DeePBSPV4, XNOD and ZNOD formats to Crispy-Heretic [^crispy-heretic-extnodes]
 * `2023-01-30` — Kraflab adds XGL2/ZGL2 and XGL3/ZGL3 support to DSDA, for UDMF maps [^dsda-xgl-part3] and adds XGLN/2/3 node support to binary format maps [^dsda-xgl-part4]
 
+[^glbsp-v1-v2]: https://github.com/elf-alchemist/glbsp-archive/commit/12188e7b46bb27422b452f972315631c308bb7bc
 [^deepbspv4-origin]: https://www.doomworld.com/forum/topic/23391-new-node-format/
 [^glbsp-glv3]: https://github.com/elf-alchemist/glbsp-archive/commit/efdeccfcfd56016ce2e18ec8dc90e4eb2c668eb9
 [^deepbspv4-release]: https://web.archive.org/web/20041130085424/http://www.sbsoftware.com/
