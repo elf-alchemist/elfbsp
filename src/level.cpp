@@ -1775,6 +1775,12 @@ void ParseUDMF(void)
 
 static void CheckBinaryFormatLimits(void)
 {
+  if (num_old_vert > LIMIT_VERT)
+  {
+    PrintLine(LOG_NORMAL, "FAILURE: Map has too many vertices.");
+    lev_overflows = true;
+  }
+
   if (lev_sectors.size() > LIMIT_SECTOR)
   {
     PrintLine(LOG_NORMAL, "FAILURE: Map has too many sectors.");
@@ -1796,15 +1802,8 @@ static void CheckBinaryFormatLimits(void)
 
 bsp_type_t CheckFormatBSP(void)
 {
-  if (lev_vertices.size() > LIMIT_VERT)
-  {
-    PrintLine(LOG_NORMAL, "WARNING: Vertex overflow. Forcing XNOD node format.");
-    config.total_warnings++;
-    return BSP_XNOD;
-  }
-
-  if (lev_vertices.size() <= LIMIT_VERT
-      && (lev_segs.size() > LIMIT_SEG || lev_subsecs.size() > LIMIT_SUBSEC || lev_nodes.size() > LIMIT_NODE))
+  if (lev_segs.size() > LIMIT_SEG || lev_subsecs.size() > LIMIT_SUBSEC || lev_nodes.size() > LIMIT_NODE
+      || lev_vertices.size() > LIMIT_VERT)
   {
     PrintLine(LOG_NORMAL, "WARNING: BSP overflow. Forcing DeepBSPV4 node format.");
     config.total_warnings++;
