@@ -823,7 +823,7 @@ static void PutNodes_Xgl3(Lump_c *lump, node_t *root)
 // Lump writing procedures
 //
 
-void SaveFormat_Vanilla(node_t *root_node)
+void SaveBinaryFormat_Vanilla(node_t *root_node)
 {
   // remove all the minisegs from subsectors
   NormaliseBspTree();
@@ -838,7 +838,7 @@ void SaveFormat_Vanilla(node_t *root_node)
   PutNodes_Vanilla(root_node);
 }
 
-void SaveFormat_DeepBSPV4(node_t *root_node)
+void SaveBinaryFormat_DeepBSPV4(node_t *root_node)
 {
   // remove all the minisegs from subsectors
   NormaliseBspTree();
@@ -853,7 +853,7 @@ void SaveFormat_DeepBSPV4(node_t *root_node)
   PutNodes_DeepBSPV4(root_node);
 }
 
-void SaveFormat_Xnod(node_t *root_node)
+void SaveBinaryFormat_XNOD(node_t *root_node)
 {
   CreateLevelLump("SEGS")->Finish();
   CreateLevelLump("SSECTORS")->Finish();
@@ -872,14 +872,13 @@ void SaveFormat_Xnod(node_t *root_node)
   lump = nullptr;
 }
 
-void SaveFormat_Xgln(node_t *root_node)
+void SaveBinaryFormat_XGLN(node_t *root_node)
 {
   // leave SEGS empty
   CreateLevelLump("SEGS")->Finish();
 
   SortSegs();
 
-  // WISH : compute a max_size
   Lump_c *lump = CreateLevelLump("SSECTORS", CalcXnodNodesSize());
   lump->Write(BSP_MAGIC_XGLN, 4);
   PutVertices_Xnod(lump);
@@ -894,14 +893,13 @@ void SaveFormat_Xgln(node_t *root_node)
   CreateLevelLump("NODES")->Finish();
 }
 
-void SaveFormat_Xgl2(node_t *root_node)
+void SaveBinaryFormat_XGL2(node_t *root_node)
 {
   // leave SEGS empty
   CreateLevelLump("SEGS")->Finish();
 
   SortSegs();
 
-  // WISH : compute a max_size
   Lump_c *lump = CreateLevelLump("SSECTORS", CalcXnodNodesSize());
   lump->Write(BSP_MAGIC_XGL2, 4);
   PutVertices_Xnod(lump);
@@ -916,14 +914,13 @@ void SaveFormat_Xgl2(node_t *root_node)
   CreateLevelLump("NODES")->Finish();
 }
 
-void SaveFormat_Xgl3(node_t *root_node)
+void SaveBinaryFormat_XGL3(node_t *root_node)
 {
   // leave SEGS empty
   CreateLevelLump("SEGS")->Finish();
 
   SortSegs();
 
-  // WISH : compute a max_size
   Lump_c *lump = CreateLevelLump("SSECTORS", CalcXnodNodesSize());
   lump->Write(BSP_MAGIC_XGL3, 4);
   PutVertices_Xnod(lump);
@@ -936,4 +933,21 @@ void SaveFormat_Xgl3(node_t *root_node)
 
   // leave NODES empty
   CreateLevelLump("NODES")->Finish();
+}
+
+// Unlike the binary map formats, UDMF has a tight requirement for fractional coordinates.
+// Always use the latest high-precision BSP format we support.
+void SaveTextmap_ZNODES(node_t *root_node)
+{
+  SortSegs();
+
+  Lump_c *lump = CreateLevelLump("ZNODES", CalcXnodNodesSize());
+  lump->Write(BSP_MAGIC_XGL3, 4);
+  PutVertices_Xnod(lump);
+  PutSubsecs_Xnod(lump);
+  PutSegs_Xgl2(lump);
+  PutNodes_Xgl3(lump, root_node);
+
+  lump->Finish();
+  lump = nullptr;
 }

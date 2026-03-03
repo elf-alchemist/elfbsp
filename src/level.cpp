@@ -1934,22 +1934,22 @@ build_result_e SaveBinaryFormatLevel(node_t *root_node)
   switch (level_type)
   {
   case BSP_XGL3:
-    SaveFormat_Xgl3(root_node);
+    SaveBinaryFormat_XGL3(root_node);
     break;
   case BSP_XGL2:
-    SaveFormat_Xgl2(root_node);
+    SaveBinaryFormat_XGL2(root_node);
     break;
   case BSP_XGLN:
-    SaveFormat_Xgln(root_node);
+    SaveBinaryFormat_XGLN(root_node);
     break;
   case BSP_XNOD:
-    SaveFormat_Xnod(root_node);
+    SaveBinaryFormat_XNOD(root_node);
     break;
   case BSP_DEEPBSPV4:
-    SaveFormat_DeepBSPV4(root_node);
+    SaveBinaryFormat_DeepBSPV4(root_node);
     break;
   case BSP_VANILLA:
-    SaveFormat_Vanilla(root_node);
+    SaveBinaryFormat_Vanilla(root_node);
     break;
   }
 
@@ -1988,7 +1988,7 @@ build_result_e SaveTextMapLevel(node_t *root_node)
   }
   else
   {
-    SaveFormat_Xgl3(root_node);
+    SaveTextmap_ZNODES(root_node);
   }
 
   // -Elf-
