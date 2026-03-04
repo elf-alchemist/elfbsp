@@ -1800,17 +1800,22 @@ static void CheckBinaryFormatLimits(void)
   }
 }
 
-bsp_type_t CheckFormatBSP(void)
+bsp_type_t CheckFormatBSP(buildinfo_t &ctx)
 {
-  if (lev_segs.size() > LIMIT_SEG || lev_subsecs.size() > LIMIT_SUBSEC || lev_nodes.size() > LIMIT_NODE
-      || lev_vertices.size() > LIMIT_VERT)
+  bsp_type_t level_type = ctx.bsp_type;
+
+  if (level_type < BSP_DEEPBSPV4 &&         // We're currently doing vanilla format by default
+      (lev_vertices.size() > LIMIT_VERT     // Consider also the possibility of not doing old formats at all
+       || lev_nodes.size() > LIMIT_NODE     // Starting with XNOD we have fixed_t BSP verticies
+       || lev_subsecs.size() > LIMIT_SUBSEC // And XGL3 does fixed_t partition line coordinates
+       || lev_segs.size() > LIMIT_SEG))     // The vanilla EXE also uses INT16_MAX segment indices, hm
   {
     PrintLine(LOG_NORMAL, "WARNING: BSP overflow. Forcing DeepBSPV4 node format.");
     config.total_warnings++;
-    return BSP_DEEPBSPV4;
+    level_type = BSP_DEEPBSPV4;
   }
 
-  return BSP_VANILLA;
+  return std::max(config.bsp_type, level_type);
 }
 
 /* ----- whole-level routines --------------------------- */
@@ -1928,8 +1933,7 @@ build_result_e SaveBinaryFormatLevel(node_t *root_node)
   // check for overflows...
   CheckBinaryFormatLimits();
 
-  bsp_type_t level_type = CheckFormatBSP();
-  level_type = std::max(config.bsp_type, level_type);
+  bsp_type_t level_type = CheckFormatBSP(config);
 
   switch (level_type)
   {

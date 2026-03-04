@@ -132,12 +132,6 @@ static void PutVertices_Vanilla(void)
   {
     PrintLine(LOG_ERROR, "PutVertices miscounted (%zu != %zu)", count, num_old_vert);
   }
-
-  if (count > 65534)
-  {
-    PrintLine(LOG_NORMAL, "FAILURE: Number of vertices has overflowed.");
-    lev_overflows = true;
-  }
 }
 
 static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
@@ -298,12 +292,6 @@ static void PutNodes_Vanilla(node_t *root_node)
   if (node_cur_index != lev_nodes.size())
   {
     PrintLine(LOG_ERROR, "PutNodes miscounted (%zu != %zu)", node_cur_index, lev_nodes.size());
-  }
-
-  if (node_cur_index > 32767)
-  {
-    PrintLine(LOG_NORMAL, "FAILURE: Number of nodes has overflowed.");
-    lev_overflows = true;
   }
 }
 
