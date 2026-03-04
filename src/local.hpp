@@ -540,9 +540,11 @@ void RoundOffBspTree(void);
 
 extern size_t lev_current_idx;
 
-void SaveFormat_Vanilla(node_t *root_node);
-void SaveFormat_DeepBSPV4(node_t *root_node);
-void SaveFormat_Xnod(node_t *root_node);
-void SaveFormat_Xgln(node_t *root_node);
-void SaveFormat_Xgl2(node_t *root_node);
-void SaveFormat_Xgl3(node_t *root_node);
+void SaveBinaryFormat_Vanilla(node_t *root_node);
+void SaveBinaryFormat_DeepBSPV4(node_t *root_node);
+void SaveBinaryFormat_XNOD(node_t *root_node);
+void SaveBinaryFormat_XGLN(node_t *root_node);
+void SaveBinaryFormat_XGL2(node_t *root_node);
+void SaveBinaryFormat_XGL3(node_t *root_node);
+
+void SaveTextmap_ZNODES(node_t *root_node);
