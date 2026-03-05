@@ -2104,8 +2104,6 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
 
   InitBlockmap();
 
-  build_result_e ret = BUILD_OK;
-
   if (num_real_lines > 0)
   {
     if (config.analysis)
@@ -2140,44 +2138,35 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
 
     bbox_t dummy;
     // recursively create nodes
-    ret = BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, config.split_cost, config.fast, false);
+    BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, config.split_cost, config.fast, false);
   }
 
-  if (ret == BUILD_OK)
+  if (config.verbose)
   {
-    if (config.verbose)
-    {
-      PrintLine(LOG_NORMAL, "Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES", lev_nodes.size(), lev_subsecs.size(),
-                lev_segs.size(), num_old_vert + num_new_vert);
-    }
-
-    if (root_node != nullptr)
-    {
-      if (config.verbose)
-      {
-        PrintLine(LOG_NORMAL, "Heights of subtrees: %d / %d", ComputeBspHeight(root_node->r.node),
-                  ComputeBspHeight(root_node->l.node));
-      }
-    }
-
-    ClockwiseBspTree();
-
-    switch (lev_format)
-    {
-    case MapFormat_Doom:
-    case MapFormat_Hexen:
-      ret = SaveBinaryFormatLevel(root_node);
-      break;
-    case MapFormat_UDMF:
-      ret = SaveTextMapLevel(root_node);
-      break;
-    default:
-      break;
-    }
+    PrintLine(LOG_NORMAL, "Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES", lev_nodes.size(), lev_subsecs.size(),
+              lev_segs.size(), num_old_vert + num_new_vert);
   }
-  else
+
+  if (config.verbose && root_node != nullptr)
   {
-    /* build was Cancelled by the user */
+    PrintLine(LOG_NORMAL, "Heights of subtrees: %d / %d", ComputeBspHeight(root_node->r.node),
+              ComputeBspHeight(root_node->l.node));
+  }
+
+  ClockwiseBspTree();
+
+  build_result_e ret = BUILD_OK;
+  switch (lev_format)
+  {
+  case MapFormat_Doom:
+  case MapFormat_Hexen:
+    SaveBinaryFormatLevel(root_node);
+    break;
+  case MapFormat_UDMF:
+    SaveTextMapLevel(root_node);
+    break;
+  default:
+    break;
   }
 
   FreeLevel();

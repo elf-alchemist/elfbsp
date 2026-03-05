@@ -514,8 +514,7 @@ quadtree_c *TreeFromSegList(seg_t *list);
 // and '*N' is the new node (and '*S' is set to nullptr).  Normally
 // returns BUILD_OK.
 
-build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast,
-                          bool analysis);
+void BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast, bool analysis);
 
 // compute the height of the bsp tree, starting at 'node'.
 int ComputeBspHeight(const node_t *node);
