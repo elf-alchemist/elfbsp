@@ -1605,5 +1605,5 @@ const char *GetLevelName(size_t lev_idx);
 build_result_e BuildLevel(size_t lev_idx, const char *filename);
 
 void SetupAnalysisFile(const char *filepath);
-void WriteAnalysis(const char *filename);
 void GenerateAnalysis(const char *filename);
+void WriteAnalysis(const char *filename);

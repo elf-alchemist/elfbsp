@@ -2135,7 +2135,7 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
               lev_segs.size(), num_old_vert + num_new_vert);
   }
 
-  if (root_node != nullptr && config.verbose)
+  if (config.verbose && root_node != nullptr)
   {
     PrintLine(LOG_NORMAL, "Heights of subtrees: %zu / %zu", ComputeTreeDepth(root_node->l.node),
               ComputeTreeDepth(root_node->r.node));
