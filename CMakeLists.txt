@@ -6,10 +6,6 @@ project(elfbsp
 
 include(CheckIncludeFile)
 
-set(CMAKE_C_STANDARD 23)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_C_STANDARD_REQUIRED TRUE)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_INSTALL_DO_STRIP TRUE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
@@ -61,6 +57,11 @@ add_executable(elfbsp
     src/parse.cpp
     src/polyobj.cpp
     src/wad.cpp
+)
+
+set_target_properties(elfbsp PROPERTIES
+    C_STANDARD 23
+    CXX_STANDARD 20
 )
 
 target_compile_options(elfbsp PRIVATE
