@@ -2155,15 +2155,15 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
 
   ClockwiseBspTree();
 
-  build_result_e ret = BUILD_OK;
+  build_result_t ret = BUILD_OK;
   switch (lev_format)
   {
   case MapFormat_Doom:
   case MapFormat_Hexen:
-    SaveBinaryFormatLevel(root_node);
+    ret = SaveBinaryFormatLevel(root_node);
     break;
   case MapFormat_UDMF:
-    SaveTextMapLevel(root_node);
+    ret = SaveTextMapLevel(root_node);
     break;
   default:
     break;

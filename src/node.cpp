@@ -1721,8 +1721,6 @@ void BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S
   {
     PrintLine(LOG_DEBUG, "[%s] DONE", __func__);
   }
-
-  return;
 }
 
 void ClockwiseBspTree(void)
