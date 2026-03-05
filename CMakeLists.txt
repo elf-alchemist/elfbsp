@@ -48,11 +48,8 @@ if(SAN_COUNT GREATER 0)
     endif()
 endif()
 
-add_subdirectory(third-party/matplot)
-
 add_executable(elfbsp
     src/bsp.cpp
-    src/core.cpp
     src/info.cpp
     src/level.cpp
     src/main.cpp
@@ -71,7 +68,7 @@ set_target_properties(elfbsp PROPERTIES
 target_compile_options(elfbsp PRIVATE
     -Wall
     -Wextra
-    # -Wshadow
+    -Wshadow
     -Wconversion
     -Wsign-conversion
     -Wno-unused-parameter
@@ -84,10 +81,11 @@ target_compile_options(elfbsp PRIVATE
     $<$<CONFIG:MinSizeRel>:-Os>
 )
 
-# target_compile_options(elfbsp PRIVATE
-#     $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
-#     $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
-# )
+target_compile_options(elfbsp PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
+    $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
+)
 
 if(ENABLE_WERROR)
     target_compile_options(elfbsp PRIVATE -Werror)
@@ -124,8 +122,6 @@ if(ENABLE_LTO)
 endif()
 
 target_include_directories(elfbsp PRIVATE ${CMAKE_BINARY_DIR})
-
-target_link_libraries(elfbsp PRIVATE matplot)
 
 set(CPACK_GENERATOR ZIP)
 if(WIN32)

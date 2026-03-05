@@ -2135,13 +2135,10 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
               lev_segs.size(), num_old_vert + num_new_vert);
   }
 
-  if (root_node != nullptr)
+  if (root_node != nullptr && config.verbose)
   {
-    if (config.verbose)
-    {
-      PrintLine(LOG_NORMAL, "Heights of subtrees: %zu / %zu", ComputeTreeDepth(root_node->l.node),
-                ComputeTreeDepth(root_node->r.node));
-    }
+    PrintLine(LOG_NORMAL, "Heights of subtrees: %zu / %zu", ComputeTreeDepth(root_node->l.node),
+              ComputeTreeDepth(root_node->r.node));
   }
 
   ClockwiseBspTree();
@@ -2149,15 +2146,15 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
   build_result_t ret = BUILD_OK;
   switch (lev_format)
   {
-    case MapFormat_Doom:
-    case MapFormat_Hexen:
-      ret = SaveBinaryFormatLevel(root_node);
-      break;
-    case MapFormat_UDMF:
-      ret = SaveTextMapLevel(root_node);
-      break;
-    default:
-      break;
+  case MapFormat_Doom:
+  case MapFormat_Hexen:
+    ret = SaveBinaryFormatLevel(root_node);
+    break;
+  case MapFormat_UDMF:
+    ret = SaveTextMapLevel(root_node);
+    break;
+  default:
+    break;
   }
 
   FreeLevel();
