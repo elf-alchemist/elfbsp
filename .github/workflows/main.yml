@@ -35,7 +35,7 @@ jobs:
                 clang lld libc++-dev libc++abi-dev ninja-build \
                 libasound2-dev libpulse-dev libaudio-dev \
                 libx11-dev libxcursor-dev libxext-dev libxi-dev \
-                libxinerama-dev libxrand-dev libxss-dev \
+                libxinerama-dev libxrandr-dev libxss-dev \
                 libwayland-dev libxkbcommon-dev libdrm-dev libgbm-dev
             configure: |
               -G Ninja \
