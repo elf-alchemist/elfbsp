@@ -32,17 +32,19 @@ jobs:
             install: |
               sudo apt-get update
               sudo apt-get install -y \
-                clang \
-                lld \
-                libc++-dev \
-                libc++abi-dev \
-                ninja-build
+                clang lld libc++-dev libc++abi-dev ninja-build \
+                libasound2-dev libpulse-dev libaudio-dev \
+                libx11-dev libxcursor-dev libxext-dev libxi-dev \
+                libxinerama-dev libxrand-dev libxss-dev \
+                libwayland-dev libxkbcommon-dev libdrm-dev libgbm-dev
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
               -DCMAKE_LINKER=lld \
               -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+              -DSDL_STATIC=ON \
+              -DSDL_SHARED=OFF
               -DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections"
 
           - name: MacOS Universal
@@ -57,7 +59,9 @@ jobs:
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
-              -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+              -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+              -DSDL_STATIC=ON \
+              -DSDL_SHARED=OFF
 
           - name: Windows MinGW x86_64
             os: windows-latest
@@ -80,6 +84,8 @@ jobs:
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
               -DCMAKE_LINKER=lld \
+              -DSDL_STATIC=ON \
+              -DSDL_SHARED=OFF \
               -DCMAKE_EXE_LINKER_FLAGS="-static -Wl,--gc-sections" \
               -DCMAKE_SHARED_LINKER_FLAGS="-static"
 
@@ -94,6 +100,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0   # Required so we can move and push tags
+          submodules: recursive
 
       - name: Install dependencies
         run: ${{ matrix.config.install }}

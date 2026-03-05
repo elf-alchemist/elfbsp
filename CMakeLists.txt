@@ -55,6 +55,8 @@ endif()
 # SDL3
 set(SDL_TEST OFF CACHE BOOL "" FORCE)
 set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
+set(SDL_STATIC ON CACHE BOOL "" FORCE)
+set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 add_subdirectory(library/SDL)
 
 # Dear ImGui
@@ -70,6 +72,7 @@ add_library(imgui STATIC
 
 target_include_directories(imgui PUBLIC
     library/imgui
+    library/imgui/backends
 )
 
 target_link_libraries(imgui PUBLIC SDL3::SDL3)
@@ -155,18 +158,7 @@ set(CPACK_GENERATOR ZIP)
 if(WIN32)
     install(FILES LICENSE.txt DESTINATION .)
     install(FILES elfbsp.cfg DESTINATION .)
-    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.21 AND NOT VCPKG_TOOLCHAIN)
-        install(
-            TARGETS elfbsp
-            RUNTIME_DEPENDENCIES
-                PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
-                POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
-                DIRECTORIES $<TARGET_FILE_DIR:elfbsp> $ENV{PATH}
-            RUNTIME DESTINATION .
-        )
-    else()
-        install(TARGETS elfbsp RUNTIME DESTINATION .)
-    endif()
+    install(TARGETS elfbsp RUNTIME DESTINATION .)
 else()
     include(GNUInstallDirs)
     install(FILES LICENSE.txt DESTINATION "share/doc/${PROJECT_NAME}")
