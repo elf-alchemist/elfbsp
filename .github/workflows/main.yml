@@ -46,7 +46,7 @@ jobs:
               -DCMAKE_LINKER=lld \
               -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
               -DSDL_STATIC=ON \
-              -DSDL_SHARED=OFF
+              -DSDL_SHARED=OFF \
               -DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections"
 
           - name: MacOS Universal
