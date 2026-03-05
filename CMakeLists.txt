@@ -57,7 +57,7 @@ set(SDL_TEST OFF CACHE BOOL "" FORCE)
 set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
-add_subdirectory(library/SDL)
+add_subdirectory(library/sdl)
 
 # Dear ImGui
 add_library(imgui STATIC
