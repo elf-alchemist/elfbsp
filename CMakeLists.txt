@@ -53,6 +53,8 @@ if(SAN_COUNT GREATER 0)
 endif()
 
 # SDL3
+set(SDL_TEST OFF CACHE BOOL "" FORCE)
+set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(library/SDL)
 
 # Dear ImGui
