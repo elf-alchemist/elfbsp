@@ -518,7 +518,7 @@ quadtree_c *TreeFromSegList(seg_t *list);
 void BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast, bool analysis);
 
 // compute the height of the bsp tree, starting at 'node'.
-size_t ComputeTreeDepth(const node_t *node);
+size_t ComputeBspHeight(const node_t *node);
 
 // put all the segs in each subsector into clockwise order, and renumber
 // the seg indices.

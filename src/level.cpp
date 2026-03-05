@@ -2089,15 +2089,15 @@ const char *GetLevelName(size_t lev_idx)
   return cur_wad->GetLump(lump_idx)->Name();
 }
 
-size_t ComputeTreeDepth(const node_t *node)
+size_t ComputeBspHeight(const node_t *node)
 {
   if (node == nullptr)
   {
     return 0;
   }
 
-  size_t right = ComputeTreeDepth(node->r.node);
-  size_t left = ComputeTreeDepth(node->l.node);
+  size_t right = ComputeBspHeight(node->r.node);
+  size_t left = ComputeBspHeight(node->l.node);
 
   return std::max(left, right) + 1;
 }
@@ -2137,8 +2137,8 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
 
   if (config.verbose && root_node != nullptr)
   {
-    PrintLine(LOG_NORMAL, "Heights of subtrees: %zu / %zu", ComputeTreeDepth(root_node->l.node),
-              ComputeTreeDepth(root_node->r.node));
+    PrintLine(LOG_NORMAL, "Heights of subtrees: %zu / %zu", ComputeBspHeight(root_node->l.node),
+              ComputeBspHeight(root_node->r.node));
   }
 
   ClockwiseBspTree();

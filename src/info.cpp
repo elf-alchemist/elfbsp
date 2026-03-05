@@ -81,7 +81,7 @@ void WriteAnalysis(const char *filename)
   PrintLine(LOG_NORMAL, "[%s] Successfully finished writing data to CSV file %s.", __func__, csv_path.c_str());
 }
 
-static void ComputeBspDepth(const node_t *node, size_t depth, double &leaf_depth_sum)
+static void ComputeTotalBspHeights(const node_t *node, size_t depth, double &leaf_depth_sum)
 {
   if (!node)
   {
@@ -96,7 +96,7 @@ static void ComputeBspDepth(const node_t *node, size_t depth, double &leaf_depth
   }
   else
   {
-    ComputeBspDepth(node->l.node, depth, leaf_depth_sum);
+    ComputeTotalBspHeights(node->l.node, depth, leaf_depth_sum);
   }
 
   if (!node->r.node)
@@ -105,7 +105,7 @@ static void ComputeBspDepth(const node_t *node, size_t depth, double &leaf_depth
   }
   else
   {
-    ComputeBspDepth(node->r.node, depth, leaf_depth_sum);
+    ComputeTotalBspHeights(node->r.node, depth, leaf_depth_sum);
   }
 }
 
@@ -151,9 +151,9 @@ void GenerateAnalysis(const char *filename)
     data.splits = lev_segs.size() - lev_sidedefs.size();
     num_leafs = static_cast<double>(data.subsecs);
 
-    ComputeBspDepth(analysis_node, 0, total_depth_sum);
-    data.left_depth = ComputeTreeDepth(analysis_node->l.node);
-    data.right_depth = ComputeTreeDepth(analysis_node->r.node);
+    ComputeTotalBspHeights(analysis_node, 0, total_depth_sum);
+    data.left_depth = ComputeBspHeight(analysis_node->l.node);
+    data.right_depth = ComputeBspHeight(analysis_node->r.node);
 
     left_size = static_cast<double>(data.left_depth);
     right_size = static_cast<double>(data.right_depth);
