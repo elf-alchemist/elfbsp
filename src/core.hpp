@@ -1498,10 +1498,6 @@ constexpr double SPLIT_COST_MIN = 1.0;
 constexpr double SPLIT_COST_DEFAULT = 11.0;
 constexpr double SPLIT_COST_MAX = 32.0;
 
-// 32 levels of split cost, 1-32
-// 2 modes, normal and fast
-constexpr size_t ANALYSIS_TOTAL = 32 * 2;
-
 using buildinfo_t = struct buildinfo_s;
 
 extern buildinfo_t config;
@@ -1608,4 +1604,6 @@ const char *GetLevelName(size_t lev_idx);
 // BUILD_LumpOverflow if some limits were exceeded.
 build_result_e BuildLevel(size_t lev_idx, const char *filename);
 
-void AnalysisBSP(const char *filename);
+void SetupAnalysisFile(const char *filepath);
+void WriteAnalysis(const char *filename);
+void GenerateAnalysis(const char *filename);

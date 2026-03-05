@@ -2121,7 +2121,7 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
   {
     if (config.analysis)
     {
-      AnalysisBSP(filename);
+      GenerateAnalysis(filename);
     }
 
     bbox_t dummy;
@@ -2158,6 +2158,11 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
   }
 
   FreeLevel();
+
+  if (config.analysis)
+  {
+    WriteAnalysis(filename);
+  }
 
   return ret;
 }

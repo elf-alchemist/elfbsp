@@ -18,21 +18,67 @@
 //
 //------------------------------------------------------------------------------
 
+#include <format>
+#include <fstream>
+
 #include "core.hpp"
 #include "local.hpp"
 
-static void WriteAnalysis(const char *filename, bool is_fast, std::vector<AnalysisData> &list)
+static std::vector<std::string> analysis_csv;
+
+//------------------------------------------------------------------------
+
+void SetupAnalysisFile(const char *filepath)
 {
-  auto png_path = std::string(filename);
-  if (auto ext_pos = FindExtension(filename); ext_pos > 0)
+  auto csv_path = std::string(filepath);
+
+  auto ext_pos = FindExtension(filepath);
+  if (ext_pos > 0)
   {
-    png_path.resize(ext_pos);
+    csv_path.resize(ext_pos);
   }
-  png_path += "_";
-  png_path += GetLevelName(lev_current_idx);
-  png_path += "_";
-  png_path += is_fast ? "fast" : "normal";
-  png_path += ".png";
+
+  csv_path += ".csv";
+  FileClear(csv_path.c_str());
+
+  std::string line = "old_vertex,lines,sides,sectors,new_vertex,nodes,subsecs,segs,splits,left_depth,right_depth,average_depth,"
+                     "optimal_depth,tree_balance,worst_case_ratio,tree_quality";
+  analysis_csv.push_back(line);
+}
+
+// writes out for current file
+// expects AnalysisPushLine to have been called with all 0-32 split costs during node-building
+void WriteAnalysis(const char *filename)
+{
+  auto csv_path = std::string(filename);
+
+  if (const auto ext_pos = FindExtension(filename); ext_pos > 0)
+  {
+    csv_path.resize(ext_pos);
+  }
+
+  csv_path += ".csv";
+
+  // Append to fresh CSV
+  auto csv_file = std::ofstream(csv_path.c_str(), std::ios::app);
+
+  if (!csv_file.is_open())
+  {
+    PrintLine(LOG_WARN, "[%s] Couldn't open file %s for writing.", __func__, csv_path.c_str());
+    return;
+  }
+
+  for (const auto &line : analysis_csv)
+  {
+    csv_file << line << '\n';
+  }
+
+  csv_file.close();
+
+  // Flush out from memory
+  analysis_csv.clear();
+
+  PrintLine(LOG_NORMAL, "[%s] Successfully finished writing data to CSV file %s.", __func__, csv_path.c_str());
 }
 
 static void ComputeBspDepth(const node_t *node, size_t depth, double &leaf_depth_sum)
@@ -63,12 +109,14 @@ static void ComputeBspDepth(const node_t *node, size_t depth, double &leaf_depth
   }
 }
 
-void AnalysisBSP(const char *filename)
+void GenerateAnalysis(const char *filename)
 {
-  auto generate_analysis_data = [](AnalysisData &data, bool is_fast, size_t split_cost) -> auto
+  auto generate_analysis_data = [](size_t level_index, bool is_fast, size_t split_cost) -> auto
   {
+    AnalysisData data;
     node_t *analysis_node = nullptr;
     subsec_t *analysis_sub = nullptr;
+    seg_t *analysis_seg = nullptr;
 
     // Using 'double's to get around strict type casting
     // and implicit conversion warnings
@@ -85,7 +133,8 @@ void AnalysisBSP(const char *filename)
     double max_epl = 0.0;
 
     bbox_t dummy = {0, 0, 0, 0};
-    BuildNodes(CreateSegs(), 0, &dummy, &analysis_node, &analysis_sub, static_cast<double>(split_cost), is_fast, true);
+    analysis_seg = CreateSegs();
+    BuildNodes(analysis_seg, 0, &dummy, &analysis_node, &analysis_sub, static_cast<double>(split_cost), is_fast, true);
 
     // TODO: pass level data by context instead of globally :v
     data.vertex = num_old_vert;
@@ -123,6 +172,13 @@ void AnalysisBSP(const char *filename)
     data.worst_case_ratio = min_epl / max_epl;
     data.tree_quality = ((min_epl / total_depth_sum) - data.worst_case_ratio) / (1 - data.worst_case_ratio);
 
+    std::string line =
+        std::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}", GetLevelName(level_index), is_fast, split_cost,
+                    data.vertex, data.lines, data.sides, data.sectors, data.bsp_vertex, data.nodes, data.subsecs, data.segs,
+                    data.splits, data.left_depth, data.right_depth, data.average_depth, data.optimal_depth, data.tree_balance,
+                    data.worst_case_ratio, data.tree_quality);
+    analysis_csv.push_back(line);
+
     // TODO: pass level data by context instead of globally :v
     FreeNodes();
     FreeSubsecs();
@@ -134,15 +190,12 @@ void AnalysisBSP(const char *filename)
   // normal mode, and fast mode
   for (size_t is_fast = 0; is_fast <= 1; is_fast++)
   {
-    std::vector<AnalysisData> list;
-    list.reserve(32);
-
     // across all split costs
     for (size_t split_cost = 1; split_cost <= 32; split_cost++)
     {
-      generate_analysis_data(list[split_cost - 1], is_fast != 0, split_cost);
+      generate_analysis_data(lev_current_idx, is_fast != 0, split_cost);
     }
 
-    WriteAnalysis(filename, is_fast, list);
+    WriteAnalysis(filename);
   }
 }

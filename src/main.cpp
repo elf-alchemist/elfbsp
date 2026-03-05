@@ -227,7 +227,7 @@ void VisitFile(const char *filename)
 
   if (config.analysis)
   {
-    // AnalysisSetupFile(filename);
+    SetupAnalysisFile(filename);
   }
 
   PrintLine(LOG_NORMAL, "Building %s", filename);
