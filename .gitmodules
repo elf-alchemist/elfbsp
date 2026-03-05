@@ -1,5 +1,5 @@
-[submodule "library/SDL"]
-	path = library/SDL
+[submodule "library/sdl"]
+	path = library/sdl
 	url = https://github.com/libsdl-org/SDL.git
 [submodule "library/imgui"]
 	path = library/imgui
