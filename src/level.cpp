@@ -2089,6 +2089,19 @@ const char *GetLevelName(size_t lev_idx)
   return cur_wad->GetLump(lump_idx)->Name();
 }
 
+size_t ComputeBspHeight(const node_t *node)
+{
+  if (node == nullptr)
+  {
+    return 0;
+  }
+
+  size_t right = ComputeBspHeight(node->r.node);
+  size_t left = ComputeBspHeight(node->l.node);
+
+  return std::max(left, right) + 1;
+}
+
 /* ----- build nodes for a single level ----- */
 
 build_result_e BuildLevel(size_t lev_idx, const char *filename)
@@ -2108,32 +2121,8 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
   {
     if (config.analysis)
     {
-      // normal mode, across all default costs
-      for (double split_cost = 1.0; split_cost <= 32.0; split_cost++)
-      {
-        bbox_t dummy;
-        root_node = nullptr;
-        root_sub = nullptr;
-        BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, split_cost, false, true);
-        AnalysisPushLine(lev_current_idx, false, split_cost, lev_segs.size(), lev_subsecs.size(), lev_nodes.size(),
-                         ComputeBspHeight(root_node->l.node), ComputeBspHeight(root_node->r.node));
-        FreeNodes();
-        FreeSubsecs();
-        FreeSegs();
-      }
-      // fast mode, also across all default costs
-      for (double split_cost = 1.0; split_cost <= 32.0; split_cost++)
-      {
-        bbox_t dummy;
-        root_node = nullptr;
-        root_sub = nullptr;
-        BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, split_cost, true, true);
-        AnalysisPushLine(lev_current_idx, true, split_cost, lev_segs.size(), lev_subsecs.size(), lev_nodes.size(),
-                         ComputeBspHeight(root_node->l.node), ComputeBspHeight(root_node->r.node));
-        FreeNodes();
-        FreeSubsecs();
-        FreeSegs();
-      }
+      PrintLine(LOG_NORMAL, "[%s] Starting analysis loop for %s", __func__, GetLevelName(lev_current_idx));
+      GenerateAnalysis(filename);
     }
 
     bbox_t dummy;
@@ -2149,8 +2138,8 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
 
   if (config.verbose && root_node != nullptr)
   {
-    PrintLine(LOG_NORMAL, "Heights of subtrees: %d / %d", ComputeBspHeight(root_node->r.node),
-              ComputeBspHeight(root_node->l.node));
+    PrintLine(LOG_NORMAL, "Heights of subtrees: %zu / %zu", ComputeBspHeight(root_node->l.node),
+              ComputeBspHeight(root_node->r.node));
   }
 
   ClockwiseBspTree();

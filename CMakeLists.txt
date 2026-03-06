@@ -50,6 +50,7 @@ endif()
 
 add_executable(elfbsp
     src/bsp.cpp
+    src/info.cpp
     src/level.cpp
     src/main.cpp
     src/misc.cpp
