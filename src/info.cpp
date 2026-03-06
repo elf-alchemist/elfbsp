@@ -41,8 +41,8 @@ void SetupAnalysisFile(const char *filepath)
   csv_path += ".csv";
   FileClear(csv_path.c_str());
 
-  std::string line = "old_vertex,lines,sides,sectors,new_vertex,nodes,subsecs,segs,splits,left_depth,right_depth,average_depth,"
-                     "optimal_depth,tree_balance,worst_case_ratio,tree_quality";
+  std::string line = "map,is_fast,split_cost,old_vertex,lines,sides,sectors,new_vertex,nodes,subsecs,segs,splits,left_depth,"
+                     "right_depth,average_depth,optimal_depth,tree_balance,worst_case_ratio,tree_quality";
   analysis_csv.push_back(line);
 }
 
@@ -78,7 +78,7 @@ void WriteAnalysis(const char *filename)
   // Flush out from memory
   analysis_csv.clear();
 
-  PrintLine(LOG_NORMAL, "[%s] Successfully finished writing data to CSV file %s.", __func__, csv_path.c_str());
+  PrintLine(LOG_NORMAL, "[%s] Successfully wrote data to CSV file %s.", __func__, csv_path.c_str());
 }
 
 static void ComputeTotalBspHeights(const node_t *node, size_t depth, double &leaf_depth_sum)
@@ -165,8 +165,8 @@ void GenerateAnalysis(const char *filename)
     data.optimal_depth = static_cast<size_t>(optimal_depth);
     data.tree_balance = (left_size < right_size) ? left_size / right_size : right_size / left_size;
 
-    // math pulled from ZenNode/ZokumBSP's BSPInfo utility
-    expected_leafs_for_optimal_depth = (1u << data.optimal_depth); // equals to "pow(2, optimal_depth);"
+    // math pulled from Marc Rousseau's BSPInfo utility
+    expected_leafs_for_optimal_depth = pow(2, static_cast<double>(data.optimal_depth)); // 2 to the power N
     min_epl = num_leafs * (optimal_depth + 1) - expected_leafs_for_optimal_depth;
     max_epl = num_leafs * ((num_leafs - 1) / 2 + 1) - 1;
     data.worst_case_ratio = min_epl / max_epl;
@@ -194,8 +194,7 @@ void GenerateAnalysis(const char *filename)
     for (size_t split_cost = 1; split_cost <= 32; split_cost++)
     {
       generate_analysis_data(lev_current_idx, is_fast != 0, split_cost);
+      PrintLine(LOG_NORMAL, "[%s] Analyzed %s, %s mode, split cost factor of %zu", __func__, GetLevelName(lev_current_idx), is_fast ? "fast" : "normal", split_cost);
     }
-
-    WriteAnalysis(filename);
   }
 }

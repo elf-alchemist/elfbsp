@@ -2121,6 +2121,7 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
   {
     if (config.analysis)
     {
+      PrintLine(LOG_NORMAL, "[%s] Starting analysis loop for %s", __func__, GetLevelName(lev_current_idx));
       GenerateAnalysis(filename);
     }
 

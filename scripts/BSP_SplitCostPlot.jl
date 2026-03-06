@@ -7,7 +7,7 @@ using Base.Filesystem
 println("[Init] Starting up")
 
 struct DataVisBSP
-  map_name::String
+  map::String
   is_fast::Bool
   split_cost::Int64
   old_vertex::Int64
@@ -42,7 +42,7 @@ bsp_vis = DataVisBSP[]
 for row in rows
   push!(bsp_vis,
     DataVisBSP(
-      row.map_name,
+      row.map,
       row.is_fast,
       row.split_cost,
       row.old_vertex,
@@ -69,7 +69,7 @@ levels = Dict{Tuple{String,Bool},Vector{DataVisBSP}}()
 
 println("[CSV] Setting up internal data format")
 for row in bsp_vis
-  key = (row.map_name, row.is_fast)
+  key = (row.map, row.is_fast)
   push!(get!(levels, key, DataVisBSP[]), row)
 end
 
