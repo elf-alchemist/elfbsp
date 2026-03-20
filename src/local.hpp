@@ -126,9 +126,9 @@ struct sidedef_t
 
   double offset_x = 0.0;
   double offset_y = 0.0;
-  char tex_upper[8];
-  char tex_middle[8];
-  char tex_lower[8];
+  char tex_upper[8] = "-";
+  char tex_middle[8] = "-";
+  char tex_lower[8] = "-";
 
   // sidedef index.  Always valid after loading & pruning.
   size_t index;
@@ -145,8 +145,8 @@ struct linedef_t
   sidedef_t *right; // right sidedef
   sidedef_t *left;  // left sidedef, or nullptr if none
 
+  uint32_t flags;  // currently we only care about two-sided lines, but who knows
   int32_t special; //
-  uint16_t flags;  // currently we only care about two-sided lines, but who knows
   int32_t id;      // Tag => arg0/id split
   int32_t args[5]; //
 

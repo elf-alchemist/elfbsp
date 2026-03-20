@@ -1042,7 +1042,7 @@ static inline sidedef_t *SafeLookupSidedef(uint16_t num)
   return lev_sidedefs[num];
 }
 
-static void GetVertices_Binary(void)
+static void GetVertices_Normal(void)
 {
   size_t count = 0;
 
@@ -1086,7 +1086,51 @@ static void GetVertices_Binary(void)
   num_old_vert = lev_vertices.size();
 }
 
-static void GetSectors_Binary(void)
+static void GetVertices_Fractional(void)
+{
+  size_t count = 0;
+
+  Lump_c *lump = FindLevelLump("VERTEXES");
+
+  if (lump)
+  {
+    count = lump->Length() / sizeof(raw_vertex_fixed_t);
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+  }
+
+  if (lump == nullptr || count == 0)
+  {
+    return;
+  }
+
+  if (!lump->Seek(0))
+  {
+    PrintLine(LOG_ERROR, "Error seeking to 32bit vertices.");
+  }
+
+  for (size_t i = 0; i < count; i++)
+  {
+    raw_vertex_fixed_t raw;
+
+    if (!lump->Read(&raw, sizeof(raw)))
+    {
+      PrintLine(LOG_ERROR, "Error reading 32bit vertices.");
+    }
+
+    vertex_t *vert = NewVertex();
+
+    vert->x = static_cast<double>(GetLittleEndian(raw.x) / 65536.0);
+    vert->y = static_cast<double>(GetLittleEndian(raw.y) / 65536.0);
+  }
+
+  num_old_vert = lev_vertices.size();
+}
+
+static void GetSectors_Doom(void)
 {
   size_t count = 0;
 
@@ -1094,7 +1138,7 @@ static void GetSectors_Binary(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_sector_t);
+    count = lump->Length() / sizeof(raw_sector_doom_t);
   }
 
   if (lump == nullptr || count == 0)
@@ -1114,7 +1158,7 @@ static void GetSectors_Binary(void)
 
   for (size_t i = 0; i < count; i++)
   {
-    raw_sector_t raw;
+    raw_sector_doom_t raw;
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
@@ -1136,7 +1180,7 @@ static void GetThings_Doom(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_thing_t);
+    count = lump->Length() / sizeof(raw_thing_doom_t);
   }
 
   if (lump == nullptr || count == 0)
@@ -1156,7 +1200,7 @@ static void GetThings_Doom(void)
 
   for (size_t i = 0; i < count; i++)
   {
-    raw_thing_t raw;
+    raw_thing_doom_t raw;
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
@@ -1171,50 +1215,7 @@ static void GetThings_Doom(void)
   }
 }
 
-static void GetThings_Hexen(void)
-{
-  size_t count = 0;
-
-  Lump_c *lump = FindLevelLump("THINGS");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_hexen_thing_t);
-  }
-
-  if (lump == nullptr || count == 0)
-  {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "Error seeking to things.");
-  }
-
-  if (HAS_BIT(config.debug, DEBUG_LOAD))
-  {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
-  }
-
-  for (size_t i = 0; i < count; i++)
-  {
-    raw_hexen_thing_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "Error reading things.");
-    }
-
-    thing_t *thing = NewThing();
-
-    thing->x = GetLittleEndian(raw.x);
-    thing->y = GetLittleEndian(raw.y);
-    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
-  }
-}
-
-static void GetSidedefs_Binary(void)
+static void GetSidedefs_Doom(void)
 {
   size_t count = 0;
 
@@ -1222,7 +1223,7 @@ static void GetSidedefs_Binary(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_sidedef_t);
+    count = lump->Length() / sizeof(raw_sidedef_doom_t);
   }
 
   if (lump == nullptr || count == 0)
@@ -1242,7 +1243,7 @@ static void GetSidedefs_Binary(void)
 
   for (size_t i = 0; i < count; i++)
   {
-    raw_sidedef_t raw;
+    raw_sidedef_doom_t raw;
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
@@ -1268,7 +1269,7 @@ static void GetLinedefs_Doom(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_linedef_t);
+    count = lump->Length() / sizeof(raw_linedef_doom_t);
   }
 
   if (lump == nullptr || count == 0)
@@ -1288,7 +1289,7 @@ static void GetLinedefs_Doom(void)
 
   for (size_t i = 0; i < count; i++)
   {
-    raw_linedef_t raw;
+    raw_linedef_doom_t raw;
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
@@ -1299,11 +1300,11 @@ static void GetLinedefs_Doom(void)
 
     line->start = SafeLookupVertex(GetLittleEndian(raw.start));
     line->end = SafeLookupVertex(GetLittleEndian(raw.end));
-    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
     line->flags = GetLittleEndian(raw.flags);
     line->special = GetLittleEndian(raw.special);
     line->args[0] = GetLittleEndian(raw.tag);
+    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
+    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
 
     line->start->is_used = true;
     line->end->is_used = true;
@@ -1356,6 +1357,49 @@ static void GetLinedefs_Doom(void)
   }
 }
 
+static void GetThings_Hexen(void)
+{
+  size_t count = 0;
+
+  Lump_c *lump = FindLevelLump("THINGS");
+
+  if (lump)
+  {
+    count = lump->Length() / sizeof(raw_thing_hexen_t);
+  }
+
+  if (lump == nullptr || count == 0)
+  {
+    return;
+  }
+
+  if (!lump->Seek(0))
+  {
+    PrintLine(LOG_ERROR, "Error seeking to things.");
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+  }
+
+  for (size_t i = 0; i < count; i++)
+  {
+    raw_thing_hexen_t raw;
+
+    if (!lump->Read(&raw, sizeof(raw)))
+    {
+      PrintLine(LOG_ERROR, "Error reading things.");
+    }
+
+    thing_t *thing = NewThing();
+
+    thing->x = GetLittleEndian(raw.x);
+    thing->y = GetLittleEndian(raw.y);
+    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
+  }
+}
+
 static void GetLinedefs_Hexen(void)
 {
   size_t count = 0;
@@ -1364,7 +1408,7 @@ static void GetLinedefs_Hexen(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_hexen_linedef_t);
+    count = lump->Length() / sizeof(raw_linedef_hexen_t);
   }
 
   if (lump == nullptr || count == 0)
@@ -1384,7 +1428,7 @@ static void GetLinedefs_Hexen(void)
 
   for (size_t i = 0; i < count; i++)
   {
-    raw_hexen_linedef_t raw;
+    raw_linedef_hexen_t raw;
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
@@ -1422,6 +1466,187 @@ static void GetLinedefs_Hexen(void)
     default:
       break;
     }
+  }
+}
+
+static void GetSectors_Doom64(void)
+{
+  size_t count = 0;
+
+  Lump_c *lump = FindLevelLump("SECTORS");
+
+  if (lump)
+  {
+    count = lump->Length() / sizeof(raw_sector_doom64_t);
+  }
+
+  if (lump == nullptr || count == 0)
+  {
+    return;
+  }
+
+  if (!lump->Seek(0))
+  {
+    PrintLine(LOG_ERROR, "Error seeking to Doom64 sectors.");
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+  }
+
+  for (size_t i = 0; i < count; i++)
+  {
+    raw_sector_doom64_t raw;
+
+    if (!lump->Read(&raw, sizeof(raw)))
+    {
+      PrintLine(LOG_ERROR, "Error reading Doom64 sectors.");
+    }
+
+    sector_t *sector = NewSector();
+
+    sector->height_floor = static_cast<double>(GetLittleEndian(raw.floorh));
+    sector->height_ceiling = static_cast<double>(GetLittleEndian(raw.ceilh));
+  }
+}
+
+static void GetSidedefs_Doom64(void)
+{
+  size_t count = 0;
+
+  Lump_c *lump = FindLevelLump("SIDEDEFS");
+
+  if (lump)
+  {
+    count = lump->Length() / sizeof(raw_sidedef_doom_t);
+  }
+
+  if (lump == nullptr || count == 0)
+  {
+    return;
+  }
+
+  if (!lump->Seek(0))
+  {
+    PrintLine(LOG_ERROR, "Error seeking to Doom64 sidedefs.");
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+  }
+
+  for (size_t i = 0; i < count; i++)
+  {
+    raw_sidedef_doom64_t raw;
+
+    if (!lump->Read(&raw, sizeof(raw)))
+    {
+      PrintLine(LOG_ERROR, "Error reading Doom64 sidedefs.");
+    }
+
+    sidedef_t *side = NewSidedef();
+
+    side->offset_x = GetLittleEndian(raw.x_offset);
+    side->offset_y = GetLittleEndian(raw.y_offset);
+    // We don't care about texture indexes here
+    side->sector = SafeLookupSector(GetLittleEndian(raw.sector));
+  }
+}
+
+static void GetLinedefs_Doom64(void)
+{
+  size_t count = 0;
+
+  Lump_c *lump = FindLevelLump("LINEDEFS");
+
+  if (lump)
+  {
+    count = lump->Length() / sizeof(raw_linedef_doom64_t);
+  }
+
+  if (lump == nullptr || count == 0)
+  {
+    return;
+  }
+
+  if (!lump->Seek(0))
+  {
+    PrintLine(LOG_ERROR, "Error seeking to Doom64 linedefs.");
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+  }
+
+  for (size_t i = 0; i < count; i++)
+  {
+    raw_linedef_doom64_t raw;
+
+    if (!lump->Read(&raw, sizeof(raw)))
+    {
+      PrintLine(LOG_ERROR, "Error reading Doom64 linedefs.");
+    }
+
+    linedef_t *line = NewLinedef();
+
+    line->start = SafeLookupVertex(GetLittleEndian(raw.start));
+    line->end = SafeLookupVertex(GetLittleEndian(raw.end));
+    line->flags = GetLittleEndian(raw.flags);
+    line->special = GetLittleEndian(raw.special);
+    line->args[0] = GetLittleEndian(raw.tag);
+    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
+    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
+
+    line->start->is_used = true;
+    line->end->is_used = true;
+
+    ValidateLinedef(line);
+  }
+}
+
+static void GetThings_Doom64(void)
+{
+  size_t count = 0;
+
+  Lump_c *lump = FindLevelLump("THINGS");
+
+  if (lump)
+  {
+    count = lump->Length() / sizeof(raw_thing_doom64_t);
+  }
+
+  if (lump == nullptr || count == 0)
+  {
+    return;
+  }
+
+  if (!lump->Seek(0))
+  {
+    PrintLine(LOG_ERROR, "Error seeking to Doom64 things.");
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+  }
+
+  for (size_t i = 0; i < count; i++)
+  {
+    raw_thing_doom64_t raw;
+
+    if (!lump->Read(&raw, sizeof(raw)))
+    {
+      PrintLine(LOG_ERROR, "Error reading Doom64 things.");
+    }
+
+    thing_t *thing = NewThing();
+
+    thing->x = GetLittleEndian(raw.x);
+    thing->y = GetLittleEndian(raw.y);
+    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
   }
 }
 
@@ -1826,33 +2051,42 @@ void LoadLevel(void)
 
   lev_overflows = false;
 
-  PrintLine(LOG_NORMAL, "%s", LEV->Name());
+  PrintLine(LOG_NORMAL, "[%s] Reading %s", __func__, LEV->Name());
 
   num_new_vert = 0;
   num_real_lines = 0;
 
   switch (lev_format)
   {
-  case MapFormat_UDMF:
-    ParseUDMF();
-    break;
   case MapFormat_Doom:
-    GetVertices_Binary();
-    GetSectors_Binary();
-    GetSidedefs_Binary();
+    GetVertices_Normal();
+    GetSectors_Doom();
+    GetSidedefs_Doom();
     GetLinedefs_Doom();
     GetThings_Doom();
     PruneVerticesAtEnd();
     break;
   case MapFormat_Hexen:
-    GetVertices_Binary();
-    GetSectors_Binary();
-    GetSidedefs_Binary();
+    GetVertices_Normal();
+    GetSectors_Doom();
+    GetSidedefs_Doom();
     GetLinedefs_Hexen();
     GetThings_Hexen();
     PruneVerticesAtEnd();
     break;
-  default:
+  case MapFormat_Doom64:
+    GetVertices_Fractional();
+    GetSectors_Doom64();
+    GetSidedefs_Doom64();
+    GetLinedefs_Doom64();
+    GetThings_Doom64();
+    PruneVerticesAtEnd();
+    break;
+  case MapFormat_UDMF:
+    ParseUDMF();
+    break;
+  case MapFormat_INVALID:
+    PrintLine(LOG_ERROR, "[%s] Unknown level format on level %s", __func__, LEV->Name());
     break;
   }
 

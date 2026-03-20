@@ -100,7 +100,7 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
   return result;
 }
 
-static void PutVertices_Vanilla(void)
+static void PutVertices_Normal(void)
 {
   // this size is worst-case scenario
   size_t size = lev_vertices.size() * sizeof(raw_vertex_t);
@@ -122,6 +122,40 @@ static void PutVertices_Vanilla(void)
     raw.y = GetLittleEndian(static_cast<int16_t>(floor(vert->y)));
 
     lump->Write(&raw, sizeof(raw_vertex_t));
+
+    count++;
+  }
+
+  lump->Finish();
+
+  if (count != num_old_vert)
+  {
+    PrintLine(LOG_ERROR, "PutVertices miscounted (%zu != %zu)", count, num_old_vert);
+  }
+}
+
+static void PutVertices_Fractional(void)
+{
+  // this size is worst-case scenario
+  size_t size = lev_vertices.size() * sizeof(raw_vertex_fixed_t);
+  Lump_c *lump = CreateLevelLump("VERTEXES", size);
+
+  size_t count = 0;
+  for (size_t i = 0; i < lev_vertices.size(); i++)
+  {
+    raw_vertex_fixed_t raw;
+
+    const vertex_t *vert = lev_vertices[i];
+
+    if (vert->is_new)
+    {
+      continue;
+    }
+
+    raw.x = GetLittleEndian(static_cast<int16_t>(floor(vert->x)));
+    raw.y = GetLittleEndian(static_cast<int16_t>(floor(vert->y)));
+
+    lump->Write(&raw, sizeof(raw_vertex_fixed_t));
 
     count++;
   }
@@ -463,7 +497,7 @@ static void PutVertices_Xnod(Lump_c *lump)
   size_t count = 0;
   for (size_t i = 0; i < lev_vertices.size(); i++)
   {
-    raw_xnod_vertex_t raw;
+    raw_vertex_xnod_t raw;
 
     const vertex_t *vert = lev_vertices[i];
 
@@ -475,7 +509,7 @@ static void PutVertices_Xnod(Lump_c *lump)
     raw.x = GetLittleEndian(static_cast<int32_t>(floor(vert->x * 65536.0)));
     raw.y = GetLittleEndian(static_cast<int32_t>(floor(vert->y * 65536.0)));
 
-    lump->Write(&raw, sizeof(raw_xnod_vertex_t));
+    lump->Write(&raw, sizeof(raw_vertex_xnod_t));
 
     count++;
   }
@@ -537,19 +571,19 @@ static void PutSegs_Xnod(Lump_c *lump)
       PrintLine(LOG_ERROR, "PutZSegs: seg index mismatch (%zu != %zu)", seg->index, i);
     }
 
-    raw_xnod_seg_t raw = {};
+    raw_seg_xnod_t raw = {};
 
     raw.start = GetLittleEndian(VertexIndex_XNOD(seg->start));
     raw.end = GetLittleEndian(VertexIndex_XNOD(seg->end));
     raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef->index));
     raw.side = seg->side;
-    lump->Write(&raw, sizeof(raw_xnod_seg_t));
+    lump->Write(&raw, sizeof(raw_seg_xnod_t));
   }
 }
 
 static void PutOneNode_Xnod(Lump_c *lump, node_t *node, size_t &node_cur_index)
 {
-  raw_xnod_node_t raw;
+  raw_node_xnod_t raw;
 
   if (node->r.node)
   {
@@ -604,7 +638,7 @@ static void PutOneNode_Xnod(Lump_c *lump, node_t *node, size_t &node_cur_index)
     PrintLine(LOG_ERROR, "Bad left child in ZDoom node %zu", node->index);
   }
 
-  lump->Write(&raw, sizeof(raw_xnod_node_t));
+  lump->Write(&raw, sizeof(raw_node_xnod_t));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
@@ -638,10 +672,10 @@ static size_t CalcXnodNodesSize(void)
 
   size_t size = 32; // header + a bit extra
 
-  size += 8 + lev_vertices.size() * sizeof(raw_xnod_vertex_t);
-  size += 4 + lev_subsecs.size() * sizeof(raw_xnod_subsec_t);
-  size += 4 + lev_segs.size() * sizeof(raw_xgl2_seg_t);
-  size += 4 + lev_nodes.size() * sizeof(raw_xgl3_node_t);
+  size += 8 + lev_vertices.size() * sizeof(raw_vertex_xnod_t);
+  size += 4 + lev_subsecs.size() * sizeof(raw_subsec_xnod_t);
+  size += 4 + lev_segs.size() * sizeof(raw_seg_xgl2_t);
+  size += 4 + lev_nodes.size() * sizeof(raw_node_xgl3_t);
 
   return size;
 }
@@ -664,14 +698,14 @@ static void PutSegs_Xgln(Lump_c *lump)
       PrintLine(LOG_ERROR, "PutXGL3Segs: seg index mismatch (%zu != %zu)", seg->index, i);
     }
 
-    raw_xgln_seg_t raw = {};
+    raw_seg_xgln_t raw = {};
 
     raw.vertex = GetLittleEndian(VertexIndex_XNOD(seg->start));
     raw.partner = GetLittleEndian(static_cast<uint32_t>(seg->partner ? seg->partner->index : NO_INDEX));
     raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
-    lump->Write(&raw, sizeof(raw_xgln_seg_t));
+    lump->Write(&raw, sizeof(raw_seg_xgln_t));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -695,14 +729,14 @@ static void PutSegs_Xgl2(Lump_c *lump)
       PrintLine(LOG_ERROR, "PutXGL3Segs: seg index mismatch (%zu != %zu)", seg->index, i);
     }
 
-    raw_xgl2_seg_t raw = {};
+    raw_seg_xgl2_t raw = {};
 
     raw.vertex = GetLittleEndian(VertexIndex_XNOD(seg->start));
     raw.partner = GetLittleEndian(static_cast<uint32_t>(seg->partner ? seg->partner->index : NO_INDEX));
     raw.linedef = GetLittleEndian(static_cast<uint32_t>(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
-    lump->Write(&raw, sizeof(raw_xgl2_seg_t));
+    lump->Write(&raw, sizeof(raw_seg_xgl2_t));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -714,7 +748,7 @@ static void PutSegs_Xgl2(Lump_c *lump)
 
 static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
 {
-  raw_xgl3_node_t raw;
+  raw_node_xgl3_t raw;
 
   if (node->r.node)
   {
@@ -769,7 +803,7 @@ static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
     PrintLine(LOG_ERROR, "Bad left child in ZDoom node %zu", node->index);
   }
 
-  lump->Write(&raw, sizeof(raw_xgl3_node_t));
+  lump->Write(&raw, sizeof(raw_node_xgl3_t));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
@@ -808,7 +842,7 @@ void SaveBinaryFormat_Vanilla(node_t *root_node)
   // are removed from subsectors.
   RoundOffBspTree();
   SortSegs();
-  PutVertices_Vanilla();
+  PutVertices_Normal();
   PutSegs_Vanilla();
   PutSubsecs_Vanilla();
   PutNodes_Vanilla(root_node);
@@ -823,7 +857,7 @@ void SaveBinaryFormat_DeepBSPV4(node_t *root_node)
   // are removed from subsectors.
   RoundOffBspTree();
   SortSegs();
-  PutVertices_Vanilla();
+  PutVertices_Normal();
   PutSegs_DeepBSPV4();
   PutSubsecs_DeepBSPV4();
   PutNodes_DeepBSPV4(root_node);

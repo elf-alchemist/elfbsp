@@ -262,8 +262,6 @@ Lump_c *Wad_file::GetLump(size_t index)
   return directory[index];
 }
 
-static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
-
 size_t Wad_file::LevelLookupLump(size_t lev_num, const char *name)
 {
   size_t start = LevelHeader(lev_num);
@@ -325,7 +323,7 @@ map_format_e Wad_file::LevelFormat(size_t lev_num)
 
   if (start + 2 < NumLumps())
   {
-    const char *name = GetLump(start + 1)->Name();
+    const char *name = GetLump(start + LL_TEXTMAP)->Name();
 
     if (StringCaseCmp(name, "TEXTMAP") == 0)
     {

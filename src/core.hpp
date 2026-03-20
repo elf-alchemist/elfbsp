@@ -599,6 +599,7 @@ using map_format_t = enum map_format_e
 
   MapFormat_Doom,
   MapFormat_Hexen,
+  MapFormat_Doom64,
   MapFormat_UDMF,
 };
 
@@ -617,9 +618,17 @@ using lump_order_t = enum lump_order_e
   LL_SECTORS,   // Sectors, from editing
   LL_REJECT,    // LUT, sector-sector visibility
   LL_BLOCKMAP,  // LUT, motion clipping, walls/grid element
-  LL_BEHAVIOR,  // ACS bytecode
-  LL_SCRIPTS,   // ACS source code
+
+  LL_TEXTMAP = LL_LABEL + 1,     // UDMF lump
+  LL_ENDMAP,                     // UDMF
+  LL_BEHAVIOR = LL_BLOCKMAP + 1, // ACS bytecode
+  LL_SCRIPTS,                    // ACS source code
+  LL_LEAFS = LL_BLOCKMAP + 1,    // PSX/N64 hardware rendering
+  LL_LIGHTS,                     // Colored sectors
+  LL_MACROS,                     // Simple scripting
 };
+
+static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
 
 using raw_vertex_t = struct raw_vertex_s
 {
@@ -627,7 +636,13 @@ using raw_vertex_t = struct raw_vertex_s
   int16_t y;
 } PACKEDATTR;
 
-using raw_linedef_t = struct raw_linedef_s
+using raw_vertex_fixed_t = struct raw_vertex_fixed_s
+{
+  fixed_t x;
+  fixed_t y;
+} PACKEDATTR;
+
+using raw_linedef_doom_t = struct raw_linedef_doom_s
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
@@ -638,18 +653,7 @@ using raw_linedef_t = struct raw_linedef_s
   uint16_t left;    // left sidedef (only if this line adjoins 2 sectors)
 } PACKEDATTR;
 
-using raw_hexen_linedef_t = struct raw_hexen_linedef_s
-{
-  uint16_t start;  // from this vertex...
-  uint16_t end;    // ... to this vertex
-  uint16_t flags;  // linedef flags (impassible, etc)
-  uint8_t special; // special type
-  uint8_t args[5]; // special arguments
-  uint16_t right;  // right sidedef
-  uint16_t left;   // left sidedef
-} PACKEDATTR;
-
-using raw_sidedef_t = struct raw_sidedef_s
+using raw_sidedef_doom_t = struct raw_sidedef_doom_s
 {
   int16_t x_offset;  // X offset for texture
   int16_t y_offset;  // Y offset for texture
@@ -659,7 +663,7 @@ using raw_sidedef_t = struct raw_sidedef_s
   uint16_t sector;   // adjacent sector
 } PACKEDATTR;
 
-using raw_sector_t = struct raw_sector_s
+using raw_sector_doom_t = struct raw_sector_doom_s
 {
   int16_t floorh;    // floor height
   int16_t ceilh;     // ceiling height
@@ -670,7 +674,7 @@ using raw_sector_t = struct raw_sector_s
   uint16_t tag;      // sector activated by a linedef with same tag
 } PACKEDATTR;
 
-using raw_thing_t = struct raw_thing_s
+using raw_thing_doom_t = struct raw_thing_doom_s
 {
   int16_t x;        // x position of thing
   int16_t y;        // y position of thing
@@ -679,8 +683,19 @@ using raw_thing_t = struct raw_thing_s
   uint16_t options; // when appears, deaf, etc..
 } PACKEDATTR;
 
-// -JL- Hexen thing definition
-using raw_hexen_thing_t = struct raw_hexen_thing_s
+// -JL- Hexen definition
+using raw_linedef_hexen_t = struct raw_linedef_hexen_s
+{
+  uint16_t start;  // from this vertex...
+  uint16_t end;    // ... to this vertex
+  uint16_t flags;  // linedef flags (impassible, etc)
+  uint8_t special; // special type
+  uint8_t args[5]; // special arguments
+  uint16_t right;  // right sidedef
+  uint16_t left;   // left sidedef
+} PACKEDATTR;
+
+using raw_thing_hexen_t = struct raw_thing_hexen_s
 {
   int16_t tid;      // tag id (for scripts/specials)
   int16_t x;        // x position
@@ -692,6 +707,63 @@ using raw_hexen_thing_t = struct raw_hexen_thing_s
   uint8_t special;  // special type
   uint8_t args[5];  // special arguments
 } PACKEDATTR;
+
+// -Elf- Doom64 definitions
+// Some are shared with PSX Doom's and PSX Final Doom's formats
+// but we don't support those
+
+// See https://doomwiki.org/wiki/LEAFS
+using raw_leafs_t = struct raw_leafs_s
+{
+  uint16_t vertex;
+  uint16_t seg;
+} PACKEDATTR;
+
+using raw_thing_doom64_t = struct raw_thing_doom64_s
+{
+  int16_t x;        // x position of thing
+  int16_t y;        // y position of thing
+  int16_t z;        // y position of thing
+  int16_t angle;    // angle thing faces (degrees)
+  int16_t type;     // type of thing
+  uint16_t options; // when appears, deaf, etc..
+} PACKEDATTR;
+
+// See https://doomwiki.org/wiki/Linedef#Doom_64_format
+using raw_linedef_doom64_t = struct raw_linedef_doom64_s
+{
+  uint16_t start;   // from this vertex...
+  uint16_t end;     // ... to this vertex
+  uint32_t flags;   // linedef flags (impassible, etc)
+  uint16_t special; // special type
+  uint16_t tag;     // this linedef activates the sector with same tag
+  uint16_t right;   // right sidedef
+  uint16_t left;    // left sidedef (only if this line adjoins 2 sectors)
+} PACKEDATTR;
+
+// See https://doomwiki.org/wiki/Sidedef#Doom_64_format
+using raw_sidedef_doom64_t = struct raw_sidedef_doom64_s
+{
+  int16_t x_offset;   // X offset for texture
+  int16_t y_offset;   // Y offset for texture
+  uint16_t upper_tex; // texture index for the part above
+  uint16_t lower_tex; // texture index for the part below
+  uint16_t mid_tex;   // texture index for the regular part
+  uint16_t sector;    // adjacent sector
+} PACKEDATTR;
+
+// See: https://doomwiki.org/wiki/Sector#Doom_64_format
+using raw_sector_doom64_t = struct raw_sector_doom64_s
+{
+  int16_t floorh;     // floor height
+  int16_t ceilh;      // ceiling height
+  uint16_t floor_tex; // floor texture
+  uint16_t ceil_tex;  // ceiling texture
+  uint16_t colors[5]; // hardware rendering colors, LIGHTS
+  uint16_t special;   // special type
+  uint16_t tag;       // tag number
+  uint16_t flags;     // reverb, damage, water, etc
+};
 
 //------------------------------------------------------------------------
 // BSP TREE STRUCTURES
@@ -823,13 +895,9 @@ using raw_seg_deepbspv4_t = struct raw_seg_deepbspv4_s
 // * compared to vanilla, some types were raise to 32bit
 // * each version (XNOD->XGLN->XGL2->XGL3) builds on top of the previous
 //
-using raw_xnod_vertex_t = struct raw_xnod_vertex_s
-{
-  int32_t x;
-  int32_t y;
-} PACKEDATTR;
+using raw_vertex_xnod_t = raw_vertex_fixed_t;
 
-using raw_xnod_node_t = struct raw_xnod_node_s
+using raw_node_xnod_t = struct raw_node_xnod_s
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
@@ -837,7 +905,7 @@ using raw_xnod_node_t = struct raw_xnod_node_s
   uint32_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-using raw_xnod_subsec_t = struct raw_xnod_subsec_s
+using raw_subsec_xnod_t = struct raw_subsec_xnod_s
 {
   uint32_t segnum;
   // NOTE : no "first" value, segs must be contiguous and appear
@@ -846,7 +914,7 @@ using raw_xnod_subsec_t = struct raw_xnod_subsec_s
   //        all segs of the first subsector.
 } PACKEDATTR;
 
-using raw_xnod_seg_t = struct raw_xnod_seg_s
+using raw_seg_xnod_t = struct raw_seg_xnod_s
 {
   uint32_t start;   // from this vertex...
   uint32_t end;     // ... to this vertex
@@ -854,7 +922,7 @@ using raw_xnod_seg_t = struct raw_xnod_seg_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-using raw_xgln_seg_t = struct raw_xgln_seg_s
+using raw_seg_xgln_t = struct raw_seg_xgln_s
 {
   uint32_t vertex;  // from this vertex ... to the next
   uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
@@ -862,7 +930,7 @@ using raw_xgln_seg_t = struct raw_xgln_seg_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-using raw_xgl2_seg_t = struct raw_xgl2_seg_s
+using raw_seg_xgl2_t = struct raw_seg_xgl2_s
 {
   uint32_t vertex;  // from this vertex ... to the next
   uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
@@ -870,7 +938,7 @@ using raw_xgl2_seg_t = struct raw_xgl2_seg_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-using raw_xgl3_node_t = struct raw_xgl3_node_s
+using raw_node_xgl3_t = struct raw_node_xgl3_s
 {
   int32_t x, y;         // starting point
   int32_t dx, dy;       // offset to ending point
@@ -942,42 +1010,17 @@ using patch_t = struct patch_s
 // LineDef attributes.
 //
 
-using vanilla_lineflag_t = enum vanilla_lineflag_e : uint16_t
+using lineflag_doom_t = enum lineflag_doom_e : uint16_t
 {
   MLF_BLOCKING = BIT(0),      // Solid, is an obstacle
   MLF_BLOCKMONSTERS = BIT(1), // Blocks monsters only
   MLF_TWOSIDED = BIT(2),      // Backside will not be present at all if not two sided
-
-  // If a texture is pegged, the texture will have
-  // the end exposed to air held constant at the
-  // top or bottom of the texture (stairs or pulled
-  // down things) and will move with a height change
-  // of one of the neighbor sectors.
-  //
-  // Unpegged textures allways have the first row of
-  // the texture at the top pixel of the line for both
-  // top and bottom textures (use next to windows).
-
   MLF_UPPERUNPEGGED = BIT(3), // Upper texture unpegged
   MLF_LOWERUNPEGGED = BIT(4), // Lower texture unpegged
   MLF_SECRET = BIT(5),        // In AutoMap: don't map as two sided: IT'S A SECRET!
   MLF_SOUNDBLOCK = BIT(6),    // Sound rendering: don't let sound cross two of these
   MLF_DONTDRAW = BIT(7),      // Don't draw on the automap at all
   MLF_MAPPED = BIT(8),        // Set as if already seen, thus drawn in automap
-};
-
-using boom_lineflag_t = enum boom_lineflag_e : uint16_t
-{
-  // Inherited from vanilla
-  MLF_BOOM_BLOCKING = MLF_BLOCKING,
-  MLF_BOOM_BLOCKMONSTERS = MLF_BLOCKMONSTERS,
-  MLF_BOOM_TWOSIDED = MLF_TWOSIDED,
-  MLF_BOOM_UPPERUNPEGGED = MLF_UPPERUNPEGGED,
-  MLF_BOOM_LOWERUNPEGGED = MLF_LOWERUNPEGGED,
-  MLF_BOOM_SECRET = MLF_SECRET,
-  MLF_BOOM_SOUNDBLOCK = MLF_SOUNDBLOCK,
-  MLF_BOOM_DONTDRAW = MLF_DONTDRAW,
-  MLF_BOOM_MAPPED = MLF_MAPPED,
 
   // Boom lineage
   MLF_BOOM_PASSUSE = BIT(9),       // Allow multiple lines to be pushed simultaneously.
@@ -987,7 +1030,7 @@ using boom_lineflag_t = enum boom_lineflag_e : uint16_t
   MLF_BOOM_BLOCKPLAYERS = BIT(13), // Block Players Only
 };
 
-using hexen_lineflag_t = enum hexen_lineflag_e : uint16_t
+using lineflag_hexen_t = enum lineflag_hexen_e : uint16_t
 {
   // Inherited from vanilla Doom
   MLF_HEXEN_BLOCKING = MLF_BLOCKING,
@@ -1008,6 +1051,43 @@ using hexen_lineflag_t = enum hexen_lineflag_e : uint16_t
   MLF_HEXEN_MONCANACTIVATE = BIT(13),
   MLF_HEXEN_BLOCKPLAYERS = BIT(14),
   MLF_HEXEN_BLOCKEVERYTHING = BIT(15),
+};
+
+// See https://www.doom64.com/maps/linedefs.html
+using lineflag_doom64_t = enum lineflag_doom64_e : uint32_t
+{
+  MLF_DOOM64_BLOCKING = MLF_BLOCKING,
+  MLF_DOOM64_BLOCKMONSTERS = MLF_BLOCKMONSTERS,
+  MLF_DOOM64_TWOSIDED = MLF_TWOSIDED,
+  MLF_DOOM64_UPPERUNPEGGED = MLF_UPPERUNPEGGED,
+  MLF_DOOM64_LOWERUNPEGGED = MLF_LOWERUNPEGGED,
+  MLF_DOOM64_AUTOMAP_ONESIDED = BIT(5),
+  MLF_DOOM64_BLOCKSOUND = BIT(6),
+  MLF_DOOM64_AUTOMAP_HIDE = BIT(7),
+  MLF_DOOM64_AUTOMAP_SHOW = BIT(8),
+  MLF_DOOM64_RENDER_MIDTEX = BIT(9),
+  MLF_DOOM64_NO_OCCLUSION = BIT(10),
+  MLF_DOOM64_BLOCKPROJ = BIT(11),
+  MLF_DOOM64_DEAD_TRIGGER = BIT(12),
+  MLF_DOOM64_DECAL_UPPER = BIT(13),
+  MLF_DOOM64_DECAL_LOWER = BIT(14),
+  MLF_DOOM64_SWITCH_UPPER = BIT(15),
+  MLF_DOOM64_SWITCH_LOWER = BIT(16),
+  MLF_DOOM64_SCROLL_LEFT = BIT(17),
+  MLF_DOOM64_SCROLL_RIGHT = BIT(18),
+  MLF_DOOM64_SCROLL_UP = BIT(19),
+  MLF_DOOM64_SCROLL_DOWN = BIT(20),
+  MLF_DOOM64_PEG_COLOR_UPPER = BIT(21),
+  MLF_DOOM64_PEG_COLOR_LOWER = BIT(22),
+  MLF_DOOM64_UPPER_WALL_COLOR_BLEND = BIT(23),
+  MLF_DOOM64_TRIGGER_FRONT = BIT(24),
+  MLF_DOOM64_AUTOMAP_HIDE_SPECIAL = BIT(25),
+  MLF_DOOM64_FLIP_UPPER_PEGGED_COLOR = BIT(26),
+  MLF_DOOM64EXPLUS_BLOCKPLAYER = BIT(27),
+  MLF_DOOM64_UNUSED_28 = BIT(28),
+  MLF_DOOM64_UNUSED_29 = BIT(29),
+  MLF_DOOM64_MIRROR_HORI = BIT(30),
+  MLF_DOOM64_MIRROR_VERT = BIT(31),
 };
 
 using hexen_activation_t = enum hexen_activation_e
