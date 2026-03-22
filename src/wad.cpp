@@ -288,7 +288,7 @@ size_t Wad_file::LevelLastLump(size_t lev_num)
   size_t count = 1;
 
   // UDMF level?
-  if (LevelFormat(lev_num) == MapFormat_UDMF)
+  if (directory[start + 1]->Match("TEXTMAP"))
   {
     while (count < MAX_LUMPS_IN_A_LEVEL && start + count < NumLumps())
     {
@@ -333,14 +333,9 @@ map_format_e Wad_file::LevelFormat(size_t lev_num)
     }
   }
 
-  if (start + LL_BEHAVIOR < NumLumps())
+  if (LevelLookupLump(lev_num, "BEHAVIOR"))
   {
-    const char *name = GetLump(start + LL_BEHAVIOR)->Name();
-
-    if (StringCaseCmp(name, "BEHAVIOR") == 0)
-    {
-      return MapFormat_Hexen;
-    }
+    return MapFormat_Hexen;
   }
 
   return MapFormat_Doom;
