@@ -85,7 +85,7 @@ constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
 
 // -Elf- updated, pulled from Chocolate Doom
 
-#if defined(__GNUC__)
+#if defined(__clang__) || defined(__GNUC__)
 
   #if defined(_WIN32) && !defined(__clang__)
     #define PACKEDATTR __attribute__((packed, gcc_struct))
