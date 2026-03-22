@@ -147,8 +147,8 @@ struct linedef_t
 
   int32_t special; //
   uint16_t flags;  // currently we only care about two-sided lines, but who knows
-  int32_t id;      // Tag => arg0/id split
-  int32_t args[5]; //
+  int32_t args[5]; // Tag => arg0/id split
+  int32_t id;      //
 
   uint32_t effects = FX_Nothing;
   seg_rotation_t angle = FX_DoNotRotate;

@@ -963,7 +963,7 @@ void ValidateLinedef(linedef_t *line)
 
   if (line->left && line->right && line->left->sector == line->right->sector)
   {
-    line->effects |= FX_SelfReferencial;
+    line->effects |= FX_SelfReferential;
     if (config.verbose)
     {
       PrintLine(LOG_NORMAL, "Linedef #%zu is self-referencing", line->index);
@@ -1001,17 +1001,17 @@ void ValidateLinedef(linedef_t *line)
   }
 }
 
-static vertex_t *SafeLookupVertex(size_t num)
+static vertex_t *SafeLookupVertex(size_t num, size_t num_line)
 {
-  if (num >= lev_vertices.size())
+  if (num >= num_old_vert)
   {
-    PrintLine(LOG_ERROR, "illegal vertex number #%zu", num);
+    PrintLine(LOG_ERROR, "FATAL: Illegal map-vertex number #%zu, on line #%zu, maximum is #%zu", num, num_line, num_old_vert);
   }
 
   return lev_vertices[num];
 }
 
-static sector_t *SafeLookupSector(uint16_t num)
+static sector_t *SafeLookupSector(size_t num, size_t num_side)
 {
   if (num >= NO_INDEX_INT16)
   {
@@ -1020,7 +1020,8 @@ static sector_t *SafeLookupSector(uint16_t num)
 
   if (num >= lev_sectors.size())
   {
-    PrintLine(LOG_ERROR, "illegal sector number #%zu", static_cast<size_t>(num));
+    PrintLine(LOG_ERROR, "FATAL: Illegal sector number #%zu, on side #%zu, maximum is #%zu", static_cast<size_t>(num), num_side,
+              lev_sectors.size() - 1);
   }
 
   return lev_sectors[num];
@@ -1256,7 +1257,7 @@ static void GetSidedefs_Binary(void)
     memcpy(side->tex_upper, raw.upper_tex, 8);
     memcpy(side->tex_lower, raw.lower_tex, 8);
     memcpy(side->tex_middle, raw.mid_tex, 8);
-    side->sector = SafeLookupSector(GetLittleEndian(raw.sector));
+    side->sector = SafeLookupSector(GetLittleEndian(raw.sector), i);
   }
 }
 
@@ -1297,8 +1298,8 @@ static void GetLinedefs_Doom(void)
 
     linedef_t *line = NewLinedef();
 
-    line->start = SafeLookupVertex(GetLittleEndian(raw.start));
-    line->end = SafeLookupVertex(GetLittleEndian(raw.end));
+    line->start = SafeLookupVertex(GetLittleEndian(raw.start), i);
+    line->end = SafeLookupVertex(GetLittleEndian(raw.end), i);
     line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
     line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
     line->flags = GetLittleEndian(raw.flags);
@@ -1393,8 +1394,8 @@ static void GetLinedefs_Hexen(void)
 
     linedef_t *line = NewLinedef();
 
-    line->start = SafeLookupVertex(GetLittleEndian(raw.start));
-    line->end = SafeLookupVertex(GetLittleEndian(raw.end));
+    line->start = SafeLookupVertex(GetLittleEndian(raw.start), i);
+    line->end = SafeLookupVertex(GetLittleEndian(raw.end), i);
     line->flags = GetLittleEndian(raw.flags);
     line->special = raw.special;
     line->args[0] = raw.args[0];
@@ -1413,11 +1414,10 @@ static void GetLinedefs_Hexen(void)
     switch (line->special)
     {
     case BSP_SpecialEffects:
-      line->angle = FX_RotateRelativeRatio;
-      if (line->args[1]) line->effects |= FX_NoBlockmap;
-      if (line->args[2]) line->effects |= FX_DoNotSplitSeg;
-      if (line->args[3]) line->effects |= FX_DoNotRenderBack;
-      if (line->args[4]) line->effects |= FX_DoNotRenderFront;
+      if (line->args[0]) line->effects |= FX_NoBlockmap;
+      if (line->args[1]) line->effects |= FX_DoNotSplitSeg;
+      if (line->args[2]) line->effects |= FX_DoNotRenderBack;
+      if (line->args[3]) line->effects |= FX_DoNotRenderFront;
       break;
     default:
       break;
@@ -1488,12 +1488,12 @@ static void ParseLinedefField(linedef_t *line, const std::string &key, token_kin
 {
   if (key == "v1")
   {
-    line->start = SafeLookupVertex(LEX_Index(value));
+    line->start = SafeLookupVertex(LEX_Index(value), static_cast<size_t>(line - lev_linedefs[0]));
   }
 
   if (key == "v2")
   {
-    line->end = SafeLookupVertex(LEX_Index(value));
+    line->end = SafeLookupVertex(LEX_Index(value), static_cast<size_t>(line - lev_linedefs[0]));
   }
 
   if (key == "special")
