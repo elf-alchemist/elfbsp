@@ -177,7 +177,7 @@ void ValidateInputFilename(const char *filename)
   }
 
   // reject anything that isn't a WAD, or a UDB temp file
-  if (!MatchExtension(filename, "wad") || !MatchExtension(filename, "tmp"))
+  if (!MatchExtension(filename, "wad") && !MatchExtension(filename, "tmp"))
   {
     PrintLine(LOG_ERROR, "not a wad file: %s", filename);
   }
