@@ -929,7 +929,7 @@ using raw_strife_texture_t = struct raw_strife_texture_s
 // and we compose textures from the TEXTURE1/2 lists
 // of patches.
 //
-using patch_t = struct patch_s
+using raw_patch_t = struct patch_s
 {
   int16_t width;         // bounding box size
   int16_t height;        //
@@ -937,6 +937,37 @@ using patch_t = struct patch_s
   int16_t topoffset;     // pixels below the origin
   uint32_t columnofs[1]; // only [width] used
 } PACKEDATTR;
+
+// Fail way earlier
+static_assert(sizeof(raw_wad_header_t) == 12, "Size mismatch for 'raw_wad_header_t'. Should be 12.");
+static_assert(sizeof(raw_wad_entry_t) == 16, "Size mismatch for 'raw_wad_entry_t'. Should be 16.");
+static_assert(sizeof(raw_vertex_t) == 4, "Size mismatch for 'raw_vertex_t'. Should be 4.");
+static_assert(sizeof(raw_linedef_t) == 14, "Size mismatch for 'raw_linedef_t'. Should be 14.");
+static_assert(sizeof(raw_hexen_linedef_t) == 16, "Size mismatch for 'raw_hexen_linedef_t'. Should be 16.");
+static_assert(sizeof(raw_sidedef_t) == 30, "Size mismatch for 'raw_sidedef_t'. Should be 30.");
+static_assert(sizeof(raw_sector_t) == 26, "Size mismatch for 'raw_sector_t'. Should be 26.");
+static_assert(sizeof(raw_thing_t) == 10, "Size mismatch for 'raw_thing_t'. Should be 10.");
+static_assert(sizeof(raw_hexen_thing_t) == 20, "Size mismatch for 'raw_hexen_thing_t'. Should be 20.");
+static_assert(sizeof(raw_bbox_t) == 8, "Size mismatch for 'raw_bbox_t'. Should be 8.");
+static_assert(sizeof(raw_blockmap_header_t) == 8, "Size mismatch for 'raw_blockmap_header_t'. Should be 8.");
+static_assert(sizeof(raw_node_vanilla_t) == 28, "Size mismatch for 'raw_node_vanilla_t'. Should be 28.");
+static_assert(sizeof(raw_subsec_vanilla_t) == 4, "Size mismatch for 'raw_subsec_vanilla_t'. Should be 4.");
+static_assert(sizeof(raw_seg_vanilla_t) == 12, "Size mismatch for 'raw_seg_vanilla_t'. Should be 12.");
+static_assert(sizeof(raw_node_deepbspv4_t) == 32, "Size mismatch for 'raw_node_deepbspv4_t'. Should be 32.");
+static_assert(sizeof(raw_subsec_deepbspv4_t) == 6, "Size mismatch for 'raw_subsec_deepbspv4_t'. Should be 6.");
+static_assert(sizeof(raw_seg_deepbspv4_t) == 16, "Size mismatch for 'raw_seg_deepbspv4_t'. Should be 16.");
+static_assert(sizeof(raw_xnod_vertex_t) == 8, "Size mismatch for 'raw_xnod_vertex_t'. Should be 8.");
+static_assert(sizeof(raw_xnod_node_t) == 32, "Size mismatch for 'raw_xnod_node_t'. Should be 32.");
+static_assert(sizeof(raw_xnod_subsec_t) == 4, "Size mismatch for 'raw_xnod_subsec_t'. Should be 4.");
+static_assert(sizeof(raw_xnod_seg_t) == 11, "Size mismatch for 'raw_xnod_seg_t'. Should be 11.");
+static_assert(sizeof(raw_xgln_seg_t) == 11, "Size mismatch for 'raw_xgln_seg_t'. Should be 11.");
+static_assert(sizeof(raw_xgl2_seg_t) == 13, "Size mismatch for 'raw_xgl2_seg_t'. Should be 13.");
+static_assert(sizeof(raw_xgl3_node_t) == 40, "Size mismatch for 'raw_xgl3_node_t'. Should be 40.");
+static_assert(sizeof(raw_patchdef_t) == 10, "Size mismatch for 'raw_patchdef_t'. Should be 10.");
+static_assert(sizeof(raw_strife_patchdef_t) == 6, "Size mismatch for 'raw_strife_patchdef_t'. Should be 6.");
+static_assert(sizeof(raw_texture_t) == 32, "Size mismatch for 'raw_texture_t'. Should be 32.");
+static_assert(sizeof(raw_strife_texture_t) == 24, "Size mismatch for 'raw_strife_texture_t'. Should be 24.");
+static_assert(sizeof(raw_patch_t) == 12, "Size mismatch for 'raw_patch_t'. Should be 12.");
 
 //
 // LineDef attributes.
