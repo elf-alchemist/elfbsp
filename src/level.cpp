@@ -1806,7 +1806,7 @@ bsp_type_t CheckFormatBSP(buildinfo_t &ctx)
 
   if (level_type < BSP_DEEPBSPV4 &&         // We're currently doing vanilla format by default
       (lev_vertices.size() > LIMIT_VERT     // Consider also the possibility of not doing old formats at all
-       || lev_nodes.size() > LIMIT_NODE     // Starting with XNOD we have fixed_t BSP verticies
+       || lev_nodes.size() > LIMIT_NODE     // Starting with XNOD we have fixed_t BSP vertices
        || lev_subsecs.size() > LIMIT_SUBSEC // And XGL3 does fixed_t partition line coordinates
        || lev_segs.size() > LIMIT_SEG))     // The vanilla EXE also uses INT16_MAX segment indices, hm
   {

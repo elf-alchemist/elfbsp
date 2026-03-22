@@ -43,7 +43,7 @@
 //
 
 static constexpr uint32_t PRECIOUS_MULTIPLY = 100;
-static constexpr uint32_t SEG_FAST_THRESHHOLD = 200;
+static constexpr uint32_t SEG_FAST_THRESHOLD = 200;
 
 struct eval_info_t
 {
@@ -738,7 +738,7 @@ seg_t *PickNode(quadtree_c *tree, int depth, double split_cost, bool fast)
    *       are axis-aligned and roughly divide the current group into
    *       two halves.  This can save *heaps* of times on large levels.
    */
-  if (fast && tree->real_num >= SEG_FAST_THRESHHOLD)
+  if (fast && tree->real_num >= SEG_FAST_THRESHOLD)
   {
     if (HAS_BIT(config.debug, DEBUG_PICKNODE))
     {

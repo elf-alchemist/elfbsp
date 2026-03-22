@@ -954,7 +954,7 @@ using vanilla_lineflag_t = enum vanilla_lineflag_e : uint16_t
   // down things) and will move with a height change
   // of one of the neighbor sectors.
   //
-  // Unpegged textures allways have the first row of
+  // Unpegged textures always have the first row of
   // the texture at the top pixel of the line for both
   // top and bottom textures (use next to windows).
 
