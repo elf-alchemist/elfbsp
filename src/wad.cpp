@@ -150,7 +150,7 @@ retry:
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] total_size = %zu", __func__, w->total_size);
+    PrintLine(LOG_DEBUG, "[%s] total_size = %zu", __func__, static_cast<size_t>(w->total_size));
   }
 
   if (w->total_size < 0)
@@ -969,7 +969,7 @@ size_t Wad_file::PositionForWrite(size_t max_size)
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] POSITION FOR WRITE: %zu  (total_size %zu)", __func__, want_pos, total_size);
+    PrintLine(LOG_DEBUG, "[%s] POSITION FOR WRITE: %zu  (total_size %zu)", __func__, static_cast<size_t>(want_pos), static_cast<size_t>(total_size));
   }
 
   return static_cast<size_t>(want_pos);
@@ -1051,7 +1051,7 @@ void Wad_file::WriteDirectory(void)
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] total_size: %zu", __func__, total_size);
+    PrintLine(LOG_DEBUG, "[%s] total_size: %zu", __func__, static_cast<size_t>(total_size));
   }
 
   if (total_size < 0)

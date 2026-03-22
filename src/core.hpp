@@ -1255,7 +1255,7 @@ struct Wad_file
   // zero means "currently unknown", which only occurs after a
   // call to BeginWrite() and before any call to AddLump() or
   // the finalizing EndWrite().
-  off_t total_size;
+  int64_t total_size;
 
   std::vector<Lump_c *> directory;
 
@@ -1428,7 +1428,7 @@ struct Lump_c
   // the beginning).  Returns true if OK, false on error.
   [[nodiscard]] bool Seek(const size_t offset) const
   {
-    return (fseeko(parent->fp, static_cast<off_t>(l_start + offset), SEEK_SET) == 0);
+    return (fseek(parent->fp, static_cast<int64_t>(l_start + offset), SEEK_SET) == 0);
   }
 
   // read some data from the lump, returning true if OK.
