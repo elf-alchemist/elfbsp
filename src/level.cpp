@@ -1414,11 +1414,10 @@ static void GetLinedefs_Hexen(void)
     switch (line->special)
     {
     case BSP_SpecialEffects:
-      line->angle = FX_RotateRelativeRatio;
-      if (line->args[1]) line->effects |= FX_NoBlockmap;
-      if (line->args[2]) line->effects |= FX_DoNotSplitSeg;
-      if (line->args[3]) line->effects |= FX_DoNotRenderBack;
-      if (line->args[4]) line->effects |= FX_DoNotRenderFront;
+      if (line->args[0]) line->effects |= FX_NoBlockmap;
+      if (line->args[1]) line->effects |= FX_DoNotSplitSeg;
+      if (line->args[2]) line->effects |= FX_DoNotRenderBack;
+      if (line->args[3]) line->effects |= FX_DoNotRenderFront;
       break;
     default:
       break;
