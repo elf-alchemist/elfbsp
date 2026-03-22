@@ -154,7 +154,7 @@ static void BlockAdd(size_t blk_num, size_t line_index)
 
   if (blk_num >= block_count)
   {
-    PrintLine(LOG_ERROR, "BlockAdd: bad block number %zu", blk_num);
+    PrintLine(LOG_ERROR, "ERROR: BlockAdd: bad block number %zu", blk_num);
   }
 
   if (!cur)
@@ -454,7 +454,7 @@ static void WriteBlockmap(void)
 
     if (ptr == 0)
     {
-      PrintLine(LOG_ERROR, "WriteBlockmap: offset %zu not set.", i);
+      PrintLine(LOG_ERROR, "ERROR: WriteBlockmap: offset %zu not set.", i);
     }
 
     lump->Write(&ptr, sizeof(uint16_t));
@@ -1007,7 +1007,7 @@ static vertex_t *SafeLookupVertex(size_t num, size_t num_line)
 {
   if (num >= lev_vertices.size())
   {
-    PrintLine(LOG_ERROR, "FATAL: Illegal map-vertex number #%zu, on line #%zu, maximum is #%zu", num, num_line,
+    PrintLine(LOG_ERROR, "ERROR: Illegal map-vertex number #%zu, on line #%zu, maximum is #%zu", num, num_line,
               lev_vertices.size());
   }
 
@@ -1023,7 +1023,7 @@ static sector_t *SafeLookupSector(size_t num, size_t num_side)
 
   if (num >= lev_sectors.size())
   {
-    PrintLine(LOG_ERROR, "FATAL: Illegal sector number #%zu, on side #%zu, maximum is #%zu", static_cast<size_t>(num), num_side,
+    PrintLine(LOG_ERROR, "ERROR: Illegal sector number #%zu, on side #%zu, maximum is #%zu", num, num_side,
               lev_sectors.size() - 1);
   }
 
@@ -1069,7 +1069,7 @@ static void GetVertices_Binary(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to vertices.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to vertices.");
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1078,7 +1078,7 @@ static void GetVertices_Binary(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading vertices.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading vertices.");
     }
 
     vertex_t *vert = NewVertex();
@@ -1108,7 +1108,7 @@ static void GetSectors_Binary(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to sectors.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to sectors.");
   }
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
@@ -1122,7 +1122,7 @@ static void GetSectors_Binary(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading sectors.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading sectors.");
     }
 
     sector_t *sector = NewSector();
@@ -1150,7 +1150,7 @@ static void GetThings_Doom(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to things.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to things.");
   }
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
@@ -1164,7 +1164,7 @@ static void GetThings_Doom(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading things.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading things.");
     }
 
     thing_t *thing = NewThing();
@@ -1193,7 +1193,7 @@ static void GetThings_Hexen(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to things.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to things.");
   }
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
@@ -1207,7 +1207,7 @@ static void GetThings_Hexen(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading things.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading things.");
     }
 
     thing_t *thing = NewThing();
@@ -1236,7 +1236,7 @@ static void GetSidedefs_Binary(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to sidedefs.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to sidedefs.");
   }
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
@@ -1250,7 +1250,7 @@ static void GetSidedefs_Binary(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading sidedefs.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading sidedefs.");
     }
 
     sidedef_t *side = NewSidedef();
@@ -1282,7 +1282,7 @@ static void GetLinedefs_Doom(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to linedefs.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to linedefs.");
   }
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
@@ -1296,7 +1296,7 @@ static void GetLinedefs_Doom(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading linedefs.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading linedefs.");
     }
 
     linedef_t *line = NewLinedef();
@@ -1380,7 +1380,7 @@ static void GetLinedefs_Hexen(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to linedefs.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to linedefs.");
   }
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
@@ -1394,7 +1394,7 @@ static void GetLinedefs_Hexen(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading linedefs.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading linedefs.");
     }
 
     linedef_t *line = NewLinedef();
@@ -1484,7 +1484,7 @@ static void ParseSidedefField(sidedef_t *side, const std::string &key, token_kin
 
     if (num >= lev_sectors.size())
     {
-      PrintLine(LOG_ERROR, "illegal sector number #%zu", static_cast<size_t>(num));
+      PrintLine(LOG_ERROR, "ERROR: illegal sector number #%zu", static_cast<size_t>(num));
     }
 
     side->sector = lev_sectors[num];
@@ -1588,29 +1588,29 @@ static void ParseUDMF_Block(lexer_c &lex, int cur_type)
 
     if (tok == TOK_EOF)
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: unclosed block");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: unclosed block");
     }
 
     if (tok != TOK_Ident)
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: missing key");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing key");
     }
 
     if (!lex.Match("="))
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: missing '='");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing '='");
     }
 
     tok = lex.Next(value);
 
     if (tok == TOK_EOF || tok == TOK_ERROR || value == "}")
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: missing value");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing value");
     }
 
     if (!lex.Match(";"))
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: missing ';'");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing ';'");
     }
 
     switch (cur_type)
@@ -1642,7 +1642,7 @@ static void ParseUDMF_Block(lexer_c &lex, int cur_type)
   {
     if (line->start == nullptr || line->end == nullptr)
     {
-      PrintLine(LOG_ERROR, "Linedef #%zu is missing a vertex!", line->index);
+      PrintLine(LOG_ERROR, "ERROR: Linedef #%zu is missing a vertex!", line->index);
     }
 
     ValidateLinedef(line);
@@ -1669,7 +1669,7 @@ static void ParseUDMF_Pass(const std::string &data, int pass)
 
     if (tok != TOK_Ident)
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump.");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump.");
       return;
     }
 
@@ -1679,14 +1679,14 @@ static void ParseUDMF_Pass(const std::string &data, int pass)
       lex.Next(section);
       if (!lex.Match(";"))
       {
-        PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: missing ';'");
+        PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing ';'");
       }
       continue;
     }
 
     if (!lex.Match("{"))
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: missing '{'");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing '{'");
     }
 
     int cur_type = 0;
@@ -1738,7 +1738,7 @@ void ParseUDMF(void)
 
   if (lump == nullptr || !lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error finding TEXTMAP lump.");
+    PrintLine(LOG_ERROR, "ERROR: Failure finding TEXTMAP lump.");
   }
 
   size_t remain = lump->Length();
@@ -1754,7 +1754,7 @@ void ParseUDMF(void)
 
     if (!lump->Read(buffer, want))
     {
-      PrintLine(LOG_ERROR, "Error reading TEXTMAP lump.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading TEXTMAP lump.");
     }
 
     data.append(buffer, want);
@@ -2056,14 +2056,14 @@ void OpenWad(const char *filename)
   cur_wad = Wad_file::Open(filename, 'a');
   if (cur_wad == nullptr)
   {
-    PrintLine(LOG_ERROR, "Cannot open file: %s", filename);
+    PrintLine(LOG_ERROR, "ERROR: Cannot open file: %s", filename);
   }
 
   if (cur_wad->IsReadOnly())
   {
     delete cur_wad;
     cur_wad = nullptr;
-    PrintLine(LOG_ERROR, "file is read only: %s", filename);
+    PrintLine(LOG_ERROR, "ERROR: file is read only: %s", filename);
   }
 }
 

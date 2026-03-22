@@ -143,7 +143,7 @@ retry:
   // determine total size (seek to end)
   if (fseek(fp, 0, SEEK_END) != 0)
   {
-    PrintLine(LOG_ERROR, "Error determining WAD size.");
+    PrintLine(LOG_ERROR, "ERROR: Failure determining WAD size.");
   }
 
   w->total_size = ftell(fp);
@@ -155,7 +155,7 @@ retry:
 
   if (w->total_size < 0)
   {
-    PrintLine(LOG_ERROR, "Error determining WAD size.");
+    PrintLine(LOG_ERROR, "ERROR: Failure determining WAD size.");
   }
 
   w->ReadDirectory();
@@ -351,7 +351,7 @@ void Wad_file::ReadDirectory(void)
 
   if (fread(&header, sizeof(header), 1, fp) != 1)
   {
-    PrintLine(LOG_ERROR, "Error reading WAD header.");
+    PrintLine(LOG_ERROR, "ERROR: Failure reading WAD header.");
   }
 
   // WISH: check ident for PWAD or IWAD
@@ -363,12 +363,12 @@ void Wad_file::ReadDirectory(void)
 
   if (dir_count > 32000)
   {
-    PrintLine(LOG_ERROR, "Bad WAD header, too many entries (%zu)", dir_count);
+    PrintLine(LOG_ERROR, "ERROR: Bad WAD header, too many entries (%zu)", dir_count);
   }
 
   if (fseek(fp, static_cast<int64_t>(dir_start), SEEK_SET) != 0)
   {
-    PrintLine(LOG_ERROR, "Error seeking to WAD directory.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to WAD directory.");
   }
 
   for (size_t i = 0; i < dir_count; i++)
@@ -377,7 +377,7 @@ void Wad_file::ReadDirectory(void)
 
     if (fread(&entry, sizeof(entry), 1, fp) != 1)
     {
-      PrintLine(LOG_ERROR, "Error reading WAD directory.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading WAD directory.");
     }
 
     Lump_c *lump = MakeLumpFromEntry(this, &entry);
@@ -661,7 +661,7 @@ void Wad_file::ProcessNamespaces(void)
         break;
 
       default:
-        PrintLine(LOG_ERROR, "ProcessNamespaces: active = 0x%02x", active);
+        PrintLine(LOG_ERROR, "ERROR: ProcessNamespaces: active = 0x%02x", active);
       }
     }
   }
@@ -683,12 +683,12 @@ void Wad_file::BeginWrite(void)
 {
   if (mode == 'r')
   {
-    PrintLine(LOG_ERROR, "Wad_file::BeginWrite() called on read-only file");
+    PrintLine(LOG_ERROR, "ERROR: Wad_file::BeginWrite() called on read-only file");
   }
 
   if (begun_write)
   {
-    PrintLine(LOG_ERROR, "Wad_file::BeginWrite() called again without EndWrite()");
+    PrintLine(LOG_ERROR, "ERROR: Wad_file::BeginWrite() called again without EndWrite()");
   }
 
   // put the size into a quantum state
@@ -700,7 +700,7 @@ void Wad_file::EndWrite(void)
 {
   if (!begun_write)
   {
-    PrintLine(LOG_ERROR, "Wad_file::EndWrite() called without BeginWrite()");
+    PrintLine(LOG_ERROR, "ERROR: Wad_file::EndWrite() called without BeginWrite()");
   }
 
   begun_write = false;
@@ -939,14 +939,14 @@ size_t Wad_file::PositionForWrite(size_t max_size)
 
   if (fseek(fp, 0, SEEK_END) < 0)
   {
-    PrintLine(LOG_ERROR, "Error seeking to new write position.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to new write position.");
   }
 
   total_size = ftell(fp);
 
   if (total_size < 0)
   {
-    PrintLine(LOG_ERROR, "Error seeking to new write position.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to new write position.");
   }
 
   if (want_pos > total_size)
@@ -963,7 +963,7 @@ size_t Wad_file::PositionForWrite(size_t max_size)
   {
     if (fseek(fp, want_pos, SEEK_SET) < 0)
     {
-      PrintLine(LOG_ERROR, "Error seeking to new write position.");
+      PrintLine(LOG_ERROR, "ERROR: Failure seeking to new write position.");
     }
   }
 
@@ -982,7 +982,7 @@ bool Wad_file::FinishLump(size_t final_size)
   // sanity check
   if (final_size > begun_max_size)
   {
-    PrintLine(LOG_ERROR, "Internal Error: wrote too much in lump (%zu > %zu)", final_size, begun_max_size);
+    PrintLine(LOG_ERROR, "ERROR: wrote too much in lump (%zu > %zu)", final_size, begun_max_size);
   }
 
   int64_t pos = ftell(fp);
@@ -1041,7 +1041,7 @@ void Wad_file::WriteDirectory(void)
 
     if (fwrite(&entry, sizeof(entry), 1, fp) != 1)
     {
-      PrintLine(LOG_ERROR, "Error writing WAD directory.");
+      PrintLine(LOG_ERROR, "ERROR: Failure writing WAD directory.");
     }
   }
 
@@ -1056,7 +1056,7 @@ void Wad_file::WriteDirectory(void)
 
   if (total_size < 0)
   {
-    PrintLine(LOG_ERROR, "Error determining WAD size.");
+    PrintLine(LOG_ERROR, "ERROR: Failure determining WAD size.");
   }
 
   // update header at start of file
@@ -1072,7 +1072,7 @@ void Wad_file::WriteDirectory(void)
 
   if (fwrite(&header, sizeof(header), 1, fp) != 1)
   {
-    PrintLine(LOG_ERROR, "Error writing WAD header.");
+    PrintLine(LOG_ERROR, "ERROR: Failure writing WAD header.");
   }
 
   fflush(fp);

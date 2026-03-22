@@ -372,7 +372,7 @@ vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end)
 
   if (dlen == 0)
   {
-    PrintLine(LOG_ERROR, "NewVertexDegenerate: bad delta!");
+    PrintLine(LOG_ERROR, "ERROR: NewVertexDegenerate: bad delta!");
   }
 
   dx /= dlen;

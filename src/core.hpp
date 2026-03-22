@@ -311,7 +311,7 @@ inline void PRINTF_ATTR(2, 3) PrintLine(const log_level_t level, const char *fmt
 // Assertion macros
 //
 #define SYS_ASSERT(cond) \
-  (cond) ? (void)0 : PrintLine(LOG_ERROR, "Assertion failed! In function %s (%s:%d)", __func__, __FILE__, __LINE__);
+  (cond) ? (void)0 : PrintLine(LOG_ERROR, "ERROR: Assertion failed! In function %s (%s:%d)", __func__, __FILE__, __LINE__);
 
 //------------------------------------------------------------------------
 // MEMORY ALLOCATION
@@ -326,7 +326,7 @@ template <typename T> constexpr T *UtilCalloc(const size_t size)
 
   if (!ret)
   {
-    PrintLine(LOG_ERROR, "Out of memory (cannot allocate %zu bytes)", size);
+    PrintLine(LOG_ERROR, "ERROR: Out of memory (cannot allocate %zu bytes)", size);
   }
 
   return ret;
@@ -341,7 +341,7 @@ template <typename T> constexpr T *UtilRealloc(T *old, const size_t size)
 
   if (!ret)
   {
-    PrintLine(LOG_ERROR, "Out of memory (cannot reallocate %zu bytes)", size);
+    PrintLine(LOG_ERROR, "ERROR: Out of memory (cannot reallocate %zu bytes)", size);
   }
 
   return ret;
@@ -354,7 +354,7 @@ template <typename T> constexpr void UtilFree(T *data)
 {
   if (data == nullptr)
   {
-    PrintLine(LOG_ERROR, "Trying to free a nullptr");
+    PrintLine(LOG_ERROR, "ERROR: Trying to free a nullptr");
   }
 
   free(data);
