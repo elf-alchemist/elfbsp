@@ -1005,9 +1005,10 @@ void ValidateLinedef(linedef_t *line)
 
 static vertex_t *SafeLookupVertex(size_t num, size_t num_line)
 {
-  if (num >= num_old_vert)
+  if (num >= lev_vertices.size())
   {
-    PrintLine(LOG_ERROR, "FATAL: Illegal map-vertex number #%zu, on line #%zu, maximum is #%zu", num, num_line, num_old_vert);
+    PrintLine(LOG_ERROR, "FATAL: Illegal map-vertex number #%zu, on line #%zu, maximum is #%zu", num, num_line,
+              lev_vertices.size());
   }
 
   return lev_vertices[num];
