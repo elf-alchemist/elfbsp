@@ -176,8 +176,8 @@ void ValidateInputFilename(const char *filename)
     PrintLine(LOG_ERROR, "package files (like PK3) are not supported: %s", filename);
   }
 
-  // reject some very common formats
-  if (!MatchExtension(filename, "wad"))
+  // reject anything that isn't a WAD, or a UDB temp file
+  if (!MatchExtension(filename, "wad") || !MatchExtension(filename, "tmp"))
   {
     PrintLine(LOG_ERROR, "not a wad file: %s", filename);
   }
