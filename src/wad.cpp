@@ -141,12 +141,12 @@ retry:
   Wad_file *w = new Wad_file(filename, mode, fp);
 
   // determine total size (seek to end)
-  if (fseeko(fp, 0, SEEK_END) != 0)
+  if (fseek(fp, 0, SEEK_END) != 0)
   {
     PrintLine(LOG_ERROR, "Error determining WAD size.");
   }
 
-  w->total_size = ftello(fp);
+  w->total_size = ftell(fp);
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
@@ -366,7 +366,7 @@ void Wad_file::ReadDirectory(void)
     PrintLine(LOG_ERROR, "Bad WAD header, too many entries (%zu)", dir_count);
   }
 
-  if (fseeko(fp, static_cast<off_t>(dir_start), SEEK_SET) != 0)
+  if (fseek(fp, static_cast<int64_t>(dir_start), SEEK_SET) != 0)
   {
     PrintLine(LOG_ERROR, "Error seeking to WAD directory.");
   }
@@ -928,7 +928,7 @@ size_t Wad_file::FindFreeSpace(size_t length)
 
 size_t Wad_file::PositionForWrite(size_t max_size)
 {
-  off_t want_pos = static_cast<off_t>(max_size == NO_INDEX ? HighWaterMark() : FindFreeSpace(max_size));
+  int64_t want_pos = static_cast<int64_t>(max_size == NO_INDEX ? HighWaterMark() : FindFreeSpace(max_size));
 
   // determine if position is past end of file
   // (difference should only be a few bytes)
@@ -937,12 +937,12 @@ size_t Wad_file::PositionForWrite(size_t max_size)
   //       but trying to optimise it away will just make the code
   //       needlessly complex and hard to follow.
 
-  if (fseeko(fp, 0, SEEK_END) < 0)
+  if (fseek(fp, 0, SEEK_END) < 0)
   {
     PrintLine(LOG_ERROR, "Error seeking to new write position.");
   }
 
-  total_size = ftello(fp);
+  total_size = ftell(fp);
 
   if (total_size < 0)
   {
@@ -961,7 +961,7 @@ size_t Wad_file::PositionForWrite(size_t max_size)
   }
   else
   {
-    if (fseeko(fp, want_pos, SEEK_SET) < 0)
+    if (fseek(fp, want_pos, SEEK_SET) < 0)
     {
       PrintLine(LOG_ERROR, "Error seeking to new write position.");
     }
@@ -985,7 +985,7 @@ bool Wad_file::FinishLump(size_t final_size)
     PrintLine(LOG_ERROR, "Internal Error: wrote too much in lump (%zu > %zu)", final_size, begun_max_size);
   }
 
-  off_t pos = ftello(fp);
+  int64_t pos = ftell(fp);
 
   if (pos & 3)
   {
@@ -1047,7 +1047,7 @@ void Wad_file::WriteDirectory(void)
 
   fflush(fp);
 
-  total_size = ftello(fp);
+  total_size = ftell(fp);
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
