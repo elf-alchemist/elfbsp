@@ -797,7 +797,7 @@ void DivideOneSeg(seg_t *seg, seg_t *part, seg_t **left_list, seg_t **right_list
   double a = part->PerpDist(seg->psx, seg->psy);
   double b = part->PerpDist(seg->pex, seg->pey);
 
-  bool self_ref = seg->linedef && HAS_BIT(seg->linedef->effects, FX_SelfReferencial);
+  bool self_ref = seg->linedef && HAS_BIT(seg->linedef->effects, FX_SelfReferential);
 
   if (seg->source_line == part->source_line)
   {
@@ -1482,7 +1482,7 @@ void ClockwiseOrder(subsec_t *subsec)
     {
       cur_score = 0;
     }
-    else if (HAS_BIT(array[j]->linedef->effects, FX_SelfReferencial))
+    else if (HAS_BIT(array[j]->linedef->effects, FX_SelfReferential))
     {
       cur_score = 2;
     }

@@ -963,7 +963,7 @@ void ValidateLinedef(linedef_t *line)
 
   if (line->left && line->right && line->left->sector == line->right->sector)
   {
-    line->effects |= FX_SelfReferencial;
+    line->effects |= FX_SelfReferential;
     if (config.verbose)
     {
       PrintLine(LOG_NORMAL, "Linedef #%zu is self-referencing", line->index);

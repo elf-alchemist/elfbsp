@@ -1112,7 +1112,7 @@ using bsp_effects_t = enum bsp_effects_e : uint32_t
   FX_ZeroLength = BIT(26),
 
   // Self-referencing
-  FX_SelfReferencial = BIT(27),
+  FX_SelfReferential = BIT(27),
 
   // Segment generation
   FX_DoNotRenderFront = BIT(28),
