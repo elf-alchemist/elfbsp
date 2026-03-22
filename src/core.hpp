@@ -23,8 +23,6 @@
 //------------------------------------------------------------------------------
 
 #pragma once
-#include <string>
-#include <vector>
 
 constexpr auto PROJECT_COMPANY = "Guilherme Miranda, et al";
 constexpr auto PROJECT_COPYRIGHT = "Copyright (C) 1994-2026";
@@ -46,6 +44,8 @@ constexpr auto PROJECT_STRING = "ELFBSP v1.1";
 #include <cstring>
 
 #include <bit>
+#include <string>
+#include <vector>
 
 //
 //  OS support
@@ -1529,6 +1529,31 @@ struct buildinfo_s
   uint32_t debug = DEBUG_NONE;
 };
 
+extern size_t lev_current_idx;
+
+struct AnalysisData
+{
+  size_t vertex = 0;  // Original set of vertices
+  size_t lines = 0;   // Original set of linedefs
+  size_t sides = 0;   // Original set of sidedefs
+  size_t sectors = 0; // Original set of sectors
+
+  size_t bsp_vertex = 0; // BSP-generated set of vertices
+  size_t nodes = 0;      // Each node of BSP tree, bounding box for culling
+  size_t subsecs = 0;    // Leaves of the tree, points to a set of segs
+  size_t segs = 0;       // Segments, actually used for rendering
+  size_t splits = 0;     // Difference between segments and sidedefs
+
+  size_t left_depth = 0;      // Maximum depth on the left side of the tree
+  size_t right_depth = 0;     // Maximum depth on the right side of the tree
+  double average_depth = 0.0; // Arithmetic mean depth
+  size_t optimal_depth = 0;   // Optimal depth for a tree of N leaves
+  double tree_balance = 0.0;  // Balance factor
+
+  double worst_case_ratio = 0.0; // Best possible tree
+  double tree_quality = 0.0;     // Tree's actual figure of merit
+};
+
 constexpr const char PRINT_HELP[] = "\n"
                                     "Usage: elfbsp [options...] FILE...\n"
                                     "\n"
@@ -1577,6 +1602,6 @@ const char *GetLevelName(size_t lev_idx);
 // BUILD_LumpOverflow if some limits were exceeded.
 build_result_e BuildLevel(size_t lev_idx, const char *filename);
 
+void SetupAnalysisFile(const char *filepath);
+void GenerateAnalysis(const char *filename);
 void WriteAnalysis(const char *filename);
-void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes,
-                      int32_t left_size, int32_t right_size);
