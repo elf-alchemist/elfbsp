@@ -8,6 +8,7 @@ New features:
 * Added support for special effects in Hexen-format maps via the line special 108
 * Added `--polyobj` to make poly-object editor number detection more explicit, ZDoom editor numbers are now the default
 * Added more information to `--analysis` output, thanks to Marc Rousseau's BSPInfo utility
+* Added `--no-effects` to disable specials effects during build time, e.g tags 900-999, etc
 
 Bugfixes:
 * Improved correctness for certain special effects, numerical effects of number 998 & 999 are now read from the line's tag instead of line's special

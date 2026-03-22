@@ -1311,6 +1311,8 @@ static void GetLinedefs_Doom(void)
 
     ValidateLinedef(line);
 
+    if (!config.effects) continue;
+
     // Line tags ( 900 <= x <=999 ) are considered "precious" and will, therefore, have a much higher seg split cost
     switch (line->args[0])
     {
@@ -1410,6 +1412,8 @@ static void GetLinedefs_Hexen(void)
     line->end->is_used = true;
 
     ValidateLinedef(line);
+
+    if (!config.effects) continue;
 
     switch (line->special)
     {

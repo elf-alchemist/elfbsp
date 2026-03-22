@@ -1502,14 +1502,6 @@ extern buildinfo_t config;
 
 struct buildinfo_s
 {
-  // use a faster method to pick nodes
-  bool fast = false;
-  bool backup = false;
-  // write out CSV for data analysis and visualization
-  bool analysis = false;
-
-  bsp_type_t bsp_type = bsp_type_t::BSP_VANILLA;
-
   struct
   {
     doomednum_t anchor = ZDoom_PolyObj_Anchor;
@@ -1519,14 +1511,15 @@ struct buildinfo_s
   } polyobj;
 
   double split_cost = SPLIT_COST_DEFAULT;
-
-  // this affects how some messages are shown
-  bool verbose = false;
-
-  // from here on, various bits of internal state
   size_t total_warnings = 0;
-
   uint32_t debug = DEBUG_NONE;
+
+  bsp_type_t bsp_type = bsp_type_t::BSP_VANILLA;
+  bool fast = false;     // use a faster method to pick nodes
+  bool backup = false;   // keep a copy of the WAD
+  bool analysis = false; // write out CSV for data analysis and visualization
+  bool verbose = false;  // this affects how some messages are shown
+  bool effects = true;   // disable special effects
 };
 
 extern size_t lev_current_idx;

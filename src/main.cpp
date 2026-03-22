@@ -523,6 +523,10 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
   {
     config.fast = true;
   }
+  else if (strcmp(name, "--no-effects") == 0)
+  {
+    config.effects = false;
+  }
   else if (strcmp(name, "--map") == 0 || strcmp(name, "--maps") == 0)
   {
     if (argc < 1 || argv[0][0] == '-')
