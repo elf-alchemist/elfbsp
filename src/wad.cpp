@@ -333,7 +333,7 @@ map_format_e Wad_file::LevelFormat(size_t lev_num)
     }
   }
 
-  if (LevelLookupLump(lev_num, "BEHAVIOR"))
+  if (LevelLookupLump(lev_num, "BEHAVIOR") != NO_INDEX)
   {
     return MapFormat_Hexen;
   }
