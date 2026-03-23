@@ -1,7 +1,7 @@
 # ELFBSP CMake Script
 cmake_minimum_required(VERSION 3.15)
 project(elfbsp
-        VERSION "1.1"
+        VERSION "1.2"
         LANGUAGES C CXX)
 
 include(CheckIncludeFile)
@@ -48,7 +48,7 @@ if(SAN_COUNT GREATER 0)
     endif()
 endif()
 
-add_executable(elfbsp
+add_executable(${PROJECT_NAME}
     src/bsp.cpp
     src/info.cpp
     src/level.cpp
@@ -60,12 +60,12 @@ add_executable(elfbsp
     src/wad.cpp
 )
 
-set_target_properties(elfbsp PROPERTIES
+set_target_properties(${PROJECT_NAME} PROPERTIES
     C_STANDARD 23
     CXX_STANDARD 20
 )
 
-target_compile_options(elfbsp PRIVATE
+target_compile_options(${PROJECT_NAME} PRIVATE
     -Wall
     -Wextra
     -Wshadow
@@ -74,76 +74,65 @@ target_compile_options(elfbsp PRIVATE
     -Wno-unused-parameter
 )
 
-target_compile_options(elfbsp PRIVATE
+target_compile_options(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:Release>:-O3>
     $<$<CONFIG:RelWithDebInfo>:-O3>
     $<$<CONFIG:Debug>:-O0>
     $<$<CONFIG:MinSizeRel>:-Os>
 )
 
-target_compile_options(elfbsp PRIVATE
+target_compile_options(${PROJECT_NAME} PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
     $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
     $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
 )
 
 if(ENABLE_WERROR)
-    target_compile_options(elfbsp PRIVATE -Werror)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
 endif()
 
 if(ENABLE_ASAN)
-    target_compile_options(elfbsp PRIVATE -fsanitize=address -fno-omit-frame-pointer)
-    target_link_options(elfbsp PRIVATE -fsanitize=address)
+    target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+    target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address)
 endif()
 
 if(ENABLE_UBSAN)
-    target_compile_options(elfbsp PRIVATE -fsanitize=undefined)
-    target_link_options(elfbsp PRIVATE -fsanitize=undefined)
+    target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=undefined)
+    target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=undefined)
 endif()
 
 if(ENABLE_TSAN)
-    target_compile_options(elfbsp PRIVATE -fsanitize=thread)
-    target_link_options(elfbsp PRIVATE -fsanitize=thread)
+    target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=thread)
+    target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=thread)
 endif()
 
 if(ENABLE_HARDENING)
-    target_compile_options(elfbsp PRIVATE -fstack-protector-strong)
-    target_link_options(elfbsp PRIVATE -Wl,-z,relro -Wl,-z,now)
+    target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong)
+    target_link_options(${PROJECT_NAME} PRIVATE -Wl,-z,relro -Wl,-z,now)
 endif()
 
 if(ENABLE_LTO)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
     if(ipo_supported)
-        set_property(TARGET elfbsp PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+        set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
     else()
         message(WARNING "LTO not supported: ${ipo_error}")
     endif()
 endif()
 
-target_include_directories(elfbsp PRIVATE ${CMAKE_BINARY_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 
 set(CPACK_GENERATOR ZIP)
 if(WIN32)
     install(FILES LICENSE.txt DESTINATION .)
     install(FILES elfbsp.cfg DESTINATION .)
-    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.21 AND NOT VCPKG_TOOLCHAIN)
-        install(
-            TARGETS elfbsp
-            RUNTIME_DEPENDENCIES
-                PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
-                POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
-                DIRECTORIES $<TARGET_FILE_DIR:elfbsp> $ENV{PATH}
-            RUNTIME DESTINATION .
-        )
-    else()
-        install(TARGETS elfbsp RUNTIME DESTINATION .)
-    endif()
+    install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION .)
 else()
     include(GNUInstallDirs)
     install(FILES LICENSE.txt DESTINATION "share/doc/${PROJECT_NAME}")
     install(FILES elfbsp.cfg DESTINATION "share/doc/${PROJECT_NAME}")
-    install(TARGETS elfbsp RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
 set(CPACK_PACKAGE_NAME "elfbsp")
