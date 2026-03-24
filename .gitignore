@@ -98,7 +98,9 @@ CMakeUserPresets.json
 # Build artifacts
 build/
 .cache/
-imgui.ini
 *.bak
 *.wad
 *.csv
+library/SDL/*
+library/imgui/*
+imgui.ini
