@@ -147,8 +147,8 @@ struct linedef_t
 
   int32_t special; //
   uint16_t flags;  // currently we only care about two-sided lines, but who knows
-  int32_t id;      // Tag => arg0/id split
-  int32_t args[5]; //
+  int32_t args[5]; // Tag => arg0/id split
+  int32_t id;      //
 
   uint32_t effects = FX_Nothing;
   seg_rotation_t angle = FX_DoNotRotate;
@@ -407,6 +407,7 @@ void DetectOverlappingLines(void);
 void DetectPolyobjSectors(buildinfo_t &config);
 
 // pruning routines
+void ClearNewVertices(void);
 void PruneVerticesAtEnd(void);
 
 // computes the wall tips for all of the vertices
@@ -514,11 +515,10 @@ quadtree_c *TreeFromSegList(seg_t *list);
 // and '*N' is the new node (and '*S' is set to nullptr).  Normally
 // returns BUILD_OK.
 
-build_result_e BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast,
-                          bool analysis);
+void BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast, bool analysis);
 
 // compute the height of the bsp tree, starting at 'node'.
-int ComputeBspHeight(const node_t *node);
+size_t ComputeBspHeight(const node_t *node);
 
 // put all the segs in each subsector into clockwise order, and renumber
 // the seg indices.

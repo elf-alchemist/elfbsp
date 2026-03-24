@@ -1,15 +1,11 @@
 # ELFBSP CMake Script
 cmake_minimum_required(VERSION 3.15)
 project(elfbsp
-        VERSION "1.1"
+        VERSION "1.2"
         LANGUAGES C CXX)
 
 include(CheckIncludeFile)
 
-set(CMAKE_C_STANDARD 23)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_C_STANDARD_REQUIRED TRUE)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_INSTALL_DO_STRIP TRUE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
@@ -77,9 +73,10 @@ target_include_directories(imgui PUBLIC
 
 target_link_libraries(imgui PUBLIC SDL3::SDL3)
 
-add_executable(elfbsp
+add_executable(${PROJECT_NAME}
     src/bsp.cpp
     src/core.hpp
+    src/info.cpp
     src/level.cpp
     src/local.hpp
     src/main.cpp
@@ -91,7 +88,12 @@ add_executable(elfbsp
     src/wad.cpp
 )
 
-target_compile_options(elfbsp PRIVATE
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    C_STANDARD 23
+    CXX_STANDARD 20
+)
+
+target_compile_options(${PROJECT_NAME} PRIVATE
     -Wall
     -Wextra
     -Wshadow
@@ -100,14 +102,14 @@ target_compile_options(elfbsp PRIVATE
     -Wno-unused-parameter
 )
 
-target_compile_options(elfbsp PRIVATE
+target_compile_options(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:Release>:-O3>
     $<$<CONFIG:RelWithDebInfo>:-O3>
     $<$<CONFIG:Debug>:-O0>
     $<$<CONFIG:MinSizeRel>:-Os>
 )
 
-target_compile_options(elfbsp PRIVATE
+target_compile_options(${PROJECT_NAME} PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
     $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
     $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
@@ -119,51 +121,51 @@ target_link_libraries(elfbsp PRIVATE
 )
 
 if(ENABLE_WERROR)
-    target_compile_options(elfbsp PRIVATE -Werror)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
 endif()
 
 if(ENABLE_ASAN)
-    target_compile_options(elfbsp PRIVATE -fsanitize=address -fno-omit-frame-pointer)
-    target_link_options(elfbsp PRIVATE -fsanitize=address)
+    target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+    target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address)
 endif()
 
 if(ENABLE_UBSAN)
-    target_compile_options(elfbsp PRIVATE -fsanitize=undefined)
-    target_link_options(elfbsp PRIVATE -fsanitize=undefined)
+    target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=undefined)
+    target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=undefined)
 endif()
 
 if(ENABLE_TSAN)
-    target_compile_options(elfbsp PRIVATE -fsanitize=thread)
-    target_link_options(elfbsp PRIVATE -fsanitize=thread)
+    target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=thread)
+    target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=thread)
 endif()
 
 if(ENABLE_HARDENING)
-    target_compile_options(elfbsp PRIVATE -fstack-protector-strong)
-    target_link_options(elfbsp PRIVATE -Wl,-z,relro -Wl,-z,now)
+    target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong)
+    target_link_options(${PROJECT_NAME} PRIVATE -Wl,-z,relro -Wl,-z,now)
 endif()
 
 if(ENABLE_LTO)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
     if(ipo_supported)
-        set_property(TARGET elfbsp PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+        set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
     else()
         message(WARNING "LTO not supported: ${ipo_error}")
     endif()
 endif()
 
-target_include_directories(elfbsp PRIVATE ${CMAKE_BINARY_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 
 set(CPACK_GENERATOR ZIP)
 if(WIN32)
     install(FILES LICENSE.txt DESTINATION .)
     install(FILES elfbsp.cfg DESTINATION .)
-    install(TARGETS elfbsp RUNTIME DESTINATION .)
+    install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION .)
 else()
     include(GNUInstallDirs)
     install(FILES LICENSE.txt DESTINATION "share/doc/${PROJECT_NAME}")
     install(FILES elfbsp.cfg DESTINATION "share/doc/${PROJECT_NAME}")
-    install(TARGETS elfbsp RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
 set(CPACK_PACKAGE_NAME "elfbsp")

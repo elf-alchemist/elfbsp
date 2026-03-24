@@ -154,7 +154,7 @@ static void BlockAdd(size_t blk_num, size_t line_index)
 
   if (blk_num >= block_count)
   {
-    PrintLine(LOG_ERROR, "BlockAdd: bad block number %zu", blk_num);
+    PrintLine(LOG_ERROR, "ERROR: BlockAdd: bad block number %zu", blk_num);
   }
 
   if (!cur)
@@ -454,7 +454,7 @@ static void WriteBlockmap(void)
 
     if (ptr == 0)
     {
-      PrintLine(LOG_ERROR, "WriteBlockmap: offset %zu not set.", i);
+      PrintLine(LOG_ERROR, "ERROR: WriteBlockmap: offset %zu not set.", i);
     }
 
     lump->Write(&ptr, sizeof(uint16_t));
@@ -963,21 +963,23 @@ void ValidateLinedef(linedef_t *line)
 
   if (line->left && line->right && line->left->sector == line->right->sector)
   {
-    line->effects |= FX_SelfReferencial;
+    line->effects |= FX_SelfReferential;
     if (config.verbose)
     {
       PrintLine(LOG_NORMAL, "Linedef #%zu is self-referencing", line->index);
     }
   }
 
-  if (line->left                                                // Side exists ...
+  if (config.effects                                            // Effects enabled ...
+      && line->left                                             // ... side exists ...
       && line->left->tex_lower[0] != '-'                        // ... lower texture isn't empty ...
       && StringCaseCmp(line->left->tex_lower, "BSPNOSEG") == 0) // ... lower texture is BSPNOSEG
   {
     line->effects |= FX_DoNotRenderBack;
   }
 
-  if (line->right                                                // Side exists ...
+  if (config.effects                                             // Effects enabled ...
+      && line->right                                             // ... side exists ...
       && line->right->tex_lower[0] != '-'                        // ... lower texture isn't empty ...
       && StringCaseCmp(line->right->tex_lower, "BSPNOSEG") == 0) // ... lower texture is BSPNOSEG
   {
@@ -1001,17 +1003,18 @@ void ValidateLinedef(linedef_t *line)
   }
 }
 
-static vertex_t *SafeLookupVertex(size_t num)
+static vertex_t *SafeLookupVertex(size_t num, size_t num_line)
 {
   if (num >= lev_vertices.size())
   {
-    PrintLine(LOG_ERROR, "illegal vertex number #%zu", num);
+    PrintLine(LOG_ERROR, "ERROR: Illegal map-vertex number #%zu, on line #%zu, maximum is #%zu", num, num_line,
+              lev_vertices.size());
   }
 
   return lev_vertices[num];
 }
 
-static sector_t *SafeLookupSector(uint16_t num)
+static sector_t *SafeLookupSector(size_t num, size_t num_side)
 {
   if (num >= NO_INDEX_INT16)
   {
@@ -1020,7 +1023,8 @@ static sector_t *SafeLookupSector(uint16_t num)
 
   if (num >= lev_sectors.size())
   {
-    PrintLine(LOG_ERROR, "illegal sector number #%zu", static_cast<size_t>(num));
+    PrintLine(LOG_ERROR, "ERROR: Illegal sector number #%zu, on side #%zu, maximum is #%zu", num, num_side,
+              lev_sectors.size() - 1);
   }
 
   return lev_sectors[num];
@@ -1065,7 +1069,7 @@ static void GetVertices_Binary(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to vertices.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to vertices.");
   }
 
   for (size_t i = 0; i < count; i++)
@@ -1074,7 +1078,7 @@ static void GetVertices_Binary(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading vertices.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading vertices.");
     }
 
     vertex_t *vert = NewVertex();
@@ -1104,7 +1108,7 @@ static void GetSectors_Binary(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to sectors.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to sectors.");
   }
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
@@ -1118,7 +1122,7 @@ static void GetSectors_Binary(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading sectors.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading sectors.");
     }
 
     sector_t *sector = NewSector();
@@ -1146,7 +1150,7 @@ static void GetThings_Doom(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to things.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to things.");
   }
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
@@ -1160,7 +1164,7 @@ static void GetThings_Doom(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading things.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading things.");
     }
 
     thing_t *thing = NewThing();
@@ -1189,7 +1193,7 @@ static void GetThings_Hexen(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to things.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to things.");
   }
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
@@ -1203,7 +1207,7 @@ static void GetThings_Hexen(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading things.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading things.");
     }
 
     thing_t *thing = NewThing();
@@ -1232,7 +1236,7 @@ static void GetSidedefs_Binary(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to sidedefs.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to sidedefs.");
   }
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
@@ -1246,7 +1250,7 @@ static void GetSidedefs_Binary(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading sidedefs.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading sidedefs.");
     }
 
     sidedef_t *side = NewSidedef();
@@ -1256,7 +1260,7 @@ static void GetSidedefs_Binary(void)
     memcpy(side->tex_upper, raw.upper_tex, 8);
     memcpy(side->tex_lower, raw.lower_tex, 8);
     memcpy(side->tex_middle, raw.mid_tex, 8);
-    side->sector = SafeLookupSector(GetLittleEndian(raw.sector));
+    side->sector = SafeLookupSector(GetLittleEndian(raw.sector), i);
   }
 }
 
@@ -1278,7 +1282,7 @@ static void GetLinedefs_Doom(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to linedefs.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to linedefs.");
   }
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
@@ -1292,13 +1296,13 @@ static void GetLinedefs_Doom(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading linedefs.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading linedefs.");
     }
 
     linedef_t *line = NewLinedef();
 
-    line->start = SafeLookupVertex(GetLittleEndian(raw.start));
-    line->end = SafeLookupVertex(GetLittleEndian(raw.end));
+    line->start = SafeLookupVertex(GetLittleEndian(raw.start), i);
+    line->end = SafeLookupVertex(GetLittleEndian(raw.end), i);
     line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
     line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
     line->flags = GetLittleEndian(raw.flags);
@@ -1309,6 +1313,8 @@ static void GetLinedefs_Doom(void)
     line->end->is_used = true;
 
     ValidateLinedef(line);
+
+    if (!config.effects) continue;
 
     // Line tags ( 900 <= x <=999 ) are considered "precious" and will, therefore, have a much higher seg split cost
     switch (line->args[0])
@@ -1374,7 +1380,7 @@ static void GetLinedefs_Hexen(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to linedefs.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to linedefs.");
   }
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
@@ -1388,13 +1394,13 @@ static void GetLinedefs_Hexen(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading linedefs.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading linedefs.");
     }
 
     linedef_t *line = NewLinedef();
 
-    line->start = SafeLookupVertex(GetLittleEndian(raw.start));
-    line->end = SafeLookupVertex(GetLittleEndian(raw.end));
+    line->start = SafeLookupVertex(GetLittleEndian(raw.start), i);
+    line->end = SafeLookupVertex(GetLittleEndian(raw.end), i);
     line->flags = GetLittleEndian(raw.flags);
     line->special = raw.special;
     line->args[0] = raw.args[0];
@@ -1410,14 +1416,15 @@ static void GetLinedefs_Hexen(void)
 
     ValidateLinedef(line);
 
+    if (!config.effects) continue;
+
     switch (line->special)
     {
     case BSP_SpecialEffects:
-      line->angle = FX_RotateRelativeRatio;
-      if (line->args[1]) line->effects |= FX_NoBlockmap;
-      if (line->args[2]) line->effects |= FX_DoNotSplitSeg;
-      if (line->args[3]) line->effects |= FX_DoNotRenderBack;
-      if (line->args[4]) line->effects |= FX_DoNotRenderFront;
+      if (line->args[0]) line->effects |= FX_NoBlockmap;
+      if (line->args[1]) line->effects |= FX_DoNotSplitSeg;
+      if (line->args[2]) line->effects |= FX_DoNotRenderBack;
+      if (line->args[3]) line->effects |= FX_DoNotRenderFront;
       break;
     default:
       break;
@@ -1477,7 +1484,7 @@ static void ParseSidedefField(sidedef_t *side, const std::string &key, token_kin
 
     if (num >= lev_sectors.size())
     {
-      PrintLine(LOG_ERROR, "illegal sector number #%zu", static_cast<size_t>(num));
+      PrintLine(LOG_ERROR, "ERROR: illegal sector number #%zu", static_cast<size_t>(num));
     }
 
     side->sector = lev_sectors[num];
@@ -1488,12 +1495,12 @@ static void ParseLinedefField(linedef_t *line, const std::string &key, token_kin
 {
   if (key == "v1")
   {
-    line->start = SafeLookupVertex(LEX_Index(value));
+    line->start = SafeLookupVertex(LEX_Index(value), static_cast<size_t>(line - lev_linedefs[0]));
   }
 
   if (key == "v2")
   {
-    line->end = SafeLookupVertex(LEX_Index(value));
+    line->end = SafeLookupVertex(LEX_Index(value), static_cast<size_t>(line - lev_linedefs[0]));
   }
 
   if (key == "special")
@@ -1581,29 +1588,29 @@ static void ParseUDMF_Block(lexer_c &lex, int cur_type)
 
     if (tok == TOK_EOF)
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: unclosed block");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: unclosed block");
     }
 
     if (tok != TOK_Ident)
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: missing key");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing key");
     }
 
     if (!lex.Match("="))
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: missing '='");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing '='");
     }
 
     tok = lex.Next(value);
 
     if (tok == TOK_EOF || tok == TOK_ERROR || value == "}")
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: missing value");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing value");
     }
 
     if (!lex.Match(";"))
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: missing ';'");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing ';'");
     }
 
     switch (cur_type)
@@ -1635,7 +1642,7 @@ static void ParseUDMF_Block(lexer_c &lex, int cur_type)
   {
     if (line->start == nullptr || line->end == nullptr)
     {
-      PrintLine(LOG_ERROR, "Linedef #%zu is missing a vertex!", line->index);
+      PrintLine(LOG_ERROR, "ERROR: Linedef #%zu is missing a vertex!", line->index);
     }
 
     ValidateLinedef(line);
@@ -1662,7 +1669,7 @@ static void ParseUDMF_Pass(const std::string &data, int pass)
 
     if (tok != TOK_Ident)
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump.");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump.");
       return;
     }
 
@@ -1672,14 +1679,14 @@ static void ParseUDMF_Pass(const std::string &data, int pass)
       lex.Next(section);
       if (!lex.Match(";"))
       {
-        PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: missing ';'");
+        PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing ';'");
       }
       continue;
     }
 
     if (!lex.Match("{"))
     {
-      PrintLine(LOG_ERROR, "Malformed TEXTMAP lump: missing '{'");
+      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing '{'");
     }
 
     int cur_type = 0;
@@ -1731,7 +1738,7 @@ void ParseUDMF(void)
 
   if (lump == nullptr || !lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error finding TEXTMAP lump.");
+    PrintLine(LOG_ERROR, "ERROR: Failure finding TEXTMAP lump.");
   }
 
   size_t remain = lump->Length();
@@ -1747,7 +1754,7 @@ void ParseUDMF(void)
 
     if (!lump->Read(buffer, want))
     {
-      PrintLine(LOG_ERROR, "Error reading TEXTMAP lump.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading TEXTMAP lump.");
     }
 
     data.append(buffer, want);
@@ -1806,7 +1813,7 @@ bsp_type_t CheckFormatBSP(buildinfo_t &ctx)
 
   if (level_type < BSP_DEEPBSPV4 &&         // We're currently doing vanilla format by default
       (lev_vertices.size() > LIMIT_VERT     // Consider also the possibility of not doing old formats at all
-       || lev_nodes.size() > LIMIT_NODE     // Starting with XNOD we have fixed_t BSP verticies
+       || lev_nodes.size() > LIMIT_NODE     // Starting with XNOD we have fixed_t BSP vertices
        || lev_subsecs.size() > LIMIT_SUBSEC // And XGL3 does fixed_t partition line coordinates
        || lev_segs.size() > LIMIT_SEG))     // The vanilla EXE also uses INT16_MAX segment indices, hm
   {
@@ -2049,14 +2056,14 @@ void OpenWad(const char *filename)
   cur_wad = Wad_file::Open(filename, 'a');
   if (cur_wad == nullptr)
   {
-    PrintLine(LOG_ERROR, "Cannot open file: %s", filename);
+    PrintLine(LOG_ERROR, "ERROR: Cannot open file: %s", filename);
   }
 
   if (cur_wad->IsReadOnly())
   {
     delete cur_wad;
     cur_wad = nullptr;
-    PrintLine(LOG_ERROR, "file is read only: %s", filename);
+    PrintLine(LOG_ERROR, "ERROR: file is read only: %s", filename);
   }
 }
 
@@ -2089,6 +2096,19 @@ const char *GetLevelName(size_t lev_idx)
   return cur_wad->GetLump(lump_idx)->Name();
 }
 
+size_t ComputeBspHeight(const node_t *node)
+{
+  if (node == nullptr)
+  {
+    return 0;
+  }
+
+  size_t right = ComputeBspHeight(node->r.node);
+  size_t left = ComputeBspHeight(node->l.node);
+
+  return std::max(left, right) + 1;
+}
+
 /* ----- build nodes for a single level ----- */
 
 build_result_e BuildLevel(size_t lev_idx, const char *filename)
@@ -2104,80 +2124,45 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
 
   InitBlockmap();
 
-  build_result_e ret = BUILD_OK;
-
   if (num_real_lines > 0)
   {
     if (config.analysis)
     {
-      // normal mode, across all default costs
-      for (double split_cost = 1.0; split_cost <= 32.0; split_cost++)
-      {
-        bbox_t dummy;
-        root_node = nullptr;
-        root_sub = nullptr;
-        BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, split_cost, false, true);
-        AnalysisPushLine(lev_current_idx, false, split_cost, lev_segs.size(), lev_subsecs.size(), lev_nodes.size(),
-                         ComputeBspHeight(root_node->l.node), ComputeBspHeight(root_node->r.node));
-        FreeNodes();
-        FreeSubsecs();
-        FreeSegs();
-      }
-      // fast mode, also across all default costs
-      for (double split_cost = 1.0; split_cost <= 32.0; split_cost++)
-      {
-        bbox_t dummy;
-        root_node = nullptr;
-        root_sub = nullptr;
-        BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, split_cost, true, true);
-        AnalysisPushLine(lev_current_idx, true, split_cost, lev_segs.size(), lev_subsecs.size(), lev_nodes.size(),
-                         ComputeBspHeight(root_node->l.node), ComputeBspHeight(root_node->r.node));
-        FreeNodes();
-        FreeSubsecs();
-        FreeSegs();
-      }
+      PrintLine(LOG_NORMAL, "[%s] Starting analysis loop for %s", __func__, GetLevelName(lev_current_idx));
+      GenerateAnalysis(filename);
     }
 
     bbox_t dummy;
     // recursively create nodes
-    ret = BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, config.split_cost, config.fast, false);
+    BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, config.split_cost, config.fast, false);
   }
 
-  if (ret == BUILD_OK)
+  if (config.verbose)
   {
-    if (config.verbose)
-    {
-      PrintLine(LOG_NORMAL, "Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES", lev_nodes.size(), lev_subsecs.size(),
-                lev_segs.size(), num_old_vert + num_new_vert);
-    }
-
-    if (root_node != nullptr)
-    {
-      if (config.verbose)
-      {
-        PrintLine(LOG_NORMAL, "Heights of subtrees: %d / %d", ComputeBspHeight(root_node->r.node),
-                  ComputeBspHeight(root_node->l.node));
-      }
-    }
-
-    ClockwiseBspTree();
-
-    switch (lev_format)
-    {
-    case MapFormat_Doom:
-    case MapFormat_Hexen:
-      ret = SaveBinaryFormatLevel(root_node);
-      break;
-    case MapFormat_UDMF:
-      ret = SaveTextMapLevel(root_node);
-      break;
-    default:
-      break;
-    }
+    PrintLine(LOG_NORMAL, "Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES", lev_nodes.size(), lev_subsecs.size(),
+              lev_segs.size(), num_old_vert + num_new_vert);
   }
-  else
+
+  if (config.verbose && root_node != nullptr)
   {
-    /* build was Cancelled by the user */
+    PrintLine(LOG_NORMAL, "Heights of subtrees: %zu / %zu", ComputeBspHeight(root_node->l.node),
+              ComputeBspHeight(root_node->r.node));
+  }
+
+  ClockwiseBspTree();
+
+  build_result_t ret = BUILD_OK;
+  switch (lev_format)
+  {
+  case MapFormat_Doom:
+  case MapFormat_Hexen:
+    ret = SaveBinaryFormatLevel(root_node);
+    break;
+  case MapFormat_UDMF:
+    ret = SaveTextMapLevel(root_node);
+    break;
+  default:
+    break;
   }
 
   FreeLevel();

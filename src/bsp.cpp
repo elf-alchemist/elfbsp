@@ -81,12 +81,6 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
   case FX_RotateAbsoluteDegrees:
     result = DegreesToShortBAM(seg->linedef->args[0]);
     break;
-  case FX_RotateRelativeRatio:
-    result += DegreesToShortBAM((seg->linedef->args[0] / 255.0) * 360.0);
-    break;
-  case FX_RotateAbsoluteRatio:
-    result = DegreesToShortBAM((seg->linedef->args[0] / 255.0) * 360.0);
-    break;
   case FX_RotateRelativeBAM:
     result += static_cast<short_angle_t>(seg->linedef->args[0]);
     break;
@@ -130,7 +124,7 @@ static void PutVertices_Vanilla(void)
 
   if (count != num_old_vert)
   {
-    PrintLine(LOG_ERROR, "PutVertices miscounted (%zu != %zu)", count, num_old_vert);
+    PrintLine(LOG_ERROR, "ERROR: PutVertices miscounted (%zu != %zu)", count, num_old_vert);
   }
 }
 
@@ -250,7 +244,7 @@ static void PutOneNode_Vanilla(Lump_c *lump, node_t *node, size_t &node_cur_inde
   }
   else
   {
-    PrintLine(LOG_ERROR, "Bad right child in node %zu", node->index);
+    PrintLine(LOG_ERROR, "ERROR: Bad right child in node %zu", node->index);
   }
 
   if (node->l.node)
@@ -263,7 +257,7 @@ static void PutOneNode_Vanilla(Lump_c *lump, node_t *node, size_t &node_cur_inde
   }
   else
   {
-    PrintLine(LOG_ERROR, "Bad left child in node %zu", node->index);
+    PrintLine(LOG_ERROR, "ERROR: Bad left child in node %zu", node->index);
   }
 
   lump->Write(&raw, sizeof(raw_node_vanilla_t));
@@ -291,7 +285,7 @@ static void PutNodes_Vanilla(node_t *root_node)
 
   if (node_cur_index != lev_nodes.size())
   {
-    PrintLine(LOG_ERROR, "PutNodes miscounted (%zu != %zu)", node_cur_index, lev_nodes.size());
+    PrintLine(LOG_ERROR, "ERROR: PutNodes miscounted (%zu != %zu)", node_cur_index, lev_nodes.size());
   }
 }
 
@@ -400,7 +394,7 @@ static void PutOneNode_DeepBSPV4(Lump_c *lump, node_t *node, size_t &node_cur_in
   }
   else
   {
-    PrintLine(LOG_ERROR, "Bad right child in node %zu", node->index);
+    PrintLine(LOG_ERROR, "ERROR: Bad right child in node %zu", node->index);
   }
 
   if (node->l.node)
@@ -413,7 +407,7 @@ static void PutOneNode_DeepBSPV4(Lump_c *lump, node_t *node, size_t &node_cur_in
   }
   else
   {
-    PrintLine(LOG_ERROR, "Bad left child in node %zu", node->index);
+    PrintLine(LOG_ERROR, "ERROR: Bad left child in node %zu", node->index);
   }
 
   lump->Write(&raw, sizeof(raw_node_deepbspv4_t));
@@ -444,7 +438,7 @@ static void PutNodes_DeepBSPV4(node_t *root_node)
 
   if (node_cur_index != lev_nodes.size())
   {
-    PrintLine(LOG_ERROR, "PutNodes miscounted (%zu != %zu)", node_cur_index, lev_nodes.size());
+    PrintLine(LOG_ERROR, "ERROR: PutNodes miscounted (%zu != %zu)", node_cur_index, lev_nodes.size());
   }
 }
 
@@ -482,7 +476,7 @@ static void PutVertices_Xnod(Lump_c *lump)
 
   if (count != num_new_vert)
   {
-    PrintLine(LOG_ERROR, "PutZVertices miscounted (%zu != %zu)", count, num_new_vert);
+    PrintLine(LOG_ERROR, "ERROR: PutZVertices miscounted (%zu != %zu)", count, num_new_vert);
   }
 }
 
@@ -505,7 +499,7 @@ static void PutSubsecs_Xnod(Lump_c *lump)
     {
       if (cur_seg_index != seg->index)
       {
-        PrintLine(LOG_ERROR, "PutZSubsecs: seg index mismatch in sub %zu (%zu != %zu)", i, cur_seg_index, seg->index);
+        PrintLine(LOG_ERROR, "ERROR: PutZSubsecs: seg index mismatch in sub %zu (%zu != %zu)", i, cur_seg_index, seg->index);
       }
 
       count++;
@@ -513,13 +507,13 @@ static void PutSubsecs_Xnod(Lump_c *lump)
 
     if (count != sub->seg_count)
     {
-      PrintLine(LOG_ERROR, "PutZSubsecs: miscounted segs in sub %zu (%zu != %zu)", i, count, sub->seg_count);
+      PrintLine(LOG_ERROR, "ERROR: PutZSubsecs: miscounted segs in sub %zu (%zu != %zu)", i, count, sub->seg_count);
     }
   }
 
   if (cur_seg_index != lev_segs.size())
   {
-    PrintLine(LOG_ERROR, "PutZSubsecs miscounted segs (%zu != %zu)", cur_seg_index, lev_segs.size());
+    PrintLine(LOG_ERROR, "ERROR: PutZSubsecs miscounted segs (%zu != %zu)", cur_seg_index, lev_segs.size());
   }
 }
 
@@ -534,7 +528,7 @@ static void PutSegs_Xnod(Lump_c *lump)
 
     if (seg->index != i)
     {
-      PrintLine(LOG_ERROR, "PutZSegs: seg index mismatch (%zu != %zu)", seg->index, i);
+      PrintLine(LOG_ERROR, "ERROR: PutZSegs: seg index mismatch (%zu != %zu)", seg->index, i);
     }
 
     raw_xnod_seg_t raw = {};
@@ -588,7 +582,7 @@ static void PutOneNode_Xnod(Lump_c *lump, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "Bad right child in ZDoom node %zu", node->index);
+    PrintLine(LOG_ERROR, "ERROR: Bad right child in ZDoom node %zu", node->index);
   }
 
   if (node->l.node)
@@ -601,7 +595,7 @@ static void PutOneNode_Xnod(Lump_c *lump, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "Bad left child in ZDoom node %zu", node->index);
+    PrintLine(LOG_ERROR, "ERROR: Bad left child in ZDoom node %zu", node->index);
   }
 
   lump->Write(&raw, sizeof(raw_xnod_node_t));
@@ -626,7 +620,7 @@ static void PutNodes_Xnod(Lump_c *lump, node_t *root)
 
   if (node_cur_index != lev_nodes.size())
   {
-    PrintLine(LOG_ERROR, "PutZNodes miscounted (%zu != %zu)", node_cur_index, lev_nodes.size());
+    PrintLine(LOG_ERROR, "ERROR: PutZNodes miscounted (%zu != %zu)", node_cur_index, lev_nodes.size());
   }
 }
 
@@ -661,7 +655,7 @@ static void PutSegs_Xgln(Lump_c *lump)
 
     if (seg->index != i)
     {
-      PrintLine(LOG_ERROR, "PutXGL3Segs: seg index mismatch (%zu != %zu)", seg->index, i);
+      PrintLine(LOG_ERROR, "ERROR: PutXGL3Segs: seg index mismatch (%zu != %zu)", seg->index, i);
     }
 
     raw_xgln_seg_t raw = {};
@@ -692,7 +686,7 @@ static void PutSegs_Xgl2(Lump_c *lump)
 
     if (seg->index != i)
     {
-      PrintLine(LOG_ERROR, "PutXGL3Segs: seg index mismatch (%zu != %zu)", seg->index, i);
+      PrintLine(LOG_ERROR, "ERROR: PutXGL3Segs: seg index mismatch (%zu != %zu)", seg->index, i);
     }
 
     raw_xgl2_seg_t raw = {};
@@ -753,7 +747,7 @@ static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "Bad right child in ZDoom node %zu", node->index);
+    PrintLine(LOG_ERROR, "ERROR: Bad right child in ZDoom node %zu", node->index);
   }
 
   if (node->l.node)
@@ -766,7 +760,7 @@ static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "Bad left child in ZDoom node %zu", node->index);
+    PrintLine(LOG_ERROR, "ERROR: Bad left child in ZDoom node %zu", node->index);
   }
 
   lump->Write(&raw, sizeof(raw_xgl3_node_t));
@@ -791,7 +785,7 @@ static void PutNodes_Xgl3(Lump_c *lump, node_t *root)
 
   if (node_cur_index != lev_nodes.size())
   {
-    PrintLine(LOG_ERROR, "PutZNodes miscounted (%zu != %zu)", node_cur_index, lev_nodes.size());
+    PrintLine(LOG_ERROR, "ERROR: PutZNodes miscounted (%zu != %zu)", node_cur_index, lev_nodes.size());
   }
 }
 

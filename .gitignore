@@ -100,6 +100,7 @@ build/
 .cache/
 *.bak
 *.wad
-
+*.csv
 library/SDL/*
 library/imgui/*
+imgui.ini

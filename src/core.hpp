@@ -23,8 +23,6 @@
 //------------------------------------------------------------------------------
 
 #pragma once
-#include <string>
-#include <vector>
 
 constexpr auto PROJECT_LICENSE = "GNU General Public License, version 2";
 
@@ -49,6 +47,8 @@ constexpr auto PROJECT_TYPE = "application";
 #include <cstring>
 
 #include <bit>
+#include <string>
+#include <vector>
 
 //
 //  OS support
@@ -88,7 +88,7 @@ constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
 
 // -Elf- updated, pulled from Chocolate Doom
 
-#if defined(__GNUC__)
+#if defined(__clang__) || defined(__GNUC__)
 
   #if defined(_WIN32) && !defined(__clang__)
     #define PACKEDATTR __attribute__((packed, gcc_struct))
@@ -296,7 +296,7 @@ extern void PRINTF_ATTR(2, 3) PrintLineCLI(const log_level_t level, const char *
 // Assertion macros
 //
 #define SYS_ASSERT(cond) \
-  (cond) ? (void)0 : PrintLine(LOG_ERROR, "Assertion failed! In function %s (%s:%d)", __func__, __FILE__, __LINE__);
+  (cond) ? (void)0 : PrintLine(LOG_ERROR, "ERROR: Assertion failed! In function %s (%s:%d)", __func__, __FILE__, __LINE__);
 
 //------------------------------------------------------------------------
 // MEMORY ALLOCATION
@@ -311,7 +311,7 @@ template <typename T> constexpr T *UtilCalloc(const size_t size)
 
   if (!ret)
   {
-    PrintLine(LOG_ERROR, "Out of memory (cannot allocate %zu bytes)", size);
+    PrintLine(LOG_ERROR, "ERROR: Out of memory (cannot allocate %zu bytes)", size);
   }
 
   return ret;
@@ -326,7 +326,7 @@ template <typename T> constexpr T *UtilRealloc(T *old, const size_t size)
 
   if (!ret)
   {
-    PrintLine(LOG_ERROR, "Out of memory (cannot reallocate %zu bytes)", size);
+    PrintLine(LOG_ERROR, "ERROR: Out of memory (cannot reallocate %zu bytes)", size);
   }
 
   return ret;
@@ -339,7 +339,7 @@ template <typename T> constexpr void UtilFree(T *data)
 {
   if (data == nullptr)
   {
-    PrintLine(LOG_ERROR, "Trying to free a nullptr");
+    PrintLine(LOG_ERROR, "ERROR: Trying to free a nullptr");
   }
 
   free(data);
@@ -914,7 +914,7 @@ using raw_strife_texture_t = struct raw_strife_texture_s
 // and we compose textures from the TEXTURE1/2 lists
 // of patches.
 //
-using patch_t = struct patch_s
+using raw_patch_t = struct patch_s
 {
   int16_t width;         // bounding box size
   int16_t height;        //
@@ -922,6 +922,37 @@ using patch_t = struct patch_s
   int16_t topoffset;     // pixels below the origin
   uint32_t columnofs[1]; // only [width] used
 } PACKEDATTR;
+
+// Fail way earlier
+static_assert(sizeof(raw_wad_header_t) == 12, "Size mismatch for 'raw_wad_header_t'. Should be 12.");
+static_assert(sizeof(raw_wad_entry_t) == 16, "Size mismatch for 'raw_wad_entry_t'. Should be 16.");
+static_assert(sizeof(raw_vertex_t) == 4, "Size mismatch for 'raw_vertex_t'. Should be 4.");
+static_assert(sizeof(raw_linedef_t) == 14, "Size mismatch for 'raw_linedef_t'. Should be 14.");
+static_assert(sizeof(raw_hexen_linedef_t) == 16, "Size mismatch for 'raw_hexen_linedef_t'. Should be 16.");
+static_assert(sizeof(raw_sidedef_t) == 30, "Size mismatch for 'raw_sidedef_t'. Should be 30.");
+static_assert(sizeof(raw_sector_t) == 26, "Size mismatch for 'raw_sector_t'. Should be 26.");
+static_assert(sizeof(raw_thing_t) == 10, "Size mismatch for 'raw_thing_t'. Should be 10.");
+static_assert(sizeof(raw_hexen_thing_t) == 20, "Size mismatch for 'raw_hexen_thing_t'. Should be 20.");
+static_assert(sizeof(raw_bbox_t) == 8, "Size mismatch for 'raw_bbox_t'. Should be 8.");
+static_assert(sizeof(raw_blockmap_header_t) == 8, "Size mismatch for 'raw_blockmap_header_t'. Should be 8.");
+static_assert(sizeof(raw_node_vanilla_t) == 28, "Size mismatch for 'raw_node_vanilla_t'. Should be 28.");
+static_assert(sizeof(raw_subsec_vanilla_t) == 4, "Size mismatch for 'raw_subsec_vanilla_t'. Should be 4.");
+static_assert(sizeof(raw_seg_vanilla_t) == 12, "Size mismatch for 'raw_seg_vanilla_t'. Should be 12.");
+static_assert(sizeof(raw_node_deepbspv4_t) == 32, "Size mismatch for 'raw_node_deepbspv4_t'. Should be 32.");
+static_assert(sizeof(raw_subsec_deepbspv4_t) == 6, "Size mismatch for 'raw_subsec_deepbspv4_t'. Should be 6.");
+static_assert(sizeof(raw_seg_deepbspv4_t) == 16, "Size mismatch for 'raw_seg_deepbspv4_t'. Should be 16.");
+static_assert(sizeof(raw_xnod_vertex_t) == 8, "Size mismatch for 'raw_xnod_vertex_t'. Should be 8.");
+static_assert(sizeof(raw_xnod_node_t) == 32, "Size mismatch for 'raw_xnod_node_t'. Should be 32.");
+static_assert(sizeof(raw_xnod_subsec_t) == 4, "Size mismatch for 'raw_xnod_subsec_t'. Should be 4.");
+static_assert(sizeof(raw_xnod_seg_t) == 11, "Size mismatch for 'raw_xnod_seg_t'. Should be 11.");
+static_assert(sizeof(raw_xgln_seg_t) == 11, "Size mismatch for 'raw_xgln_seg_t'. Should be 11.");
+static_assert(sizeof(raw_xgl2_seg_t) == 13, "Size mismatch for 'raw_xgl2_seg_t'. Should be 13.");
+static_assert(sizeof(raw_xgl3_node_t) == 40, "Size mismatch for 'raw_xgl3_node_t'. Should be 40.");
+static_assert(sizeof(raw_patchdef_t) == 10, "Size mismatch for 'raw_patchdef_t'. Should be 10.");
+static_assert(sizeof(raw_strife_patchdef_t) == 6, "Size mismatch for 'raw_strife_patchdef_t'. Should be 6.");
+static_assert(sizeof(raw_texture_t) == 32, "Size mismatch for 'raw_texture_t'. Should be 32.");
+static_assert(sizeof(raw_strife_texture_t) == 24, "Size mismatch for 'raw_strife_texture_t'. Should be 24.");
+static_assert(sizeof(raw_patch_t) == 12, "Size mismatch for 'raw_patch_t'. Should be 12.");
 
 //
 // LineDef attributes.
@@ -939,7 +970,7 @@ using vanilla_lineflag_t = enum vanilla_lineflag_e : uint16_t
   // down things) and will move with a height change
   // of one of the neighbor sectors.
   //
-  // Unpegged textures allways have the first row of
+  // Unpegged textures always have the first row of
   // the texture at the top pixel of the line for both
   // top and bottom textures (use next to windows).
 
@@ -1097,7 +1128,7 @@ using bsp_effects_t = enum bsp_effects_e : uint32_t
   FX_ZeroLength = BIT(26),
 
   // Self-referencing
-  FX_SelfReferencial = BIT(27),
+  FX_SelfReferential = BIT(27),
 
   // Segment generation
   FX_DoNotRenderFront = BIT(28),
@@ -1117,8 +1148,6 @@ using seg_rotation_t = enum seg_rotation_e : uint8_t
   FX_DoNotRotate = 0,
   FX_RotateRelativeDegrees,
   FX_RotateAbsoluteDegrees,
-  FX_RotateRelativeRatio,
-  FX_RotateAbsoluteRatio,
   FX_RotateRelativeBAM,
   FX_RotateAbsoluteBAM,
 };
@@ -1211,7 +1240,7 @@ struct Wad_file
   // zero means "currently unknown", which only occurs after a
   // call to BeginWrite() and before any call to AddLump() or
   // the finalizing EndWrite().
-  off_t total_size;
+  int64_t total_size;
 
   std::vector<Lump_c *> directory;
 
@@ -1384,7 +1413,7 @@ struct Lump_c
   // the beginning).  Returns true if OK, false on error.
   [[nodiscard]] bool Seek(const size_t offset) const
   {
-    return (fseeko(parent->fp, static_cast<off_t>(l_start + offset), SEEK_SET) == 0);
+    return (fseek(parent->fp, static_cast<int64_t>(l_start + offset), SEEK_SET) == 0);
   }
 
   // read some data from the lump, returning true if OK.
@@ -1489,14 +1518,6 @@ extern buildinfo_t config;
 
 struct buildinfo_s
 {
-  // use a faster method to pick nodes
-  bool fast = false;
-  bool backup = false;
-  // write out CSV for data analysis and visualization
-  bool analysis = false;
-
-  bsp_type_t bsp_type = bsp_type_t::BSP_VANILLA;
-
   struct
   {
     doomednum_t anchor = ZDoom_PolyObj_Anchor;
@@ -1506,14 +1527,40 @@ struct buildinfo_s
   } polyobj;
 
   double split_cost = SPLIT_COST_DEFAULT;
-
-  // this affects how some messages are shown
-  bool verbose = false;
-
-  // from here on, various bits of internal state
   size_t total_warnings = 0;
-
   uint32_t debug = DEBUG_NONE;
+
+  bsp_type_t bsp_type = bsp_type_t::BSP_VANILLA;
+  bool fast = false;     // use a faster method to pick nodes
+  bool backup = false;   // keep a copy of the WAD
+  bool analysis = false; // write out CSV for data analysis and visualization
+  bool verbose = false;  // this affects how some messages are shown
+  bool effects = true;   // disable special effects
+};
+
+extern size_t lev_current_idx;
+
+struct AnalysisData
+{
+  size_t vertex = 0;  // Original set of vertices
+  size_t lines = 0;   // Original set of linedefs
+  size_t sides = 0;   // Original set of sidedefs
+  size_t sectors = 0; // Original set of sectors
+
+  size_t bsp_vertex = 0; // BSP-generated set of vertices
+  size_t nodes = 0;      // Each node of BSP tree, bounding box for culling
+  size_t subsecs = 0;    // Leaves of the tree, points to a set of segs
+  size_t segs = 0;       // Segments, actually used for rendering
+  size_t splits = 0;     // Difference between segments and sidedefs
+
+  size_t left_depth = 0;      // Maximum depth on the left side of the tree
+  size_t right_depth = 0;     // Maximum depth on the right side of the tree
+  double average_depth = 0.0; // Arithmetic mean depth
+  size_t optimal_depth = 0;   // Optimal depth for a tree of N leaves
+  double tree_balance = 0.0;  // Balance factor
+
+  double worst_case_ratio = 0.0; // Best possible tree
+  double tree_quality = 0.0;     // Tree's actual figure of merit
 };
 
 constexpr const char PRINT_HELP[] = "\n"
@@ -1564,6 +1611,8 @@ const char *GetLevelName(size_t lev_idx);
 // BUILD_LumpOverflow if some limits were exceeded.
 build_result_e BuildLevel(size_t lev_idx, const char *filename);
 
+void SetupAnalysisFile(const char *filepath);
+void GenerateAnalysis(const char *filename);
 void WriteAnalysis(const char *filename);
 void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes,
                       int32_t left_size, int32_t right_size);
