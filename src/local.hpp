@@ -145,8 +145,8 @@ struct linedef_t
   sidedef_t *right; // right sidedef
   sidedef_t *left;  // left sidedef, or nullptr if none
 
-  uint32_t flags;  // currently we only care about two-sided lines, but who knows
   int32_t special; //
+  uint32_t flags;  // currently we only care about two-sided lines, but who knows
   int32_t args[5]; // Tag => arg0/id split
   int32_t id;      //
 

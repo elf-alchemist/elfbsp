@@ -1304,11 +1304,11 @@ static void GetLinedefs_Doom(void)
 
     line->start = SafeLookupVertex(GetLittleEndian(raw.start), i);
     line->end = SafeLookupVertex(GetLittleEndian(raw.end), i);
+    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
+    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
     line->flags = GetLittleEndian(raw.flags);
     line->special = GetLittleEndian(raw.special);
     line->args[0] = GetLittleEndian(raw.tag);
-    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
 
     line->start->is_used = true;
     line->end->is_used = true;

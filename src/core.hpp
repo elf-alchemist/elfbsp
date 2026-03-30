@@ -618,14 +618,16 @@ using lump_order_t = enum lump_order_e
   LL_SECTORS,   // Sectors, from editing
   LL_REJECT,    // LUT, sector-sector visibility
   LL_BLOCKMAP,  // LUT, motion clipping, walls/grid element
+  LL_BEHAVIOR,  // ACS bytecode
+  LL_SCRIPTS,   // ACS source code
 
-  LL_TEXTMAP = LL_LABEL + 1,     // UDMF lump
-  LL_ENDMAP,                     // UDMF
-  LL_BEHAVIOR = LL_BLOCKMAP + 1, // ACS bytecode
-  LL_SCRIPTS,                    // ACS source code
-  LL_LEAFS = LL_BLOCKMAP + 1,    // PSX/N64 hardware rendering
-  LL_LIGHTS,                     // Colored sectors
-  LL_MACROS,                     // Simple scripting
+  D64_LEAFS = LL_BLOCKMAP + 1, // PSX/N64 hardware rendering
+  D64_LIGHTS,                  // Colored sectors
+  D64_MACROS,                  // BLAM
+  D64_SCRIPTS,                 // BLAM
+
+  LL_TEXTMAP = LL_LABEL + 1, // UDMF lump
+  LL_ENDMAP,                 // UDMF
 };
 
 static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
