@@ -12,8 +12,8 @@ The simplest possible operation will rebuild nodes in all of the maps in a provi
 elfbsp example.wad
 ```
 
-## Ouput separate file
-The following will rebuild all of the nodes in a seperate copy of the provided WAD:
+## Output separate file
+The following will rebuild all of the nodes in a separate copy of the provided WAD:
 ```bash
 elfbsp example1.wad --output example2.wad
 ```
@@ -59,22 +59,20 @@ Several map names and/or ranges can be given, using commas to separate them, suc
 
 NOTE: spaces cannot be used to separate map names.
 
-#### `-x --xnod`
-Forces XNOD (ZDoom extended) format of normal nodes.
-Without this option, normal nodes will be built using the standard DOOM format, and only switch to XNOD format when the level is too large (e.g. has too many segs).
-
-Using XNOD format can be better for source ports which support it, since it provides higher accuracy for seg splits.
-However, it cannot be used with the original DOOM.EXE or with Chocolate-Doom.
-
-#### `-s --ssect`
-Build XGL3 (extended Nodes) format in the SSECTORS lump.
-This option will disable the building of normal nodes, leaving the NODES and SEGS lumps empty.
-Although it can be used with the `-x` option to store XNOD format nodes in the NODES lump as well.
+#### `-t --type <0...5>`
+Forces a specific BSP tree lump format at build time. The default is 0, using vanilla lumps.
+Supported formats are as follows:
+* 0 -> vanilla (default)
+* 1 -> DeePBSPV4
+* 2 -> XNOD
+* 3 -> XGLN
+* 4 -> XGL2
+* 5 -> XGL3
 
 #### `-p, --polyobj`
 Use Hexen's original polyobject editor numbers (3000, 3001, 3002), instead of ZDoom's polyobject editor numbers (9300, 9301, 9302, 9303).
 
-#### `-c --cost  ##`
+#### `-c --cost  <1...32>`
 Sets the cost for making seg splits. The value is a number between 1 and 32. The default value is 11.
 Larger values try to reduce the number of seg splits, whereas smaller values produce more balanced BSP trees.
 
@@ -89,7 +87,7 @@ This option *cannot* be used with multiple input files, or with the --backup opt
 Displays a brief help screen, then exits.
 
 #### `-d --doc`
-Displays this documentaion screen, then exits.
+Displays this documentation screen, then exits.
 
 #### `--version`
 Displays the version of ELFBSP, then exits.

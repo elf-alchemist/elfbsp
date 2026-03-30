@@ -141,21 +141,21 @@ retry:
   Wad_file *w = new Wad_file(filename, mode, fp);
 
   // determine total size (seek to end)
-  if (fseeko(fp, 0, SEEK_END) != 0)
+  if (fseek(fp, 0, SEEK_END) != 0)
   {
-    PrintLine(LOG_ERROR, "Error determining WAD size.");
+    PrintLine(LOG_ERROR, "ERROR: Failure determining WAD size.");
   }
 
-  w->total_size = ftello(fp);
+  w->total_size = ftell(fp);
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] total_size = %zu", __func__, w->total_size);
+    PrintLine(LOG_DEBUG, "[%s] total_size = %zu", __func__, static_cast<size_t>(w->total_size));
   }
 
   if (w->total_size < 0)
   {
-    PrintLine(LOG_ERROR, "Error determining WAD size.");
+    PrintLine(LOG_ERROR, "ERROR: Failure determining WAD size.");
   }
 
   w->ReadDirectory();
@@ -286,7 +286,7 @@ size_t Wad_file::LevelLastLump(size_t lev_num)
   size_t count = 1;
 
   // UDMF level?
-  if (LevelFormat(lev_num) == MapFormat_UDMF)
+  if (directory[start + 1]->Match("TEXTMAP"))
   {
     while (count < MAX_LUMPS_IN_A_LEVEL && start + count < NumLumps())
     {
@@ -331,14 +331,9 @@ map_format_e Wad_file::LevelFormat(size_t lev_num)
     }
   }
 
-  if (start + LL_BEHAVIOR < NumLumps())
+  if (LevelLookupLump(lev_num, "BEHAVIOR") != NO_INDEX)
   {
-    const char *name = GetLump(start + LL_BEHAVIOR)->Name();
-
-    if (StringCaseCmp(name, "BEHAVIOR") == 0)
-    {
-      return MapFormat_Hexen;
-    }
+    return MapFormat_Hexen;
   }
 
   return MapFormat_Doom;
@@ -354,7 +349,7 @@ void Wad_file::ReadDirectory(void)
 
   if (fread(&header, sizeof(header), 1, fp) != 1)
   {
-    PrintLine(LOG_ERROR, "Error reading WAD header.");
+    PrintLine(LOG_ERROR, "ERROR: Failure reading WAD header.");
   }
 
   // WISH: check ident for PWAD or IWAD
@@ -366,12 +361,12 @@ void Wad_file::ReadDirectory(void)
 
   if (dir_count > 32000)
   {
-    PrintLine(LOG_ERROR, "Bad WAD header, too many entries (%zu)", dir_count);
+    PrintLine(LOG_ERROR, "ERROR: Bad WAD header, too many entries (%zu)", dir_count);
   }
 
-  if (fseeko(fp, static_cast<off_t>(dir_start), SEEK_SET) != 0)
+  if (fseek(fp, static_cast<int64_t>(dir_start), SEEK_SET) != 0)
   {
-    PrintLine(LOG_ERROR, "Error seeking to WAD directory.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to WAD directory.");
   }
 
   for (size_t i = 0; i < dir_count; i++)
@@ -380,7 +375,7 @@ void Wad_file::ReadDirectory(void)
 
     if (fread(&entry, sizeof(entry), 1, fp) != 1)
     {
-      PrintLine(LOG_ERROR, "Error reading WAD directory.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading WAD directory.");
     }
 
     Lump_c *lump = MakeLumpFromEntry(this, &entry);
@@ -664,7 +659,7 @@ void Wad_file::ProcessNamespaces(void)
         break;
 
       default:
-        PrintLine(LOG_ERROR, "ProcessNamespaces: active = 0x%02x", active);
+        PrintLine(LOG_ERROR, "ERROR: ProcessNamespaces: active = 0x%02x", active);
       }
     }
   }
@@ -686,12 +681,12 @@ void Wad_file::BeginWrite(void)
 {
   if (mode == 'r')
   {
-    PrintLine(LOG_ERROR, "Wad_file::BeginWrite() called on read-only file");
+    PrintLine(LOG_ERROR, "ERROR: Wad_file::BeginWrite() called on read-only file");
   }
 
   if (begun_write)
   {
-    PrintLine(LOG_ERROR, "Wad_file::BeginWrite() called again without EndWrite()");
+    PrintLine(LOG_ERROR, "ERROR: Wad_file::BeginWrite() called again without EndWrite()");
   }
 
   // put the size into a quantum state
@@ -703,7 +698,7 @@ void Wad_file::EndWrite(void)
 {
   if (!begun_write)
   {
-    PrintLine(LOG_ERROR, "Wad_file::EndWrite() called without BeginWrite()");
+    PrintLine(LOG_ERROR, "ERROR: Wad_file::EndWrite() called without BeginWrite()");
   }
 
   begun_write = false;
@@ -931,7 +926,7 @@ size_t Wad_file::FindFreeSpace(size_t length)
 
 size_t Wad_file::PositionForWrite(size_t max_size)
 {
-  off_t want_pos = static_cast<off_t>(max_size == NO_INDEX ? HighWaterMark() : FindFreeSpace(max_size));
+  int64_t want_pos = static_cast<int64_t>(max_size == NO_INDEX ? HighWaterMark() : FindFreeSpace(max_size));
 
   // determine if position is past end of file
   // (difference should only be a few bytes)
@@ -940,16 +935,16 @@ size_t Wad_file::PositionForWrite(size_t max_size)
   //       but trying to optimise it away will just make the code
   //       needlessly complex and hard to follow.
 
-  if (fseeko(fp, 0, SEEK_END) < 0)
+  if (fseek(fp, 0, SEEK_END) < 0)
   {
-    PrintLine(LOG_ERROR, "Error seeking to new write position.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to new write position.");
   }
 
-  total_size = ftello(fp);
+  total_size = ftell(fp);
 
   if (total_size < 0)
   {
-    PrintLine(LOG_ERROR, "Error seeking to new write position.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to new write position.");
   }
 
   if (want_pos > total_size)
@@ -964,15 +959,15 @@ size_t Wad_file::PositionForWrite(size_t max_size)
   }
   else
   {
-    if (fseeko(fp, want_pos, SEEK_SET) < 0)
+    if (fseek(fp, want_pos, SEEK_SET) < 0)
     {
-      PrintLine(LOG_ERROR, "Error seeking to new write position.");
+      PrintLine(LOG_ERROR, "ERROR: Failure seeking to new write position.");
     }
   }
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] POSITION FOR WRITE: %zu  (total_size %zu)", __func__, want_pos, total_size);
+    PrintLine(LOG_DEBUG, "[%s] POSITION FOR WRITE: %zu  (total_size %zu)", __func__, static_cast<size_t>(want_pos), static_cast<size_t>(total_size));
   }
 
   return static_cast<size_t>(want_pos);
@@ -985,10 +980,10 @@ bool Wad_file::FinishLump(size_t final_size)
   // sanity check
   if (final_size > begun_max_size)
   {
-    PrintLine(LOG_ERROR, "Internal Error: wrote too much in lump (%zu > %zu)", final_size, begun_max_size);
+    PrintLine(LOG_ERROR, "ERROR: wrote too much in lump (%zu > %zu)", final_size, begun_max_size);
   }
 
-  off_t pos = ftello(fp);
+  int64_t pos = ftell(fp);
 
   if (pos & 3)
   {
@@ -1044,22 +1039,22 @@ void Wad_file::WriteDirectory(void)
 
     if (fwrite(&entry, sizeof(entry), 1, fp) != 1)
     {
-      PrintLine(LOG_ERROR, "Error writing WAD directory.");
+      PrintLine(LOG_ERROR, "ERROR: Failure writing WAD directory.");
     }
   }
 
   fflush(fp);
 
-  total_size = ftello(fp);
+  total_size = ftell(fp);
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] total_size: %zu", __func__, total_size);
+    PrintLine(LOG_DEBUG, "[%s] total_size: %zu", __func__, static_cast<size_t>(total_size));
   }
 
   if (total_size < 0)
   {
-    PrintLine(LOG_ERROR, "Error determining WAD size.");
+    PrintLine(LOG_ERROR, "ERROR: Failure determining WAD size.");
   }
 
   // update header at start of file
@@ -1075,7 +1070,7 @@ void Wad_file::WriteDirectory(void)
 
   if (fwrite(&header, sizeof(header), 1, fp) != 1)
   {
-    PrintLine(LOG_ERROR, "Error writing WAD header.");
+    PrintLine(LOG_ERROR, "ERROR: Failure writing WAD header.");
   }
 
   fflush(fp);

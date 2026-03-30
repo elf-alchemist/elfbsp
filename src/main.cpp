@@ -24,8 +24,6 @@
 #include "core.hpp"
 
 #include <cstring>
-#include <format>
-#include <fstream>
 #include <string>
 #include <vector>
 
@@ -48,70 +46,8 @@ struct map_range_t
 };
 
 static std::vector<map_range_t> map_list;
-static std::vector<std::string> analysis_csv;
 
 buildinfo_t config;
-
-//------------------------------------------------------------------------
-void AnalysisSetupFile(const char *filepath)
-{
-  auto csv_path = std::string(filepath);
-
-  auto ext_pos = FindExtension(filepath);
-  if (ext_pos > 0)
-  {
-    csv_path.resize(ext_pos);
-  }
-
-  csv_path += ".csv";
-  FileClear(csv_path.c_str());
-
-  std::string line = "map_name,is_fast,split_cost,num_segs,num_subsecs,num_nodes,size_left,size_right";
-  analysis_csv.push_back(line);
-}
-
-void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes,
-                      int32_t left_size, int32_t right_size)
-{
-  std::string line = std::format("{},{},{},{},{},{},{},{}", GetLevelName(level_index), is_fast, split_cost, segs, subsecs,
-                                 nodes, left_size, right_size);
-  analysis_csv.push_back(line);
-}
-
-// writes out for current file
-// expects AnalysisPushLine to have been called with all 0-32 split costs during node-building
-void WriteAnalysis(const char *filename)
-{
-  auto csv_path = std::string(filename);
-
-  if (const auto ext_pos = FindExtension(filename); ext_pos > 0)
-  {
-    csv_path.resize(ext_pos);
-  }
-
-  csv_path += ".csv";
-
-  // Append to fresh CSV
-  auto csv_file = std::ofstream(csv_path.c_str(), std::ios::app);
-
-  if (!csv_file.is_open())
-  {
-    PrintLine(LOG_WARN, "[%s] Couldn't open file %s for writing.", __func__, csv_path.c_str());
-    return;
-  }
-
-  for (const auto &line : analysis_csv)
-  {
-    csv_file << line << '\n';
-  }
-
-  csv_file.close();
-
-  // Flush out from memory
-  analysis_csv.clear();
-
-  PrintLine(LOG_NORMAL, "[%s] Successfully finished writing data to CSV file %s.", __func__, csv_path.c_str());
-}
 
 //------------------------------------------------------------------------
 
@@ -229,7 +165,7 @@ void ValidateInputFilename(const char *filename)
   // files with ".bak" extension cannot be backed up, so refuse them
   if (MatchExtension(filename, "bak"))
   {
-    PrintLine(LOG_ERROR, "cannot process a backup file: %s", filename);
+    PrintLine(LOG_ERROR, "ERROR: cannot process a backup file: %s", filename);
   }
 
   // we do not support packages
@@ -237,13 +173,13 @@ void ValidateInputFilename(const char *filename)
       || MatchExtension(filename, "pk4") || MatchExtension(filename, "pk7") || MatchExtension(filename, "epk")
       || MatchExtension(filename, "pack") || MatchExtension(filename, "zip") || MatchExtension(filename, "rar"))
   {
-    PrintLine(LOG_ERROR, "package files (like PK3) are not supported: %s", filename);
+    PrintLine(LOG_ERROR, "ERROR: package files (like PK3) are not supported: %s", filename);
   }
 
-  // reject some very common formats
-  if (!MatchExtension(filename, "wad"))
+  // reject anything that isn't a WAD, or a UDB temp file
+  if (!MatchExtension(filename, "wad") && !MatchExtension(filename, "tmp"))
   {
-    PrintLine(LOG_ERROR, "not a wad file: %s", filename);
+    PrintLine(LOG_ERROR, "ERROR: not a wad file: %s", filename);
   }
 }
 
@@ -263,7 +199,7 @@ void BackupFile(const char *filename)
 
   if (!FileCopy(filename, dest_name.c_str()))
   {
-    PrintLine(LOG_ERROR, "failed to create backup: %s", dest_name.c_str());
+    PrintLine(LOG_ERROR, "ERROR: failed to create backup: %s", dest_name.c_str());
   }
 
   PrintLine(LOG_NORMAL, "Created backup: %s", dest_name.c_str());
@@ -276,7 +212,7 @@ void VisitFile(const char *filename)
   {
     if (!FileCopy(filename, opt_output.c_str()))
     {
-      PrintLine(LOG_ERROR, "failed to create output file: %s", opt_output.c_str());
+      PrintLine(LOG_ERROR, "ERROR: failed to create output file: %s", opt_output.c_str());
     }
 
     PrintLine(LOG_NORMAL, "Copied input file: %s", filename);
@@ -291,7 +227,7 @@ void VisitFile(const char *filename)
 
   if (config.analysis)
   {
-    AnalysisSetupFile(filename);
+    SetupAnalysisFile(filename);
   }
 
   PrintLine(LOG_NORMAL, "Building %s", filename);
@@ -352,32 +288,32 @@ void ParseMapRange(char *tok)
 
   if (!ValidateMapName(low))
   {
-    PrintLine(LOG_ERROR, "illegal map name: '%s'", low);
+    PrintLine(LOG_ERROR, "ERROR: illegal map name: '%s'", low);
   }
 
   if (!ValidateMapName(high))
   {
-    PrintLine(LOG_ERROR, "illegal map name: '%s'", high);
+    PrintLine(LOG_ERROR, "ERROR: illegal map name: '%s'", high);
   }
 
   if (strlen(low) < strlen(high))
   {
-    PrintLine(LOG_ERROR, "bad map range (%s shorter than %s)", low, high);
+    PrintLine(LOG_ERROR, "ERROR: bad map range (%s shorter than %s)", low, high);
   }
 
   if (strlen(low) > strlen(high))
   {
-    PrintLine(LOG_ERROR, "bad map range (%s longer than %s)", low, high);
+    PrintLine(LOG_ERROR, "ERROR: bad map range (%s longer than %s)", low, high);
   }
 
   if (low[0] != high[0])
   {
-    PrintLine(LOG_ERROR, "bad map range (%s and %s start with different letters)", low, high);
+    PrintLine(LOG_ERROR, "ERROR: bad map range (%s and %s start with different letters)", low, high);
   }
 
   if (strcmp(low, high) > 0)
   {
-    PrintLine(LOG_ERROR, "bad map range (wrong order, %s > %s)", low, high);
+    PrintLine(LOG_ERROR, "ERROR: bad map range (wrong order, %s > %s)", low, high);
   }
 
   // Ok
@@ -396,7 +332,7 @@ void ParseMapList(const char *arg)
   {
     if (*arg == ',')
     {
-      PrintLine(LOG_ERROR, "bad map list (empty element)");
+      PrintLine(LOG_ERROR, "ERROR: bad map list (empty element)");
     }
 
     // copy characters up to next comma / end
@@ -407,7 +343,7 @@ void ParseMapList(const char *arg)
     {
       if (len > sizeof(buffer) - 4)
       {
-        PrintLine(LOG_ERROR, "bad map list (very long element)");
+        PrintLine(LOG_ERROR, "ERROR: bad map list (very long element)");
       }
 
       buffer[len++] = *arg++;
@@ -456,13 +392,13 @@ void ParseShortArgument(const char *arg)
     case 'm':
     case 'o':
     case 't':
-      PrintLine(LOG_ERROR, "cannot use option '-%c' like that", c);
+      PrintLine(LOG_ERROR, "ERROR: cannot use option '-%c' like that", c);
       return;
 
     case 'c':
       if (*arg == 0 || !isdigit(*arg))
       {
-        PrintLine(LOG_ERROR, "missing value for '-c' option");
+        PrintLine(LOG_ERROR, "ERROR: missing value for '-c' option");
       }
 
       // we only accept one or two digits here
@@ -477,7 +413,7 @@ void ParseShortArgument(const char *arg)
 
       if (val < SPLIT_COST_MIN || val > SPLIT_COST_MAX)
       {
-        PrintLine(LOG_ERROR, "illegal value for '-c' option");
+        PrintLine(LOG_ERROR, "ERROR: illegal value for '-c' option");
       }
 
       config.split_cost = val;
@@ -486,11 +422,11 @@ void ParseShortArgument(const char *arg)
     default:
       if (isprint(c) && !isspace(c))
       {
-        PrintLine(LOG_ERROR, "unknown short option: '-%c'", c);
+        PrintLine(LOG_ERROR, "ERROR: unknown short option: '-%c'", c);
       }
       else
       {
-        PrintLine(LOG_ERROR, "illegal short option (ascii code %d)", static_cast<unsigned char>(c));
+        PrintLine(LOG_ERROR, "ERROR: illegal short option (ascii code %d)", static_cast<unsigned char>(c));
       }
       return;
     }
@@ -587,11 +523,15 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
   {
     config.fast = true;
   }
+  else if (strcmp(name, "--no-effects") == 0)
+  {
+    config.effects = false;
+  }
   else if (strcmp(name, "--map") == 0 || strcmp(name, "--maps") == 0)
   {
     if (argc < 1 || argv[0][0] == '-')
     {
-      PrintLine(LOG_ERROR, "missing value for '--map' option");
+      PrintLine(LOG_ERROR, "ERROR: missing value for '--map' option");
     }
 
     ParseMapList(argv[0]);
@@ -602,14 +542,14 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
   {
     if (argc < 1 || !isdigit(argv[0][0]))
     {
-      PrintLine(LOG_ERROR, "missing value for '--type' option");
+      PrintLine(LOG_ERROR, "ERROR: missing value for '--type' option");
     }
 
     int32_t val = std::stoi(argv[0]);
 
     if (val < BSP_MIN || val > BSP_MAX)
     {
-      PrintLine(LOG_ERROR, "illegal value for '--type' option");
+      PrintLine(LOG_ERROR, "ERROR: illegal value for '--type' option");
     }
 
     RaiseValue(config.bsp_type, static_cast<bsp_type_t>(val));
@@ -619,14 +559,14 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
   {
     if (argc < 1 || !isdigit(argv[0][0]))
     {
-      PrintLine(LOG_ERROR, "missing value for '--cost' option");
+      PrintLine(LOG_ERROR, "ERROR: missing value for '--cost' option");
     }
 
     int32_t val = std::stoi(argv[0]);
 
     if (val < SPLIT_COST_MIN || val > SPLIT_COST_MAX)
     {
-      PrintLine(LOG_ERROR, "illegal value for '--cost' option");
+      PrintLine(LOG_ERROR, "ERROR: illegal value for '--cost' option");
     }
 
     config.split_cost = val;
@@ -645,12 +585,12 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
 
     if (argc < 1 || argv[0][0] == '-')
     {
-      PrintLine(LOG_ERROR, "missing value for '--output' option");
+      PrintLine(LOG_ERROR, "ERROR: missing value for '--output' option");
     }
 
     if (!opt_output.empty())
     {
-      PrintLine(LOG_ERROR, "cannot use '--output' option twice");
+      PrintLine(LOG_ERROR, "ERROR: cannot use '--output' option twice");
     }
 
     opt_output = argv[0];
@@ -660,12 +600,12 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
   {
     if (!ProcessDebugParam(name, config.debug))
     {
-      PrintLine(LOG_ERROR, "unknown debug parameter '%s'", name);
+      PrintLine(LOG_ERROR, "ERROR: unknown debug parameter '%s'", name);
     }
   }
   else
   {
-    PrintLine(LOG_ERROR, "unknown long option: '%s'", name);
+    PrintLine(LOG_ERROR, "ERROR: unknown long option: '%s'", name);
   }
 
   return used;
@@ -707,7 +647,7 @@ void ParseCommandLine(int32_t argc, const char *argv[])
 
     if (strcmp(arg, "-") == 0)
     {
-      PrintLine(LOG_ERROR, "illegal option '-'");
+      PrintLine(LOG_ERROR, "ERROR: illegal option '-'");
     }
 
     if (strcmp(arg, "--") == 0)
@@ -774,7 +714,7 @@ int32_t main(const int32_t argc, const char *argv[])
 
   if (total_files == 0)
   {
-    PrintLine(LOG_ERROR, "no files to process");
+    PrintLine(LOG_ERROR, "ERROR: no files to process");
     return 0;
   }
 
@@ -782,17 +722,17 @@ int32_t main(const int32_t argc, const char *argv[])
   {
     if (config.backup)
     {
-      PrintLine(LOG_ERROR, "cannot use --backup with --output");
+      PrintLine(LOG_ERROR, "ERROR: cannot use --backup with --output");
     }
 
     if (total_files > 1)
     {
-      PrintLine(LOG_ERROR, "cannot use multiple input files with --output");
+      PrintLine(LOG_ERROR, "ERROR: cannot use multiple input files with --output");
     }
 
     if (StringCaseCmp(wad_list[0], opt_output.c_str()) == 0)
     {
-      PrintLine(LOG_ERROR, "input and output files are the same");
+      PrintLine(LOG_ERROR, "ERROR: input and output files are the same");
     }
   }
 
@@ -803,7 +743,7 @@ int32_t main(const int32_t argc, const char *argv[])
 
     if (!FileExists(filename))
     {
-      PrintLine(LOG_ERROR, "no such file: %s", filename);
+      PrintLine(LOG_ERROR, "ERROR: no such file: %s", filename);
     }
   }
 

@@ -43,7 +43,7 @@
 //
 
 static constexpr uint32_t PRECIOUS_MULTIPLY = 100;
-static constexpr uint32_t SEG_FAST_THRESHHOLD = 200;
+static constexpr uint32_t SEG_FAST_THRESHOLD = 200;
 
 struct eval_info_t
 {
@@ -119,7 +119,7 @@ void Recompute(seg_t *seg)
 
   if (seg->p_length <= 0)
   {
-    PrintLine(LOG_ERROR, "Seg %p has zero p_length.", seg);
+    PrintLine(LOG_ERROR, "ERROR: Seg %p has zero p_length.", seg);
   }
 
   seg->p_perp = seg->psy * seg->pdx - seg->psx * seg->pdy;
@@ -738,7 +738,7 @@ seg_t *PickNode(quadtree_c *tree, int depth, double split_cost, bool fast)
    *       are axis-aligned and roughly divide the current group into
    *       two halves.  This can save *heaps* of times on large levels.
    */
-  if (fast && tree->real_num >= SEG_FAST_THRESHHOLD)
+  if (fast && tree->real_num >= SEG_FAST_THRESHOLD)
   {
     if (HAS_BIT(config.debug, DEBUG_PICKNODE))
     {
@@ -797,7 +797,7 @@ void DivideOneSeg(seg_t *seg, seg_t *part, seg_t **left_list, seg_t **right_list
   double a = part->PerpDist(seg->psx, seg->psy);
   double b = part->PerpDist(seg->pex, seg->pey);
 
-  bool self_ref = seg->linedef && HAS_BIT(seg->linedef->effects, FX_SelfReferencial);
+  bool self_ref = seg->linedef && HAS_BIT(seg->linedef->effects, FX_SelfReferential);
 
   if (seg->source_line == part->source_line)
   {
@@ -973,7 +973,7 @@ void AddMinisegs(intersection_t *cut_list, seg_t *part, seg_t **left_list, seg_t
     double len = next->along_dist - cut->along_dist;
     if (len < -0.001)
     {
-      PrintLine(LOG_ERROR, "Bad order in intersect list: %1.3f > %1.3f", cut->along_dist, next->along_dist);
+      PrintLine(LOG_ERROR, "ERROR: Bad order in intersect list: %1.3f > %1.3f", cut->along_dist, next->along_dist);
     }
 
     bool A = cut->open_after;
@@ -1482,7 +1482,7 @@ void ClockwiseOrder(subsec_t *subsec)
     {
       cur_score = 0;
     }
-    else if (HAS_BIT(array[j]->linedef->effects, FX_SelfReferencial))
+    else if (HAS_BIT(array[j]->linedef->effects, FX_SelfReferential))
     {
       cur_score = 2;
     }
@@ -1566,7 +1566,7 @@ void SanityCheckHasRealSeg(subsec_t *subsec)
     }
   }
 
-  PrintLine(LOG_ERROR, "Subsector #%zu near (%1.1f,%1.1f) has no real seg!", subsec->index, subsec->mid_x, subsec->mid_y);
+  PrintLine(LOG_ERROR, "ERROR: Subsector #%zu near (%1.1f,%1.1f) has no real seg!", subsec->index, subsec->mid_x, subsec->mid_y);
 }
 
 void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index)
@@ -1613,19 +1613,6 @@ subsec_t *CreateSubsec(quadtree_c *tree)
   }
 
   return sub;
-}
-
-int ComputeBspHeight(const node_t *node)
-{
-  if (node == nullptr)
-  {
-    return 1;
-  }
-
-  int right = ComputeBspHeight(node->r.node);
-  int left = ComputeBspHeight(node->l.node);
-
-  return std::max(left, right) + 1;
 }
 
 void BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast, bool analysis)
@@ -1686,12 +1673,12 @@ void BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S
   /* sanity checks... */
   if (rights == nullptr)
   {
-    PrintLine(LOG_ERROR, "Separated seg-list has empty RIGHT side");
+    PrintLine(LOG_ERROR, "ERROR: Separated seg-list has empty RIGHT side");
   }
 
   if (lefts == nullptr)
   {
-    PrintLine(LOG_ERROR, "Separated seg-list has empty LEFT side");
+    PrintLine(LOG_ERROR, "ERROR: Separated seg-list has empty LEFT side");
   }
 
   if (cut_list != nullptr)
@@ -1790,7 +1777,7 @@ void Normalise(subsec_t *subsec)
 
   if (new_head == nullptr)
   {
-    PrintLine(LOG_ERROR, "Subsector %zu normalised to being EMPTY", subsec->index);
+    PrintLine(LOG_ERROR, "ERROR: Subsector %zu normalised to being EMPTY", subsec->index);
   }
 
   subsec->seg_list = new_head;
@@ -1877,7 +1864,7 @@ void RoundOff(subsec_t *subsec)
   {
     if (last_real_degen == nullptr)
     {
-      PrintLine(LOG_ERROR, "Subsector %zu rounded off with NO real segs", subsec->index);
+      PrintLine(LOG_ERROR, "ERROR: Subsector %zu rounded off with NO real segs", subsec->index);
     }
 
     if (HAS_BIT(config.debug, DEBUG_SUBSEC))
@@ -1937,7 +1924,7 @@ void RoundOff(subsec_t *subsec)
 
   if (new_head == nullptr)
   {
-    PrintLine(LOG_ERROR, "Subsector %zu rounded off to being EMPTY", subsec->index);
+    PrintLine(LOG_ERROR, "ERROR: Subsector %zu rounded off to being EMPTY", subsec->index);
   }
 
   subsec->seg_list = new_head;

@@ -16,6 +16,7 @@
 * `2005-05-20` — glBSP adds ZNOD support [^glbsp-znod]
 * `2005-07-09` — GL V5 spec is publicly frozen [^glv5-spec]
 * `2006-02-24` — earliest SVN revision of ZDoom, already supports ZNOD and ZGLN nodes
+* `2006-11-05` — Kaiser publishes the "Console Doom hacking project" thread, with the first description of the LEAFS lump [^console-leafs]
 * `2009-03-17` — Randi adds ZGL2 (with 32bit sidedef indexes to address large UDMF maps) to ZDoom/ZDBSP [^zdoom-zgl2]
 * `2010-04-12` — Sunder's development unearths the DeePBSPV4 format and triggers a discussion for its wider adoption [^sunder-deepbspv4] as well as the issues of the compressed ZDoom nodes
 * `2010-04-15` — Andrey Budko adds DeepBSPV4 node support to PrBoom+ [^prboom-deepbspv4]
@@ -41,6 +42,7 @@
 [^glbsp-glv5]: https://github.com/elf-alchemist/glbsp-archive/commit/182c158da4aa918eccd2d25b42c7f3d4c2e5eec8
 [^glbsp-znod]: https://github.com/elf-alchemist/glbsp-archive/commit/40fb3f670ea99920c51f5b06b1fdbf582e7af24a
 [^glv5-spec]: https://www.doomworld.com/forum/topic/32807-v5-gl-node-update/
+[^console-leafs]: https://www.doomworld.com/forum/topic/38608-the-console-doom-hacking-project-console-specs/
 [^zdoom-zgl2]: https://github.com/UZDoom/UZDoom/commit/314216343dae34a70993803375dfce8ebe7090fb
 [^sunder-deepbspv4]: https://www.doomworld.com/forum/post/867492
 [^prboom-deepbspv4]: https://github.com/kraflab/dsda-doom/commit/42972ed42d3a54bc9ac0636e17f3db1b2ee7aaa9

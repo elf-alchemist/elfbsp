@@ -107,6 +107,25 @@ void DetectOverlappingVertices(void)
   }
 }
 
+void ClearNewVertices(void)
+{
+  for (size_t i = lev_vertices.size() - 1; i != NO_INDEX; i--)
+  {
+    vertex_t *V = lev_vertices[i];
+
+    if (!V->is_new)
+    {
+      break;
+    }
+
+    UtilFree(V);
+
+    lev_vertices.pop_back();
+  }
+
+  num_old_vert = lev_vertices.size();
+}
+
 void PruneVerticesAtEnd(void)
 {
   // always prune vertices at end of lump, otherwise all the
@@ -353,7 +372,7 @@ vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end)
 
   if (dlen == 0)
   {
-    PrintLine(LOG_ERROR, "NewVertexDegenerate: bad delta!");
+    PrintLine(LOG_ERROR, "ERROR: NewVertexDegenerate: bad delta!");
   }
 
   dx /= dlen;
