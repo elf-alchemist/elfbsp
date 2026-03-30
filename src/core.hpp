@@ -823,13 +823,13 @@ using raw_seg_deepbspv4_t = struct raw_seg_deepbspv4_s
 // * compared to vanilla, some types were raise to 32bit
 // * each version (XNOD->XGLN->XGL2->XGL3) builds on top of the previous
 //
-using raw_xnod_vertex_t = struct raw_xnod_vertex_s
+using raw_vertex_xnod_t = struct raw_vertex_xnod_s
 {
   int32_t x;
   int32_t y;
 } PACKEDATTR;
 
-using raw_xnod_node_t = struct raw_xnod_node_s
+using raw_node_xnod_t = struct raw_node_xnod_s
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
@@ -837,7 +837,7 @@ using raw_xnod_node_t = struct raw_xnod_node_s
   uint32_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-using raw_xnod_subsec_t = struct raw_xnod_subsec_s
+using raw_subsec_xnod_t = struct raw_subsec_xnod_s
 {
   uint32_t segnum;
   // NOTE : no "first" value, segs must be contiguous and appear
@@ -846,7 +846,7 @@ using raw_xnod_subsec_t = struct raw_xnod_subsec_s
   //        all segs of the first subsector.
 } PACKEDATTR;
 
-using raw_xnod_seg_t = struct raw_xnod_seg_s
+using raw_seg_xnod_t = struct raw_seg_xnod_s
 {
   uint32_t start;   // from this vertex...
   uint32_t end;     // ... to this vertex
@@ -854,7 +854,7 @@ using raw_xnod_seg_t = struct raw_xnod_seg_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-using raw_xgln_seg_t = struct raw_xgln_seg_s
+using raw_seg_xgln_t = struct raw_seg_xgln_s
 {
   uint32_t vertex;  // from this vertex ... to the next
   uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
@@ -862,7 +862,7 @@ using raw_xgln_seg_t = struct raw_xgln_seg_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-using raw_xgl2_seg_t = struct raw_xgl2_seg_s
+using raw_seg_xgl2_t = struct raw_seg_xgl2_s
 {
   uint32_t vertex;  // from this vertex ... to the next
   uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
@@ -870,7 +870,7 @@ using raw_xgl2_seg_t = struct raw_xgl2_seg_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-using raw_xgl3_node_t = struct raw_xgl3_node_s
+using raw_node_xgl3_t = struct raw_node_xgl3_s
 {
   int32_t x, y;         // starting point
   int32_t dx, dy;       // offset to ending point
@@ -956,13 +956,13 @@ static_assert(sizeof(raw_seg_vanilla_t) == 12, "Size mismatch for 'raw_seg_vanil
 static_assert(sizeof(raw_node_deepbspv4_t) == 32, "Size mismatch for 'raw_node_deepbspv4_t'. Should be 32.");
 static_assert(sizeof(raw_subsec_deepbspv4_t) == 6, "Size mismatch for 'raw_subsec_deepbspv4_t'. Should be 6.");
 static_assert(sizeof(raw_seg_deepbspv4_t) == 16, "Size mismatch for 'raw_seg_deepbspv4_t'. Should be 16.");
-static_assert(sizeof(raw_xnod_vertex_t) == 8, "Size mismatch for 'raw_xnod_vertex_t'. Should be 8.");
-static_assert(sizeof(raw_xnod_node_t) == 32, "Size mismatch for 'raw_xnod_node_t'. Should be 32.");
-static_assert(sizeof(raw_xnod_subsec_t) == 4, "Size mismatch for 'raw_xnod_subsec_t'. Should be 4.");
-static_assert(sizeof(raw_xnod_seg_t) == 11, "Size mismatch for 'raw_xnod_seg_t'. Should be 11.");
-static_assert(sizeof(raw_xgln_seg_t) == 11, "Size mismatch for 'raw_xgln_seg_t'. Should be 11.");
-static_assert(sizeof(raw_xgl2_seg_t) == 13, "Size mismatch for 'raw_xgl2_seg_t'. Should be 13.");
-static_assert(sizeof(raw_xgl3_node_t) == 40, "Size mismatch for 'raw_xgl3_node_t'. Should be 40.");
+static_assert(sizeof(raw_vertex_xnod_t) == 8, "Size mismatch for 'raw_vertex_xnod_t'. Should be 8.");
+static_assert(sizeof(raw_node_xnod_t) == 32, "Size mismatch for 'raw_node_xnod_t'. Should be 32.");
+static_assert(sizeof(raw_subsec_xnod_t) == 4, "Size mismatch for 'raw_subsec_xnod_t'. Should be 4.");
+static_assert(sizeof(raw_seg_xnod_t) == 11, "Size mismatch for 'raw_seg_xnod_t'. Should be 11.");
+static_assert(sizeof(raw_seg_xgln_t) == 11, "Size mismatch for 'raw_seg_xgln_t'. Should be 11.");
+static_assert(sizeof(raw_seg_xgl2_t) == 13, "Size mismatch for 'raw_seg_xgl2_t'. Should be 13.");
+static_assert(sizeof(raw_node_xgl3_t) == 40, "Size mismatch for 'raw_node_xgl3_t'. Should be 40.");
 static_assert(sizeof(raw_patchdef_t) == 10, "Size mismatch for 'raw_patchdef_t'. Should be 10.");
 static_assert(sizeof(raw_strife_patchdef_t) == 6, "Size mismatch for 'raw_strife_patchdef_t'. Should be 6.");
 static_assert(sizeof(raw_texture_t) == 32, "Size mismatch for 'raw_texture_t'. Should be 32.");
