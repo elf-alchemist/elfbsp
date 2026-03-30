@@ -1545,7 +1545,7 @@ struct buildinfo_s
   size_t total_warnings = 0;
   uint32_t debug = DEBUG_NONE;
 
-  bsp_type_t bsp_type = bsp_type_t::BSP_VANILLA;
+  bsp_type_t bsp_type = bsp_type_t::BSP_XNOD;
   bool fast = false;     // use a faster method to pick nodes
   bool backup = false;   // keep a copy of the WAD
   bool analysis = false; // write out CSV for data analysis and visualization
@@ -1587,14 +1587,6 @@ constexpr const char PRINT_HELP[] = "\n"
                                     "    -f --fast          Faster partition selection\n"
                                     "    -m --map   XXXX    Control which map(s) are built\n"
                                     "    -c --cost  ##      Cost assigned to seg splits (1-32)\n"
-                                    "\n"
-                                    "    -t --type          Force specific BSP format\n"
-                                    "       0 -> vanilla (default)\n"
-                                    "       1 -> DeePBSPV4\n"
-                                    "       2 -> XNOD\n"
-                                    "       3 -> XGLN\n"
-                                    "       4 -> XGL2\n"
-                                    "       5 -> XGL3\n"
                                     "\n"
                                     "Short options may be mixed, for example: -fbv\n"
                                     "Long options must always begin with a double hyphen\n"
