@@ -317,9 +317,7 @@ static void PutNodes_Vanilla(node_t *root_node)
 
 static void PutLeafs_Vanilla(void)
 {
-  size_t max_size = (lev_subsecs.size() * sizeof(uint16_t)) + (lev_segs.size() * sizeof(raw_leaf_vanilla_t));
-
-  Lump_c *lump = CreateLevelLump("LEAFS", max_size);
+  Lump_c *lump = CreateLevelLump("LEAFS");
 
   for (size_t i = 0; i < lev_subsecs.size(); i++)
   {
@@ -328,6 +326,11 @@ static void PutLeafs_Vanilla(void)
     size_t seg_count = subsec->seg_count;
 
     lump->Write(&seg_count, sizeof(uint16_t));
+
+    if (HAS_BIT(config.debug, DEBUG_BSP))
+    {
+      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] Segs: %zu", __func__, i, seg_count);
+    }
 
     for (size_t j = 0; j < seg_count; j++)
     {
@@ -341,7 +344,7 @@ static void PutLeafs_Vanilla(void)
 
       if (HAS_BIT(config.debug, DEBUG_BSP))
       {
-        PrintLine(LOG_DEBUG, "[%s] Subsector[%zu]  Segment = %hu  Vertex = %hu", __func__, subsec->index, raw.seg, raw.vertex);
+        PrintLine(LOG_DEBUG, "[%s] Segment = %hu Vertex = %hu", __func__, raw.seg, raw.vertex);
       }
     }
   }
@@ -502,9 +505,7 @@ static void PutNodes_DeePBSPV4(node_t *root_node)
 
 static void PutLeafs_DeePBSPV4(void)
 {
-  size_t max_size = (lev_subsecs.size() * sizeof(uint32_t)) + (lev_segs.size() * sizeof(raw_leaf_deepbspv4_t));
-
-  Lump_c *lump = CreateLevelLump("LEAFS", max_size);
+  Lump_c *lump = CreateLevelLump("LEAFS");
 
   for (size_t i = 0; i < lev_subsecs.size(); i++)
   {
@@ -513,6 +514,11 @@ static void PutLeafs_DeePBSPV4(void)
     size_t seg_count = subsec->seg_count;
 
     lump->Write(&seg_count, sizeof(uint32_t));
+
+    if (HAS_BIT(config.debug, DEBUG_BSP))
+    {
+      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] Segs: %zu", __func__, i, seg_count);
+    }
 
     for (size_t j = 0; j < seg_count; j++)
     {
@@ -526,7 +532,7 @@ static void PutLeafs_DeePBSPV4(void)
 
       if (HAS_BIT(config.debug, DEBUG_BSP))
       {
-        PrintLine(LOG_DEBUG, "[%s] Subsector[%zu]  Segment = %u  Vertex = %u", __func__, subsec->index, raw.seg, raw.vertex);
+        PrintLine(LOG_DEBUG, "[%s] Segment = %u Vertex = %u", __func__, raw.seg, raw.vertex);
       }
     }
   }
