@@ -135,33 +135,22 @@ static void PutVertices_Doom64(void)
   size_t size = lev_vertices.size() * sizeof(raw_vertex_doom64_t);
   Lump_c *lump = CreateLevelLump("VERTEXES", size);
 
-  size_t count = 0;
   for (size_t i = 0; i < lev_vertices.size(); i++)
   {
     raw_vertex_doom64_t raw;
 
     const vertex_t *vert = lev_vertices[i];
 
-    // see: RoundOffVertices()
-    if (vert->is_new)
-    {
-      continue;
-    }
+    // do not ignore vertex_t::is_new
+    // it is required for leafs
 
     raw.x = GetLittleEndian(static_cast<fixed_t>(floor(vert->x * FRACFACTOR)));
     raw.y = GetLittleEndian(static_cast<fixed_t>(floor(vert->y * FRACFACTOR)));
 
     lump->Write(&raw, sizeof(raw_vertex_doom64_t));
-
-    count++;
   }
 
   lump->Finish();
-
-  if (count != num_old_vert)
-  {
-    PrintLine(LOG_ERROR, "PutVertices miscounted (%zu != %zu)", count, num_old_vert);
-  }
 }
 
 //
@@ -318,6 +307,7 @@ static void PutNodes_Vanilla(node_t *root_node)
 static void PutLeafs_Vanilla(void)
 {
   Lump_c *lump = CreateLevelLump("LEAFS");
+  uint16_t actual_seg_index = 0;
 
   for (size_t i = 0; i < lev_subsecs.size(); i++)
   {
@@ -329,17 +319,34 @@ static void PutLeafs_Vanilla(void)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] Segs: %zu", __func__, i, seg_count);
+      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] Leafs: %zu", __func__, i, seg_count);
+    }
+
+    if (seg_count < 3)
+    {
+      PrintLine(LOG_ERROR, "[%s] Subsector[%zu] has fewer than 3 leafs", __func__, i);
     }
 
     for (size_t j = 0; j < seg_count; j++)
     {
+      // Do not remove minisegs from tree before
+      // we are able to write all this
       raw_leaf_vanilla_t raw;
-      raw.vertex = GetLittleEndian(static_cast<uint16_t>(seg->start->index));
-      raw.seg = GetLittleEndian(static_cast<uint16_t>(seg->index));
+      vertex_t *vert = seg->start;
+
+      raw.vertex = GetLittleEndian(static_cast<uint16_t>(vert->index));
+      // if (seg->linedef)
+      if (seg->linedef && !vert->is_new)
+      {
+        raw.seg = GetLittleEndian(actual_seg_index);
+        actual_seg_index++;
+      }
+      else
+      {
+        raw.seg = NO_INDEX_INT16;
+      }
 
       lump->Write(&raw, sizeof(raw));
-
       seg = seg->next;
 
       if (HAS_BIT(config.debug, DEBUG_BSP))
@@ -506,6 +513,7 @@ static void PutNodes_DeePBSPV4(node_t *root_node)
 static void PutLeafs_DeePBSPV4(void)
 {
   Lump_c *lump = CreateLevelLump("LEAFS");
+  uint32_t actual_seg_index = 0;
 
   for (size_t i = 0; i < lev_subsecs.size(); i++)
   {
@@ -517,17 +525,33 @@ static void PutLeafs_DeePBSPV4(void)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] Segs: %zu", __func__, i, seg_count);
+      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] Leafs: %zu", __func__, i, seg_count);
+    }
+
+    if (seg_count < 3)
+    {
+      PrintLine(LOG_ERROR, "[%s] Subsector[%zu] has fewer than 3 leafs", __func__, i);
     }
 
     for (size_t j = 0; j < seg_count; j++)
     {
+      // Do not remove minisegs from tree before
+      // we are able to write all this
       raw_leaf_deepbspv4_t raw;
-      raw.vertex = GetLittleEndian(static_cast<uint32_t>(seg->start->index));
-      raw.seg = GetLittleEndian(static_cast<uint32_t>(seg->index));
+      vertex_t *vert = seg->start;
+
+      raw.vertex = GetLittleEndian(static_cast<uint16_t>(vert->index));
+      if (seg->linedef && !vert->is_new)
+      {
+        raw.seg = GetLittleEndian(actual_seg_index);
+        actual_seg_index++;
+      }
+      else
+      {
+        raw.seg = NO_INDEX_INT32;
+      }
 
       lump->Write(&raw, sizeof(raw));
-
       seg = seg->next;
 
       if (HAS_BIT(config.debug, DEBUG_BSP))
@@ -1018,30 +1042,28 @@ void SaveDoom_XGL3(node_t *root_node)
 
 void SaveDoom64_Vanilla(node_t *root_node)
 {
+  // We need minisegs just for leafs
+  PutLeafs_Vanilla();
   // remove all the minisegs from subsectors
   NormaliseBspTree();
-  // Do not call RoundOffSubsector, as we are actually using fractional coordinates
-  RoundOffVertices();
   SortSegs();
   PutVertices_Doom64();
   PutSegs_Vanilla();
   PutSubsecs_Vanilla();
   PutNodes_Vanilla(root_node);
-  PutLeafs_Vanilla();
 }
 
 void SaveDoom64_DeePBSPV4(node_t *root_node)
 {
+  // We need minisegs just for leafs
+  PutLeafs_DeePBSPV4();
   // remove all the minisegs from subsectors
   NormaliseBspTree();
-  // Do not call RoundOffSubsector, as we are actually using fractional coordinates
-  RoundOffVertices();
   SortSegs();
   PutVertices_Doom64();
   PutSegs_DeePBSPV4();
   PutSubsecs_DeePBSPV4();
   PutNodes_DeePBSPV4(root_node);
-  PutLeafs_DeePBSPV4();
 }
 
 //

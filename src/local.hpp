@@ -205,9 +205,7 @@ struct seg_t
   size_t index = NO_INDEX;
 
   // when true, this seg has become zero length (integer rounding of the
-  // start and end vertices produces the same location).  It should be
-  // ignored when writing the SEGS or V1 GL_SEGS lumps.  [Note: there
-  // won't be any of these when writing the V2 GL_SEGS lump].
+  // start and end vertices produces the same location).
   bool is_degenerate;
 
   // the quad-tree node that contains this seg, or nullptr if the seg
@@ -311,8 +309,7 @@ struct node_t
   child_t r;
   child_t l;
 
-  // node index.  Only valid once the NODES or GL_NODES lump has been
-  // created.
+  // node index.  Only valid once the NODES lump has been created.
   size_t index;
 };
 

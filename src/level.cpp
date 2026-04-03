@@ -2201,11 +2201,11 @@ build_result_e SaveLevelBinaryFormat(node_t *root_node)
       SaveDoom64_Vanilla(root_node);
       break;
     default:
-      PrintLine(LOG_ERROR, "ERROR: Tried to write unsupported format #%d on Doom64 map format", level_type);
+      PrintLine(LOG_ERROR, "ERROR: Tried to write unsupported BSP format #%d on Doom64 map format", level_type);
       break;
     }
   }
-  else
+  else // MapFormat_Doom or MapFormat_Hexen
   {
     switch (level_type)
     {
