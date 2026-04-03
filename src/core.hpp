@@ -708,21 +708,12 @@ using raw_thing_hexen_t = struct raw_thing_hexen_s
 // Some are shared with PSX Doom's and PSX Final Doom's formats
 // but we don't support those
 
-// See https://doomwiki.org/wiki/Vertices#PlayStation_/_Doom_64_format
 using raw_vertex_doom64_t = struct raw_vertex_doom64_s
 {
   fixed_t x;
   fixed_t y;
 } PACKEDATTR;
 
-// See https://doomwiki.org/wiki/LEAFS
-using raw_leafs_t = struct raw_leafs_s
-{
-  uint16_t vertex;
-  uint16_t seg;
-} PACKEDATTR;
-
-// See https://doomwiki.org/wiki/Thing#Doom_64_format
 using raw_thing_doom64_t = struct raw_thing_doom64_s
 {
   int16_t x;        // x position of thing
@@ -733,7 +724,6 @@ using raw_thing_doom64_t = struct raw_thing_doom64_s
   uint16_t options; // when appears, deaf, etc..
 } PACKEDATTR;
 
-// See https://doomwiki.org/wiki/Linedef#Doom_64_format
 using raw_linedef_doom64_t = struct raw_linedef_doom64_s
 {
   uint16_t start;   // from this vertex...
@@ -745,7 +735,6 @@ using raw_linedef_doom64_t = struct raw_linedef_doom64_s
   uint16_t left;    // left sidedef (only if this line adjoins 2 sectors)
 } PACKEDATTR;
 
-// See https://doomwiki.org/wiki/Sidedef#Doom_64_format
 using raw_sidedef_doom64_t = struct raw_sidedef_doom64_s
 {
   int16_t x_offset;   // X offset for texture
@@ -756,7 +745,6 @@ using raw_sidedef_doom64_t = struct raw_sidedef_doom64_s
   uint16_t sector;    // adjacent sector
 } PACKEDATTR;
 
-// See: https://doomwiki.org/wiki/Sector#Doom_64_format
 using raw_sector_doom64_t = struct raw_sector_doom64_s
 {
   int16_t floorh;     // floor height
@@ -802,7 +790,7 @@ constexpr uint32_t NF_SUBSECTOR = UINT32_C(0x80000000);
 
 //
 // Binary format upper bounds.
-// Some of these, namely the BSP tree indexes, are addressed by using later formats, such as DeepBSPV4, etc
+// Some of these, namely the BSP tree indexes, are addressed by using later formats, such as DeePBSPV4, etc
 //
 // * No known ports seem to reserve 0xFFFF for vertices
 // * The linedef index 0xFFFF is reserved for minisegs in XGLN/XGL2/XGL3 nodes
@@ -866,6 +854,12 @@ using raw_seg_vanilla_t = struct raw_seg_vanilla_s
   int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
+using raw_leaf_vanilla_t = struct raw_leaf_vanilla_s
+{
+  uint16_t vertex;
+  uint16_t seg;
+} PACKEDATTR;
+
 //
 // DeepSea BSP
 // * compared to vanilla, some types were raise to 32bit
@@ -892,6 +886,12 @@ using raw_seg_deepbspv4_t = struct raw_seg_deepbspv4_s
   uint16_t linedef; // linedef that this seg goes along
   uint16_t flip;    // true if not the same direction as linedef
   int16_t dist;     // distance from starting point
+} PACKEDATTR;
+
+using raw_leaf_deepbspv4_t = struct raw_leaf_deepbspv4_s
+{
+  uint32_t vertex;
+  uint32_t seg;
 } PACKEDATTR;
 
 //

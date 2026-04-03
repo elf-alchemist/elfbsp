@@ -543,13 +543,13 @@ void RoundOffVertices(void);
 void RoundOffBspTree(void);
 
 void SaveDoom_Vanilla(node_t *root_node);
-void SaveDoom_DeepBSPV4(node_t *root_node);
+void SaveDoom_DeePBSPV4(node_t *root_node);
 void SaveDoom_XNOD(node_t *root_node);
 void SaveDoom_XGLN(node_t *root_node);
 void SaveDoom_XGL2(node_t *root_node);
 void SaveDoom_XGL3(node_t *root_node);
 
 void SaveDoom64_Vanilla(node_t *root_node);
-void SaveDoom64_DeepBSPV4(node_t *root_node);
+void SaveDoom64_DeePBSPV4(node_t *root_node);
 
 void SaveTextmap_ZNODES(node_t *root_node);

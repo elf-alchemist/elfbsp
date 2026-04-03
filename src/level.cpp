@@ -2050,7 +2050,7 @@ bsp_type_t CheckFormatBSP(buildinfo_t &ctx, map_format_t map_format)
        || lev_subsecs.size() > LIMIT_SUBSEC //
        || lev_segs.size() > LIMIT_SEG))     //
   {
-    PrintLine(LOG_NORMAL, "WARNING: BSP overflow. Forcing DeepBSPV4 node format.");
+    PrintLine(LOG_NORMAL, "WARNING: BSP overflow. Forcing DeePBSPV4 node format.");
     config.total_warnings++;
     level_type = BSP_DEEPBSPV4;
   }
@@ -2195,7 +2195,7 @@ build_result_e SaveLevelBinaryFormat(node_t *root_node)
     switch (level_type)
     {
     case BSP_DEEPBSPV4:
-      SaveDoom_DeepBSPV4(root_node);
+      SaveDoom_DeePBSPV4(root_node);
       break;
     case BSP_VANILLA:
       SaveDoom64_Vanilla(root_node);
@@ -2222,7 +2222,7 @@ build_result_e SaveLevelBinaryFormat(node_t *root_node)
       SaveDoom_XNOD(root_node);
       break;
     case BSP_DEEPBSPV4:
-      SaveDoom_DeepBSPV4(root_node);
+      SaveDoom_DeePBSPV4(root_node);
       break;
     case BSP_VANILLA:
       SaveDoom_Vanilla(root_node);

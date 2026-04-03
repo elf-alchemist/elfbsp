@@ -19,8 +19,8 @@
 * `2006-11-05` — Kaiser publishes the "Console Doom hacking project" thread, with the first description of the LEAFS lump [^console-leafs]
 * `2009-03-17` — Randi adds ZGL2 (with 32bit sidedef indexes to address large UDMF maps) to ZDoom/ZDBSP [^zdoom-zgl2]
 * `2010-04-12` — Sunder's development unearths the DeePBSPV4 format and triggers a discussion for its wider adoption [^sunder-deepbspv4] as well as the issues of the compressed ZDoom nodes
-* `2010-04-15` — Andrey Budko adds DeepBSPV4 node support to PrBoom+ [^prboom-deepbspv4]
-* `2010-04-17` — Graf adds DeepBSPV4 node support to ZDoom [^zdoom-deepbspv4]
+* `2010-04-15` — Andrey Budko adds DeePBSPV4 node support to PrBoom+ [^prboom-deepbspv4]
+* `2010-04-17` — Graf adds DeePBSPV4 node support to ZDoom [^zdoom-deepbspv4]
 * `2010-04-17` — Graf adds the uncompressed versions, XNOD, XGLN and XGL2, to ZDoom/ZDBSP [^zdoom-xnod-xgln]
 * `2010-04-18` — Andrey Budko adds support for XNOD [^prboom-xnod]
 * `2012-12-07` — Randi adds ZGL3 and XGL3 to ZDoom/ZDBSP, addressing coordinate precision on BSP nodes [^zdoom-xgl3-zgl3]

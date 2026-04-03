@@ -164,16 +164,6 @@ static void PutVertices_Doom64(void)
   }
 }
 
-static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
-{
-  if (v->is_new)
-  {
-    return static_cast<uint32_t>(num_old_vert + v->index);
-  }
-
-  return static_cast<uint32_t>(v->index);
-}
-
 //
 // Vanilla format
 //
@@ -325,11 +315,43 @@ static void PutNodes_Vanilla(node_t *root_node)
   }
 }
 
+static void PutLeafs_Vanilla(void)
+{
+  size_t max_size = (lev_subsecs.size() * sizeof(uint16_t)) + (lev_segs.size() * sizeof(raw_leaf_vanilla_t));
+
+  Lump_c *lump = CreateLevelLump("LEAFS", max_size);
+
+  for (size_t i = 0; i < lev_subsecs.size(); i++)
+  {
+    subsec_t *subsec = lev_subsecs[i];
+    seg_t *seg = subsec->seg_list;
+    size_t seg_count = subsec->seg_count;
+
+    lump->Write(&seg_count, sizeof(uint16_t));
+
+    for (size_t j = 0; j < seg_count; j++)
+    {
+      raw_leaf_vanilla_t raw;
+      raw.vertex = GetLittleEndian(static_cast<uint16_t>(seg->start->index));
+      raw.seg = GetLittleEndian(static_cast<uint16_t>(seg->index));
+
+      lump->Write(&raw, sizeof(raw));
+
+      seg = seg->next;
+
+      if (HAS_BIT(config.debug, DEBUG_BSP))
+      {
+        PrintLine(LOG_DEBUG, "[%s] Subsector[%zu]  Segment = %hu  Vertex = %hu", __func__, subsec->index, raw.seg, raw.vertex);
+      }
+    }
+  }
+}
+
 //
-// DeepBSPV4 format
+// DeePBSPV4 format
 //
 
-static void PutSegs_DeepBSPV4(void)
+static void PutSegs_DeePBSPV4(void)
 {
   // this size is worst-case scenario
   size_t size = lev_segs.size() * sizeof(raw_seg_deepbspv4_t);
@@ -361,7 +383,7 @@ static void PutSegs_DeepBSPV4(void)
   lump->Finish();
 }
 
-static void PutSubsecs_DeepBSPV4(void)
+static void PutSubsecs_DeePBSPV4(void)
 {
   size_t size = lev_subsecs.size() * sizeof(raw_subsec_deepbspv4_t);
 
@@ -388,16 +410,16 @@ static void PutSubsecs_DeepBSPV4(void)
   lump->Finish();
 }
 
-static void PutOneNode_DeepBSPV4(Lump_c *lump, node_t *node, size_t &node_cur_index)
+static void PutOneNode_DeePBSPV4(Lump_c *lump, node_t *node, size_t &node_cur_index)
 {
   if (node->r.node)
   {
-    PutOneNode_DeepBSPV4(lump, node->r.node, node_cur_index);
+    PutOneNode_DeePBSPV4(lump, node->r.node, node_cur_index);
   }
 
   if (node->l.node)
   {
-    PutOneNode_DeepBSPV4(lump, node->l.node, node_cur_index);
+    PutOneNode_DeePBSPV4(lump, node->l.node, node_cur_index);
   }
 
   node->index = node_cur_index++;
@@ -455,7 +477,7 @@ static void PutOneNode_DeepBSPV4(Lump_c *lump, node_t *node, size_t &node_cur_in
   }
 }
 
-static void PutNodes_DeepBSPV4(node_t *root_node)
+static void PutNodes_DeePBSPV4(node_t *root_node)
 {
   // this can be bigger than the actual size, but never smaller
   // 8 bytes for BSP_MAGIC_DEEPBSPV4 header
@@ -467,7 +489,7 @@ static void PutNodes_DeepBSPV4(node_t *root_node)
 
   if (root_node != nullptr)
   {
-    PutOneNode_DeepBSPV4(lump, root_node, node_cur_index);
+    PutOneNode_DeePBSPV4(lump, root_node, node_cur_index);
   }
 
   lump->Finish();
@@ -475,6 +497,38 @@ static void PutNodes_DeepBSPV4(node_t *root_node)
   if (node_cur_index != lev_nodes.size())
   {
     PrintLine(LOG_ERROR, "ERROR: PutNodes miscounted (%zu != %zu)", node_cur_index, lev_nodes.size());
+  }
+}
+
+static void PutLeafs_DeePBSPV4(void)
+{
+  size_t max_size = (lev_subsecs.size() * sizeof(uint32_t)) + (lev_segs.size() * sizeof(raw_leaf_deepbspv4_t));
+
+  Lump_c *lump = CreateLevelLump("LEAFS", max_size);
+
+  for (size_t i = 0; i < lev_subsecs.size(); i++)
+  {
+    subsec_t *subsec = lev_subsecs[i];
+    seg_t *seg = subsec->seg_list;
+    size_t seg_count = subsec->seg_count;
+
+    lump->Write(&seg_count, sizeof(uint32_t));
+
+    for (size_t j = 0; j < seg_count; j++)
+    {
+      raw_leaf_deepbspv4_t raw;
+      raw.vertex = GetLittleEndian(static_cast<uint32_t>(seg->start->index));
+      raw.seg = GetLittleEndian(static_cast<uint32_t>(seg->index));
+
+      lump->Write(&raw, sizeof(raw));
+
+      seg = seg->next;
+
+      if (HAS_BIT(config.debug, DEBUG_BSP))
+      {
+        PrintLine(LOG_DEBUG, "[%s] Subsector[%zu]  Segment = %u  Vertex = %u", __func__, subsec->index, raw.seg, raw.vertex);
+      }
+    }
   }
 }
 
@@ -514,6 +568,16 @@ static void PutVertices_Xnod(Lump_c *lump)
   {
     PrintLine(LOG_ERROR, "ERROR: PutZVertices miscounted (%zu != %zu)", count, num_new_vert);
   }
+}
+
+static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
+{
+  if (v->is_new)
+  {
+    return static_cast<uint32_t>(num_old_vert + v->index);
+  }
+
+  return static_cast<uint32_t>(v->index);
 }
 
 static void PutSubsecs_Xnod(Lump_c *lump)
@@ -844,7 +908,7 @@ void SaveDoom_Vanilla(node_t *root_node)
   PutNodes_Vanilla(root_node);
 }
 
-void SaveDoom_DeepBSPV4(node_t *root_node)
+void SaveDoom_DeePBSPV4(node_t *root_node)
 {
   // remove all the minisegs from subsectors
   NormaliseBspTree();
@@ -854,9 +918,9 @@ void SaveDoom_DeepBSPV4(node_t *root_node)
   RoundOffBspTree();
   SortSegs();
   PutVertices_Doom();
-  PutSegs_DeepBSPV4();
-  PutSubsecs_DeepBSPV4();
-  PutNodes_DeepBSPV4(root_node);
+  PutSegs_DeePBSPV4();
+  PutSubsecs_DeePBSPV4();
+  PutNodes_DeePBSPV4(root_node);
 }
 
 void SaveDoom_XNOD(node_t *root_node)
@@ -960,7 +1024,7 @@ void SaveDoom64_Vanilla(node_t *root_node)
   PutLeafs_Vanilla();
 }
 
-void SaveDoom64_DeepBSPV4(node_t *root_node)
+void SaveDoom64_DeePBSPV4(node_t *root_node)
 {
   // remove all the minisegs from subsectors
   NormaliseBspTree();
@@ -968,9 +1032,9 @@ void SaveDoom64_DeepBSPV4(node_t *root_node)
   RoundOffVertices();
   SortSegs();
   PutVertices_Doom64();
-  PutSegs_DeepBSPV4();
-  PutSubsecs_DeepBSPV4();
-  PutNodes_DeepBSPV4(root_node);
+  PutSegs_DeePBSPV4();
+  PutSubsecs_DeePBSPV4();
+  PutNodes_DeePBSPV4(root_node);
   PutLeafs_DeePBSPV4();
 }
 
