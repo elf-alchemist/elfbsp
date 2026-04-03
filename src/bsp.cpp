@@ -71,7 +71,7 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
 
   double angle = ComputeAngle(dx, dy);
 
-  auto result = static_cast<short_angle_t>(floor(angle * 65536.0 / 360.0 + 0.5));
+  auto result = static_cast<short_angle_t>(floor(angle * FRACFACTOR / 360.0 + 0.5));
 
   switch (seg->linedef->angle)
   {
@@ -94,7 +94,7 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
   return result;
 }
 
-static void PutVertices_Normal(void)
+static void PutVertices_Doom(void)
 {
   // this size is worst-case scenario
   size_t size = lev_vertices.size() * sizeof(raw_vertex_t);
@@ -129,16 +129,16 @@ static void PutVertices_Normal(void)
   }
 }
 
-static void PutVertices_Fractional(void)
+static void PutVertices_Doom64(void)
 {
   // this size is worst-case scenario
-  size_t size = lev_vertices.size() * sizeof(raw_vertex_fixed_t);
+  size_t size = lev_vertices.size() * sizeof(raw_vertex_doom64_t);
   Lump_c *lump = CreateLevelLump("VERTEXES", size);
 
   size_t count = 0;
   for (size_t i = 0; i < lev_vertices.size(); i++)
   {
-    raw_vertex_fixed_t raw;
+    raw_vertex_doom64_t raw;
 
     const vertex_t *vert = lev_vertices[i];
 
@@ -151,7 +151,7 @@ static void PutVertices_Fractional(void)
     raw.x = GetLittleEndian(static_cast<fixed_t>(floor(vert->x * FRACFACTOR)));
     raw.y = GetLittleEndian(static_cast<fixed_t>(floor(vert->y * FRACFACTOR)));
 
-    lump->Write(&raw, sizeof(raw_vertex_fixed_t));
+    lump->Write(&raw, sizeof(raw_vertex_doom64_t));
 
     count++;
   }
@@ -502,8 +502,8 @@ static void PutVertices_Xnod(Lump_c *lump)
       continue;
     }
 
-    raw.x = GetLittleEndian(static_cast<int32_t>(floor(vert->x * 65536.0)));
-    raw.y = GetLittleEndian(static_cast<int32_t>(floor(vert->y * 65536.0)));
+    raw.x = GetLittleEndian(static_cast<int32_t>(floor(vert->x * FRACFACTOR)));
+    raw.y = GetLittleEndian(static_cast<int32_t>(floor(vert->y * FRACFACTOR)));
 
     lump->Write(&raw, sizeof(raw_vertex_xnod_t));
 
@@ -758,10 +758,10 @@ static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
 
   node->index = node_cur_index++;
 
-  raw.x = GetLittleEndian(static_cast<int32_t>(floor(node->x * 65536.0)));
-  raw.y = GetLittleEndian(static_cast<int32_t>(floor(node->y * 65536.0)));
-  raw.dx = GetLittleEndian(static_cast<int32_t>(floor(node->dx * 65536.0)));
-  raw.dy = GetLittleEndian(static_cast<int32_t>(floor(node->dy * 65536.0)));
+  raw.x = GetLittleEndian(static_cast<int32_t>(floor(node->x * FRACFACTOR)));
+  raw.y = GetLittleEndian(static_cast<int32_t>(floor(node->y * FRACFACTOR)));
+  raw.dx = GetLittleEndian(static_cast<int32_t>(floor(node->dx * FRACFACTOR)));
+  raw.dy = GetLittleEndian(static_cast<int32_t>(floor(node->dy * FRACFACTOR)));
 
   raw.b1.minx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.minx));
   raw.b1.miny = GetLittleEndian(static_cast<int16_t>(node->r.bounds.miny));
@@ -838,7 +838,7 @@ void SaveDoom_Vanilla(node_t *root_node)
   // are removed from subsectors.
   RoundOffBspTree();
   SortSegs();
-  PutVertices_Normal();
+  PutVertices_Doom();
   PutSegs_Vanilla();
   PutSubsecs_Vanilla();
   PutNodes_Vanilla(root_node);
@@ -853,7 +853,7 @@ void SaveDoom_DeepBSPV4(node_t *root_node)
   // are removed from subsectors.
   RoundOffBspTree();
   SortSegs();
-  PutVertices_Normal();
+  PutVertices_Doom();
   PutSegs_DeepBSPV4();
   PutSubsecs_DeepBSPV4();
   PutNodes_DeepBSPV4(root_node);
@@ -953,10 +953,11 @@ void SaveDoom64_Vanilla(node_t *root_node)
   // Do not call RoundOffSubsector, as we are actually using fractional coordinates
   RoundOffVertices();
   SortSegs();
-  PutVertices_Normal();
+  PutVertices_Doom64();
   PutSegs_Vanilla();
   PutSubsecs_Vanilla();
   PutNodes_Vanilla(root_node);
+  PutLeafs_Vanilla();
 }
 
 void SaveDoom64_DeepBSPV4(node_t *root_node)
@@ -966,10 +967,11 @@ void SaveDoom64_DeepBSPV4(node_t *root_node)
   // Do not call RoundOffSubsector, as we are actually using fractional coordinates
   RoundOffVertices();
   SortSegs();
-  PutVertices_Normal();
+  PutVertices_Doom64();
   PutSegs_DeepBSPV4();
   PutSubsecs_DeepBSPV4();
   PutNodes_DeepBSPV4(root_node);
+  PutLeafs_DeePBSPV4();
 }
 
 //

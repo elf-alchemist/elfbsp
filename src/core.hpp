@@ -638,12 +638,6 @@ using raw_vertex_t = struct raw_vertex_s
   int16_t y;
 } PACKEDATTR;
 
-using raw_vertex_fixed_t = struct raw_vertex_fixed_s
-{
-  fixed_t x;
-  fixed_t y;
-} PACKEDATTR;
-
 using raw_linedef_doom_t = struct raw_linedef_doom_s
 {
   uint16_t start;   // from this vertex...
@@ -714,6 +708,13 @@ using raw_thing_hexen_t = struct raw_thing_hexen_s
 // Some are shared with PSX Doom's and PSX Final Doom's formats
 // but we don't support those
 
+// See https://doomwiki.org/wiki/Vertices#PlayStation_/_Doom_64_format
+using raw_vertex_doom64_t = struct raw_vertex_doom64_s
+{
+  fixed_t x;
+  fixed_t y;
+} PACKEDATTR;
+
 // See https://doomwiki.org/wiki/LEAFS
 using raw_leafs_t = struct raw_leafs_s
 {
@@ -721,6 +722,7 @@ using raw_leafs_t = struct raw_leafs_s
   uint16_t seg;
 } PACKEDATTR;
 
+// See https://doomwiki.org/wiki/Thing#Doom_64_format
 using raw_thing_doom64_t = struct raw_thing_doom64_s
 {
   int16_t x;        // x position of thing

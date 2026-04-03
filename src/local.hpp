@@ -432,7 +432,7 @@ static constexpr double IFFY_LEN = 4.0;
 static constexpr double DIST_EPSILON = (1.0 / 1024.0);
 
 // smallest distance between two points before being considered equal
-static constexpr double DIST_EPSILON_HI = (1.0 / 65536.0);
+static constexpr double DIST_EPSILON_HI = (1.0 / FRACFACTOR);
 
 // smallest degrees between two angles before being considered equal
 static constexpr double ANG_EPSILON = (1.0 / 1024.0);

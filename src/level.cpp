@@ -1046,7 +1046,7 @@ static inline sidedef_t *SafeLookupSidedef(uint16_t num)
   return lev_sidedefs[num];
 }
 
-static void GetVertices_Normal(void)
+static void GetVertices_Doom(void)
 {
   size_t count = 0;
 
@@ -1085,50 +1085,6 @@ static void GetVertices_Normal(void)
 
     vert->x = static_cast<double>(GetLittleEndian(raw.x));
     vert->y = static_cast<double>(GetLittleEndian(raw.y));
-  }
-
-  num_old_vert = lev_vertices.size();
-}
-
-static void GetVertices_Fractional(void)
-{
-  size_t count = 0;
-
-  Lump_c *lump = FindLevelLump("VERTEXES");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_vertex_fixed_t);
-  }
-
-  if (HAS_BIT(config.debug, DEBUG_LOAD))
-  {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
-  }
-
-  if (lump == nullptr || count == 0)
-  {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "Error seeking to 32bit vertices.");
-  }
-
-  for (size_t i = 0; i < count; i++)
-  {
-    raw_vertex_fixed_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "Error reading 32bit vertices.");
-    }
-
-    vertex_t *vert = NewVertex();
-
-    vert->x = static_cast<double>(GetLittleEndian(raw.x) / 65536.0);
-    vert->y = static_cast<double>(GetLittleEndian(raw.y) / 65536.0);
   }
 
   num_old_vert = lev_vertices.size();
@@ -1476,6 +1432,50 @@ static void GetLinedefs_Hexen(void)
   }
 }
 
+static void GetVertices_Doom64(void)
+{
+  size_t count = 0;
+
+  Lump_c *lump = FindLevelLump("VERTEXES");
+
+  if (lump)
+  {
+    count = lump->Length() / sizeof(raw_vertex_doom64_t);
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+  }
+
+  if (lump == nullptr || count == 0)
+  {
+    return;
+  }
+
+  if (!lump->Seek(0))
+  {
+    PrintLine(LOG_ERROR, "Error seeking to 32bit vertices.");
+  }
+
+  for (size_t i = 0; i < count; i++)
+  {
+    raw_vertex_doom64_t raw;
+
+    if (!lump->Read(&raw, sizeof(raw)))
+    {
+      PrintLine(LOG_ERROR, "Error reading 32bit vertices.");
+    }
+
+    vertex_t *vert = NewVertex();
+
+    vert->x = static_cast<double>(GetLittleEndian(raw.x) / FRACFACTOR);
+    vert->y = static_cast<double>(GetLittleEndian(raw.y) / FRACFACTOR);
+  }
+
+  num_old_vert = lev_vertices.size();
+}
+
 static void GetSectors_Doom64(void)
 {
   size_t count = 0;
@@ -1526,7 +1526,7 @@ static void GetSidedefs_Doom64(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_sidedef_doom_t);
+    count = lump->Length() / sizeof(raw_sidedef_doom64_t);
   }
 
   if (lump == nullptr || count == 0)
@@ -2074,7 +2074,7 @@ void LoadLevel(void)
   switch (lev_format)
   {
   case MapFormat_Doom:
-    GetVertices_Normal();
+    GetVertices_Doom();
     GetSectors_Doom();
     GetSidedefs_Doom();
     GetLinedefs_Doom();
@@ -2082,7 +2082,7 @@ void LoadLevel(void)
     PruneVerticesAtEnd();
     break;
   case MapFormat_Hexen:
-    GetVertices_Normal();
+    GetVertices_Doom();
     GetSectors_Doom();
     GetSidedefs_Doom();
     GetLinedefs_Hexen();
@@ -2090,7 +2090,7 @@ void LoadLevel(void)
     PruneVerticesAtEnd();
     break;
   case MapFormat_Doom64:
-    GetVertices_Fractional();
+    GetVertices_Doom64();
     GetSectors_Doom64();
     GetSidedefs_Doom64();
     GetLinedefs_Doom64();

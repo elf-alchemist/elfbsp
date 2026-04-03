@@ -250,6 +250,18 @@ static bool IsLevelLump(const char *name)
   {
     return true;
   }
+  if (StringCaseCmp(name, "LEAFS") == 0)
+  {
+    return true;
+  }
+  if (StringCaseCmp(name, "LIGHTS") == 0)
+  {
+    return true;
+  }
+  if (StringCaseCmp(name, "MACROS") == 0)
+  {
+    return true;
+  }
 
   return WhatLevelPart(name) != 0;
 }
