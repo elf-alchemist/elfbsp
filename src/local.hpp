@@ -539,7 +539,7 @@ void NormaliseBspTree(void);
 void RoundOffBspTree(void);
 
 void SaveBinaryFormat_Vanilla(node_t *root_node);
-void SaveBinaryFormat_DeepBSPV4(node_t *root_node);
+void SaveBinaryFormat_DeePBSPV4(node_t *root_node);
 void SaveBinaryFormat_XNOD(node_t *root_node);
 void SaveBinaryFormat_XGLN(node_t *root_node);
 void SaveBinaryFormat_XGL2(node_t *root_node);

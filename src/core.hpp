@@ -726,7 +726,7 @@ constexpr uint32_t NF_SUBSECTOR = UINT32_C(0x80000000);
 
 //
 // Binary format upper bounds.
-// Some of these, namely the BSP tree indexes, are addressed by using later formats, such as DeepBSPV4, etc
+// Some of these, namely the BSP tree indexes, are addressed by using later formats, such as DeePBSPV4, etc
 //
 // * No known ports seem to reserve 0xFFFF for vertices
 // * The linedef index 0xFFFF is reserved for minisegs in XGLN/XGL2/XGL3 nodes

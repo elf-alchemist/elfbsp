@@ -290,10 +290,10 @@ static void PutNodes_Vanilla(node_t *root_node)
 }
 
 //
-// DeepBSPV4 format
+// DeePBSPV4 format
 //
 
-static void PutSegs_DeepBSPV4(void)
+static void PutSegs_DeePBSPV4(void)
 {
   // this size is worst-case scenario
   size_t size = lev_segs.size() * sizeof(raw_seg_deepbspv4_t);
@@ -325,7 +325,7 @@ static void PutSegs_DeepBSPV4(void)
   lump->Finish();
 }
 
-static void PutSubsecs_DeepBSPV4(void)
+static void PutSubsecs_DeePBSPV4(void)
 {
   size_t size = lev_subsecs.size() * sizeof(raw_subsec_deepbspv4_t);
 
@@ -352,16 +352,16 @@ static void PutSubsecs_DeepBSPV4(void)
   lump->Finish();
 }
 
-static void PutOneNode_DeepBSPV4(Lump_c *lump, node_t *node, size_t &node_cur_index)
+static void PutOneNode_DeePBSPV4(Lump_c *lump, node_t *node, size_t &node_cur_index)
 {
   if (node->r.node)
   {
-    PutOneNode_DeepBSPV4(lump, node->r.node, node_cur_index);
+    PutOneNode_DeePBSPV4(lump, node->r.node, node_cur_index);
   }
 
   if (node->l.node)
   {
-    PutOneNode_DeepBSPV4(lump, node->l.node, node_cur_index);
+    PutOneNode_DeePBSPV4(lump, node->l.node, node_cur_index);
   }
 
   node->index = node_cur_index++;
@@ -419,7 +419,7 @@ static void PutOneNode_DeepBSPV4(Lump_c *lump, node_t *node, size_t &node_cur_in
   }
 }
 
-static void PutNodes_DeepBSPV4(node_t *root_node)
+static void PutNodes_DeePBSPV4(node_t *root_node)
 {
   // this can be bigger than the actual size, but never smaller
   // 8 bytes for BSP_MAGIC_DEEPBSPV4 header
@@ -431,7 +431,7 @@ static void PutNodes_DeepBSPV4(node_t *root_node)
 
   if (root_node != nullptr)
   {
-    PutOneNode_DeepBSPV4(lump, root_node, node_cur_index);
+    PutOneNode_DeePBSPV4(lump, root_node, node_cur_index);
   }
 
   lump->Finish();
@@ -808,7 +808,7 @@ void SaveBinaryFormat_Vanilla(node_t *root_node)
   PutNodes_Vanilla(root_node);
 }
 
-void SaveBinaryFormat_DeepBSPV4(node_t *root_node)
+void SaveBinaryFormat_DeePBSPV4(node_t *root_node)
 {
   // remove all the minisegs from subsectors
   NormaliseBspTree();
@@ -818,9 +818,9 @@ void SaveBinaryFormat_DeepBSPV4(node_t *root_node)
   RoundOffBspTree();
   SortSegs();
   PutVertices_Vanilla();
-  PutSegs_DeepBSPV4();
-  PutSubsecs_DeepBSPV4();
-  PutNodes_DeepBSPV4(root_node);
+  PutSegs_DeePBSPV4();
+  PutSubsecs_DeePBSPV4();
+  PutNodes_DeePBSPV4(root_node);
 }
 
 void SaveBinaryFormat_XNOD(node_t *root_node)
