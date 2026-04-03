@@ -2032,9 +2032,17 @@ static void CheckBinaryFormatLimits(void)
   }
 }
 
-bsp_type_t CheckFormatBSP(buildinfo_t &ctx)
+bsp_type_t CheckFormatBSP(buildinfo_t &ctx, map_format_t map_format)
 {
   bsp_type_t level_type = ctx.bsp_type;
+
+  if (map_format == MapFormat_Doom64)
+  {
+    // Clamp Doom64 maps to only vanilla and DeePBSPV4 formats.
+    // With support for fractional coordinates, it doesn't
+    // make sense for it to need to support XNOD, etc.
+    level_type = BSP_VANILLA;
+  }
 
   if (level_type == BSP_VANILLA &&          // always allow for a valid map to be produced
       (lev_vertices.size() > LIMIT_VERT     // even if it may not run on some older source ports
@@ -2047,7 +2055,7 @@ bsp_type_t CheckFormatBSP(buildinfo_t &ctx)
     level_type = BSP_DEEPBSPV4;
   }
 
-  return std::max(config.bsp_type, level_type);
+  return level_type;
 }
 
 /* ----- whole-level routines --------------------------- */
@@ -2157,7 +2165,7 @@ static void AddMissingLump(const char *name, const char *after)
   cur_wad->AddLump(name)->Finish();
 }
 
-build_result_e SaveBinaryFormatLevel(node_t *root_node)
+build_result_e SaveLevelBinaryFormat(node_t *root_node)
 {
   // Note: root_node may be nullptr
 
@@ -2171,31 +2179,55 @@ build_result_e SaveBinaryFormatLevel(node_t *root_node)
   AddMissingLump("REJECT", "SECTORS");
   AddMissingLump("BLOCKMAP", "REJECT");
 
+  // No need to add BEHAVIOR, LIGHTS or MACROS
+  if (lev_format == MapFormat_Doom64)
+  {
+    AddMissingLump("LEAFS", "BLOCKMAP");
+  }
+
   // check for overflows...
   CheckBinaryFormatLimits();
 
-  bsp_type_t level_type = CheckFormatBSP(config);
+  bsp_type_t level_type = CheckFormatBSP(config, lev_format);
 
-  switch (level_type)
+  if (lev_format == MapFormat_Doom64)
   {
-  case BSP_XGL3:
-    SaveBinaryFormat_XGL3(root_node);
-    break;
-  case BSP_XGL2:
-    SaveBinaryFormat_XGL2(root_node);
-    break;
-  case BSP_XGLN:
-    SaveBinaryFormat_XGLN(root_node);
-    break;
-  case BSP_XNOD:
-    SaveBinaryFormat_XNOD(root_node);
-    break;
-  case BSP_DEEPBSPV4:
-    SaveBinaryFormat_DeepBSPV4(root_node);
-    break;
-  case BSP_VANILLA:
-    SaveBinaryFormat_Vanilla(root_node);
-    break;
+    switch (level_type)
+    {
+    case BSP_DEEPBSPV4:
+      SaveDoom_DeepBSPV4(root_node);
+      break;
+    case BSP_VANILLA:
+      SaveDoom64_Vanilla(root_node);
+      break;
+    default:
+      PrintLine(LOG_ERROR, "ERROR: Tried to write unsupported format #%d on Doom64 map format", level_type);
+      break;
+    }
+  }
+  else
+  {
+    switch (level_type)
+    {
+    case BSP_XGL3:
+      SaveDoom_XGL3(root_node);
+      break;
+    case BSP_XGL2:
+      SaveDoom_XGL2(root_node);
+      break;
+    case BSP_XGLN:
+      SaveDoom_XGLN(root_node);
+      break;
+    case BSP_XNOD:
+      SaveDoom_XNOD(root_node);
+      break;
+    case BSP_DEEPBSPV4:
+      SaveDoom_DeepBSPV4(root_node);
+      break;
+    case BSP_VANILLA:
+      SaveDoom_Vanilla(root_node);
+      break;
+    }
   }
 
   PutBlockmap();
@@ -2214,7 +2246,7 @@ build_result_e SaveBinaryFormatLevel(node_t *root_node)
   return BUILD_OK;
 }
 
-build_result_e SaveTextMapLevel(node_t *root_node)
+build_result_e SaveLevelTextMap(node_t *root_node)
 {
   cur_wad->BeginWrite();
 
@@ -2390,10 +2422,11 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
   {
   case MapFormat_Doom:
   case MapFormat_Hexen:
-    ret = SaveBinaryFormatLevel(root_node);
+  case MapFormat_Doom64:
+    ret = SaveLevelBinaryFormat(root_node);
     break;
   case MapFormat_UDMF:
-    ret = SaveTextMapLevel(root_node);
+    ret = SaveLevelTextMap(root_node);
     break;
   default:
     break;

@@ -276,7 +276,7 @@ void DetermineMiddle(subsec_t *subsec);
 void ClockwiseOrder(subsec_t *subsec);
 void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index);
 
-void RoundOff(subsec_t *subsec);
+void RoundOffSubsector(subsec_t *subsec);
 void Normalise(subsec_t *subsec);
 
 void SanityCheckClosed(subsec_t *subsec);
@@ -533,16 +533,23 @@ void ClockwiseBspTree(void);
 // removing minisegs).
 void NormaliseBspTree(void);
 
+// Mark new vertices as old for writing into the VERTEXES lump
+// Needed for RoundOffBspTree and saving to Doom 64 map formats directly
+void RoundOffVertices(void);
+
 // traverse the BSP tree, doing whatever is necessary to round
 // vertices to integer coordinates (for example, removing segs whose
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree(void);
 
-void SaveBinaryFormat_Vanilla(node_t *root_node);
-void SaveBinaryFormat_DeepBSPV4(node_t *root_node);
-void SaveBinaryFormat_XNOD(node_t *root_node);
-void SaveBinaryFormat_XGLN(node_t *root_node);
-void SaveBinaryFormat_XGL2(node_t *root_node);
-void SaveBinaryFormat_XGL3(node_t *root_node);
+void SaveDoom_Vanilla(node_t *root_node);
+void SaveDoom_DeepBSPV4(node_t *root_node);
+void SaveDoom_XNOD(node_t *root_node);
+void SaveDoom_XGLN(node_t *root_node);
+void SaveDoom_XGL2(node_t *root_node);
+void SaveDoom_XGL3(node_t *root_node);
+
+void SaveDoom64_Vanilla(node_t *root_node);
+void SaveDoom64_DeepBSPV4(node_t *root_node);
 
 void SaveTextmap_ZNODES(node_t *root_node);

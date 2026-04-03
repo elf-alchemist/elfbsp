@@ -321,6 +321,8 @@ map_format_e Wad_file::LevelFormat(size_t lev_num)
 {
   size_t start = LevelHeader(lev_num);
 
+  // UDMF maps can contain BEHAVIOR or MACROS
+  // check exclusively TEXTMAP
   if (start + 2 < NumLumps())
   {
     const char *name = GetLump(start + LL_TEXTMAP)->Name();
@@ -334,6 +336,11 @@ map_format_e Wad_file::LevelFormat(size_t lev_num)
   if (LevelLookupLump(lev_num, "BEHAVIOR") != NO_INDEX)
   {
     return MapFormat_Hexen;
+  }
+
+  if (LevelLookupLump(lev_num, "LIGHTS") != NO_INDEX && LevelLookupLump(lev_num, "MACROS") != NO_INDEX)
+  {
+    return MapFormat_Doom64;
   }
 
   return MapFormat_Doom;
@@ -967,13 +974,14 @@ size_t Wad_file::PositionForWrite(size_t max_size)
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] POSITION FOR WRITE: %zu  (total_size %zu)", __func__, static_cast<size_t>(want_pos), static_cast<size_t>(total_size));
+    PrintLine(LOG_DEBUG, "[%s] POSITION FOR WRITE: %zu  (total_size %zu)", __func__, static_cast<size_t>(want_pos),
+              static_cast<size_t>(total_size));
   }
 
   return static_cast<size_t>(want_pos);
 }
 
-bool Wad_file::FinishLump(size_t final_size)
+void Wad_file::FinishLump(size_t final_size)
 {
   fflush(fp);
 
@@ -991,7 +999,6 @@ bool Wad_file::FinishLump(size_t final_size)
   }
 
   fflush(fp);
-  return true;
 }
 
 size_t Wad_file::WritePadding(size_t count)

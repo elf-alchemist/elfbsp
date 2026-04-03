@@ -1811,7 +1811,7 @@ void RoundOffVertices(void)
   }
 }
 
-void RoundOff(subsec_t *subsec)
+void RoundOffSubsector(subsec_t *subsec)
 {
   // use head + tail to maintain same order of segs
   seg_t *new_head = nullptr;
@@ -1940,7 +1940,7 @@ void RoundOffBspTree(void)
   {
     subsec_t *sub = lev_subsecs[i];
 
-    RoundOff(sub);
+    RoundOffSubsector(sub);
     RenumberSegs(sub, cur_seg_index);
   }
 }

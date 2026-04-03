@@ -107,6 +107,7 @@ static void PutVertices_Normal(void)
 
     const vertex_t *vert = lev_vertices[i];
 
+    // see: RoundOffVertices()
     if (vert->is_new)
     {
       continue;
@@ -141,13 +142,14 @@ static void PutVertices_Fractional(void)
 
     const vertex_t *vert = lev_vertices[i];
 
+    // see: RoundOffVertices()
     if (vert->is_new)
     {
       continue;
     }
 
-    raw.x = GetLittleEndian(static_cast<int16_t>(floor(vert->x)));
-    raw.y = GetLittleEndian(static_cast<int16_t>(floor(vert->y)));
+    raw.x = GetLittleEndian(static_cast<fixed_t>(floor(vert->x * FRACFACTOR)));
+    raw.y = GetLittleEndian(static_cast<fixed_t>(floor(vert->y * FRACFACTOR)));
 
     lump->Write(&raw, sizeof(raw_vertex_fixed_t));
 
@@ -827,7 +829,7 @@ static void PutNodes_Xgl3(Lump_c *lump, node_t *root)
 // Lump writing procedures
 //
 
-void SaveBinaryFormat_Vanilla(node_t *root_node)
+void SaveDoom_Vanilla(node_t *root_node)
 {
   // remove all the minisegs from subsectors
   NormaliseBspTree();
@@ -842,7 +844,7 @@ void SaveBinaryFormat_Vanilla(node_t *root_node)
   PutNodes_Vanilla(root_node);
 }
 
-void SaveBinaryFormat_DeepBSPV4(node_t *root_node)
+void SaveDoom_DeepBSPV4(node_t *root_node)
 {
   // remove all the minisegs from subsectors
   NormaliseBspTree();
@@ -857,7 +859,7 @@ void SaveBinaryFormat_DeepBSPV4(node_t *root_node)
   PutNodes_DeepBSPV4(root_node);
 }
 
-void SaveBinaryFormat_XNOD(node_t *root_node)
+void SaveDoom_XNOD(node_t *root_node)
 {
   CreateLevelLump("SEGS")->Finish();
   CreateLevelLump("SSECTORS")->Finish();
@@ -876,7 +878,7 @@ void SaveBinaryFormat_XNOD(node_t *root_node)
   lump = nullptr;
 }
 
-void SaveBinaryFormat_XGLN(node_t *root_node)
+void SaveDoom_XGLN(node_t *root_node)
 {
   // leave SEGS empty
   CreateLevelLump("SEGS")->Finish();
@@ -897,7 +899,7 @@ void SaveBinaryFormat_XGLN(node_t *root_node)
   CreateLevelLump("NODES")->Finish();
 }
 
-void SaveBinaryFormat_XGL2(node_t *root_node)
+void SaveDoom_XGL2(node_t *root_node)
 {
   // leave SEGS empty
   CreateLevelLump("SEGS")->Finish();
@@ -918,7 +920,7 @@ void SaveBinaryFormat_XGL2(node_t *root_node)
   CreateLevelLump("NODES")->Finish();
 }
 
-void SaveBinaryFormat_XGL3(node_t *root_node)
+void SaveDoom_XGL3(node_t *root_node)
 {
   // leave SEGS empty
   CreateLevelLump("SEGS")->Finish();
@@ -939,8 +941,41 @@ void SaveBinaryFormat_XGL3(node_t *root_node)
   CreateLevelLump("NODES")->Finish();
 }
 
-// Unlike the binary map formats, UDMF has a tight requirement for fractional coordinates.
+//
+// Doom64 has some differences from Doom-format or Hexen-format
+// This could also be shared with PSX Doom and PSX Final Doom, but we don't support those
+//
+
+void SaveDoom64_Vanilla(node_t *root_node)
+{
+  // remove all the minisegs from subsectors
+  NormaliseBspTree();
+  // Do not call RoundOffSubsector, as we are actually using fractional coordinates
+  RoundOffVertices();
+  SortSegs();
+  PutVertices_Normal();
+  PutSegs_Vanilla();
+  PutSubsecs_Vanilla();
+  PutNodes_Vanilla(root_node);
+}
+
+void SaveDoom64_DeepBSPV4(node_t *root_node)
+{
+  // remove all the minisegs from subsectors
+  NormaliseBspTree();
+  // Do not call RoundOffSubsector, as we are actually using fractional coordinates
+  RoundOffVertices();
+  SortSegs();
+  PutVertices_Normal();
+  PutSegs_DeepBSPV4();
+  PutSubsecs_DeepBSPV4();
+  PutNodes_DeepBSPV4(root_node);
+}
+
+//
+// Unlike the the Doom and Hexen map formats, UDMF has a tight requirement for fractional coordinates.
 // Always use the latest high-precision BSP format we support.
+//
 void SaveTextmap_ZNODES(node_t *root_node)
 {
   SortSegs();

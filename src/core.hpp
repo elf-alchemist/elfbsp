@@ -626,8 +626,8 @@ using lump_order_t = enum lump_order_e
   D64_MACROS,                  // BLAM
   D64_SCRIPTS,                 // BLAM
 
-  LL_TEXTMAP = LL_LABEL + 1, // UDMF lump
-  LL_ENDMAP,                 // UDMF
+  LL_TEXTMAP = LL_LABEL + 1, // UDMF geometry
+  LL_ENDMAP,                 // UDMF end marker
 };
 
 static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
@@ -1463,7 +1463,7 @@ struct Wad_file
   // be no more than a few bytes).  Returns new position.
   size_t PositionForWrite(size_t max_size = NO_INDEX);
 
-  bool FinishLump(size_t final_size);
+  void FinishLump(size_t final_size);
   size_t WritePadding(size_t count);
 
   // write the new directory, updating the dir_xxx variables
@@ -1535,14 +1535,14 @@ struct Lump_c
   }
 
   // mark the lump as finished (after writing data to it).
-  bool Finish(void)
+  void Finish(void)
   {
     if (l_length == 0)
     {
       l_start = 0;
     }
 
-    return parent->FinishLump(l_length);
+    parent->FinishLump(l_length);
   }
 };
 
