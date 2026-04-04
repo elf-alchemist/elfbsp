@@ -1046,7 +1046,7 @@ static inline sidedef_t *SafeLookupSidedef(uint16_t num)
   return lev_sidedefs[num];
 }
 
-static void GetVertices_Binary(void)
+static void GetVertices_Doom(void)
 {
   size_t count = 0;
 
@@ -1090,7 +1090,7 @@ static void GetVertices_Binary(void)
   num_old_vert = lev_vertices.size();
 }
 
-static void GetSectors_Binary(void)
+static void GetSectors_Doom(void)
 {
   size_t count = 0;
 
@@ -1175,50 +1175,7 @@ static void GetThings_Doom(void)
   }
 }
 
-static void GetThings_Hexen(void)
-{
-  size_t count = 0;
-
-  Lump_c *lump = FindLevelLump("THINGS");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_thing_hexen_t);
-  }
-
-  if (lump == nullptr || count == 0)
-  {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "ERROR: Failure seeking to things.");
-  }
-
-  if (HAS_BIT(config.debug, DEBUG_LOAD))
-  {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
-  }
-
-  for (size_t i = 0; i < count; i++)
-  {
-    raw_thing_hexen_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "ERROR: Failure reading things.");
-    }
-
-    thing_t *thing = NewThing();
-
-    thing->x = GetLittleEndian(raw.x);
-    thing->y = GetLittleEndian(raw.y);
-    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
-  }
-}
-
-static void GetSidedefs_Binary(void)
+static void GetSidedefs_Doom(void)
 {
   size_t count = 0;
 
@@ -1359,6 +1316,49 @@ static void GetLinedefs_Doom(void)
     default:
       break;
     }
+  }
+}
+
+static void GetThings_Hexen(void)
+{
+  size_t count = 0;
+
+  Lump_c *lump = FindLevelLump("THINGS");
+
+  if (lump)
+  {
+    count = lump->Length() / sizeof(raw_thing_hexen_t);
+  }
+
+  if (lump == nullptr || count == 0)
+  {
+    return;
+  }
+
+  if (!lump->Seek(0))
+  {
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to things.");
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+  }
+
+  for (size_t i = 0; i < count; i++)
+  {
+    raw_thing_hexen_t raw;
+
+    if (!lump->Read(&raw, sizeof(raw)))
+    {
+      PrintLine(LOG_ERROR, "ERROR: Failure reading things.");
+    }
+
+    thing_t *thing = NewThing();
+
+    thing->x = GetLittleEndian(raw.x);
+    thing->y = GetLittleEndian(raw.y);
+    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
   }
 }
 
@@ -1822,7 +1822,7 @@ bsp_type_t CheckFormatBSP(buildinfo_t &ctx)
     level_type = BSP_DEEPBSPV4;
   }
 
-  return std::max(config.bsp_type, level_type);
+  return level_type;
 }
 
 /* ----- whole-level routines --------------------------- */
@@ -1833,33 +1833,34 @@ void LoadLevel(void)
 
   lev_overflows = false;
 
-  PrintLine(LOG_NORMAL, "%s", LEV->Name());
+  PrintLine(LOG_NORMAL, "[%s] Reading %s", __func__, LEV->Name());
 
   num_new_vert = 0;
   num_real_lines = 0;
 
   switch (lev_format)
   {
-  case MapFormat_UDMF:
-    ParseUDMF();
-    break;
   case MapFormat_Doom:
-    GetVertices_Binary();
-    GetSectors_Binary();
-    GetSidedefs_Binary();
+    GetVertices_Doom();
+    GetSectors_Doom();
+    GetSidedefs_Doom();
     GetLinedefs_Doom();
     GetThings_Doom();
     PruneVerticesAtEnd();
     break;
   case MapFormat_Hexen:
-    GetVertices_Binary();
-    GetSectors_Binary();
-    GetSidedefs_Binary();
+    GetVertices_Doom();
+    GetSectors_Doom();
+    GetSidedefs_Doom();
     GetLinedefs_Hexen();
     GetThings_Hexen();
     PruneVerticesAtEnd();
     break;
-  default:
+  case MapFormat_UDMF:
+    ParseUDMF();
+    break;
+  case MapFormat_INVALID:
+    PrintLine(LOG_ERROR, "[%s] Unknown level format on level %s", __func__, LEV->Name());
     break;
   }
 
@@ -1923,7 +1924,7 @@ static void AddMissingLump(const char *name, const char *after)
   cur_wad->AddLump(name)->Finish();
 }
 
-build_result_e SaveBinaryFormatLevel(node_t *root_node)
+build_result_e SaveLevelBinaryFormat(node_t *root_node)
 {
   // Note: root_node may be nullptr
 
@@ -1980,7 +1981,7 @@ build_result_e SaveBinaryFormatLevel(node_t *root_node)
   return BUILD_OK;
 }
 
-build_result_e SaveTextMapLevel(node_t *root_node)
+build_result_e SaveLevelTextMap(node_t *root_node)
 {
   cur_wad->BeginWrite();
 
@@ -2156,10 +2157,10 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
   {
   case MapFormat_Doom:
   case MapFormat_Hexen:
-    ret = SaveBinaryFormatLevel(root_node);
+    ret = SaveLevelBinaryFormat(root_node);
     break;
   case MapFormat_UDMF:
-    ret = SaveTextMapLevel(root_node);
+    ret = SaveLevelTextMap(root_node);
     break;
   default:
     break;

@@ -107,6 +107,7 @@ static void PutVertices_Vanilla(void)
 
     const vertex_t *vert = lev_vertices[i];
 
+    // see: RoundOffVertices()
     if (vert->is_new)
     {
       continue;
