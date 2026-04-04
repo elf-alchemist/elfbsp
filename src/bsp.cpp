@@ -94,7 +94,7 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
   return result;
 }
 
-static void PutVertices_Vanilla(void)
+static void PutVertices_Doom(void)
 {
   // this size is worst-case scenario
   size_t size = lev_vertices.size() * sizeof(raw_vertex_t);
@@ -803,7 +803,7 @@ void SaveDoom_Vanilla(node_t *root_node)
   // are removed from subsectors.
   RoundOffBspTree();
   SortSegs();
-  PutVertices_Vanilla();
+  PutVertices_Doom();
   PutSegs_Vanilla();
   PutSubsecs_Vanilla();
   PutNodes_Vanilla(root_node);
@@ -818,7 +818,7 @@ void SaveDoom_DeePBSPV4(node_t *root_node)
   // are removed from subsectors.
   RoundOffBspTree();
   SortSegs();
-  PutVertices_Vanilla();
+  PutVertices_Doom();
   PutSegs_DeePBSPV4();
   PutSubsecs_DeePBSPV4();
   PutNodes_DeePBSPV4(root_node);
