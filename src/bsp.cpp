@@ -567,6 +567,16 @@ static void PutLeafs_DeePBSPV4(void)
 // ZDoom format -- XNOD
 //
 
+static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
+{
+  if (v->is_new)
+  {
+    return static_cast<uint32_t>(num_old_vert + v->index);
+  }
+
+  return static_cast<uint32_t>(v->index);
+}
+
 static void PutVertices_Xnod(Lump_c *lump)
 {
   size_t orgverts = GetLittleEndian(num_old_vert);
@@ -599,16 +609,6 @@ static void PutVertices_Xnod(Lump_c *lump)
   {
     PrintLine(LOG_ERROR, "ERROR: PutZVertices miscounted (%zu != %zu)", count, num_new_vert);
   }
-}
-
-static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
-{
-  if (v->is_new)
-  {
-    return static_cast<uint32_t>(num_old_vert + v->index);
-  }
-
-  return static_cast<uint32_t>(v->index);
 }
 
 static void PutSubsecs_Xnod(Lump_c *lump)

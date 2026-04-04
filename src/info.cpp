@@ -194,7 +194,8 @@ void GenerateAnalysis(const char *filename)
     for (size_t split_cost = 1; split_cost <= 32; split_cost++)
     {
       generate_analysis_data(lev_current_idx, is_fast != 0, split_cost);
-      PrintLine(LOG_NORMAL, "[%s] Analyzed %s, %s mode, split cost factor of %zu", __func__, GetLevelName(lev_current_idx), is_fast ? "fast" : "normal", split_cost);
+      PrintLine(LOG_NORMAL, "[%s] Analyzed %s, %s mode, split cost factor of %zu", __func__, GetLevelName(lev_current_idx),
+                is_fast ? "fast" : "normal", split_cost);
     }
   }
 }
