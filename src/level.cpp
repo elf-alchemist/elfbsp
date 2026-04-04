@@ -2195,7 +2195,7 @@ build_result_e SaveLevelBinaryFormat(node_t *root_node)
     switch (level_type)
     {
     case BSP_DEEPBSPV4:
-      SaveDoom_DeePBSPV4(root_node);
+      SaveDoom64_DeePBSPV4(root_node);
       break;
     case BSP_VANILLA:
       SaveDoom64_Vanilla(root_node);

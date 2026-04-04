@@ -335,8 +335,8 @@ static void PutLeafs_Vanilla(void)
       vertex_t *vert = seg->start;
 
       raw.vertex = GetLittleEndian(static_cast<uint16_t>(vert->index));
-      // if (seg->linedef)
-      if (seg->linedef && !vert->is_new)
+      if (seg->linedef)
+      // if (seg->linedef && !vert->is_new)
       {
         raw.seg = GetLittleEndian(actual_seg_index);
         actual_seg_index++;
@@ -541,7 +541,8 @@ static void PutLeafs_DeePBSPV4(void)
       vertex_t *vert = seg->start;
 
       raw.vertex = GetLittleEndian(static_cast<uint16_t>(vert->index));
-      if (seg->linedef && !vert->is_new)
+      if (seg->linedef)
+      // if (seg->linedef && !vert->is_new)
       {
         raw.seg = GetLittleEndian(actual_seg_index);
         actual_seg_index++;
