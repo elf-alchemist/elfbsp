@@ -1337,7 +1337,7 @@ static void GetThings_Hexen(void)
 
   if (!lump->Seek(0))
   {
-    PrintLine(LOG_ERROR, "Error seeking to things.");
+    PrintLine(LOG_ERROR, "ERROR: Failure seeking to things.");
   }
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
@@ -1351,7 +1351,7 @@ static void GetThings_Hexen(void)
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
-      PrintLine(LOG_ERROR, "Error reading things.");
+      PrintLine(LOG_ERROR, "ERROR: Failure reading things.");
     }
 
     thing_t *thing = NewThing();
