@@ -71,7 +71,7 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
 
   double angle = ComputeAngle(dx, dy);
 
-  auto result = static_cast<short_angle_t>(floor(angle * 65536.0 / 360.0 + 0.5));
+  auto result = static_cast<short_angle_t>(floor(angle * FRACFACTOR / 360.0 + 0.5));
 
   switch (seg->linedef->angle)
   {
@@ -126,16 +126,6 @@ static void PutVertices_Vanilla(void)
   {
     PrintLine(LOG_ERROR, "ERROR: PutVertices miscounted (%zu != %zu)", count, num_old_vert);
   }
-}
-
-static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
-{
-  if (v->is_new)
-  {
-    return static_cast<uint32_t>(num_old_vert + v->index);
-  }
-
-  return static_cast<uint32_t>(v->index);
 }
 
 //
@@ -446,6 +436,16 @@ static void PutNodes_DeePBSPV4(node_t *root_node)
 // ZDoom format -- XNOD
 //
 
+static inline uint32_t VertexIndex_XNOD(const vertex_t *v)
+{
+  if (v->is_new)
+  {
+    return static_cast<uint32_t>(num_old_vert + v->index);
+  }
+
+  return static_cast<uint32_t>(v->index);
+}
+
 static void PutVertices_Xnod(Lump_c *lump)
 {
   size_t orgverts = GetLittleEndian(num_old_vert);
@@ -466,8 +466,8 @@ static void PutVertices_Xnod(Lump_c *lump)
       continue;
     }
 
-    raw.x = GetLittleEndian(static_cast<int32_t>(floor(vert->x * 65536.0)));
-    raw.y = GetLittleEndian(static_cast<int32_t>(floor(vert->y * 65536.0)));
+    raw.x = GetLittleEndian(static_cast<int32_t>(floor(vert->x * FRACFACTOR)));
+    raw.y = GetLittleEndian(static_cast<int32_t>(floor(vert->y * FRACFACTOR)));
 
     lump->Write(&raw, sizeof(raw_vertex_xnod_t));
 
@@ -722,10 +722,10 @@ static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
 
   node->index = node_cur_index++;
 
-  raw.x = GetLittleEndian(static_cast<int32_t>(floor(node->x * 65536.0)));
-  raw.y = GetLittleEndian(static_cast<int32_t>(floor(node->y * 65536.0)));
-  raw.dx = GetLittleEndian(static_cast<int32_t>(floor(node->dx * 65536.0)));
-  raw.dy = GetLittleEndian(static_cast<int32_t>(floor(node->dy * 65536.0)));
+  raw.x = GetLittleEndian(static_cast<int32_t>(floor(node->x * FRACFACTOR)));
+  raw.y = GetLittleEndian(static_cast<int32_t>(floor(node->y * FRACFACTOR)));
+  raw.dx = GetLittleEndian(static_cast<int32_t>(floor(node->dx * FRACFACTOR)));
+  raw.dy = GetLittleEndian(static_cast<int32_t>(floor(node->dy * FRACFACTOR)));
 
   raw.b1.minx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.minx));
   raw.b1.miny = GetLittleEndian(static_cast<int16_t>(node->r.bounds.miny));
@@ -793,7 +793,7 @@ static void PutNodes_Xgl3(Lump_c *lump, node_t *root)
 // Lump writing procedures
 //
 
-void SaveBinaryFormat_Vanilla(node_t *root_node)
+void SaveDoom_Vanilla(node_t *root_node)
 {
   // remove all the minisegs from subsectors
   NormaliseBspTree();
@@ -808,7 +808,7 @@ void SaveBinaryFormat_Vanilla(node_t *root_node)
   PutNodes_Vanilla(root_node);
 }
 
-void SaveBinaryFormat_DeePBSPV4(node_t *root_node)
+void SaveDoom_DeePBSPV4(node_t *root_node)
 {
   // remove all the minisegs from subsectors
   NormaliseBspTree();
@@ -823,7 +823,7 @@ void SaveBinaryFormat_DeePBSPV4(node_t *root_node)
   PutNodes_DeePBSPV4(root_node);
 }
 
-void SaveBinaryFormat_XNOD(node_t *root_node)
+void SaveDoom_XNOD(node_t *root_node)
 {
   CreateLevelLump("SEGS")->Finish();
   CreateLevelLump("SSECTORS")->Finish();
@@ -842,7 +842,7 @@ void SaveBinaryFormat_XNOD(node_t *root_node)
   lump = nullptr;
 }
 
-void SaveBinaryFormat_XGLN(node_t *root_node)
+void SaveDoom_XGLN(node_t *root_node)
 {
   // leave SEGS empty
   CreateLevelLump("SEGS")->Finish();
@@ -863,7 +863,7 @@ void SaveBinaryFormat_XGLN(node_t *root_node)
   CreateLevelLump("NODES")->Finish();
 }
 
-void SaveBinaryFormat_XGL2(node_t *root_node)
+void SaveDoom_XGL2(node_t *root_node)
 {
   // leave SEGS empty
   CreateLevelLump("SEGS")->Finish();
@@ -884,7 +884,7 @@ void SaveBinaryFormat_XGL2(node_t *root_node)
   CreateLevelLump("NODES")->Finish();
 }
 
-void SaveBinaryFormat_XGL3(node_t *root_node)
+void SaveDoom_XGL3(node_t *root_node)
 {
   // leave SEGS empty
   CreateLevelLump("SEGS")->Finish();
@@ -905,8 +905,10 @@ void SaveBinaryFormat_XGL3(node_t *root_node)
   CreateLevelLump("NODES")->Finish();
 }
 
-// Unlike the binary map formats, UDMF has a tight requirement for fractional coordinates.
+//
+// Unlike the the Doom and Hexen map formats, UDMF has a tight requirement for fractional coordinates.
 // Always use the latest high-precision BSP format we support.
+//
 void SaveTextmap_ZNODES(node_t *root_node)
 {
   SortSegs();

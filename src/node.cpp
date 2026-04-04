@@ -1566,7 +1566,8 @@ void SanityCheckHasRealSeg(subsec_t *subsec)
     }
   }
 
-  PrintLine(LOG_ERROR, "ERROR: Subsector #%zu near (%1.1f,%1.1f) has no real seg!", subsec->index, subsec->mid_x, subsec->mid_y);
+  PrintLine(LOG_ERROR, "ERROR: Subsector #%zu near (%1.1f,%1.1f) has no real seg!", subsec->index, subsec->mid_x,
+            subsec->mid_y);
 }
 
 void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index)
@@ -1811,7 +1812,7 @@ void RoundOffVertices(void)
   }
 }
 
-void RoundOff(subsec_t *subsec)
+void RoundOffSubsector(subsec_t *subsec)
 {
   // use head + tail to maintain same order of segs
   seg_t *new_head = nullptr;
@@ -1940,7 +1941,7 @@ void RoundOffBspTree(void)
   {
     subsec_t *sub = lev_subsecs[i];
 
-    RoundOff(sub);
+    RoundOffSubsector(sub);
     RenumberSegs(sub, cur_seg_index);
   }
 }

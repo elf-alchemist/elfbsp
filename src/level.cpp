@@ -1098,7 +1098,7 @@ static void GetSectors_Binary(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_sector_t);
+    count = lump->Length() / sizeof(raw_sector_doom_t);
   }
 
   if (lump == nullptr || count == 0)
@@ -1118,7 +1118,7 @@ static void GetSectors_Binary(void)
 
   for (size_t i = 0; i < count; i++)
   {
-    raw_sector_t raw;
+    raw_sector_doom_t raw;
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
@@ -1140,7 +1140,7 @@ static void GetThings_Doom(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_thing_t);
+    count = lump->Length() / sizeof(raw_thing_doom_t);
   }
 
   if (lump == nullptr || count == 0)
@@ -1160,7 +1160,7 @@ static void GetThings_Doom(void)
 
   for (size_t i = 0; i < count; i++)
   {
-    raw_thing_t raw;
+    raw_thing_doom_t raw;
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
@@ -1183,7 +1183,7 @@ static void GetThings_Hexen(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_hexen_thing_t);
+    count = lump->Length() / sizeof(raw_thing_hexen_t);
   }
 
   if (lump == nullptr || count == 0)
@@ -1203,7 +1203,7 @@ static void GetThings_Hexen(void)
 
   for (size_t i = 0; i < count; i++)
   {
-    raw_hexen_thing_t raw;
+    raw_thing_hexen_t raw;
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
@@ -1226,7 +1226,7 @@ static void GetSidedefs_Binary(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_sidedef_t);
+    count = lump->Length() / sizeof(raw_sidedef_doom_t);
   }
 
   if (lump == nullptr || count == 0)
@@ -1246,7 +1246,7 @@ static void GetSidedefs_Binary(void)
 
   for (size_t i = 0; i < count; i++)
   {
-    raw_sidedef_t raw;
+    raw_sidedef_doom_t raw;
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
@@ -1272,7 +1272,7 @@ static void GetLinedefs_Doom(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_linedef_t);
+    count = lump->Length() / sizeof(raw_linedef_doom_t);
   }
 
   if (lump == nullptr || count == 0)
@@ -1292,7 +1292,7 @@ static void GetLinedefs_Doom(void)
 
   for (size_t i = 0; i < count; i++)
   {
-    raw_linedef_t raw;
+    raw_linedef_doom_t raw;
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
@@ -1370,7 +1370,7 @@ static void GetLinedefs_Hexen(void)
 
   if (lump)
   {
-    count = lump->Length() / sizeof(raw_hexen_linedef_t);
+    count = lump->Length() / sizeof(raw_linedef_hexen_t);
   }
 
   if (lump == nullptr || count == 0)
@@ -1390,7 +1390,7 @@ static void GetLinedefs_Hexen(void)
 
   for (size_t i = 0; i < count; i++)
   {
-    raw_hexen_linedef_t raw;
+    raw_linedef_hexen_t raw;
 
     if (!lump->Read(&raw, sizeof(raw)))
     {
@@ -1945,22 +1945,22 @@ build_result_e SaveBinaryFormatLevel(node_t *root_node)
   switch (level_type)
   {
   case BSP_XGL3:
-    SaveBinaryFormat_XGL3(root_node);
+    SaveDoom_XGL3(root_node);
     break;
   case BSP_XGL2:
-    SaveBinaryFormat_XGL2(root_node);
+    SaveDoom_XGL2(root_node);
     break;
   case BSP_XGLN:
-    SaveBinaryFormat_XGLN(root_node);
+    SaveDoom_XGLN(root_node);
     break;
   case BSP_XNOD:
-    SaveBinaryFormat_XNOD(root_node);
+    SaveDoom_XNOD(root_node);
     break;
   case BSP_DEEPBSPV4:
-    SaveBinaryFormat_DeePBSPV4(root_node);
+    SaveDoom_DeePBSPV4(root_node);
     break;
   case BSP_VANILLA:
-    SaveBinaryFormat_Vanilla(root_node);
+    SaveDoom_Vanilla(root_node);
     break;
   }
 

@@ -126,9 +126,9 @@ struct sidedef_t
 
   double offset_x = 0.0;
   double offset_y = 0.0;
-  char tex_upper[8];
-  char tex_middle[8];
-  char tex_lower[8];
+  char tex_upper[8] = "-";
+  char tex_middle[8] = "-";
+  char tex_lower[8] = "-";
 
   // sidedef index.  Always valid after loading & pruning.
   size_t index;
@@ -205,9 +205,7 @@ struct seg_t
   size_t index = NO_INDEX;
 
   // when true, this seg has become zero length (integer rounding of the
-  // start and end vertices produces the same location).  It should be
-  // ignored when writing the SEGS or V1 GL_SEGS lumps.  [Note: there
-  // won't be any of these when writing the V2 GL_SEGS lump].
+  // start and end vertices produces the same location).
   bool is_degenerate;
 
   // the quad-tree node that contains this seg, or nullptr if the seg
@@ -276,7 +274,7 @@ void DetermineMiddle(subsec_t *subsec);
 void ClockwiseOrder(subsec_t *subsec);
 void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index);
 
-void RoundOff(subsec_t *subsec);
+void RoundOffSubsector(subsec_t *subsec);
 void Normalise(subsec_t *subsec);
 
 void SanityCheckClosed(subsec_t *subsec);
@@ -311,8 +309,7 @@ struct node_t
   child_t r;
   child_t l;
 
-  // node index.  Only valid once the NODES or GL_NODES lump has been
-  // created.
+  // node index.  Only valid once the NODES lump has been created.
   size_t index;
 };
 
@@ -432,7 +429,7 @@ static constexpr double IFFY_LEN = 4.0;
 static constexpr double DIST_EPSILON = (1.0 / 1024.0);
 
 // smallest distance between two points before being considered equal
-static constexpr double DIST_EPSILON_HI = (1.0 / 65536.0);
+static constexpr double DIST_EPSILON_HI = (1.0 / FRACFACTOR);
 
 // smallest degrees between two angles before being considered equal
 static constexpr double ANG_EPSILON = (1.0 / 1024.0);
@@ -538,11 +535,11 @@ void NormaliseBspTree(void);
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree(void);
 
-void SaveBinaryFormat_Vanilla(node_t *root_node);
-void SaveBinaryFormat_DeePBSPV4(node_t *root_node);
-void SaveBinaryFormat_XNOD(node_t *root_node);
-void SaveBinaryFormat_XGLN(node_t *root_node);
-void SaveBinaryFormat_XGL2(node_t *root_node);
-void SaveBinaryFormat_XGL3(node_t *root_node);
+void SaveDoom_Vanilla(node_t *root_node);
+void SaveDoom_DeePBSPV4(node_t *root_node);
+void SaveDoom_XNOD(node_t *root_node);
+void SaveDoom_XGLN(node_t *root_node);
+void SaveDoom_XGL2(node_t *root_node);
+void SaveDoom_XGL3(node_t *root_node);
 
 void SaveTextmap_ZNODES(node_t *root_node);

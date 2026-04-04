@@ -619,7 +619,12 @@ using lump_order_t = enum lump_order_e
   LL_BLOCKMAP,  // LUT, motion clipping, walls/grid element
   LL_BEHAVIOR,  // ACS bytecode
   LL_SCRIPTS,   // ACS source code
+
+  LL_TEXTMAP = LL_LABEL + 1, // UDMF geometry
+  LL_ENDMAP,                 // UDMF end marker
 };
+
+static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
 
 using raw_vertex_t = struct raw_vertex_s
 {
@@ -627,7 +632,7 @@ using raw_vertex_t = struct raw_vertex_s
   int16_t y;
 } PACKEDATTR;
 
-using raw_linedef_t = struct raw_linedef_s
+using raw_linedef_doom_t = struct raw_linedef_doom_s
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
@@ -638,18 +643,7 @@ using raw_linedef_t = struct raw_linedef_s
   uint16_t left;    // left sidedef (only if this line adjoins 2 sectors)
 } PACKEDATTR;
 
-using raw_hexen_linedef_t = struct raw_hexen_linedef_s
-{
-  uint16_t start;  // from this vertex...
-  uint16_t end;    // ... to this vertex
-  uint16_t flags;  // linedef flags (impassible, etc)
-  uint8_t special; // special type
-  uint8_t args[5]; // special arguments
-  uint16_t right;  // right sidedef
-  uint16_t left;   // left sidedef
-} PACKEDATTR;
-
-using raw_sidedef_t = struct raw_sidedef_s
+using raw_sidedef_doom_t = struct raw_sidedef_doom_s
 {
   int16_t x_offset;  // X offset for texture
   int16_t y_offset;  // Y offset for texture
@@ -659,7 +653,7 @@ using raw_sidedef_t = struct raw_sidedef_s
   uint16_t sector;   // adjacent sector
 } PACKEDATTR;
 
-using raw_sector_t = struct raw_sector_s
+using raw_sector_doom_t = struct raw_sector_doom_s
 {
   int16_t floorh;    // floor height
   int16_t ceilh;     // ceiling height
@@ -670,7 +664,7 @@ using raw_sector_t = struct raw_sector_s
   uint16_t tag;      // sector activated by a linedef with same tag
 } PACKEDATTR;
 
-using raw_thing_t = struct raw_thing_s
+using raw_thing_doom_t = struct raw_thing_doom_s
 {
   int16_t x;        // x position of thing
   int16_t y;        // y position of thing
@@ -679,8 +673,19 @@ using raw_thing_t = struct raw_thing_s
   uint16_t options; // when appears, deaf, etc..
 } PACKEDATTR;
 
-// -JL- Hexen thing definition
-using raw_hexen_thing_t = struct raw_hexen_thing_s
+// -JL- Hexen definition
+using raw_linedef_hexen_t = struct raw_linedef_hexen_s
+{
+  uint16_t start;  // from this vertex...
+  uint16_t end;    // ... to this vertex
+  uint16_t flags;  // linedef flags (impassible, etc)
+  uint8_t special; // special type
+  uint8_t args[5]; // special arguments
+  uint16_t right;  // right sidedef
+  uint16_t left;   // left sidedef
+} PACKEDATTR;
+
+using raw_thing_hexen_t = struct raw_thing_hexen_s
 {
   int16_t tid;      // tag id (for scripts/specials)
   int16_t x;        // x position
@@ -942,12 +947,12 @@ using raw_patch_t = struct patch_s
 static_assert(sizeof(raw_wad_header_t) == 12, "Size mismatch for 'raw_wad_header_t'. Should be 12.");
 static_assert(sizeof(raw_wad_entry_t) == 16, "Size mismatch for 'raw_wad_entry_t'. Should be 16.");
 static_assert(sizeof(raw_vertex_t) == 4, "Size mismatch for 'raw_vertex_t'. Should be 4.");
-static_assert(sizeof(raw_linedef_t) == 14, "Size mismatch for 'raw_linedef_t'. Should be 14.");
-static_assert(sizeof(raw_hexen_linedef_t) == 16, "Size mismatch for 'raw_hexen_linedef_t'. Should be 16.");
-static_assert(sizeof(raw_sidedef_t) == 30, "Size mismatch for 'raw_sidedef_t'. Should be 30.");
-static_assert(sizeof(raw_sector_t) == 26, "Size mismatch for 'raw_sector_t'. Should be 26.");
-static_assert(sizeof(raw_thing_t) == 10, "Size mismatch for 'raw_thing_t'. Should be 10.");
-static_assert(sizeof(raw_hexen_thing_t) == 20, "Size mismatch for 'raw_hexen_thing_t'. Should be 20.");
+static_assert(sizeof(raw_linedef_doom_t) == 14, "Size mismatch for 'raw_linedef_doom_t'. Should be 14.");
+static_assert(sizeof(raw_linedef_hexen_t) == 16, "Size mismatch for 'raw_linedef_hexen_t'. Should be 16.");
+static_assert(sizeof(raw_sidedef_doom_t) == 30, "Size mismatch for 'raw_sidedef_doom_t'. Should be 30.");
+static_assert(sizeof(raw_sector_doom_t) == 26, "Size mismatch for 'raw_sector_doom_t'. Should be 26.");
+static_assert(sizeof(raw_thing_doom_t) == 10, "Size mismatch for 'raw_thing_doom_t'. Should be 10.");
+static_assert(sizeof(raw_thing_hexen_t) == 20, "Size mismatch for 'raw_thing_hexen_t'. Should be 20.");
 static_assert(sizeof(raw_bbox_t) == 8, "Size mismatch for 'raw_bbox_t'. Should be 8.");
 static_assert(sizeof(raw_blockmap_header_t) == 8, "Size mismatch for 'raw_blockmap_header_t'. Should be 8.");
 static_assert(sizeof(raw_node_vanilla_t) == 28, "Size mismatch for 'raw_node_vanilla_t'. Should be 28.");
@@ -973,42 +978,17 @@ static_assert(sizeof(raw_patch_t) == 12, "Size mismatch for 'raw_patch_t'. Shoul
 // LineDef attributes.
 //
 
-using vanilla_lineflag_t = enum vanilla_lineflag_e : uint16_t
+using lineflag_doom_t = enum lineflag_doom_e : uint16_t
 {
   MLF_BLOCKING = BIT(0),      // Solid, is an obstacle
   MLF_BLOCKMONSTERS = BIT(1), // Blocks monsters only
   MLF_TWOSIDED = BIT(2),      // Backside will not be present at all if not two sided
-
-  // If a texture is pegged, the texture will have
-  // the end exposed to air held constant at the
-  // top or bottom of the texture (stairs or pulled
-  // down things) and will move with a height change
-  // of one of the neighbor sectors.
-  //
-  // Unpegged textures always have the first row of
-  // the texture at the top pixel of the line for both
-  // top and bottom textures (use next to windows).
-
   MLF_UPPERUNPEGGED = BIT(3), // Upper texture unpegged
   MLF_LOWERUNPEGGED = BIT(4), // Lower texture unpegged
   MLF_SECRET = BIT(5),        // In AutoMap: don't map as two sided: IT'S A SECRET!
   MLF_SOUNDBLOCK = BIT(6),    // Sound rendering: don't let sound cross two of these
   MLF_DONTDRAW = BIT(7),      // Don't draw on the automap at all
   MLF_MAPPED = BIT(8),        // Set as if already seen, thus drawn in automap
-};
-
-using boom_lineflag_t = enum boom_lineflag_e : uint16_t
-{
-  // Inherited from vanilla
-  MLF_BOOM_BLOCKING = MLF_BLOCKING,
-  MLF_BOOM_BLOCKMONSTERS = MLF_BLOCKMONSTERS,
-  MLF_BOOM_TWOSIDED = MLF_TWOSIDED,
-  MLF_BOOM_UPPERUNPEGGED = MLF_UPPERUNPEGGED,
-  MLF_BOOM_LOWERUNPEGGED = MLF_LOWERUNPEGGED,
-  MLF_BOOM_SECRET = MLF_SECRET,
-  MLF_BOOM_SOUNDBLOCK = MLF_SOUNDBLOCK,
-  MLF_BOOM_DONTDRAW = MLF_DONTDRAW,
-  MLF_BOOM_MAPPED = MLF_MAPPED,
 
   // Boom lineage
   MLF_BOOM_PASSUSE = BIT(9),       // Allow multiple lines to be pushed simultaneously.
@@ -1018,7 +998,7 @@ using boom_lineflag_t = enum boom_lineflag_e : uint16_t
   MLF_BOOM_BLOCKPLAYERS = BIT(13), // Block Players Only
 };
 
-using hexen_lineflag_t = enum hexen_lineflag_e : uint16_t
+using lineflag_hexen_t = enum lineflag_hexen_e : uint16_t
 {
   // Inherited from vanilla Doom
   MLF_HEXEN_BLOCKING = MLF_BLOCKING,
@@ -1377,7 +1357,7 @@ struct Wad_file
   // be no more than a few bytes).  Returns new position.
   size_t PositionForWrite(size_t max_size = NO_INDEX);
 
-  bool FinishLump(size_t final_size);
+  void FinishLump(size_t final_size);
   size_t WritePadding(size_t count);
 
   // write the new directory, updating the dir_xxx variables
@@ -1449,14 +1429,12 @@ struct Lump_c
   }
 
   // mark the lump as finished (after writing data to it).
-  bool Finish(void)
+  void Finish(void)
   {
     if (l_length == 0)
     {
       l_start = 0;
     }
-
-    return parent->FinishLump(l_length);
   }
 };
 

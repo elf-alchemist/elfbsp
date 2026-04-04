@@ -262,8 +262,6 @@ Lump_c *Wad_file::GetLump(size_t index)
   return directory[index];
 }
 
-static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
-
 size_t Wad_file::LevelLookupLump(size_t lev_num, const char *name)
 {
   size_t start = LevelHeader(lev_num);
@@ -323,9 +321,11 @@ map_format_e Wad_file::LevelFormat(size_t lev_num)
 {
   size_t start = LevelHeader(lev_num);
 
+  // UDMF maps can contain BEHAVIOR or MACROS
+  // check exclusively TEXTMAP
   if (start + 2 < NumLumps())
   {
-    const char *name = GetLump(start + 1)->Name();
+    const char *name = GetLump(start + LL_TEXTMAP)->Name();
 
     if (StringCaseCmp(name, "TEXTMAP") == 0)
     {
@@ -969,13 +969,14 @@ size_t Wad_file::PositionForWrite(size_t max_size)
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] POSITION FOR WRITE: %zu  (total_size %zu)", __func__, static_cast<size_t>(want_pos), static_cast<size_t>(total_size));
+    PrintLine(LOG_DEBUG, "[%s] POSITION FOR WRITE: %zu  (total_size %zu)", __func__, static_cast<size_t>(want_pos),
+              static_cast<size_t>(total_size));
   }
 
   return static_cast<size_t>(want_pos);
 }
 
-bool Wad_file::FinishLump(size_t final_size)
+void Wad_file::FinishLump(size_t final_size)
 {
   fflush(fp);
 
@@ -993,7 +994,6 @@ bool Wad_file::FinishLump(size_t final_size)
   }
 
   fflush(fp);
-  return true;
 }
 
 size_t Wad_file::WritePadding(size_t count)
