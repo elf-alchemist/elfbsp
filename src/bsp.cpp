@@ -129,6 +129,30 @@ static void PutVertices_Doom(level_t &level)
   }
 }
 
+static void PutVertices_Doom64(level_t &level)
+{
+  // this size is worst-case scenario
+  size_t size = level.vertices.size() * sizeof(raw_vertex_doom64_t);
+  Lump_c *lump = CreateLevelLump(level, "VERTEXES", size);
+
+  for (size_t i = 0; i < level.vertices.size(); i++)
+  {
+    raw_vertex_doom64_t raw;
+
+    const vertex_t *vert = level.vertices[i];
+
+    // do not ignore vertex_t::is_new
+    // it is required for leafs
+
+    raw.x = GetLittleEndian(static_cast<fixed_t>(floor(vert->x * FRACFACTOR)));
+    raw.y = GetLittleEndian(static_cast<fixed_t>(floor(vert->y * FRACFACTOR)));
+
+    lump->Write(&raw, sizeof(raw_vertex_doom64_t));
+  }
+
+  lump->Finish();
+}
+
 //
 // Vanilla format
 //
@@ -277,6 +301,59 @@ static void PutNodes_Vanilla(level_t &level, node_t *root_node)
   if (node_cur_index != level.nodes.size())
   {
     PrintLine(LOG_ERROR, "ERROR: PutNodes miscounted (%zu != %zu)", node_cur_index, level.nodes.size());
+  }
+}
+
+static void PutLeafs_Vanilla(level_t &level)
+{
+  Lump_c *lump = CreateLevelLump(level, "LEAFS");
+  uint16_t actual_seg_index = 0;
+
+  for (size_t i = 0; i < level.subsecs.size(); i++)
+  {
+    subsec_t *subsec = level.subsecs[i];
+    seg_t *seg = subsec->seg_list;
+    size_t seg_count = subsec->seg_count;
+
+    lump->Write(&seg_count, sizeof(uint16_t));
+
+    if (HAS_BIT(config.debug, DEBUG_BSP))
+    {
+      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] Leafs: %zu", __func__, i, seg_count);
+    }
+
+    if (seg_count < 3)
+    {
+      PrintLine(LOG_ERROR, "[%s] Subsector[%zu] has fewer than 3 leafs", __func__, i);
+    }
+
+    for (size_t j = 0; j < seg_count; j++)
+    {
+      // Do not remove minisegs from tree before
+      // we are able to write all this
+      raw_leaf_vanilla_t raw;
+      vertex_t *vert = seg->start;
+
+      raw.vertex = GetLittleEndian(static_cast<uint16_t>(vert->index));
+      if (seg->linedef)
+      // if (seg->linedef && !vert->is_new)
+      {
+        raw.seg = GetLittleEndian(actual_seg_index);
+        actual_seg_index++;
+      }
+      else
+      {
+        raw.seg = NO_INDEX_INT16;
+      }
+
+      lump->Write(&raw, sizeof(raw));
+      seg = seg->next;
+
+      if (HAS_BIT(config.debug, DEBUG_BSP))
+      {
+        PrintLine(LOG_DEBUG, "[%s] Segment = %hu Vertex = %hu", __func__, raw.seg, raw.vertex);
+      }
+    }
   }
 }
 
@@ -430,6 +507,59 @@ static void PutNodes_DeePBSPV4(level_t &level, node_t *root_node)
   if (node_cur_index != level.nodes.size())
   {
     PrintLine(LOG_ERROR, "ERROR: PutNodes miscounted (%zu != %zu)", node_cur_index, level.nodes.size());
+  }
+}
+
+static void PutLeafs_DeePBSPV4(level_t &level)
+{
+  Lump_c *lump = CreateLevelLump(level, "LEAFS");
+  uint32_t actual_seg_index = 0;
+
+  for (size_t i = 0; i < level.subsecs.size(); i++)
+  {
+    subsec_t *subsec = level.subsecs[i];
+    seg_t *seg = subsec->seg_list;
+    size_t seg_count = subsec->seg_count;
+
+    lump->Write(&seg_count, sizeof(uint32_t));
+
+    if (HAS_BIT(config.debug, DEBUG_BSP))
+    {
+      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] Leafs: %zu", __func__, i, seg_count);
+    }
+
+    if (seg_count < 3)
+    {
+      PrintLine(LOG_ERROR, "[%s] Subsector[%zu] has fewer than 3 leafs", __func__, i);
+    }
+
+    for (size_t j = 0; j < seg_count; j++)
+    {
+      // Do not remove minisegs from tree before
+      // we are able to write all this
+      raw_leaf_deepbspv4_t raw;
+      vertex_t *vert = seg->start;
+
+      raw.vertex = GetLittleEndian(static_cast<uint16_t>(vert->index));
+      if (seg->linedef)
+      // if (seg->linedef && !vert->is_new)
+      {
+        raw.seg = GetLittleEndian(actual_seg_index);
+        actual_seg_index++;
+      }
+      else
+      {
+        raw.seg = NO_INDEX_INT32;
+      }
+
+      lump->Write(&raw, sizeof(raw));
+      seg = seg->next;
+
+      if (HAS_BIT(config.debug, DEBUG_BSP))
+      {
+        PrintLine(LOG_DEBUG, "[%s] Segment = %u Vertex = %u", __func__, raw.seg, raw.vertex);
+      }
+    }
   }
 }
 
@@ -904,6 +1034,37 @@ void SaveDoom_XGL3(level_t &level, node_t *root_node)
 
   // leave NODES empty
   CreateLevelLump(level, "NODES")->Finish();
+}
+
+//
+// Doom64 has some differences from Doom-format or Hexen-format
+// This could also be shared with PSX Doom and PSX Final Doom, but we don't support those
+//
+
+void SaveDoom64_Vanilla(level_t &level, node_t *root_node)
+{
+  // We need minisegs just for leafs
+  PutLeafs_Vanilla(level);
+  // remove all the minisegs from subsectors
+  NormaliseBspTree(level);
+  SortSegs(level);
+  PutVertices_Doom64(level);
+  PutSegs_Vanilla(level);
+  PutSubsecs_Vanilla(level);
+  PutNodes_Vanilla(level, root_node);
+}
+
+void SaveDoom64_DeePBSPV4(level_t &level, node_t *root_node)
+{
+  // We need minisegs just for leafs
+  PutLeafs_DeePBSPV4(level);
+  // remove all the minisegs from subsectors
+  NormaliseBspTree(level);
+  SortSegs(level);
+  PutVertices_Doom64(level);
+  PutSegs_DeePBSPV4(level);
+  PutSubsecs_DeePBSPV4(level);
+  PutNodes_DeePBSPV4(level, root_node);
 }
 
 //
