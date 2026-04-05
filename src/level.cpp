@@ -257,41 +257,6 @@ static void CreateBlockmap(level_t &level)
   }
 }
 
-static int BlockCompare(const void *p1, const void *p2, void *arg)
-{
-  int blk_num1 = (static_cast<const uint16_t *>(p1))[0];
-  int blk_num2 = (static_cast<const uint16_t *>(p2))[0];
-  auto level = static_cast<level_t *>(arg);
-
-  const uint16_t *A = level->block_lines[blk_num1];
-  const uint16_t *B = level->block_lines[blk_num2];
-
-  if (A == B)
-  {
-    return 0;
-  }
-  if (A == nullptr)
-  {
-    return -1;
-  }
-  if (B == nullptr)
-  {
-    return +1;
-  }
-
-  if (A[BK_NUM] != B[BK_NUM])
-  {
-    return A[BK_NUM] - B[BK_NUM];
-  }
-
-  if (A[BK_XOR] != B[BK_XOR])
-  {
-    return A[BK_XOR] - B[BK_XOR];
-  }
-
-  return memcmp(A + BK_FIRST, B + BK_FIRST, A[BK_NUM] * sizeof(uint16_t));
-}
-
 static void CompressBlockmap(level_t &level)
 {
   size_t cur_offset;
@@ -299,8 +264,8 @@ static void CompressBlockmap(level_t &level)
 
   size_t orig_size, new_size;
 
-  level.block_ptrs = UtilCalloc<uint16_t>(level.block_count * sizeof(uint16_t));
-  level.block_dups = UtilCalloc<uint16_t>(level.block_count * sizeof(uint16_t));
+  level.block_ptrs.reserve(level.block_count);
+  level.block_dups.reserve(level.block_count);
 
   // sort duplicate-detecting array.  After the sort, all duplicates
   // will be next to each other.  The duplicate array gives the order
@@ -310,7 +275,20 @@ static void CompressBlockmap(level_t &level)
     level.block_dups[i] = static_cast<uint16_t>(i);
   }
 
-  qsort_r(level.block_dups, level.block_count, sizeof(uint16_t), BlockCompare, &level);
+  auto BlockCompare = [&level](const uint16_t &blk_num1, const uint16_t &blk_num2) -> int
+  {
+    const uint16_t *A = level.block_lines[blk_num1];
+    const uint16_t *B = level.block_lines[blk_num2];
+
+    if (A == B) return 0;
+    if (A == nullptr) return -1;
+    if (B == nullptr) return +1;
+    if (A[BK_NUM] != B[BK_NUM]) return A[BK_NUM] - B[BK_NUM];
+    if (A[BK_XOR] != B[BK_XOR]) return A[BK_XOR] - B[BK_XOR];
+
+    return memcmp(A + BK_FIRST, B + BK_FIRST, A[BK_NUM] * sizeof(uint16_t));
+  };
+  std::sort(level.block_dups.begin(), level.block_dups.end(), BlockCompare);
 
   // scan duplicate array and build up offset array
   cur_offset = 4 + level.block_count + 2;
@@ -335,7 +313,7 @@ static void CompressBlockmap(level_t &level)
 
     // duplicate ?  Only the very last one of a sequence of duplicates
     // will update the current offset value.
-    if (i + 1 < level.block_count && BlockCompare(level.block_dups + i, level.block_dups + i + 1, &level) == 0)
+    if (i + 1 < level.block_count && BlockCompare(level.block_dups[i], level.block_dups[i + 1]) == 0)
     {
       level.block_ptrs[blk_num] = static_cast<uint16_t>(cur_offset);
       level.block_dups[i] = DUMMY_DUP;
@@ -482,14 +460,17 @@ static void FreeBlockmap(level_t &level)
   }
 
   UtilFree(level.block_lines);
-  UtilFree(level.block_ptrs);
-  UtilFree(level.block_dups);
+  level.block_ptrs.clear();
+  level.block_dups.clear();
 }
 
 static void FindBlockmapLimits(level_t &level, bbox_t *bbox)
 {
   double mid_x = 0;
   double mid_y = 0;
+  int16_t block_mid_x = 0;
+  int16_t block_mid_y = 0;
+
 
   bbox->minx = bbox->miny = SHRT_MAX;
   bbox->maxx = bbox->maxy = SHRT_MIN;
@@ -508,27 +489,15 @@ static void FindBlockmapLimits(level_t &level, bbox_t *bbox)
     double x2 = L->end->x;
     double y2 = L->end->y;
 
-    int32_t lx = static_cast<int32_t>(floor(std::min(x1, x2)));
-    int32_t ly = static_cast<int32_t>(floor(std::min(y1, y2)));
-    int32_t hx = static_cast<int32_t>(ceil(std::max(x1, x2)));
-    int32_t hy = static_cast<int32_t>(ceil(std::max(y1, y2)));
+    int16_t lx = static_cast<int16_t>(floor(std::min(x1, x2)));
+    int16_t ly = static_cast<int16_t>(floor(std::min(y1, y2)));
+    int16_t hx = static_cast<int16_t>(ceil(std::max(x1, x2)));
+    int16_t hy = static_cast<int16_t>(ceil(std::max(y1, y2)));
 
-    if (lx < bbox->minx)
-    {
-      bbox->minx = lx;
-    }
-    if (ly < bbox->miny)
-    {
-      bbox->miny = ly;
-    }
-    if (hx > bbox->maxx)
-    {
-      bbox->maxx = hx;
-    }
-    if (hy > bbox->maxy)
-    {
-      bbox->maxy = hy;
-    }
+    if (lx < bbox->minx) bbox->minx = lx;
+    if (ly < bbox->miny) bbox->miny = ly;
+    if (hx > bbox->maxx) bbox->maxx = hx;
+    if (hy > bbox->maxy) bbox->maxy = hy;
 
     // compute middle of cluster
     mid_x += (lx + hx) >> 1;
@@ -537,13 +506,13 @@ static void FindBlockmapLimits(level_t &level, bbox_t *bbox)
 
   if (level.linedefs.size() > 0)
   {
-    level.block_mid_x = static_cast<int32_t>(floor(mid_x / static_cast<double>(level.linedefs.size())));
-    level.block_mid_y = static_cast<int32_t>(floor(mid_y / static_cast<double>(level.linedefs.size())));
+    block_mid_x = static_cast<int16_t>(floor(mid_x / static_cast<double>(level.linedefs.size())));
+    block_mid_y = static_cast<int16_t>(floor(mid_y / static_cast<double>(level.linedefs.size())));
   }
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
-    PrintLine(LOG_DEBUG, "[%s] Blockmap lines centered at (%d,%d)", __func__, level.block_mid_x, level.block_mid_y);
+    PrintLine(LOG_DEBUG, "[%s] Blockmap lines centered at (%d,%d)", __func__, block_mid_x, block_mid_y);
   }
 }
 

@@ -280,8 +280,8 @@ void SanityCheckHasRealSeg(subsec_t *subsec);
 
 struct bbox_t
 {
-  int minx, miny;
-  int maxx, maxy;
+  int16_t minx, miny;
+  int16_t maxx, maxy;
 };
 
 struct child_t
@@ -415,13 +415,10 @@ using level_t = struct level_t
   size_t block_w, block_h;
   size_t block_count;
 
-  int block_mid_x = 0;
-  int block_mid_y = 0;
-
   uint16_t **block_lines;
 
-  uint16_t *block_ptrs;
-  uint16_t *block_dups;
+  std::vector<uint16_t> block_ptrs;
+  std::vector<uint16_t> block_dups;
 
   int32_t block_compression;
   bool block_overflowed = false;

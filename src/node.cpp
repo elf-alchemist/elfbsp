@@ -913,27 +913,15 @@ void FindLimits2(seg_t *list, bbox_t *bbox)
     double x2 = list->end->x;
     double y2 = list->end->y;
 
-    int32_t lx = static_cast<int32_t>(floor(std::min(x1, x2) - 0.2));
-    int32_t ly = static_cast<int32_t>(floor(std::min(y1, y2) - 0.2));
-    int32_t hx = static_cast<int32_t>(ceil(std::max(x1, x2) + 0.2));
-    int32_t hy = static_cast<int32_t>(ceil(std::max(y1, y2) + 0.2));
+    int16_t lx = static_cast<int16_t>(floor(std::min(x1, x2) - 0.2));
+    int16_t ly = static_cast<int16_t>(floor(std::min(y1, y2) - 0.2));
+    int16_t hx = static_cast<int16_t>(ceil(std::max(x1, x2) + 0.2));
+    int16_t hy = static_cast<int16_t>(ceil(std::max(y1, y2) + 0.2));
 
-    if (lx < bbox->minx)
-    {
-      bbox->minx = lx;
-    }
-    if (ly < bbox->miny)
-    {
-      bbox->miny = ly;
-    }
-    if (hx > bbox->maxx)
-    {
-      bbox->maxx = hx;
-    }
-    if (hy > bbox->maxy)
-    {
-      bbox->maxy = hy;
-    }
+    if (lx < bbox->minx) bbox->minx = lx;
+    if (ly < bbox->miny) bbox->miny = ly;
+    if (hx > bbox->maxx) bbox->maxx = hx;
+    if (hy > bbox->maxy) bbox->maxy = hy;
   }
 }
 
