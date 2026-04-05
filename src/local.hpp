@@ -407,6 +407,25 @@ using level_t = struct level_t
   std::vector<walltip_t *> walltips;
   std::vector<intersection_t *> intercuts;
 
+  uint8_t *reject_matrix;
+  size_t reject_size;
+  std::vector<size_t> reject_groups;
+
+  int block_x, block_y;
+  size_t block_w, block_h;
+  size_t block_count;
+
+  int block_mid_x = 0;
+  int block_mid_y = 0;
+
+  uint16_t **block_lines;
+
+  uint16_t *block_ptrs;
+  uint16_t *block_dups;
+
+  int32_t block_compression;
+  bool block_overflowed = false;
+
   inline Lump_c *FindLevelLump(const char *name)
   {
     SYS_ASSERT(cur_wad != nullptr);

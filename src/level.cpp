@@ -33,21 +33,6 @@ static constexpr std::uint32_t DUMMY_DUP = 0xFFFF;
 
 Wad_file *cur_wad;
 
-static int block_x, block_y;
-static size_t block_w, block_h;
-static size_t block_count;
-
-static int block_mid_x = 0;
-static int block_mid_y = 0;
-
-static uint16_t **block_lines;
-
-static uint16_t *block_ptrs;
-static uint16_t *block_dups;
-
-static int32_t block_compression;
-static bool block_overflowed;
-
 int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2)
 {
   int count = 2;
@@ -143,16 +128,16 @@ static constexpr uint32_t BK_XOR = 2;
 static constexpr uint32_t BK_FIRST = 3;
 static constexpr uint32_t BK_QUANTUM = 32;
 
-static void BlockAdd(size_t blk_num, size_t line_index)
+static void BlockAdd(level_t &level, size_t blk_num, size_t line_index)
 {
-  uint16_t *cur = block_lines[blk_num];
+  uint16_t *cur = level.block_lines[blk_num];
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
     PrintLine(LOG_DEBUG, "[%s] Block %zu has line %zu", __func__, blk_num, line_index);
   }
 
-  if (blk_num >= block_count)
+  if (blk_num >= level.block_count)
   {
     PrintLine(LOG_ERROR, "ERROR: BlockAdd: bad block number %zu", blk_num);
   }
@@ -160,7 +145,7 @@ static void BlockAdd(size_t blk_num, size_t line_index)
   if (!cur)
   {
     // create empty block
-    block_lines[blk_num] = cur = UtilCalloc<uint16_t>(BK_QUANTUM * sizeof(uint16_t));
+    level.block_lines[blk_num] = cur = UtilCalloc<uint16_t>(BK_QUANTUM * sizeof(uint16_t));
     cur[BK_NUM] = 0;
     cur[BK_MAX] = BK_QUANTUM;
     cur[BK_XOR] = 0x1234;
@@ -171,7 +156,7 @@ static void BlockAdd(size_t blk_num, size_t line_index)
     // no more room, so allocate some more...
     cur[BK_MAX] += BK_QUANTUM;
 
-    block_lines[blk_num] = cur = UtilRealloc(cur, cur[BK_MAX] * sizeof(uint16_t));
+    level.block_lines[blk_num] = cur = UtilRealloc(cur, cur[BK_MAX] * sizeof(uint16_t));
   }
 
   // compute new checksum
@@ -182,7 +167,7 @@ static void BlockAdd(size_t blk_num, size_t line_index)
   cur[BK_NUM]++;
 }
 
-static void BlockAddLine(const linedef_t *L)
+static void BlockAddLine(level_t &level, const linedef_t *L)
 {
   int32_t x1 = static_cast<int32_t>(L->start->x);
   int32_t y1 = static_cast<int32_t>(L->start->y);
@@ -196,16 +181,16 @@ static void BlockAddLine(const linedef_t *L)
     PrintLine(LOG_DEBUG, "[%s] %zu (%d,%d) -> (%d,%d)", __func__, line_index, x1, y1, x2, y2);
   }
 
-  int32_t bx1_temp = (std::min(x1, x2) - block_x) / 128;
-  int32_t by1_temp = (std::min(y1, y2) - block_y) / 128;
-  int32_t bx2_temp = (std::max(x1, x2) - block_x) / 128;
-  int32_t by2_temp = (std::max(y1, y2) - block_y) / 128;
+  int32_t bx1_temp = (std::min(x1, x2) - level.block_x) / 128;
+  int32_t by1_temp = (std::min(y1, y2) - level.block_y) / 128;
+  int32_t bx2_temp = (std::max(x1, x2) - level.block_x) / 128;
+  int32_t by2_temp = (std::max(y1, y2) - level.block_y) / 128;
 
   // handle truncated blockmaps
   size_t bx1 = static_cast<size_t>(std::max(bx1_temp, 0));
   size_t by1 = static_cast<size_t>(std::max(by1_temp, 0));
-  size_t bx2 = static_cast<size_t>(std::min(bx2_temp, static_cast<int32_t>(block_w - 1)));
-  size_t by2 = static_cast<size_t>(std::min(by2_temp, static_cast<int32_t>(block_h - 1)));
+  size_t bx2 = static_cast<size_t>(std::min(bx2_temp, static_cast<int32_t>(level.block_w - 1)));
+  size_t by2 = static_cast<size_t>(std::min(by2_temp, static_cast<int32_t>(level.block_h - 1)));
 
   if (bx2 < bx1 || by2 < by1)
   {
@@ -217,8 +202,8 @@ static void BlockAddLine(const linedef_t *L)
   {
     for (size_t bx = bx1; bx <= bx2; bx++)
     {
-      size_t blk_num = static_cast<size_t>(by1 * block_w + bx);
-      BlockAdd(blk_num, line_index);
+      size_t blk_num = static_cast<size_t>(by1 * level.block_w + bx);
+      BlockAdd(level, blk_num, line_index);
     }
     return;
   }
@@ -228,8 +213,8 @@ static void BlockAddLine(const linedef_t *L)
   {
     for (size_t by = by1; by <= by2; by++)
     {
-      size_t blk_num = static_cast<size_t>(by * block_w + bx1);
-      BlockAdd(blk_num, line_index);
+      size_t blk_num = static_cast<size_t>(by * level.block_w + bx1);
+      BlockAdd(level, blk_num, line_index);
     }
     return;
   }
@@ -240,16 +225,16 @@ static void BlockAddLine(const linedef_t *L)
   {
     for (size_t bx = bx1; bx <= bx2; bx++)
     {
-      size_t blk_num = static_cast<size_t>(bx + by * block_w);
+      size_t blk_num = static_cast<size_t>(bx + by * level.block_w);
 
-      int32_t minx = block_x + 128 * static_cast<int32_t>(bx);
-      int32_t miny = block_y + 128 * static_cast<int32_t>(by);
+      int32_t minx = level.block_x + 128 * static_cast<int32_t>(bx);
+      int32_t miny = level.block_y + 128 * static_cast<int32_t>(by);
       int32_t maxx = minx + 127;
       int32_t maxy = miny + 127;
 
       if (CheckLinedefInsideBox(minx, miny, maxx, maxy, x1, y1, x2, y2))
       {
-        BlockAdd(blk_num, line_index);
+        BlockAdd(level, blk_num, line_index);
       }
     }
   }
@@ -257,7 +242,7 @@ static void BlockAddLine(const linedef_t *L)
 
 static void CreateBlockmap(level_t &level)
 {
-  block_lines = UtilCalloc<uint16_t *>(block_count * sizeof(uint16_t *));
+  level.block_lines = UtilCalloc<uint16_t *>(level.block_count * sizeof(uint16_t *));
 
   for (size_t i = 0; i < level.linedefs.size(); i++)
   {
@@ -268,17 +253,18 @@ static void CreateBlockmap(level_t &level)
       continue;
     }
 
-    BlockAddLine(L);
+    BlockAddLine(level, L);
   }
 }
 
-static int BlockCompare(const void *p1, const void *p2)
+static int BlockCompare(const void *p1, const void *p2, void *arg)
 {
   int blk_num1 = (static_cast<const uint16_t *>(p1))[0];
   int blk_num2 = (static_cast<const uint16_t *>(p2))[0];
+  auto level = static_cast<level_t *>(arg);
 
-  const uint16_t *A = block_lines[blk_num1];
-  const uint16_t *B = block_lines[blk_num2];
+  const uint16_t *A = level->block_lines[blk_num1];
+  const uint16_t *B = level->block_lines[blk_num2];
 
   if (A == B)
   {
@@ -313,50 +299,50 @@ static void CompressBlockmap(level_t &level)
 
   size_t orig_size, new_size;
 
-  block_ptrs = UtilCalloc<uint16_t>(block_count * sizeof(uint16_t));
-  block_dups = UtilCalloc<uint16_t>(block_count * sizeof(uint16_t));
+  level.block_ptrs = UtilCalloc<uint16_t>(level.block_count * sizeof(uint16_t));
+  level.block_dups = UtilCalloc<uint16_t>(level.block_count * sizeof(uint16_t));
 
   // sort duplicate-detecting array.  After the sort, all duplicates
   // will be next to each other.  The duplicate array gives the order
   // of the blocklists in the BLOCKMAP lump.
-  for (size_t i = 0; i < block_count; i++)
+  for (size_t i = 0; i < level.block_count; i++)
   {
-    block_dups[i] = static_cast<uint16_t>(i);
+    level.block_dups[i] = static_cast<uint16_t>(i);
   }
 
-  qsort(block_dups, block_count, sizeof(uint16_t), BlockCompare);
+  qsort_r(level.block_dups, level.block_count, sizeof(uint16_t), BlockCompare, &level);
 
   // scan duplicate array and build up offset array
-  cur_offset = 4 + block_count + 2;
-  orig_size = 4 + block_count;
+  cur_offset = 4 + level.block_count + 2;
+  orig_size = 4 + level.block_count;
   new_size = cur_offset;
 
-  for (size_t i = 0; i < block_count; i++)
+  for (size_t i = 0; i < level.block_count; i++)
   {
-    size_t blk_num = block_dups[i];
+    size_t blk_num = level.block_dups[i];
 
     // empty block ?
-    if (block_lines[blk_num] == nullptr)
+    if (level.block_lines[blk_num] == nullptr)
     {
-      block_ptrs[blk_num] = static_cast<uint16_t>(4 + block_count);
-      block_dups[i] = DUMMY_DUP;
+      level.block_ptrs[blk_num] = static_cast<uint16_t>(4 + level.block_count);
+      level.block_dups[i] = DUMMY_DUP;
 
       orig_size += 2;
       continue;
     }
 
-    size_t count = 2 + block_lines[blk_num][BK_NUM];
+    size_t count = 2 + level.block_lines[blk_num][BK_NUM];
 
     // duplicate ?  Only the very last one of a sequence of duplicates
     // will update the current offset value.
-    if (i + 1 < block_count && BlockCompare(block_dups + i, block_dups + i + 1) == 0)
+    if (i + 1 < level.block_count && BlockCompare(level.block_dups + i, level.block_dups + i + 1, &level) == 0)
     {
-      block_ptrs[blk_num] = static_cast<uint16_t>(cur_offset);
-      block_dups[i] = DUMMY_DUP;
+      level.block_ptrs[blk_num] = static_cast<uint16_t>(cur_offset);
+      level.block_dups[i] = DUMMY_DUP;
 
       // free the memory of the duplicated block
-      UtilFree(block_lines[blk_num]);
-      block_lines[blk_num] = nullptr;
+      UtilFree(level.block_lines[blk_num]);
+      level.block_lines[blk_num] = nullptr;
 
       if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
       {
@@ -369,7 +355,7 @@ static void CompressBlockmap(level_t &level)
 
     // OK, this block is either the last of a series of duplicates, or
     // just a singleton.
-    block_ptrs[blk_num] = static_cast<uint16_t>(cur_offset);
+    level.block_ptrs[blk_num] = static_cast<uint16_t>(cur_offset);
     cur_offset += count;
     orig_size += count;
     new_size += count;
@@ -377,7 +363,7 @@ static void CompressBlockmap(level_t &level)
 
   if (cur_offset > 65535)
   {
-    block_overflowed = true;
+    level.block_overflowed = true;
     return;
   }
 
@@ -386,17 +372,17 @@ static void CompressBlockmap(level_t &level)
     PrintLine(LOG_DEBUG, "[%s] Last ptr = %zu  duplicates = %zu", __func__, cur_offset, dup_count);
   }
 
-  block_compression = static_cast<int32_t>((static_cast<int32_t>(orig_size) - static_cast<int32_t>(new_size)) * 100
-                                           / static_cast<int32_t>(orig_size));
+  level.block_compression =
+      (static_cast<int32_t>(orig_size) - static_cast<int32_t>(new_size)) * 100 / static_cast<int32_t>(orig_size);
 
   // there's a tiny chance of new_size > orig_size
-  if (block_compression < 0)
+  if (level.block_compression < 0)
   {
-    block_compression = 0;
+    level.block_compression = 0;
   }
 }
 
-static size_t CalcBlockmapSize(void)
+static size_t CalcBlockmapSize(level_t &level)
 {
   // compute size of final BLOCKMAP lump.
   // it does not need to be exact, but it *does* need to be bigger
@@ -406,12 +392,12 @@ static size_t CalcBlockmapSize(void)
   size_t size = 20;
 
   // the pointers (offsets to the line lists)
-  size = size + block_count * 2;
+  size = size + level.block_count * 2;
 
   // add size of each block
-  for (size_t i = 0; i < block_count; i++)
+  for (size_t i = 0; i < level.block_count; i++)
   {
-    size_t blk_num = block_dups[i];
+    size_t blk_num = level.block_dups[i];
 
     // ignore duplicate or empty blocks
     if (blk_num == DUMMY_DUP)
@@ -419,7 +405,7 @@ static size_t CalcBlockmapSize(void)
       continue;
     }
 
-    uint16_t *blk = block_lines[blk_num];
+    uint16_t *blk = level.block_lines[blk_num];
     SYS_ASSERT(blk);
 
     size += static_cast<size_t>(((blk[BK_NUM]) + 1 + 1) * 2);
@@ -430,7 +416,7 @@ static size_t CalcBlockmapSize(void)
 
 static void WriteBlockmap(level_t &level)
 {
-  size_t max_size = CalcBlockmapSize();
+  size_t max_size = CalcBlockmapSize(level);
   Lump_c *lump = CreateLevelLump(level, "BLOCKMAP", max_size);
 
   uint16_t null_block[2] = {0x0000, 0xFFFF};
@@ -440,17 +426,17 @@ static void WriteBlockmap(level_t &level)
   // fill in header
   raw_blockmap_header_t header;
 
-  header.x_origin = GetLittleEndian(static_cast<int16_t>(block_x));
-  header.y_origin = GetLittleEndian(static_cast<int16_t>(block_y));
-  header.x_blocks = GetLittleEndian(static_cast<int16_t>(block_w));
-  header.y_blocks = GetLittleEndian(static_cast<int16_t>(block_h));
+  header.x_origin = GetLittleEndian(static_cast<int16_t>(level.block_x));
+  header.y_origin = GetLittleEndian(static_cast<int16_t>(level.block_y));
+  header.x_blocks = GetLittleEndian(static_cast<int16_t>(level.block_w));
+  header.y_blocks = GetLittleEndian(static_cast<int16_t>(level.block_h));
 
   lump->Write(&header, sizeof(header));
 
   // handle pointers
-  for (size_t i = 0; i < block_count; i++)
+  for (size_t i = 0; i < level.block_count; i++)
   {
-    uint16_t ptr = GetLittleEndian(block_ptrs[i]);
+    uint16_t ptr = GetLittleEndian(level.block_ptrs[i]);
 
     if (ptr == 0)
     {
@@ -464,9 +450,9 @@ static void WriteBlockmap(level_t &level)
   lump->Write(null_block, sizeof(null_block));
 
   // handle each block list
-  for (size_t i = 0; i < block_count; i++)
+  for (size_t i = 0; i < level.block_count; i++)
   {
-    int blk_num = block_dups[i];
+    int blk_num = level.block_dups[i];
 
     // ignore duplicate or empty blocks
     if (blk_num == DUMMY_DUP)
@@ -474,7 +460,7 @@ static void WriteBlockmap(level_t &level)
       continue;
     }
 
-    uint16_t *blk = block_lines[blk_num];
+    uint16_t *blk = level.block_lines[blk_num];
     SYS_ASSERT(blk);
 
     lump->Write(&m_zero, sizeof(uint16_t));
@@ -485,19 +471,19 @@ static void WriteBlockmap(level_t &level)
   lump->Finish();
 }
 
-static void FreeBlockmap(void)
+static void FreeBlockmap(level_t &level)
 {
-  for (size_t i = 0; i < block_count; i++)
+  for (size_t i = 0; i < level.block_count; i++)
   {
-    if (block_lines[i])
+    if (level.block_lines[i])
     {
-      UtilFree(block_lines[i]);
+      UtilFree(level.block_lines[i]);
     }
   }
 
-  UtilFree(block_lines);
-  UtilFree(block_ptrs);
-  UtilFree(block_dups);
+  UtilFree(level.block_lines);
+  UtilFree(level.block_ptrs);
+  UtilFree(level.block_dups);
 }
 
 static void FindBlockmapLimits(level_t &level, bbox_t *bbox)
@@ -551,13 +537,13 @@ static void FindBlockmapLimits(level_t &level, bbox_t *bbox)
 
   if (level.linedefs.size() > 0)
   {
-    block_mid_x = static_cast<int32_t>(floor(mid_x / static_cast<double>(level.linedefs.size())));
-    block_mid_y = static_cast<int32_t>(floor(mid_y / static_cast<double>(level.linedefs.size())));
+    level.block_mid_x = static_cast<int32_t>(floor(mid_x / static_cast<double>(level.linedefs.size())));
+    level.block_mid_y = static_cast<int32_t>(floor(mid_y / static_cast<double>(level.linedefs.size())));
   }
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
-    PrintLine(LOG_DEBUG, "[%s] Blockmap lines centered at (%d,%d)", __func__, block_mid_x, block_mid_y);
+    PrintLine(LOG_DEBUG, "[%s] Blockmap lines centered at (%d,%d)", __func__, level.block_mid_x, level.block_mid_y);
   }
 }
 
@@ -573,13 +559,13 @@ static void InitBlockmap(level_t &level)
     PrintLine(LOG_NORMAL, "Map limits: (%d,%d) to (%d,%d)", map_bbox.minx, map_bbox.miny, map_bbox.maxx, map_bbox.maxy);
   }
 
-  block_x = map_bbox.minx - (map_bbox.minx & 0x7);
-  block_y = map_bbox.miny - (map_bbox.miny & 0x7);
+  level.block_x = map_bbox.minx - (map_bbox.minx & 0x7);
+  level.block_y = map_bbox.miny - (map_bbox.miny & 0x7);
 
-  block_w = static_cast<size_t>((map_bbox.maxx - block_x) / 128) + 1;
-  block_h = static_cast<size_t>((map_bbox.maxy - block_y) / 128) + 1;
+  level.block_w = static_cast<size_t>((map_bbox.maxx - level.block_x) / 128) + 1;
+  level.block_h = static_cast<size_t>((map_bbox.maxy - level.block_y) / 128) + 1;
 
-  block_count = block_w * block_h;
+  level.block_count = level.block_w * level.block_h;
 }
 
 static void PutBlockmap(level_t &level)
@@ -591,8 +577,6 @@ static void PutBlockmap(level_t &level)
     return;
   }
 
-  block_overflowed = false;
-
   // initial phase: create internal blockmap containing the index of
   // all lines in each block.
   CreateBlockmap(level);
@@ -603,7 +587,7 @@ static void PutBlockmap(level_t &level)
   CompressBlockmap(level);
 
   // final phase: write it out in the correct format
-  if (block_overflowed)
+  if (level.block_overflowed)
   {
     // leave an empty blockmap lump
     CreateLevelLump(level, "BLOCKMAP")->Finish();
@@ -615,44 +599,41 @@ static void PutBlockmap(level_t &level)
     WriteBlockmap(level);
     if (config.verbose)
     {
-      PrintLine(LOG_NORMAL, "Blockmap size: %zux%zu (compression: %d%%)", block_w, block_h, block_compression);
+      PrintLine(LOG_NORMAL, "Blockmap size: %zux%zu (compression: %d%%)", level.block_w, level.block_h,
+                level.block_compression);
     }
   }
 
-  FreeBlockmap();
+  FreeBlockmap(level);
 }
 
 //------------------------------------------------------------------------
 // REJECT : Generate the reject table
 //------------------------------------------------------------------------
 
-static uint8_t *rej_matrix;
-static size_t rej_total_size; // in bytes
-static std::vector<size_t> rej_sector_groups;
-
 //
 // Allocate the matrix, init sectors into individual groups.
 //
 static void Reject_Init(level_t &level)
 {
-  rej_total_size = (level.sectors.size() * level.sectors.size() + 7) / 8;
+  level.reject_size = (level.sectors.size() * level.sectors.size() + 7) / 8;
 
-  rej_matrix = new uint8_t[rej_total_size];
-  memset(rej_matrix, 0, rej_total_size);
+  level.reject_matrix = new uint8_t[level.reject_size];
+  memset(level.reject_matrix, 0, level.reject_size);
 
-  rej_sector_groups.resize(level.sectors.size());
+  level.reject_groups.resize(level.sectors.size());
 
   for (size_t i = 0; i < level.sectors.size(); i++)
   {
-    rej_sector_groups[i] = i;
+    level.reject_groups[i] = i;
   }
 }
 
-static void Reject_Free(void)
+static void Reject_Free(level_t &level)
 {
-  delete[] rej_matrix;
-  rej_matrix = nullptr;
-  rej_sector_groups.clear();
+  delete[] level.reject_matrix;
+  level.reject_matrix = nullptr;
+  level.reject_groups.clear();
 }
 
 //
@@ -680,8 +661,8 @@ static void Reject_GroupSectors(level_t &level)
     }
 
     // already in the same group ?
-    size_t group1 = rej_sector_groups[sec1->index];
-    size_t group2 = rej_sector_groups[sec2->index];
+    size_t group1 = level.reject_groups[sec1->index];
+    size_t group2 = level.reject_groups[sec2->index];
 
     if (group1 == group2)
     {
@@ -697,9 +678,9 @@ static void Reject_GroupSectors(level_t &level)
     // merge the groups
     for (size_t s = 0; s < level.sectors.size(); s++)
     {
-      if (rej_sector_groups[s] == group2)
+      if (level.reject_groups[s] == group2)
       {
-        rej_sector_groups[s] = group1;
+        level.reject_groups[s] = group1;
       }
     }
   }
@@ -711,7 +692,7 @@ static void Reject_ProcessSectors(level_t &level)
   {
     for (size_t target = 0; target < view; target++)
     {
-      if (rej_sector_groups[view] == rej_sector_groups[target])
+      if (level.reject_groups[view] == level.reject_groups[target])
       {
         continue;
       }
@@ -721,16 +702,16 @@ static void Reject_ProcessSectors(level_t &level)
       size_t p1 = view * level.sectors.size() + target;
       size_t p2 = target * level.sectors.size() + view;
 
-      rej_matrix[p1 >> 3] |= (1 << (p1 & 7));
-      rej_matrix[p2 >> 3] |= (1 << (p2 & 7));
+      level.reject_matrix[p1 >> 3] |= (1 << (p1 & 7));
+      level.reject_matrix[p2 >> 3] |= (1 << (p2 & 7));
     }
   }
 }
 
 static void Reject_WriteLump(level_t &level)
 {
-  Lump_c *lump = CreateLevelLump(level, "REJECT", rej_total_size);
-  lump->Write(rej_matrix, rej_total_size);
+  Lump_c *lump = CreateLevelLump(level, "REJECT", level.reject_size);
+  lump->Write(level.reject_matrix, level.reject_size);
   lump->Finish();
 }
 
@@ -752,10 +733,10 @@ static void PutReject(level_t &level)
   Reject_GroupSectors(level);
   Reject_ProcessSectors(level);
   Reject_WriteLump(level);
-  Reject_Free();
+  Reject_Free(level);
   if (config.verbose)
   {
-    PrintLine(LOG_NORMAL, "Reject size: %zu", rej_total_size);
+    PrintLine(LOG_NORMAL, "Reject size: %zu", level.reject_size);
   }
 }
 
