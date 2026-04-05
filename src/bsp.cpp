@@ -129,17 +129,17 @@ static void PutVertices_Doom(level_t &level)
   }
 }
 
-static void PutVertices_Doom64(void)
+static void PutVertices_Doom64(level_t &level)
 {
   // this size is worst-case scenario
-  size_t size = lev_vertices.size() * sizeof(raw_vertex_doom64_t);
-  Lump_c *lump = CreateLevelLump("VERTEXES", size);
+  size_t size = level.vertices.size() * sizeof(raw_vertex_doom64_t);
+  Lump_c *lump = CreateLevelLump(level, "VERTEXES", size);
 
-  for (size_t i = 0; i < lev_vertices.size(); i++)
+  for (size_t i = 0; i < level.vertices.size(); i++)
   {
     raw_vertex_doom64_t raw;
 
-    const vertex_t *vert = lev_vertices[i];
+    const vertex_t *vert = level.vertices[i];
 
     // do not ignore vertex_t::is_new
     // it is required for leafs
@@ -304,14 +304,14 @@ static void PutNodes_Vanilla(level_t &level, node_t *root_node)
   }
 }
 
-static void PutLeafs_Vanilla(void)
+static void PutLeafs_Vanilla(level_t &level)
 {
-  Lump_c *lump = CreateLevelLump("LEAFS");
+  Lump_c *lump = CreateLevelLump(level, "LEAFS");
   uint16_t actual_seg_index = 0;
 
-  for (size_t i = 0; i < lev_subsecs.size(); i++)
+  for (size_t i = 0; i < level.subsecs.size(); i++)
   {
-    subsec_t *subsec = lev_subsecs[i];
+    subsec_t *subsec = level.subsecs[i];
     seg_t *seg = subsec->seg_list;
     size_t seg_count = subsec->seg_count;
 
@@ -510,14 +510,14 @@ static void PutNodes_DeePBSPV4(level_t &level, node_t *root_node)
   }
 }
 
-static void PutLeafs_DeePBSPV4(void)
+static void PutLeafs_DeePBSPV4(level_t &level)
 {
-  Lump_c *lump = CreateLevelLump("LEAFS");
+  Lump_c *lump = CreateLevelLump(level, "LEAFS");
   uint32_t actual_seg_index = 0;
 
-  for (size_t i = 0; i < lev_subsecs.size(); i++)
+  for (size_t i = 0; i < level.subsecs.size(); i++)
   {
-    subsec_t *subsec = lev_subsecs[i];
+    subsec_t *subsec = level.subsecs[i];
     seg_t *seg = subsec->seg_list;
     size_t seg_count = subsec->seg_count;
 
@@ -1041,30 +1041,30 @@ void SaveDoom_XGL3(level_t &level, node_t *root_node)
 // This could also be shared with PSX Doom and PSX Final Doom, but we don't support those
 //
 
-void SaveDoom64_Vanilla(node_t *root_node)
+void SaveDoom64_Vanilla(level_t &level, node_t *root_node)
 {
   // We need minisegs just for leafs
-  PutLeafs_Vanilla();
+  PutLeafs_Vanilla(level);
   // remove all the minisegs from subsectors
-  NormaliseBspTree();
-  SortSegs();
-  PutVertices_Doom64();
-  PutSegs_Vanilla();
-  PutSubsecs_Vanilla();
-  PutNodes_Vanilla(root_node);
+  NormaliseBspTree(level);
+  SortSegs(level);
+  PutVertices_Doom64(level);
+  PutSegs_Vanilla(level);
+  PutSubsecs_Vanilla(level);
+  PutNodes_Vanilla(level, root_node);
 }
 
-void SaveDoom64_DeePBSPV4(node_t *root_node)
+void SaveDoom64_DeePBSPV4(level_t &level, node_t *root_node)
 {
   // We need minisegs just for leafs
-  PutLeafs_DeePBSPV4();
+  PutLeafs_DeePBSPV4(level);
   // remove all the minisegs from subsectors
-  NormaliseBspTree();
-  SortSegs();
-  PutVertices_Doom64();
-  PutSegs_DeePBSPV4();
-  PutSubsecs_DeePBSPV4();
-  PutNodes_DeePBSPV4(root_node);
+  NormaliseBspTree(level);
+  SortSegs(level);
+  PutVertices_Doom64(level);
+  PutSegs_DeePBSPV4(level);
+  PutSubsecs_DeePBSPV4(level);
+  PutNodes_DeePBSPV4(level, root_node);
 }
 
 //
