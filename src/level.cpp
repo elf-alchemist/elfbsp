@@ -33,21 +33,6 @@ static constexpr std::uint32_t DUMMY_DUP = 0xFFFF;
 
 Wad_file *cur_wad;
 
-static int block_x, block_y;
-static size_t block_w, block_h;
-static size_t block_count;
-
-static int block_mid_x = 0;
-static int block_mid_y = 0;
-
-static uint16_t **block_lines;
-
-static uint16_t *block_ptrs;
-static uint16_t *block_dups;
-
-static int32_t block_compression;
-static bool block_overflowed;
-
 int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2)
 {
   int count = 2;
@@ -143,16 +128,16 @@ static constexpr uint32_t BK_XOR = 2;
 static constexpr uint32_t BK_FIRST = 3;
 static constexpr uint32_t BK_QUANTUM = 32;
 
-static void BlockAdd(size_t blk_num, size_t line_index)
+static void BlockAdd(level_t &level, size_t blk_num, size_t line_index)
 {
-  uint16_t *cur = block_lines[blk_num];
+  uint16_t *cur = level.block_lines[blk_num];
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
     PrintLine(LOG_DEBUG, "[%s] Block %zu has line %zu", __func__, blk_num, line_index);
   }
 
-  if (blk_num >= block_count)
+  if (blk_num >= level.block_count)
   {
     PrintLine(LOG_ERROR, "ERROR: BlockAdd: bad block number %zu", blk_num);
   }
@@ -160,7 +145,7 @@ static void BlockAdd(size_t blk_num, size_t line_index)
   if (!cur)
   {
     // create empty block
-    block_lines[blk_num] = cur = UtilCalloc<uint16_t>(BK_QUANTUM * sizeof(uint16_t));
+    level.block_lines[blk_num] = cur = UtilCalloc<uint16_t>(BK_QUANTUM * sizeof(uint16_t));
     cur[BK_NUM] = 0;
     cur[BK_MAX] = BK_QUANTUM;
     cur[BK_XOR] = 0x1234;
@@ -171,7 +156,7 @@ static void BlockAdd(size_t blk_num, size_t line_index)
     // no more room, so allocate some more...
     cur[BK_MAX] += BK_QUANTUM;
 
-    block_lines[blk_num] = cur = UtilRealloc(cur, cur[BK_MAX] * sizeof(uint16_t));
+    level.block_lines[blk_num] = cur = UtilRealloc(cur, cur[BK_MAX] * sizeof(uint16_t));
   }
 
   // compute new checksum
@@ -182,7 +167,7 @@ static void BlockAdd(size_t blk_num, size_t line_index)
   cur[BK_NUM]++;
 }
 
-static void BlockAddLine(const linedef_t *L)
+static void BlockAddLine(level_t &level, const linedef_t *L)
 {
   int32_t x1 = static_cast<int32_t>(L->start->x);
   int32_t y1 = static_cast<int32_t>(L->start->y);
@@ -196,16 +181,16 @@ static void BlockAddLine(const linedef_t *L)
     PrintLine(LOG_DEBUG, "[%s] %zu (%d,%d) -> (%d,%d)", __func__, line_index, x1, y1, x2, y2);
   }
 
-  int32_t bx1_temp = (std::min(x1, x2) - block_x) / 128;
-  int32_t by1_temp = (std::min(y1, y2) - block_y) / 128;
-  int32_t bx2_temp = (std::max(x1, x2) - block_x) / 128;
-  int32_t by2_temp = (std::max(y1, y2) - block_y) / 128;
+  int32_t bx1_temp = (std::min(x1, x2) - level.block_x) / 128;
+  int32_t by1_temp = (std::min(y1, y2) - level.block_y) / 128;
+  int32_t bx2_temp = (std::max(x1, x2) - level.block_x) / 128;
+  int32_t by2_temp = (std::max(y1, y2) - level.block_y) / 128;
 
   // handle truncated blockmaps
   size_t bx1 = static_cast<size_t>(std::max(bx1_temp, 0));
   size_t by1 = static_cast<size_t>(std::max(by1_temp, 0));
-  size_t bx2 = static_cast<size_t>(std::min(bx2_temp, static_cast<int32_t>(block_w - 1)));
-  size_t by2 = static_cast<size_t>(std::min(by2_temp, static_cast<int32_t>(block_h - 1)));
+  size_t bx2 = static_cast<size_t>(std::min(bx2_temp, static_cast<int32_t>(level.block_w - 1)));
+  size_t by2 = static_cast<size_t>(std::min(by2_temp, static_cast<int32_t>(level.block_h - 1)));
 
   if (bx2 < bx1 || by2 < by1)
   {
@@ -217,8 +202,8 @@ static void BlockAddLine(const linedef_t *L)
   {
     for (size_t bx = bx1; bx <= bx2; bx++)
     {
-      size_t blk_num = static_cast<size_t>(by1 * block_w + bx);
-      BlockAdd(blk_num, line_index);
+      size_t blk_num = static_cast<size_t>(by1 * level.block_w + bx);
+      BlockAdd(level, blk_num, line_index);
     }
     return;
   }
@@ -228,8 +213,8 @@ static void BlockAddLine(const linedef_t *L)
   {
     for (size_t by = by1; by <= by2; by++)
     {
-      size_t blk_num = static_cast<size_t>(by * block_w + bx1);
-      BlockAdd(blk_num, line_index);
+      size_t blk_num = static_cast<size_t>(by * level.block_w + bx1);
+      BlockAdd(level, blk_num, line_index);
     }
     return;
   }
@@ -240,123 +225,102 @@ static void BlockAddLine(const linedef_t *L)
   {
     for (size_t bx = bx1; bx <= bx2; bx++)
     {
-      size_t blk_num = static_cast<size_t>(bx + by * block_w);
+      size_t blk_num = static_cast<size_t>(bx + by * level.block_w);
 
-      int32_t minx = block_x + 128 * static_cast<int32_t>(bx);
-      int32_t miny = block_y + 128 * static_cast<int32_t>(by);
+      int32_t minx = level.block_x + 128 * static_cast<int32_t>(bx);
+      int32_t miny = level.block_y + 128 * static_cast<int32_t>(by);
       int32_t maxx = minx + 127;
       int32_t maxy = miny + 127;
 
       if (CheckLinedefInsideBox(minx, miny, maxx, maxy, x1, y1, x2, y2))
       {
-        BlockAdd(blk_num, line_index);
+        BlockAdd(level, blk_num, line_index);
       }
     }
   }
 }
 
-static void CreateBlockmap(void)
+static void CreateBlockmap(level_t &level)
 {
-  block_lines = UtilCalloc<uint16_t *>(block_count * sizeof(uint16_t *));
+  level.block_lines = UtilCalloc<uint16_t *>(level.block_count * sizeof(uint16_t *));
 
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (size_t i = 0; i < level.linedefs.size(); i++)
   {
-    const linedef_t *L = lev_linedefs[i];
+    const linedef_t *L = level.linedefs[i];
 
     if (HAS_BIT(L->effects, FX_NoBlockmap | FX_ZeroLength))
     {
       continue;
     }
 
-    BlockAddLine(L);
+    BlockAddLine(level, L);
   }
 }
 
-static int BlockCompare(const void *p1, const void *p2)
-{
-  int blk_num1 = (static_cast<const uint16_t *>(p1))[0];
-  int blk_num2 = (static_cast<const uint16_t *>(p2))[0];
-
-  const uint16_t *A = block_lines[blk_num1];
-  const uint16_t *B = block_lines[blk_num2];
-
-  if (A == B)
-  {
-    return 0;
-  }
-  if (A == nullptr)
-  {
-    return -1;
-  }
-  if (B == nullptr)
-  {
-    return +1;
-  }
-
-  if (A[BK_NUM] != B[BK_NUM])
-  {
-    return A[BK_NUM] - B[BK_NUM];
-  }
-
-  if (A[BK_XOR] != B[BK_XOR])
-  {
-    return A[BK_XOR] - B[BK_XOR];
-  }
-
-  return memcmp(A + BK_FIRST, B + BK_FIRST, A[BK_NUM] * sizeof(uint16_t));
-}
-
-static void CompressBlockmap(void)
+static void CompressBlockmap(level_t &level)
 {
   size_t cur_offset;
   size_t dup_count = 0;
 
   size_t orig_size, new_size;
 
-  block_ptrs = UtilCalloc<uint16_t>(block_count * sizeof(uint16_t));
-  block_dups = UtilCalloc<uint16_t>(block_count * sizeof(uint16_t));
+  level.block_ptrs.reserve(level.block_count);
+  level.block_dups.reserve(level.block_count);
 
   // sort duplicate-detecting array.  After the sort, all duplicates
   // will be next to each other.  The duplicate array gives the order
   // of the blocklists in the BLOCKMAP lump.
-  for (size_t i = 0; i < block_count; i++)
+  for (size_t i = 0; i < level.block_count; i++)
   {
-    block_dups[i] = static_cast<uint16_t>(i);
+    level.block_dups[i] = static_cast<uint16_t>(i);
   }
 
-  qsort(block_dups, block_count, sizeof(uint16_t), BlockCompare);
+  auto BlockCompare = [&level](const uint16_t &blk_num1, const uint16_t &blk_num2) -> int
+  {
+    const uint16_t *A = level.block_lines[blk_num1];
+    const uint16_t *B = level.block_lines[blk_num2];
+
+    if (A == B) return 0;
+    if (A == nullptr) return -1;
+    if (B == nullptr) return +1;
+    if (A[BK_NUM] != B[BK_NUM]) return A[BK_NUM] - B[BK_NUM];
+    if (A[BK_XOR] != B[BK_XOR]) return A[BK_XOR] - B[BK_XOR];
+
+    return memcmp(A + BK_FIRST, B + BK_FIRST, A[BK_NUM] * sizeof(uint16_t));
+  };
+  std::sort(level.block_dups.begin(), level.block_dups.end(), BlockCompare);
 
   // scan duplicate array and build up offset array
-  cur_offset = 4 + block_count + 2;
-  orig_size = 4 + block_count;
+  cur_offset = 4 + level.block_count + 2;
+  orig_size = 4 + level.block_count;
   new_size = cur_offset;
 
-  for (size_t i = 0; i < block_count; i++)
+  for (size_t i = 0; i < level.block_count; i++)
   {
-    size_t blk_num = block_dups[i];
+    size_t blk_num = level.block_dups[i];
 
     // empty block ?
-    if (block_lines[blk_num] == nullptr)
+    if (level.block_lines[blk_num] == nullptr)
     {
-      block_ptrs[blk_num] = static_cast<uint16_t>(4 + block_count);
-      block_dups[i] = DUMMY_DUP;
+      level.block_ptrs[blk_num] = static_cast<uint16_t>(4 + level.block_count);
+      level.block_dups[i] = DUMMY_DUP;
 
       orig_size += 2;
       continue;
     }
 
-    size_t count = 2 + block_lines[blk_num][BK_NUM];
+    size_t count = 2 + level.block_lines[blk_num][BK_NUM];
 
     // duplicate ?  Only the very last one of a sequence of duplicates
     // will update the current offset value.
-    if (i + 1 < block_count && BlockCompare(block_dups + i, block_dups + i + 1) == 0)
+    if (i + 1 < level.block_count && BlockCompare(level.block_dups[i], level.block_dups[i + 1]) == 0)
     {
-      block_ptrs[blk_num] = static_cast<uint16_t>(cur_offset);
-      block_dups[i] = DUMMY_DUP;
+      level.block_ptrs[blk_num] = static_cast<uint16_t>(cur_offset);
+      level.block_dups[i] = DUMMY_DUP;
 
       // free the memory of the duplicated block
-      UtilFree(block_lines[blk_num]);
-      block_lines[blk_num] = nullptr;
+      UtilFree(level.block_lines[blk_num]);
+      level.block_lines[blk_num] = nullptr;
 
       if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
       {
@@ -369,7 +333,7 @@ static void CompressBlockmap(void)
 
     // OK, this block is either the last of a series of duplicates, or
     // just a singleton.
-    block_ptrs[blk_num] = static_cast<uint16_t>(cur_offset);
+    level.block_ptrs[blk_num] = static_cast<uint16_t>(cur_offset);
     cur_offset += count;
     orig_size += count;
     new_size += count;
@@ -377,7 +341,7 @@ static void CompressBlockmap(void)
 
   if (cur_offset > 65535)
   {
-    block_overflowed = true;
+    level.block_overflowed = true;
     return;
   }
 
@@ -386,17 +350,17 @@ static void CompressBlockmap(void)
     PrintLine(LOG_DEBUG, "[%s] Last ptr = %zu  duplicates = %zu", __func__, cur_offset, dup_count);
   }
 
-  block_compression = static_cast<int32_t>((static_cast<int32_t>(orig_size) - static_cast<int32_t>(new_size)) * 100
-                                           / static_cast<int32_t>(orig_size));
+  level.block_compression =
+      (static_cast<int32_t>(orig_size) - static_cast<int32_t>(new_size)) * 100 / static_cast<int32_t>(orig_size);
 
   // there's a tiny chance of new_size > orig_size
-  if (block_compression < 0)
+  if (level.block_compression < 0)
   {
-    block_compression = 0;
+    level.block_compression = 0;
   }
 }
 
-static size_t CalcBlockmapSize(void)
+static size_t CalcBlockmapSize(level_t &level)
 {
   // compute size of final BLOCKMAP lump.
   // it does not need to be exact, but it *does* need to be bigger
@@ -406,12 +370,12 @@ static size_t CalcBlockmapSize(void)
   size_t size = 20;
 
   // the pointers (offsets to the line lists)
-  size = size + block_count * 2;
+  size = size + level.block_count * 2;
 
   // add size of each block
-  for (size_t i = 0; i < block_count; i++)
+  for (size_t i = 0; i < level.block_count; i++)
   {
-    size_t blk_num = block_dups[i];
+    size_t blk_num = level.block_dups[i];
 
     // ignore duplicate or empty blocks
     if (blk_num == DUMMY_DUP)
@@ -419,7 +383,7 @@ static size_t CalcBlockmapSize(void)
       continue;
     }
 
-    uint16_t *blk = block_lines[blk_num];
+    uint16_t *blk = level.block_lines[blk_num];
     SYS_ASSERT(blk);
 
     size += static_cast<size_t>(((blk[BK_NUM]) + 1 + 1) * 2);
@@ -428,10 +392,10 @@ static size_t CalcBlockmapSize(void)
   return size;
 }
 
-static void WriteBlockmap(void)
+static void WriteBlockmap(level_t &level)
 {
-  size_t max_size = CalcBlockmapSize();
-  Lump_c *lump = CreateLevelLump("BLOCKMAP", max_size);
+  size_t max_size = CalcBlockmapSize(level);
+  Lump_c *lump = CreateLevelLump(level, "BLOCKMAP", max_size);
 
   uint16_t null_block[2] = {0x0000, 0xFFFF};
   uint16_t m_zero = 0x0000;
@@ -440,17 +404,17 @@ static void WriteBlockmap(void)
   // fill in header
   raw_blockmap_header_t header;
 
-  header.x_origin = GetLittleEndian(static_cast<int16_t>(block_x));
-  header.y_origin = GetLittleEndian(static_cast<int16_t>(block_y));
-  header.x_blocks = GetLittleEndian(static_cast<int16_t>(block_w));
-  header.y_blocks = GetLittleEndian(static_cast<int16_t>(block_h));
+  header.x_origin = GetLittleEndian(static_cast<int16_t>(level.block_x));
+  header.y_origin = GetLittleEndian(static_cast<int16_t>(level.block_y));
+  header.x_blocks = GetLittleEndian(static_cast<int16_t>(level.block_w));
+  header.y_blocks = GetLittleEndian(static_cast<int16_t>(level.block_h));
 
   lump->Write(&header, sizeof(header));
 
   // handle pointers
-  for (size_t i = 0; i < block_count; i++)
+  for (size_t i = 0; i < level.block_count; i++)
   {
-    uint16_t ptr = GetLittleEndian(block_ptrs[i]);
+    uint16_t ptr = GetLittleEndian(level.block_ptrs[i]);
 
     if (ptr == 0)
     {
@@ -464,9 +428,9 @@ static void WriteBlockmap(void)
   lump->Write(null_block, sizeof(null_block));
 
   // handle each block list
-  for (size_t i = 0; i < block_count; i++)
+  for (size_t i = 0; i < level.block_count; i++)
   {
-    int blk_num = block_dups[i];
+    int blk_num = level.block_dups[i];
 
     // ignore duplicate or empty blocks
     if (blk_num == DUMMY_DUP)
@@ -474,7 +438,7 @@ static void WriteBlockmap(void)
       continue;
     }
 
-    uint16_t *blk = block_lines[blk_num];
+    uint16_t *blk = level.block_lines[blk_num];
     SYS_ASSERT(blk);
 
     lump->Write(&m_zero, sizeof(uint16_t));
@@ -485,32 +449,35 @@ static void WriteBlockmap(void)
   lump->Finish();
 }
 
-static void FreeBlockmap(void)
+static void FreeBlockmap(level_t &level)
 {
-  for (size_t i = 0; i < block_count; i++)
+  for (size_t i = 0; i < level.block_count; i++)
   {
-    if (block_lines[i])
+    if (level.block_lines[i])
     {
-      UtilFree(block_lines[i]);
+      UtilFree(level.block_lines[i]);
     }
   }
 
-  UtilFree(block_lines);
-  UtilFree(block_ptrs);
-  UtilFree(block_dups);
+  UtilFree(level.block_lines);
+  level.block_ptrs.clear();
+  level.block_dups.clear();
 }
 
-static void FindBlockmapLimits(bbox_t *bbox)
+static void FindBlockmapLimits(level_t &level, bbox_t *bbox)
 {
   double mid_x = 0;
   double mid_y = 0;
+  int16_t block_mid_x = 0;
+  int16_t block_mid_y = 0;
+
 
   bbox->minx = bbox->miny = SHRT_MAX;
   bbox->maxx = bbox->maxy = SHRT_MIN;
 
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (size_t i = 0; i < level.linedefs.size(); i++)
   {
-    const linedef_t *L = lev_linedefs[i];
+    const linedef_t *L = level.linedefs[i];
 
     if (HAS_BIT(L->effects, FX_NoBlockmap | FX_ZeroLength))
     {
@@ -522,37 +489,25 @@ static void FindBlockmapLimits(bbox_t *bbox)
     double x2 = L->end->x;
     double y2 = L->end->y;
 
-    int32_t lx = static_cast<int32_t>(floor(std::min(x1, x2)));
-    int32_t ly = static_cast<int32_t>(floor(std::min(y1, y2)));
-    int32_t hx = static_cast<int32_t>(ceil(std::max(x1, x2)));
-    int32_t hy = static_cast<int32_t>(ceil(std::max(y1, y2)));
+    int16_t lx = static_cast<int16_t>(floor(std::min(x1, x2)));
+    int16_t ly = static_cast<int16_t>(floor(std::min(y1, y2)));
+    int16_t hx = static_cast<int16_t>(ceil(std::max(x1, x2)));
+    int16_t hy = static_cast<int16_t>(ceil(std::max(y1, y2)));
 
-    if (lx < bbox->minx)
-    {
-      bbox->minx = lx;
-    }
-    if (ly < bbox->miny)
-    {
-      bbox->miny = ly;
-    }
-    if (hx > bbox->maxx)
-    {
-      bbox->maxx = hx;
-    }
-    if (hy > bbox->maxy)
-    {
-      bbox->maxy = hy;
-    }
+    if (lx < bbox->minx) bbox->minx = lx;
+    if (ly < bbox->miny) bbox->miny = ly;
+    if (hx > bbox->maxx) bbox->maxx = hx;
+    if (hy > bbox->maxy) bbox->maxy = hy;
 
     // compute middle of cluster
     mid_x += (lx + hx) >> 1;
     mid_y += (ly + hy) >> 1;
   }
 
-  if (lev_linedefs.size() > 0)
+  if (level.linedefs.size() > 0)
   {
-    block_mid_x = static_cast<int32_t>(floor(mid_x / static_cast<double>(lev_linedefs.size())));
-    block_mid_y = static_cast<int32_t>(floor(mid_y / static_cast<double>(lev_linedefs.size())));
+    block_mid_x = static_cast<int16_t>(floor(mid_x / static_cast<double>(level.linedefs.size())));
+    block_mid_y = static_cast<int16_t>(floor(mid_y / static_cast<double>(level.linedefs.size())));
   }
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
@@ -561,98 +516,93 @@ static void FindBlockmapLimits(bbox_t *bbox)
   }
 }
 
-static void InitBlockmap(void)
+static void InitBlockmap(level_t &level)
 {
   bbox_t map_bbox;
 
   // find limits of linedefs, and store as map limits
-  FindBlockmapLimits(&map_bbox);
+  FindBlockmapLimits(level, &map_bbox);
 
   if (config.verbose)
   {
     PrintLine(LOG_NORMAL, "Map limits: (%d,%d) to (%d,%d)", map_bbox.minx, map_bbox.miny, map_bbox.maxx, map_bbox.maxy);
   }
 
-  block_x = map_bbox.minx - (map_bbox.minx & 0x7);
-  block_y = map_bbox.miny - (map_bbox.miny & 0x7);
+  level.block_x = map_bbox.minx - (map_bbox.minx & 0x7);
+  level.block_y = map_bbox.miny - (map_bbox.miny & 0x7);
 
-  block_w = static_cast<size_t>((map_bbox.maxx - block_x) / 128) + 1;
-  block_h = static_cast<size_t>((map_bbox.maxy - block_y) / 128) + 1;
+  level.block_w = static_cast<size_t>((map_bbox.maxx - level.block_x) / 128) + 1;
+  level.block_h = static_cast<size_t>((map_bbox.maxy - level.block_y) / 128) + 1;
 
-  block_count = block_w * block_h;
+  level.block_count = level.block_w * level.block_h;
 }
 
-static void PutBlockmap(void)
+static void PutBlockmap(level_t &level)
 {
-  if (lev_linedefs.size() == 0)
+  if (level.linedefs.size() == 0)
   {
     // just create an empty blockmap lump
-    CreateLevelLump("BLOCKMAP")->Finish();
+    CreateLevelLump(level, "BLOCKMAP")->Finish();
     return;
   }
 
-  block_overflowed = false;
-
   // initial phase: create internal blockmap containing the index of
   // all lines in each block.
-  CreateBlockmap();
+  CreateBlockmap(level);
 
   // -AJA- second phase: compress the blockmap.  We do this by sorting
   //       the blocks, which is a typical way to detect duplicates in
   //       a large list.  This also detects BLOCKMAP overflow.
-  CompressBlockmap();
+  CompressBlockmap(level);
 
   // final phase: write it out in the correct format
-  if (block_overflowed)
+  if (level.block_overflowed)
   {
     // leave an empty blockmap lump
-    CreateLevelLump("BLOCKMAP")->Finish();
+    CreateLevelLump(level, "BLOCKMAP")->Finish();
     PrintLine(LOG_NORMAL, "WARNING: Blockmap overflowed (lump will be empty)");
     config.total_warnings++;
   }
   else
   {
-    WriteBlockmap();
+    WriteBlockmap(level);
     if (config.verbose)
     {
-      PrintLine(LOG_NORMAL, "Blockmap size: %zux%zu (compression: %d%%)", block_w, block_h, block_compression);
+      PrintLine(LOG_NORMAL, "Blockmap size: %zux%zu (compression: %d%%)", level.block_w, level.block_h,
+                level.block_compression);
     }
   }
 
-  FreeBlockmap();
+  FreeBlockmap(level);
 }
 
 //------------------------------------------------------------------------
 // REJECT : Generate the reject table
 //------------------------------------------------------------------------
 
-static uint8_t *rej_matrix;
-static size_t rej_total_size; // in bytes
-static std::vector<size_t> rej_sector_groups;
-
 //
 // Allocate the matrix, init sectors into individual groups.
 //
-static void Reject_Init(void)
+static void Reject_Init(level_t &level)
 {
-  rej_total_size = (lev_sectors.size() * lev_sectors.size() + 7) / 8;
+  level.reject_size = (level.sectors.size() * level.sectors.size() + 7) / 8;
 
-  rej_matrix = new uint8_t[rej_total_size];
-  memset(rej_matrix, 0, rej_total_size);
+  level.reject_matrix = new uint8_t[level.reject_size];
+  memset(level.reject_matrix, 0, level.reject_size);
 
-  rej_sector_groups.resize(lev_sectors.size());
+  level.reject_groups.resize(level.sectors.size());
 
-  for (size_t i = 0; i < lev_sectors.size(); i++)
+  for (size_t i = 0; i < level.sectors.size(); i++)
   {
-    rej_sector_groups[i] = i;
+    level.reject_groups[i] = i;
   }
 }
 
-static void Reject_Free(void)
+static void Reject_Free(level_t &level)
 {
-  delete[] rej_matrix;
-  rej_matrix = nullptr;
-  rej_sector_groups.clear();
+  delete[] level.reject_matrix;
+  level.reject_matrix = nullptr;
+  level.reject_groups.clear();
 }
 
 //
@@ -660,11 +610,11 @@ static void Reject_Free(void)
 // Now we scan the linedef list.  For each two-sectored line,
 // merge the two sector groups into one.  That's it !
 //
-static void Reject_GroupSectors(void)
+static void Reject_GroupSectors(level_t &level)
 {
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (size_t i = 0; i < level.linedefs.size(); i++)
   {
-    const linedef_t *line = lev_linedefs[i];
+    const linedef_t *line = level.linedefs[i];
 
     if (!line->right || !line->left)
     {
@@ -680,8 +630,8 @@ static void Reject_GroupSectors(void)
     }
 
     // already in the same group ?
-    size_t group1 = rej_sector_groups[sec1->index];
-    size_t group2 = rej_sector_groups[sec2->index];
+    size_t group1 = level.reject_groups[sec1->index];
+    size_t group2 = level.reject_groups[sec2->index];
 
     if (group1 == group2)
     {
@@ -695,42 +645,42 @@ static void Reject_GroupSectors(void)
     }
 
     // merge the groups
-    for (size_t s = 0; s < lev_sectors.size(); s++)
+    for (size_t s = 0; s < level.sectors.size(); s++)
     {
-      if (rej_sector_groups[s] == group2)
+      if (level.reject_groups[s] == group2)
       {
-        rej_sector_groups[s] = group1;
+        level.reject_groups[s] = group1;
       }
     }
   }
 }
 
-static void Reject_ProcessSectors(void)
+static void Reject_ProcessSectors(level_t &level)
 {
-  for (size_t view = 0; view < lev_sectors.size(); view++)
+  for (size_t view = 0; view < level.sectors.size(); view++)
   {
     for (size_t target = 0; target < view; target++)
     {
-      if (rej_sector_groups[view] == rej_sector_groups[target])
+      if (level.reject_groups[view] == level.reject_groups[target])
       {
         continue;
       }
 
       // for symmetry, do both sides at same time
 
-      size_t p1 = view * lev_sectors.size() + target;
-      size_t p2 = target * lev_sectors.size() + view;
+      size_t p1 = view * level.sectors.size() + target;
+      size_t p2 = target * level.sectors.size() + view;
 
-      rej_matrix[p1 >> 3] |= (1 << (p1 & 7));
-      rej_matrix[p2 >> 3] |= (1 << (p2 & 7));
+      level.reject_matrix[p1 >> 3] |= (1 << (p1 & 7));
+      level.reject_matrix[p2 >> 3] |= (1 << (p2 & 7));
     }
   }
 }
 
-static void Reject_WriteLump(void)
+static void Reject_WriteLump(level_t &level)
 {
-  Lump_c *lump = CreateLevelLump("REJECT", rej_total_size);
-  lump->Write(rej_matrix, rej_total_size);
+  Lump_c *lump = CreateLevelLump(level, "REJECT", level.reject_size);
+  lump->Write(level.reject_matrix, level.reject_size);
   lump->Finish();
 }
 
@@ -739,23 +689,23 @@ static void Reject_WriteLump(void)
 // determining all isolated groups of sectors (islands that are
 // surrounded by void space).
 //
-static void PutReject(void)
+static void PutReject(level_t &level)
 {
-  if (lev_sectors.size() == 0)
+  if (level.sectors.size() == 0)
   {
     // just create an empty reject lump
-    CreateLevelLump("REJECT")->Finish();
+    CreateLevelLump(level, "REJECT")->Finish();
     return;
   }
 
-  Reject_Init();
-  Reject_GroupSectors();
-  Reject_ProcessSectors();
-  Reject_WriteLump();
-  Reject_Free();
+  Reject_Init(level);
+  Reject_GroupSectors(level);
+  Reject_ProcessSectors(level);
+  Reject_WriteLump(level);
+  Reject_Free(level);
   if (config.verbose)
   {
-    PrintLine(LOG_NORMAL, "Reject size: %zu", rej_total_size);
+    PrintLine(LOG_NORMAL, "Reject size: %zu", level.reject_size);
   }
 }
 
@@ -763,202 +713,192 @@ static void PutReject(void)
 // LEVEL : Level structure read/write functions.
 //------------------------------------------------------------------------
 
-// Note: ZDoom format support based on code (C) 2002,2003 Marisa "Randi" Heit
-
-// per-level variables
-
-size_t lev_current_idx;
-size_t lev_current_start;
-
-map_format_e lev_format;
-
-bool lev_overflows = false;
-
-// objects of loaded level, and stuff we've built
-std::vector<vertex_t *> lev_vertices;
-std::vector<linedef_t *> lev_linedefs;
-std::vector<sidedef_t *> lev_sidedefs;
-std::vector<sector_t *> lev_sectors;
-std::vector<thing_t *> lev_things;
-
-std::vector<seg_t *> lev_segs;
-std::vector<subsec_t *> lev_subsecs;
-std::vector<node_t *> lev_nodes;
-std::vector<walltip_t *> lev_walltips;
-
-size_t num_old_vert = 0;
-size_t num_new_vert = 0;
-size_t num_real_lines = 0;
-
 /* ----- allocation routines ---------------------------- */
 
-vertex_t *NewVertex(void)
+vertex_t *NewVertex(level_t &level)
 {
   vertex_t *V = UtilCalloc<vertex_t>(sizeof(vertex_t));
-  V->index = lev_vertices.size();
-  lev_vertices.push_back(V);
+  V->index = level.vertices.size();
+  level.vertices.push_back(V);
   return V;
 }
 
-linedef_t *NewLinedef(void)
+linedef_t *NewLinedef(level_t &level)
 {
   linedef_t *L = UtilCalloc<linedef_t>(sizeof(linedef_t));
-  L->index = lev_linedefs.size();
-  lev_linedefs.push_back(L);
+  L->index = level.linedefs.size();
+  level.linedefs.push_back(L);
   return L;
 }
 
-sidedef_t *NewSidedef(void)
+sidedef_t *NewSidedef(level_t &level)
 {
   sidedef_t *S = UtilCalloc<sidedef_t>(sizeof(sidedef_t));
-  S->index = lev_sidedefs.size();
-  lev_sidedefs.push_back(S);
+  S->index = level.sidedefs.size();
+  level.sidedefs.push_back(S);
   return S;
 }
 
-sector_t *NewSector(void)
+sector_t *NewSector(level_t &level)
 {
   sector_t *S = UtilCalloc<sector_t>(sizeof(sector_t));
-  S->index = lev_sectors.size();
-  lev_sectors.push_back(S);
+  S->index = level.sectors.size();
+  level.sectors.push_back(S);
   return S;
 }
 
-thing_t *NewThing(void)
+thing_t *NewThing(level_t &level)
 {
   thing_t *T = UtilCalloc<thing_t>(sizeof(thing_t));
-  T->index = lev_things.size();
-  lev_things.push_back(T);
+  T->index = level.things.size();
+  level.things.push_back(T);
   return T;
 }
 
-seg_t *NewSeg(void)
+seg_t *NewSeg(level_t &level)
 {
   seg_t *S = UtilCalloc<seg_t>(sizeof(seg_t));
-  lev_segs.push_back(S);
+  level.segs.push_back(S);
   return S;
 }
 
-subsec_t *NewSubsec(void)
+subsec_t *NewSubsec(level_t &level)
 {
   subsec_t *S = UtilCalloc<subsec_t>(sizeof(subsec_t));
-  lev_subsecs.push_back(S);
+  level.subsecs.push_back(S);
   return S;
 }
 
-node_t *NewNode(void)
+node_t *NewNode(level_t &level)
 {
   node_t *N = UtilCalloc<node_t>(sizeof(node_t));
-  lev_nodes.push_back(N);
+  level.nodes.push_back(N);
   return N;
 }
 
-walltip_t *NewWallTip(void)
+walltip_t *NewWallTip(level_t &level)
 {
   walltip_t *WT = UtilCalloc<walltip_t>(sizeof(walltip_t));
-  lev_walltips.push_back(WT);
+  level.walltips.push_back(WT);
   return WT;
+}
+
+intersection_t *NewIntersection(level_t &level)
+{
+  intersection_t *cut = new intersection_t;
+  level.intercuts.push_back(cut);
+  return cut;
 }
 
 /* ----- free routines ---------------------------- */
 
-static void FreeVertices(void)
+void FreeVertices(level_t &level)
 {
-  for (size_t i = 0; i < lev_vertices.size(); i++)
+  for (size_t i = 0; i < level.vertices.size(); i++)
   {
-    UtilFree(lev_vertices[i]);
+    UtilFree(level.vertices[i]);
   }
 
-  lev_vertices.clear();
+  level.vertices.clear();
 }
 
-static void FreeLinedefs(void)
+void FreeLinedefs(level_t &level)
 {
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (size_t i = 0; i < level.linedefs.size(); i++)
   {
-    UtilFree(lev_linedefs[i]);
+    UtilFree(level.linedefs[i]);
   }
 
-  lev_linedefs.clear();
+  level.linedefs.clear();
 }
 
-static void FreeSidedefs(void)
+void FreeSidedefs(level_t &level)
 {
-  for (size_t i = 0; i < lev_sidedefs.size(); i++)
+  for (size_t i = 0; i < level.sidedefs.size(); i++)
   {
-    UtilFree(lev_sidedefs[i]);
+    UtilFree(level.sidedefs[i]);
   }
 
-  lev_sidedefs.clear();
+  level.sidedefs.clear();
 }
 
-static void FreeSectors(void)
+void FreeSectors(level_t &level)
 {
-  for (size_t i = 0; i < lev_sectors.size(); i++)
+  for (size_t i = 0; i < level.sectors.size(); i++)
   {
-    UtilFree(lev_sectors[i]);
+    UtilFree(level.sectors[i]);
   }
 
-  lev_sectors.clear();
+  level.sectors.clear();
 }
 
-static void FreeThings(void)
+void FreeThings(level_t &level)
 {
-  for (size_t i = 0; i < lev_things.size(); i++)
+  for (size_t i = 0; i < level.things.size(); i++)
   {
-    UtilFree(lev_things[i]);
+    UtilFree(level.things[i]);
   }
 
-  lev_things.clear();
+  level.things.clear();
 }
 
-void FreeSegs(void)
+void FreeSegs(level_t &level)
 {
-  for (size_t i = 0; i < lev_segs.size(); i++)
+  for (size_t i = 0; i < level.segs.size(); i++)
   {
-    UtilFree(lev_segs[i]);
+    UtilFree(level.segs[i]);
   }
 
-  lev_segs.clear();
+  level.segs.clear();
 }
 
-void FreeSubsecs(void)
+void FreeSubsecs(level_t &level)
 {
-  for (size_t i = 0; i < lev_subsecs.size(); i++)
+  for (size_t i = 0; i < level.subsecs.size(); i++)
   {
-    UtilFree(lev_subsecs[i]);
+    UtilFree(level.subsecs[i]);
   }
 
-  lev_subsecs.clear();
+  level.subsecs.clear();
 }
 
-void FreeNodes(void)
+void FreeNodes(level_t &level)
 {
-  for (size_t i = 0; i < lev_nodes.size(); i++)
+  for (size_t i = 0; i < level.nodes.size(); i++)
   {
-    UtilFree(lev_nodes[i]);
+    UtilFree(level.nodes[i]);
   }
 
-  lev_nodes.clear();
+  level.nodes.clear();
 }
 
-static void FreeWallTips(void)
+void FreeWallTips(level_t &level)
 {
-  for (size_t i = 0; i < lev_walltips.size(); i++)
+  for (size_t i = 0; i < level.walltips.size(); i++)
   {
-    UtilFree(lev_walltips[i]);
+    UtilFree(level.walltips[i]);
   }
 
-  lev_walltips.clear();
+  level.walltips.clear();
+}
+
+void FreeIntersections(level_t &level)
+{
+  for (size_t i = 0; i < level.intercuts.size(); i++)
+  {
+    delete level.intercuts[i];
+  }
+
+  level.intercuts.clear();
 }
 
 /* ----- reading routines ------------------------------ */
 
-void ValidateLinedef(linedef_t *line)
+void ValidateLinedef(level_t &level, linedef_t *line)
 {
   if (line->right || line->left)
   {
-    num_real_lines++;
+    level.num_real_lines++;
   }
 
   if (line->left && line->right && line->left->sector == line->right->sector)
@@ -1003,54 +943,11 @@ void ValidateLinedef(linedef_t *line)
   }
 }
 
-static vertex_t *SafeLookupVertex(size_t num, size_t num_line)
-{
-  if (num >= lev_vertices.size())
-  {
-    PrintLine(LOG_ERROR, "ERROR: Illegal map-vertex number #%zu, on line #%zu, maximum is #%zu", num, num_line,
-              lev_vertices.size());
-  }
-
-  return lev_vertices[num];
-}
-
-static sector_t *SafeLookupSector(size_t num, size_t num_side)
-{
-  if (num >= NO_INDEX_INT16)
-  {
-    return nullptr;
-  }
-
-  if (num >= lev_sectors.size())
-  {
-    PrintLine(LOG_ERROR, "ERROR: Illegal sector number #%zu, on side #%zu, maximum is #%zu", num, num_side,
-              lev_sectors.size() - 1);
-  }
-
-  return lev_sectors[num];
-}
-
-static inline sidedef_t *SafeLookupSidedef(uint16_t num)
-{
-  if (num >= NO_INDEX_INT16)
-  {
-    return nullptr;
-  }
-
-  // silently ignore illegal sidedef numbers
-  if (num >= lev_sidedefs.size())
-  {
-    return nullptr;
-  }
-
-  return lev_sidedefs[num];
-}
-
-static void GetVertices_Doom(void)
+static void GetVertices_Doom(level_t &level)
 {
   size_t count = 0;
 
-  Lump_c *lump = FindLevelLump("VERTEXES");
+  Lump_c *lump = level.FindLevelLump("VERTEXES");
 
   if (lump)
   {
@@ -1081,20 +978,20 @@ static void GetVertices_Doom(void)
       PrintLine(LOG_ERROR, "ERROR: Failure reading vertices.");
     }
 
-    vertex_t *vert = NewVertex();
+    vertex_t *vert = NewVertex(level);
 
     vert->x = static_cast<double>(GetLittleEndian(raw.x));
     vert->y = static_cast<double>(GetLittleEndian(raw.y));
   }
 
-  num_old_vert = lev_vertices.size();
+  level.num_old_vert = level.vertices.size();
 }
 
-static void GetSectors_Doom(void)
+static void GetSectors_Doom(level_t &level)
 {
   size_t count = 0;
 
-  Lump_c *lump = FindLevelLump("SECTORS");
+  Lump_c *lump = level.FindLevelLump("SECTORS");
 
   if (lump)
   {
@@ -1125,18 +1022,18 @@ static void GetSectors_Doom(void)
       PrintLine(LOG_ERROR, "ERROR: Failure reading sectors.");
     }
 
-    sector_t *sector = NewSector();
+    sector_t *sector = NewSector(level);
 
     sector->height_floor = static_cast<double>(GetLittleEndian(raw.floorh));
     sector->height_ceiling = static_cast<double>(GetLittleEndian(raw.ceilh));
   }
 }
 
-static void GetThings_Doom(void)
+static void GetThings_Doom(level_t &level)
 {
   size_t count = 0;
 
-  Lump_c *lump = FindLevelLump("THINGS");
+  Lump_c *lump = level.FindLevelLump("THINGS");
 
   if (lump)
   {
@@ -1167,7 +1064,7 @@ static void GetThings_Doom(void)
       PrintLine(LOG_ERROR, "ERROR: Failure reading things.");
     }
 
-    thing_t *thing = NewThing();
+    thing_t *thing = NewThing(level);
 
     thing->x = GetLittleEndian(raw.x);
     thing->y = GetLittleEndian(raw.y);
@@ -1175,11 +1072,11 @@ static void GetThings_Doom(void)
   }
 }
 
-static void GetSidedefs_Doom(void)
+static void GetSidedefs_Doom(level_t &level)
 {
   size_t count = 0;
 
-  Lump_c *lump = FindLevelLump("SIDEDEFS");
+  Lump_c *lump = level.FindLevelLump("SIDEDEFS");
 
   if (lump)
   {
@@ -1210,22 +1107,22 @@ static void GetSidedefs_Doom(void)
       PrintLine(LOG_ERROR, "ERROR: Failure reading sidedefs.");
     }
 
-    sidedef_t *side = NewSidedef();
+    sidedef_t *side = NewSidedef(level);
 
     side->offset_x = GetLittleEndian(raw.x_offset);
     side->offset_y = GetLittleEndian(raw.y_offset);
     memcpy(side->tex_upper, raw.upper_tex, 8);
     memcpy(side->tex_lower, raw.lower_tex, 8);
     memcpy(side->tex_middle, raw.mid_tex, 8);
-    side->sector = SafeLookupSector(GetLittleEndian(raw.sector), i);
+    side->sector = level.SafeLookupSector(GetLittleEndian(raw.sector), i);
   }
 }
 
-static void GetLinedefs_Doom(void)
+static void GetLinedefs_Doom(level_t &level)
 {
   size_t count = 0;
 
-  Lump_c *lump = FindLevelLump("LINEDEFS");
+  Lump_c *lump = level.FindLevelLump("LINEDEFS");
 
   if (lump)
   {
@@ -1256,12 +1153,12 @@ static void GetLinedefs_Doom(void)
       PrintLine(LOG_ERROR, "ERROR: Failure reading linedefs.");
     }
 
-    linedef_t *line = NewLinedef();
+    linedef_t *line = NewLinedef(level);
 
-    line->start = SafeLookupVertex(GetLittleEndian(raw.start), i);
-    line->end = SafeLookupVertex(GetLittleEndian(raw.end), i);
-    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
+    line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), i);
+    line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), i);
+    line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
+    line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
     line->flags = GetLittleEndian(raw.flags);
     line->special = GetLittleEndian(raw.special);
     line->args[0] = GetLittleEndian(raw.tag);
@@ -1269,7 +1166,7 @@ static void GetLinedefs_Doom(void)
     line->start->is_used = true;
     line->end->is_used = true;
 
-    ValidateLinedef(line);
+    ValidateLinedef(level, line);
 
     if (!config.effects) continue;
 
@@ -1319,11 +1216,11 @@ static void GetLinedefs_Doom(void)
   }
 }
 
-static void GetThings_Hexen(void)
+static void GetThings_Hexen(level_t &level)
 {
   size_t count = 0;
 
-  Lump_c *lump = FindLevelLump("THINGS");
+  Lump_c *lump = level.FindLevelLump("THINGS");
 
   if (lump)
   {
@@ -1354,7 +1251,7 @@ static void GetThings_Hexen(void)
       PrintLine(LOG_ERROR, "ERROR: Failure reading things.");
     }
 
-    thing_t *thing = NewThing();
+    thing_t *thing = NewThing(level);
 
     thing->x = GetLittleEndian(raw.x);
     thing->y = GetLittleEndian(raw.y);
@@ -1362,11 +1259,11 @@ static void GetThings_Hexen(void)
   }
 }
 
-static void GetLinedefs_Hexen(void)
+static void GetLinedefs_Hexen(level_t &level)
 {
   size_t count = 0;
 
-  Lump_c *lump = FindLevelLump("LINEDEFS");
+  Lump_c *lump = level.FindLevelLump("LINEDEFS");
 
   if (lump)
   {
@@ -1397,10 +1294,10 @@ static void GetLinedefs_Hexen(void)
       PrintLine(LOG_ERROR, "ERROR: Failure reading linedefs.");
     }
 
-    linedef_t *line = NewLinedef();
+    linedef_t *line = NewLinedef(level);
 
-    line->start = SafeLookupVertex(GetLittleEndian(raw.start), i);
-    line->end = SafeLookupVertex(GetLittleEndian(raw.end), i);
+    line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), i);
+    line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), i);
     line->flags = GetLittleEndian(raw.flags);
     line->special = raw.special;
     line->args[0] = raw.args[0];
@@ -1408,13 +1305,13 @@ static void GetLinedefs_Hexen(void)
     line->args[2] = raw.args[2];
     line->args[3] = raw.args[3];
     line->args[4] = raw.args[4];
-    line->right = SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = SafeLookupSidedef(GetLittleEndian(raw.left));
+    line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
+    line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
 
     line->start->is_used = true;
     line->end->is_used = true;
 
-    ValidateLinedef(line);
+    ValidateLinedef(level, line);
 
     if (!config.effects) continue;
 
@@ -1476,31 +1373,33 @@ static void ParseSectorField(sector_t *sector, const std::string &key, token_kin
   // nothing actually needed
 }
 
-static void ParseSidedefField(sidedef_t *side, const std::string &key, token_kind_e kind, const std::string &value)
+static void ParseSidedefField(level_t &level, sidedef_t *side, const std::string &key, token_kind_e kind,
+                              const std::string &value)
 {
   if (key == "sector")
   {
     size_t num = LEX_Index(value);
 
-    if (num >= lev_sectors.size())
+    if (num >= level.sectors.size())
     {
       PrintLine(LOG_ERROR, "ERROR: illegal sector number #%zu", static_cast<size_t>(num));
     }
 
-    side->sector = lev_sectors[num];
+    side->sector = level.sectors[num];
   }
 }
 
-static void ParseLinedefField(linedef_t *line, const std::string &key, token_kind_e kind, const std::string &value)
+static void ParseLinedefField(level_t &level, linedef_t *line, const std::string &key, token_kind_e kind,
+                              const std::string &value)
 {
   if (key == "v1")
   {
-    line->start = SafeLookupVertex(LEX_Index(value), static_cast<size_t>(line - lev_linedefs[0]));
+    line->start = level.SafeLookupVertex(LEX_Index(value), static_cast<size_t>(line - level.linedefs[0]));
   }
 
   if (key == "v2")
   {
-    line->end = SafeLookupVertex(LEX_Index(value), static_cast<size_t>(line - lev_linedefs[0]));
+    line->end = level.SafeLookupVertex(LEX_Index(value), static_cast<size_t>(line - level.linedefs[0]));
   }
 
   if (key == "special")
@@ -1520,13 +1419,13 @@ static void ParseLinedefField(linedef_t *line, const std::string &key, token_kin
   {
     size_t num = LEX_Index(value);
 
-    if (num >= lev_sidedefs.size())
+    if (num >= level.sidedefs.size())
     {
       line->right = nullptr;
     }
     else
     {
-      line->right = lev_sidedefs[num];
+      line->right = level.sidedefs[num];
     }
   }
 
@@ -1534,18 +1433,18 @@ static void ParseLinedefField(linedef_t *line, const std::string &key, token_kin
   {
     size_t num = LEX_Index(value);
 
-    if (num >= lev_sidedefs.size())
+    if (num >= level.sidedefs.size())
     {
       line->left = nullptr;
     }
     else
     {
-      line->left = lev_sidedefs[num];
+      line->left = level.sidedefs[num];
     }
   }
 }
 
-static void ParseUDMF_Block(lexer_c &lex, int cur_type)
+static void ParseUDMF_Block(level_t &level, lexer_c &lex, int cur_type)
 {
   vertex_t *vertex = nullptr;
   thing_t *thing = nullptr;
@@ -1556,19 +1455,19 @@ static void ParseUDMF_Block(lexer_c &lex, int cur_type)
   switch (cur_type)
   {
   case UDMF_VERTEX:
-    vertex = NewVertex();
+    vertex = NewVertex(level);
     break;
   case UDMF_THING:
-    thing = NewThing();
+    thing = NewThing(level);
     break;
   case UDMF_SECTOR:
-    sector = NewSector();
+    sector = NewSector(level);
     break;
   case UDMF_SIDEDEF:
-    side = NewSidedef();
+    side = NewSidedef(level);
     break;
   case UDMF_LINEDEF:
-    line = NewLinedef();
+    line = NewLinedef(level);
     break;
   default:
     break;
@@ -1625,10 +1524,10 @@ static void ParseUDMF_Block(lexer_c &lex, int cur_type)
       ParseSectorField(sector, key, tok, value);
       break;
     case UDMF_SIDEDEF:
-      ParseSidedefField(side, key, tok, value);
+      ParseSidedefField(level, side, key, tok, value);
       break;
     case UDMF_LINEDEF:
-      ParseLinedefField(line, key, tok, value);
+      ParseLinedefField(level, line, key, tok, value);
       break;
 
     default: /* just skip it */
@@ -1645,11 +1544,11 @@ static void ParseUDMF_Block(lexer_c &lex, int cur_type)
       PrintLine(LOG_ERROR, "ERROR: Linedef #%zu is missing a vertex!", line->index);
     }
 
-    ValidateLinedef(line);
+    ValidateLinedef(level, line);
   }
 }
 
-static void ParseUDMF_Pass(const std::string &data, int pass)
+static void ParseUDMF_Pass(level_t &level, const std::string &data, int pass)
 {
   // pass = 1 : vertices, sectors, things
   // pass = 2 : sidedefs
@@ -1728,13 +1627,13 @@ static void ParseUDMF_Pass(const std::string &data, int pass)
     }
 
     // process the block
-    ParseUDMF_Block(lex, cur_type);
+    ParseUDMF_Block(level, lex, cur_type);
   }
 }
 
-void ParseUDMF(void)
+void ParseUDMF(level_t &level)
 {
-  Lump_c *lump = FindLevelLump("TEXTMAP");
+  Lump_c *lump = level.FindLevelLump("TEXTMAP");
 
   if (lump == nullptr || !lump->Seek(0))
   {
@@ -1767,11 +1666,11 @@ void ParseUDMF(void)
   // the UDMF spec does not require objects to be in a dependency order.
   // for example: sidedefs may occur *after* the linedefs which refer to
   // them.  hence we perform multiple passes over the TEXTMAP data.
-  ParseUDMF_Pass(data, 1);
-  ParseUDMF_Pass(data, 2);
-  ParseUDMF_Pass(data, 3);
+  ParseUDMF_Pass(level, data, 1);
+  ParseUDMF_Pass(level, data, 2);
+  ParseUDMF_Pass(level, data, 3);
 
-  num_old_vert = lev_vertices.size();
+  level.num_old_vert = level.vertices.size();
 }
 
 /* ----- writing routines ------------------------------ */
@@ -1780,42 +1679,42 @@ void ParseUDMF(void)
 // Check Limits
 //
 
-static void CheckBinaryFormatLimits(void)
+static void CheckBinaryFormatLimits(level_t &level)
 {
-  if (num_old_vert > LIMIT_VERT)
+  if (level.num_old_vert > LIMIT_VERT)
   {
     PrintLine(LOG_NORMAL, "FAILURE: Map has too many vertices.");
-    lev_overflows = true;
+    level.overflows = true;
   }
 
-  if (lev_sectors.size() > LIMIT_SECTOR)
+  if (level.sectors.size() > LIMIT_SECTOR)
   {
     PrintLine(LOG_NORMAL, "FAILURE: Map has too many sectors.");
-    lev_overflows = true;
+    level.overflows = true;
   }
 
-  if (lev_sidedefs.size() > LIMIT_SIDE)
+  if (level.sidedefs.size() > LIMIT_SIDE)
   {
     PrintLine(LOG_NORMAL, "FAILURE: Map has too many sidedefs.");
-    lev_overflows = true;
+    level.overflows = true;
   }
 
-  if (lev_linedefs.size() > LIMIT_LINE)
+  if (level.linedefs.size() > LIMIT_LINE)
   {
     PrintLine(LOG_NORMAL, "FAILURE: Map has too many linedefs.");
-    lev_overflows = true;
+    level.overflows = true;
   }
 }
 
-bsp_type_t CheckFormatBSP(buildinfo_t &ctx)
+bsp_type_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
 {
   bsp_type_t level_type = ctx.bsp_type;
 
-  if (level_type == BSP_VANILLA &&          // always allow for a valid map to be produced
-      (lev_vertices.size() > LIMIT_VERT     // even if it may not run on some older source ports
-       || lev_nodes.size() > LIMIT_NODE     // or the vanilla EXE
-       || lev_subsecs.size() > LIMIT_SUBSEC //
-       || lev_segs.size() > LIMIT_SEG))     //
+  if (level_type == BSP_VANILLA &&            // always allow for a valid map to be produced
+      (level.vertices.size() > LIMIT_VERT     // even if it may not run on some older source ports
+       || level.nodes.size() > LIMIT_NODE     // or the vanilla EXE
+       || level.subsecs.size() > LIMIT_SUBSEC //
+       || level.segs.size() > LIMIT_SEG))     //
   {
     PrintLine(LOG_NORMAL, "WARNING: BSP overflow. Forcing DeePBSPV4 node format.");
     config.total_warnings++;
@@ -1827,37 +1726,37 @@ bsp_type_t CheckFormatBSP(buildinfo_t &ctx)
 
 /* ----- whole-level routines --------------------------- */
 
-void LoadLevel(void)
+void LoadLevel(level_t &level)
 {
-  Lump_c *LEV = cur_wad->GetLump(lev_current_start);
+  Lump_c *LEV = cur_wad->GetLump(level.level_header_lump_index);
 
-  lev_overflows = false;
+  level.overflows = false;
 
   PrintLine(LOG_NORMAL, "[%s] Reading %s", __func__, LEV->Name());
 
-  num_new_vert = 0;
-  num_real_lines = 0;
+  level.num_new_vert = 0;
+  level.num_real_lines = 0;
 
-  switch (lev_format)
+  switch (level.format)
   {
   case MapFormat_Doom:
-    GetVertices_Doom();
-    GetSectors_Doom();
-    GetSidedefs_Doom();
-    GetLinedefs_Doom();
-    GetThings_Doom();
-    PruneVerticesAtEnd();
+    GetVertices_Doom(level);
+    GetSectors_Doom(level);
+    GetSidedefs_Doom(level);
+    GetLinedefs_Doom(level);
+    GetThings_Doom(level);
+    PruneVerticesAtEnd(level);
     break;
   case MapFormat_Hexen:
-    GetVertices_Doom();
-    GetSectors_Doom();
-    GetSidedefs_Doom();
-    GetLinedefs_Hexen();
-    GetThings_Hexen();
-    PruneVerticesAtEnd();
+    GetVertices_Doom(level);
+    GetSectors_Doom(level);
+    GetSidedefs_Doom(level);
+    GetLinedefs_Hexen(level);
+    GetThings_Hexen(level);
+    PruneVerticesAtEnd(level);
     break;
   case MapFormat_UDMF:
-    ParseUDMF();
+    ParseUDMF(level);
     break;
   case MapFormat_INVALID:
     PrintLine(LOG_ERROR, "[%s] Unknown level format on level %s", __func__, LEV->Name());
@@ -1866,111 +1765,109 @@ void LoadLevel(void)
 
   if (config.verbose)
   {
-    PrintLine(LOG_NORMAL, "Loaded %zu vertices, %zu sectors, %zu sides, %zu lines, %zu things", lev_vertices.size(),
-              lev_sectors.size(), lev_sidedefs.size(), lev_linedefs.size(), lev_things.size());
+    PrintLine(LOG_NORMAL, "Loaded %zu vertices, %zu sectors, %zu sides, %zu lines, %zu things", level.vertices.size(),
+              level.sectors.size(), level.sidedefs.size(), level.linedefs.size(), level.things.size());
   }
 
-  DetectOverlappingVertices();
-  DetectOverlappingLines();
+  DetectOverlappingVertices(level);
+  DetectOverlappingLines(level);
 
-  CalculateWallTips();
+  CalculateWallTips(level);
 
   // -JL- Find sectors containing polyobjs
-  switch (lev_format)
+  switch (level.format)
   {
   case MapFormat_Hexen:
   case MapFormat_UDMF:
-    DetectPolyobjSectors(config);
+    DetectPolyobjSectors(config, level);
     break;
   default:
     break;
   }
 }
 
-void FreeLevel(void)
+void FreeLevel(level_t &level)
 {
-  FreeVertices();
-  FreeSidedefs();
-  FreeLinedefs();
-  FreeSectors();
-  FreeThings();
-  FreeSegs();
-  FreeSubsecs();
-  FreeNodes();
-  FreeWallTips();
-  FreeIntersections();
+  FreeVertices(level);
+  FreeSidedefs(level);
+  FreeLinedefs(level);
+  FreeSectors(level);
+  FreeThings(level);
+  FreeSegs(level);
+  FreeSubsecs(level);
+  FreeNodes(level);
+  FreeWallTips(level);
+  FreeIntersections(level);
 }
 
-static void AddMissingLump(const char *name, const char *after)
+static void AddMissingLump(level_t &level, const char *name, const char *after)
 {
-  if (cur_wad->LevelLookupLump(lev_current_idx, name) != NO_INDEX)
+  if (cur_wad->LevelLookupLump(level.level_num, name) != NO_INDEX)
   {
     return;
   }
 
-  size_t exist = cur_wad->LevelLookupLump(lev_current_idx, after);
+  size_t exist = cur_wad->LevelLookupLump(level.level_num, after);
 
   // if this happens, the level structure is very broken
   if (exist == NO_INDEX)
   {
     PrintLine(LOG_NORMAL, "WARNING: Missing %s lump -- level structure is broken", after);
     config.total_warnings++;
-
-    exist = cur_wad->LevelLastLump(lev_current_idx);
+    exist = cur_wad->LevelLastLump(level.level_num);
   }
 
   cur_wad->InsertPoint(exist + 1);
-
   cur_wad->AddLump(name)->Finish();
 }
 
-build_result_e SaveLevelBinaryFormat(node_t *root_node)
+build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
 {
   // Note: root_node may be nullptr
 
   cur_wad->BeginWrite();
 
   // ensure all necessary level lumps are present
-  AddMissingLump("SEGS", "VERTEXES");
-  AddMissingLump("SSECTORS", "SEGS");
-  AddMissingLump("NODES", "SSECTORS");
-  AddMissingLump("SECTORS", "NODES");
-  AddMissingLump("REJECT", "SECTORS");
-  AddMissingLump("BLOCKMAP", "REJECT");
+  AddMissingLump(level, "SEGS", "VERTEXES");
+  AddMissingLump(level, "SSECTORS", "SEGS");
+  AddMissingLump(level, "NODES", "SSECTORS");
+  AddMissingLump(level, "SECTORS", "NODES");
+  AddMissingLump(level, "REJECT", "SECTORS");
+  AddMissingLump(level, "BLOCKMAP", "REJECT");
 
   // check for overflows...
-  CheckBinaryFormatLimits();
+  CheckBinaryFormatLimits(level);
 
-  bsp_type_t level_type = CheckFormatBSP(config);
+  bsp_type_t level_type = CheckFormatBSP(config, level);
 
   switch (level_type)
   {
   case BSP_XGL3:
-    SaveDoom_XGL3(root_node);
+    SaveDoom_XGL3(level, root_node);
     break;
   case BSP_XGL2:
-    SaveDoom_XGL2(root_node);
+    SaveDoom_XGL2(level, root_node);
     break;
   case BSP_XGLN:
-    SaveDoom_XGLN(root_node);
+    SaveDoom_XGLN(level, root_node);
     break;
   case BSP_XNOD:
-    SaveDoom_XNOD(root_node);
+    SaveDoom_XNOD(level, root_node);
     break;
   case BSP_DEEPBSPV4:
-    SaveDoom_DeePBSPV4(root_node);
+    SaveDoom_DeePBSPV4(level, root_node);
     break;
   case BSP_VANILLA:
-    SaveDoom_Vanilla(root_node);
+    SaveDoom_Vanilla(level, root_node);
     break;
   }
 
-  PutBlockmap();
-  PutReject();
+  PutBlockmap(level);
+  PutReject(level);
 
   cur_wad->EndWrite();
 
-  if (lev_overflows)
+  if (level.overflows)
   {
     // no message here
     // [ in verbose mode, each overflow already printed a message ]
@@ -1981,31 +1878,31 @@ build_result_e SaveLevelBinaryFormat(node_t *root_node)
   return BUILD_OK;
 }
 
-build_result_e SaveLevelTextMap(node_t *root_node)
+build_result_e SaveLevelTextMap(level_t &level, node_t *root_node)
 {
   cur_wad->BeginWrite();
 
   // remove any existing ZNODES lump
-  cur_wad->RemoveZNodes(lev_current_idx);
+  cur_wad->RemoveZNodes(level.level_num);
 
-  Lump_c *lump = CreateLevelLump("ZNODES", NO_INDEX);
+  Lump_c *lump = CreateLevelLump(level, "ZNODES", NO_INDEX);
 
   // -Elf- Ensure needed lumps exist
-  AddMissingLump("REJECT", "ZNODES");
-  AddMissingLump("BLOCKMAP", "REJECT");
+  AddMissingLump(level, "REJECT", "ZNODES");
+  AddMissingLump(level, "BLOCKMAP", "REJECT");
 
-  if (num_real_lines == 0)
+  if (level.num_real_lines == 0)
   {
     lump->Finish();
   }
   else
   {
-    SaveTextmap_ZNODES(root_node);
+    SaveTextmap_ZNODES(level, root_node);
   }
 
   // -Elf-
-  PutBlockmap();
-  PutReject();
+  PutBlockmap(level);
+  PutReject(level);
 
   cur_wad->EndWrite();
 
@@ -2014,16 +1911,10 @@ build_result_e SaveLevelTextMap(node_t *root_node)
 
 /* ---------------------------------------------------------------- */
 
-Lump_c *FindLevelLump(const char *name)
-{
-  size_t idx = cur_wad->LevelLookupLump(lev_current_idx, name);
-  return (idx != NO_INDEX) ? cur_wad->GetLump(idx) : nullptr;
-}
-
-Lump_c *CreateLevelLump(const char *name, size_t max_size)
+Lump_c *CreateLevelLump(level_t &level, const char *name, size_t max_size)
 {
   // look for existing one
-  Lump_c *lump = FindLevelLump(name);
+  Lump_c *lump = level.FindLevelLump(name);
 
   if (lump)
   {
@@ -2031,11 +1922,11 @@ Lump_c *CreateLevelLump(const char *name, size_t max_size)
   }
   else
   {
-    size_t last_idx = cur_wad->LevelLastLump(lev_current_idx);
+    size_t last_idx = cur_wad->LevelLastLump(level.level_num);
 
     // in UDMF maps, insert before the ENDMAP lump, otherwise insert
     // after the last known lump of the level.
-    if (lev_format != MapFormat_UDMF)
+    if (level.format != MapFormat_UDMF)
     {
       last_idx += 1;
     }
@@ -2088,15 +1979,6 @@ size_t LevelsInWad(void)
   return cur_wad->LevelCount();
 }
 
-const char *GetLevelName(size_t lev_idx)
-{
-  SYS_ASSERT(cur_wad != nullptr);
-
-  size_t lump_idx = cur_wad->LevelHeader(lev_idx);
-
-  return cur_wad->GetLump(lump_idx)->Name();
-}
-
 size_t ComputeBspHeight(const node_t *node)
 {
   if (node == nullptr)
@@ -2112,36 +1994,33 @@ size_t ComputeBspHeight(const node_t *node)
 
 /* ----- build nodes for a single level ----- */
 
-build_result_e BuildLevel(size_t lev_idx, const char *filename)
+build_result_e BuildLevel(level_t &level, const char *filename)
 {
   node_t *root_node = nullptr;
   subsec_t *root_sub = nullptr;
 
-  lev_current_idx = lev_idx;
-  lev_current_start = cur_wad->LevelHeader(lev_idx);
-  lev_format = cur_wad->LevelFormat(lev_idx);
+  LoadLevel(level);
 
-  LoadLevel();
+  InitBlockmap(level);
 
-  InitBlockmap();
-
-  if (num_real_lines > 0)
+  if (level.num_real_lines > 0)
   {
     if (config.analysis)
     {
-      PrintLine(LOG_NORMAL, "[%s] Starting analysis loop for %s", __func__, GetLevelName(lev_current_idx));
-      GenerateAnalysis(filename);
+      PrintLine(LOG_NORMAL, "[%s] Starting analysis loop for %s", __func__, level.GetLevelName());
+      GenerateAnalysis(level, filename);
     }
 
     bbox_t dummy;
     // recursively create nodes
-    BuildNodes(CreateSegs(), 0, &dummy, &root_node, &root_sub, config.split_cost, config.fast, false);
+    seg_t *seg_list = CreateSegs(level);
+    BuildNodes(level, seg_list, 0, &dummy, &root_node, &root_sub, config.split_cost, config.fast, false);
   }
 
   if (config.verbose)
   {
-    PrintLine(LOG_NORMAL, "Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES", lev_nodes.size(), lev_subsecs.size(),
-              lev_segs.size(), num_old_vert + num_new_vert);
+    PrintLine(LOG_NORMAL, "Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES", level.nodes.size(), level.subsecs.size(),
+              level.segs.size(), level.num_old_vert + level.num_new_vert);
   }
 
   if (config.verbose && root_node != nullptr)
@@ -2150,23 +2029,23 @@ build_result_e BuildLevel(size_t lev_idx, const char *filename)
               ComputeBspHeight(root_node->r.node));
   }
 
-  ClockwiseBspTree();
+  ClockwiseBspTree(level);
 
   build_result_t ret = BUILD_OK;
-  switch (lev_format)
+  switch (level.format)
   {
   case MapFormat_Doom:
   case MapFormat_Hexen:
-    ret = SaveLevelBinaryFormat(root_node);
+    ret = SaveLevelBinaryFormat(level, root_node);
     break;
   case MapFormat_UDMF:
-    ret = SaveLevelTextMap(root_node);
+    ret = SaveLevelTextMap(level, root_node);
     break;
   default:
     break;
   }
 
-  FreeLevel();
+  FreeLevel(level);
 
   if (config.analysis)
   {
