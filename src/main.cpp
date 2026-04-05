@@ -22,6 +22,7 @@
 //------------------------------------------------------------------------------
 
 #include "core.hpp"
+#include "local.hpp"
 
 #include <cstring>
 #include <string>
@@ -71,15 +72,13 @@ bool CheckMapInRange(const map_range_t *range, const char *name)
   return true;
 }
 
-bool CheckMapInMapList(const size_t lev_idx)
+bool CheckMapInMapList(const char *name)
 {
   // when --map is not used, allow everything
   if (map_list.empty())
   {
     return true;
   }
-
-  const char *name = GetLevelName(lev_idx);
 
   for (auto &map : map_list)
   {
@@ -113,14 +112,20 @@ static void BuildFile(const char *filename)
   // loop over each level in the wad
   for (size_t n = 0; n < num_levels; n++)
   {
-    if (!CheckMapInMapList(n))
+    // IMPORTANT: always ensure a valid map
+    level_t level;
+    level.level_num = n;
+    level.level_header_lump_index = cur_wad->LevelHeader(level.level_num);
+    level.format = cur_wad->LevelFormat(level.level_num);
+
+    if (!CheckMapInMapList(level.GetLevelName()))
     {
       continue;
     }
 
     visited += 1;
 
-    res = BuildLevel(n, filename);
+    res = BuildLevel(level, filename);
 
     // handle a failed map (due to lump overflow)
     if (res == BUILD_LumpOverflow)

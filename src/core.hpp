@@ -622,6 +622,20 @@ using lump_order_t = enum lump_order_e
 
   LL_TEXTMAP = LL_LABEL + 1, // UDMF geometry
   LL_ENDMAP,                 // UDMF end marker
+
+  GL_LABEL = 0,
+  GL_VERT,
+  GL_SEGS,
+  GL_SSECT,
+  GL_NODES,
+  GL_PVS,
+
+  LM_LABEL = 0,
+  LM_CELLS,
+  LM_SUN,
+  LM_SURFS,
+  LM_TXCRD,
+  LM_LMAPS,
 };
 
 static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
@@ -1531,8 +1545,6 @@ struct buildinfo_s
   bool effects = true;   // disable special effects
 };
 
-extern size_t lev_current_idx;
-
 struct AnalysisData
 {
   size_t vertex = 0;  // Original set of vertices
@@ -1581,8 +1593,6 @@ using build_result_t = enum build_result_e
   BUILD_LumpOverflow
 };
 
-extern bool lev_overflows;
-
 // attempt to open a wad.  on failure, the FatalError method in the
 // buildinfo_t interface is called.
 void OpenWad(const char *filename);
@@ -1593,14 +1603,11 @@ void CloseWad(void);
 // give the number of levels detected in the wad.
 size_t LevelsInWad(void);
 
-// retrieve the name of a particular level.
-const char *GetLevelName(size_t lev_idx);
-
 // build the nodes of a particular level. otherwise the wad
 // is updated to store the new lumps and returns either BUILD_OK or
 // BUILD_LumpOverflow if some limits were exceeded.
-build_result_e BuildLevel(size_t lev_idx, const char *filename);
+build_result_e BuildLevel(struct level_t &level, const char *filename);
 
 void SetupAnalysisFile(const char *filepath);
-void GenerateAnalysis(const char *filename);
+void GenerateAnalysis(level_t &level, const char *filename);
 void WriteAnalysis(const char *filename);

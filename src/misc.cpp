@@ -47,26 +47,26 @@ struct Compare_vertex_X_pred
   }
 };
 
-void DetectOverlappingVertices(void)
+void DetectOverlappingVertices(level_t &level)
 {
-  if (lev_vertices.size() < 2)
+  if (level.vertices.size() < 2)
   {
     return;
   }
 
   // copy the vertex pointers
-  std::vector<vertex_t *> array(lev_vertices);
+  std::vector<vertex_t *> array(level.vertices);
 
   // sort the vertices by increasing X coordinate.
   // hence any overlapping vertices will be near each other.
   std::sort(array.begin(), array.end(), Compare_vertex_X_pred());
 
   // now mark them off
-  for (size_t i = 0; i < lev_vertices.size() - 1; i++)
+  for (size_t i = 0; i < level.vertices.size() - 1; i++)
   {
     vertex_t *A = array[i];
 
-    for (size_t k = i + 1; k < lev_vertices.size(); k++)
+    for (size_t k = i + 1; k < level.vertices.size(); k++)
     {
       vertex_t *B = array[k];
 
@@ -91,9 +91,9 @@ void DetectOverlappingVertices(void)
   // update the in-memory linedefs.
   // DOES NOT affect the on-disk linedefs.
   // this is mainly to help the miniseg creation code.
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (size_t i = 0; i < level.linedefs.size(); i++)
   {
-    linedef_t *L = lev_linedefs[i];
+    linedef_t *L = level.linedefs[i];
 
     while (L->start->overlap)
     {
@@ -107,11 +107,11 @@ void DetectOverlappingVertices(void)
   }
 }
 
-void ClearNewVertices(void)
+void ClearNewVertices(level_t &level)
 {
-  for (size_t i = lev_vertices.size() - 1; i != NO_INDEX; i--)
+  for (size_t i = level.vertices.size() - 1; i != NO_INDEX; i--)
   {
-    vertex_t *V = lev_vertices[i];
+    vertex_t *V = level.vertices[i];
 
     if (!V->is_new)
     {
@@ -120,23 +120,23 @@ void ClearNewVertices(void)
 
     UtilFree(V);
 
-    lev_vertices.pop_back();
+    level.vertices.pop_back();
   }
 
-  num_old_vert = lev_vertices.size();
+  level.num_old_vert = level.vertices.size();
 }
 
-void PruneVerticesAtEnd(void)
+void PruneVerticesAtEnd(level_t &level)
 {
   // always prune vertices at end of lump, otherwise all the
   // unused vertices from seg splits would keep accumulating.
-  size_t old_num = lev_vertices.size();
+  size_t old_num = level.vertices.size();
 
   // scan all vertices.
   // only remove from the end, so stop when hit a used one.
-  for (size_t i = lev_vertices.size() - 1; i != NO_INDEX; i--)
+  for (size_t i = level.vertices.size() - 1; i != NO_INDEX; i--)
   {
-    vertex_t *V = lev_vertices[i];
+    vertex_t *V = level.vertices[i];
 
     if (V->is_used)
     {
@@ -145,17 +145,17 @@ void PruneVerticesAtEnd(void)
 
     UtilFree(V);
 
-    lev_vertices.pop_back();
+    level.vertices.pop_back();
   }
 
-  size_t unused = old_num - lev_vertices.size();
+  size_t unused = old_num - level.vertices.size();
 
   if (unused > 0 && config.verbose)
   {
     PrintLine(LOG_NORMAL, "Pruned %zu unused vertices at end", unused);
   }
 
-  num_old_vert = lev_vertices.size();
+  level.num_old_vert = level.vertices.size();
 }
 
 struct Compare_line_MinX_pred
@@ -166,24 +166,24 @@ struct Compare_line_MinX_pred
   }
 };
 
-void DetectOverlappingLines(void)
+void DetectOverlappingLines(level_t &level)
 {
   // Algorithm:
   //   Sort all lines by minimum X coordinate.
   //   Overlapping lines will then be near each other in this set.
   //   NOTE: does not detect partially overlapping lines.
 
-  std::vector<linedef_t *> array(lev_linedefs);
+  std::vector<linedef_t *> array(level.linedefs);
 
   std::sort(array.begin(), array.end(), Compare_line_MinX_pred());
 
   size_t count = 0;
 
-  for (size_t i = 0; i < lev_linedefs.size() - 1; i++)
+  for (size_t i = 0; i < level.linedefs.size() - 1; i++)
   {
     linedef_t *A = array[i];
 
-    for (size_t k = i + 1; k < lev_linedefs.size(); k++)
+    for (size_t k = i + 1; k < level.linedefs.size(); k++)
     {
       linedef_t *B = array[k];
 
@@ -227,11 +227,11 @@ void DetectOverlappingLines(void)
 
 /* ----- vertex routines ------------------------------- */
 
-void AddWallTip(vertex_t *vertex, double dx, double dy, bool open_left, bool open_right)
+void AddWallTip(level_t &level, vertex_t *vertex, double dx, double dy, bool open_left, bool open_right)
 {
   SYS_ASSERT(vertex->overlap == nullptr);
 
-  walltip_t *tip = NewWallTip();
+  walltip_t *tip = NewWallTip(level);
   walltip_t *after;
 
   tip->angle = ComputeAngle(dx, dy);
@@ -272,11 +272,11 @@ void AddWallTip(vertex_t *vertex, double dx, double dy, bool open_left, bool ope
   }
 }
 
-void CalculateWallTips(void)
+void CalculateWallTips(level_t &level)
 {
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (size_t i = 0; i < level.linedefs.size(); i++)
   {
-    const linedef_t *L = lev_linedefs[i];
+    const linedef_t *L = level.linedefs[i];
 
     if (L->overlap || HAS_BIT(L->effects, FX_ZeroLength))
     {
@@ -294,15 +294,15 @@ void CalculateWallTips(void)
     // note that start->overlap and end->overlap should be nullptr
     // due to logic in DetectOverlappingVertices.
 
-    AddWallTip(L->start, x2 - x1, y2 - y1, left, right);
-    AddWallTip(L->end, x1 - x2, y1 - y2, right, left);
+    AddWallTip(level, L->start, x2 - x1, y2 - y1, left, right);
+    AddWallTip(level, L->end, x1 - x2, y1 - y2, right, left);
   }
 
   if (HAS_BIT(config.debug, DEBUG_WALLTIPS))
   {
-    for (size_t k = 0; k < lev_vertices.size(); k++)
+    for (size_t k = 0; k < level.vertices.size(); k++)
     {
-      vertex_t *V = lev_vertices[k];
+      vertex_t *V = level.vertices[k];
 
       PrintLine(LOG_DEBUG, "[%s] WallTips for vertex %zu:", __func__, k);
 
@@ -314,9 +314,9 @@ void CalculateWallTips(void)
   }
 }
 
-vertex_t *NewVertexFromSplitSeg(seg_t *seg, double x, double y)
+vertex_t *NewVertexFromSplitSeg(level_t &level, seg_t *seg, double x, double y)
 {
-  vertex_t *vert = NewVertex();
+  vertex_t *vert = NewVertex(level);
 
   vert->x = x;
   vert->y = y;
@@ -324,14 +324,14 @@ vertex_t *NewVertexFromSplitSeg(seg_t *seg, double x, double y)
   vert->is_new = true;
   vert->is_used = true;
 
-  vert->index = num_new_vert;
-  num_new_vert++;
+  vert->index = level.num_new_vert;
+  level.num_new_vert++;
 
   // compute wall-tip info
   if (seg->linedef == nullptr)
   {
-    AddWallTip(vert, seg->pdx, seg->pdy, true, true);
-    AddWallTip(vert, -seg->pdx, -seg->pdy, true, true);
+    AddWallTip(level, vert, seg->pdx, seg->pdy, true, true);
+    AddWallTip(level, vert, -seg->pdx, -seg->pdy, true, true);
   }
   else
   {
@@ -341,14 +341,14 @@ vertex_t *NewVertexFromSplitSeg(seg_t *seg, double x, double y)
     bool left = (back != nullptr) && (back->sector != nullptr);
     bool right = (front != nullptr) && (front->sector != nullptr);
 
-    AddWallTip(vert, seg->pdx, seg->pdy, left, right);
-    AddWallTip(vert, -seg->pdx, -seg->pdy, right, left);
+    AddWallTip(level, vert, seg->pdx, seg->pdy, left, right);
+    AddWallTip(level, vert, -seg->pdx, -seg->pdy, right, left);
   }
 
   return vert;
 }
 
-vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end)
+vertex_t *NewVertexDegenerate(level_t &level, vertex_t *start, vertex_t *end)
 {
   // this is only called when rounding off the BSP tree and
   // all the segs are degenerate (zero length), hence we need
@@ -358,13 +358,13 @@ vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end)
 
   double dlen = hypot(dx, dy);
 
-  vertex_t *vert = NewVertex();
+  vertex_t *vert = NewVertex(level);
 
   vert->is_new = false;
   vert->is_used = true;
 
-  vert->index = num_old_vert;
-  num_old_vert++;
+  vert->index = level.num_old_vert;
+  level.num_old_vert++;
 
   // compute new coordinates
   vert->x = start->x;

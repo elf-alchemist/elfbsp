@@ -28,7 +28,7 @@ static constexpr uint32_t POLY_BOX_SZ = 10;
 
 /* ----- polyobj handling ----------------------------- */
 
-void MarkPolyobjSector(sector_t *sector)
+void MarkPolyobjSector(level_t &level, sector_t *sector)
 {
   if (sector == nullptr)
   {
@@ -50,9 +50,9 @@ void MarkPolyobjSector(sector_t *sector)
   // the sector from being split.
   sector->has_polyobj = true;
 
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (size_t i = 0; i < level.linedefs.size(); i++)
   {
-    linedef_t *L = lev_linedefs[i];
+    linedef_t *L = level.linedefs[i];
 
     if ((L->right && L->right->sector == sector) || (L->left && L->left->sector == sector))
     {
@@ -61,7 +61,7 @@ void MarkPolyobjSector(sector_t *sector)
   }
 }
 
-void MarkPolyobjPoint(double x, double y)
+void MarkPolyobjPoint(level_t &level, double x, double y)
 {
   size_t inside_count = 0;
 
@@ -78,9 +78,9 @@ void MarkPolyobjPoint(double x, double y)
   int32_t bmaxx = static_cast<int32_t>(x + POLY_BOX_SZ);
   int32_t bmaxy = static_cast<int32_t>(y + POLY_BOX_SZ);
 
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (size_t i = 0; i < level.linedefs.size(); i++)
   {
-    const linedef_t *L = lev_linedefs[i];
+    const linedef_t *L = level.linedefs[i];
 
     if (CheckLinedefInsideBox(bminx, bminy, bmaxx, bmaxy, static_cast<int32_t>(L->start->x), static_cast<int32_t>(L->start->y),
                               static_cast<int32_t>(L->end->x), static_cast<int32_t>(L->end->y)))
@@ -92,12 +92,12 @@ void MarkPolyobjPoint(double x, double y)
 
       if (L->left)
       {
-        MarkPolyobjSector(L->left->sector);
+        MarkPolyobjSector(level, L->left->sector);
       }
 
       if (L->right)
       {
-        MarkPolyobjSector(L->right->sector);
+        MarkPolyobjSector(level, L->right->sector);
       }
 
       inside_count++;
@@ -115,9 +115,9 @@ void MarkPolyobjPoint(double x, double y)
   //       If the point is sitting directly on a (two-sided) line,
   //       then we mark the sectors on both sides.
 
-  for (size_t i = 0; i < lev_linedefs.size(); i++)
+  for (size_t i = 0; i < level.linedefs.size(); i++)
   {
-    const linedef_t *L = lev_linedefs[i];
+    const linedef_t *L = level.linedefs[i];
 
     double x1 = L->start->x;
     double y1 = L->start->y;
@@ -195,19 +195,19 @@ void MarkPolyobjPoint(double x, double y)
     return;
   }
 
-  MarkPolyobjSector(sector);
+  MarkPolyobjSector(level, sector);
 }
 
 //
 // Based on code courtesy of Janis Legzdinsh.
 //
-void DetectPolyobjSectors(buildinfo_t &ctx)
+void DetectPolyobjSectors(buildinfo_t &ctx, level_t &level)
 {
   // -JL- First go through all lines to see if level contains any polyobjs
   size_t i;
-  for (i = 0; i < lev_linedefs.size(); i++)
+  for (i = 0; i < level.linedefs.size(); i++)
   {
-    linedef_t *L = lev_linedefs[i];
+    linedef_t *L = level.linedefs[i];
 
     if (L->special == Polyobj_StartLine || L->special == Polyobj_ExplicitLine)
     {
@@ -215,7 +215,7 @@ void DetectPolyobjSectors(buildinfo_t &ctx)
     }
   }
 
-  if (i == lev_linedefs.size())
+  if (i == level.linedefs.size())
   {
     // -JL- No polyobjs in this level
     return;
@@ -227,9 +227,9 @@ void DetectPolyobjSectors(buildinfo_t &ctx)
               (ctx.polyobj.anchor == ZDoom_PolyObj_Anchor) ? "ZDOOM" : "HEXEN");
   }
 
-  for (size_t j = 0; j < lev_things.size(); j++)
+  for (size_t j = 0; j < level.things.size(); j++)
   {
-    thing_t *T = lev_things[j];
+    thing_t *T = level.things[j];
 
     double x = T->x;
     double y = T->y;
@@ -246,6 +246,6 @@ void DetectPolyobjSectors(buildinfo_t &ctx)
       PrintLine(LOG_DEBUG, "[%s] Thing %zu at (%1.0f,%1.0f) is a polyobj spawner.", __func__, i, x, y);
     }
 
-    MarkPolyobjPoint(x, y);
+    MarkPolyobjPoint(level, x, y);
   }
 }
