@@ -38,6 +38,7 @@
 #include <cstring>
 
 #include <bit>
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -1605,3 +1606,31 @@ build_result_e BuildLevel(struct level_t &level, const char *filename);
 void SetupAnalysisFile(const char *filepath);
 void GenerateAnalysis(level_t &level, const char *filename);
 void WriteAnalysis(const char *filename);
+
+//
+// Benchmark
+//
+
+struct Benchmarker
+{
+  using clock = std::chrono::steady_clock;
+  clock::time_point start;
+  const char *name;
+  bool enabled;
+
+  Benchmarker(const char *_name, bool _enabled = true)
+  {
+    if (!_enabled) return;
+    enabled = _enabled;
+    name = _name;
+    start = clock::now();
+  };
+
+  ~Benchmarker(void)
+  {
+    if (!enabled) return;
+    auto end = clock::now();
+    auto time = std::chrono::duration<double, std::milli>(end - start);
+    PrintLine(LOG_NORMAL, "[Benchmarker] '%s' runtime: %.2f ms", name, time.count());
+  };
+};

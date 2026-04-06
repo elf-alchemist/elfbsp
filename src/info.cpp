@@ -50,6 +50,7 @@ void SetupAnalysisFile(const char *filepath)
 // expects AnalysisPushLine to have been called with all 0-32 split costs during node-building
 void WriteAnalysis(const char *filename)
 {
+  auto mark = Benchmarker(__func__);
   auto csv_path = std::string(filename);
 
   if (const auto ext_pos = FindExtension(filename); ext_pos > 0)
@@ -111,6 +112,7 @@ static void ComputeTotalBspHeights(const node_t *node, size_t depth, double &lea
 
 void GenerateAnalysis(level_t &level, const char *filename)
 {
+  auto mark = Benchmarker(__func__);
   auto generate_analysis_data = [](level_t &level, bool is_fast, size_t split_cost) -> auto
   {
     AnalysisData data;
