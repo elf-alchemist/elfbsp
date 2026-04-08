@@ -796,6 +796,7 @@ static void PutNodes_Xgl3(level_t &level, Lump_c *lump, node_t *root)
 
 void SaveDoom_Vanilla(level_t &level, node_t *root_node)
 {
+  auto mark = Benchmarker(__func__);
   // remove all the minisegs from subsectors
   NormaliseBspTree(level);
   // reduce vertex precision for classic DOOM nodes.
@@ -811,6 +812,7 @@ void SaveDoom_Vanilla(level_t &level, node_t *root_node)
 
 void SaveDoom_DeePBSPV4(level_t &level, node_t *root_node)
 {
+  auto mark = Benchmarker(__func__);
   // remove all the minisegs from subsectors
   NormaliseBspTree(level);
   // reduce vertex precision for classic DOOM nodes.
@@ -826,6 +828,7 @@ void SaveDoom_DeePBSPV4(level_t &level, node_t *root_node)
 
 void SaveDoom_XNOD(level_t &level, node_t *root_node)
 {
+  auto mark = Benchmarker(__func__);
   CreateLevelLump(level, "SEGS")->Finish();
   CreateLevelLump(level, "SSECTORS")->Finish();
   // remove all the minisegs from subsectors
@@ -845,6 +848,7 @@ void SaveDoom_XNOD(level_t &level, node_t *root_node)
 
 void SaveDoom_XGLN(level_t &level, node_t *root_node)
 {
+  auto mark = Benchmarker(__func__);
   // leave SEGS empty
   CreateLevelLump(level, "SEGS")->Finish();
 
@@ -866,6 +870,7 @@ void SaveDoom_XGLN(level_t &level, node_t *root_node)
 
 void SaveDoom_XGL2(level_t &level, node_t *root_node)
 {
+  auto mark = Benchmarker(__func__);
   // leave SEGS empty
   CreateLevelLump(level, "SEGS")->Finish();
 
@@ -887,6 +892,7 @@ void SaveDoom_XGL2(level_t &level, node_t *root_node)
 
 void SaveDoom_XGL3(level_t &level, node_t *root_node)
 {
+  auto mark = Benchmarker(__func__);
   // leave SEGS empty
   CreateLevelLump(level, "SEGS")->Finish();
 
@@ -912,6 +918,7 @@ void SaveDoom_XGL3(level_t &level, node_t *root_node)
 //
 void SaveTextmap_ZNODES(level_t &level, node_t *root_node)
 {
+  auto mark = Benchmarker(__func__);
   SortSegs(level);
 
   Lump_c *lump = CreateLevelLump(level, "ZNODES", CalcXnodNodesSize(level));

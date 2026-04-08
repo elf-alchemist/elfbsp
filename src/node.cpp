@@ -763,6 +763,12 @@ seg_t *PickNode(quadtree_c *tree, int depth, double split_cost, bool fast)
   return best;
 }
 
+static void ListAddSeg(seg_t **list_ptr, seg_t *seg)
+{
+  seg->next = *list_ptr;
+  *list_ptr = seg;
+}
+
 //
 // Apply the partition line to the given seg, taking the necessary
 // action (moving it into either the left list, right list, or
@@ -1298,6 +1304,7 @@ seg_t *CreateOneSeg(level_t &level, linedef_t *line, vertex_t *start, vertex_t *
 //
 seg_t *CreateSegs(level_t &level)
 {
+  auto mark = Benchmarker(__func__);
   seg_t *list = nullptr;
 
   for (size_t i = 0; i < level.linedefs.size(); i++)
@@ -1697,6 +1704,7 @@ void BuildNodes(level_t &level, seg_t *list, int depth, bbox_t *bounds, node_t *
 
 void ClockwiseBspTree(level_t &level)
 {
+  auto mark = Benchmarker(__func__);
   size_t cur_seg_index = 0;
 
   for (size_t i = 0; i < level.subsecs.size(); i++)

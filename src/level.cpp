@@ -539,6 +539,7 @@ static void InitBlockmap(level_t &level)
 
 static void PutBlockmap(level_t &level)
 {
+  auto mark = Benchmarker(__func__);
   if (level.linedefs.size() == 0)
   {
     // just create an empty blockmap lump
@@ -691,6 +692,7 @@ static void Reject_WriteLump(level_t &level)
 //
 static void PutReject(level_t &level)
 {
+  auto mark = Benchmarker(__func__);
   if (level.sectors.size() == 0)
   {
     // just create an empty reject lump
@@ -1728,6 +1730,7 @@ bsp_type_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
 
 void LoadLevel(level_t &level)
 {
+  auto mark = Benchmarker(__func__);
   Lump_c *LEV = cur_wad->GetLump(level.level_header_lump_index);
 
   level.overflows = false;
@@ -2014,6 +2017,8 @@ build_result_e BuildLevel(level_t &level, const char *filename)
     bbox_t dummy;
     // recursively create nodes
     seg_t *seg_list = CreateSegs(level);
+    // recursive function T-T
+    auto mark = Benchmarker("BuildNodes");
     BuildNodes(level, seg_list, 0, &dummy, &root_node, &root_sub, config.split_cost, config.fast, false);
   }
 

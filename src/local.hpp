@@ -541,12 +541,6 @@ static constexpr double DIST_EPSILON_HI = (1.0 / FRACFACTOR);
 // smallest degrees between two angles before being considered equal
 static constexpr double ANG_EPSILON = (1.0 / 1024.0);
 
-inline void ListAddSeg(seg_t **list_ptr, seg_t *seg)
-{
-  seg->next = *list_ptr;
-  *list_ptr = seg;
-}
-
 //------------------------------------------------------------------------
 // NODE : Recursively create nodes and return the pointers.
 //------------------------------------------------------------------------
