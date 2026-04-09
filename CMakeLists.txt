@@ -49,6 +49,7 @@ if(SAN_COUNT GREATER 0)
 endif()
 
 add_executable(${PROJECT_NAME}
+    src/blockmap.cpp
     src/bsp.cpp
     src/info.cpp
     src/level.cpp
@@ -57,6 +58,7 @@ add_executable(${PROJECT_NAME}
     src/node.cpp
     src/parse.cpp
     src/polyobj.cpp
+    src/reject.cpp
     src/wad.cpp
 )
 

@@ -582,6 +582,10 @@ void NormaliseBspTree(level_t &level);
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree(level_t &level);
 
+void InitBlockmap(level_t &level);
+void PutBlockmap(level_t &level);
+void PutReject(level_t &level);
+
 void SaveDoom_Vanilla(level_t &level, node_t *root_node);
 void SaveDoom_DeePBSPV4(level_t &level, node_t *root_node);
 void SaveDoom_XNOD(level_t &level, node_t *root_node);
