@@ -166,6 +166,10 @@ constexpr uint32_t FRACBITS = 16;
 constexpr fixed_t FRACUNIT = (1 << FRACBITS);
 constexpr double FRACFACTOR = FRACUNIT;
 
+constexpr size_t ZERO_INDEX = static_cast<size_t>(0);
+constexpr uint16_t ZERO_INDEX_INT16 = static_cast<uint16_t>(0);
+constexpr uint32_t ZERO_INDEX_INT32 = static_cast<uint32_t>(0);
+
 constexpr size_t NO_INDEX = static_cast<size_t>(-1);
 constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
 constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);

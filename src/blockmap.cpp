@@ -21,22 +21,15 @@
 //
 //------------------------------------------------------------------------------
 
+#include "core.hpp"
 #include "local.hpp"
 
 /* ----- create blockmap ------------------------------------ */
 
-static constexpr uint32_t BK_NUM = 0;
-static constexpr uint32_t BK_MAX = 1;
-static constexpr uint32_t BK_XOR = 2;
-static constexpr uint32_t BK_FIRST = 3;
-static constexpr uint32_t BK_QUANTUM = 32;
-
-static constexpr uint32_t DUMMY_DUP = 0xFFFF;
+static constexpr size_t DUMMY_DUP = NO_INDEX;
 
 static void BlockAdd(level_t &level, size_t blk_num, size_t line_index)
 {
-  uint16_t *cur = level.block_lines[blk_num];
-
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
     PrintLine(LOG_DEBUG, "[%s] Block %zu has line %zu", __func__, blk_num, line_index);
@@ -47,37 +40,20 @@ static void BlockAdd(level_t &level, size_t blk_num, size_t line_index)
     PrintLine(LOG_ERROR, "ERROR: BlockAdd: bad block number %zu", blk_num);
   }
 
-  if (!cur)
-  {
-    // create empty block
-    level.block_lines[blk_num] = cur = UtilCalloc<uint16_t>(BK_QUANTUM * sizeof(uint16_t));
-    cur[BK_NUM] = 0;
-    cur[BK_MAX] = BK_QUANTUM;
-    cur[BK_XOR] = 0x1234;
-  }
-
-  if (BK_FIRST + cur[BK_NUM] == cur[BK_MAX])
-  {
-    // no more room, so allocate some more...
-    cur[BK_MAX] += BK_QUANTUM;
-
-    level.block_lines[blk_num] = cur = UtilRealloc(cur, cur[BK_MAX] * sizeof(uint16_t));
-  }
+  auto &blk = level.block_lines[blk_num];
 
   // compute new checksum
-  cur[BK_XOR] = static_cast<uint16_t>(cur[BK_XOR] << 4) | (cur[BK_XOR] >> 12);
-  cur[BK_XOR] ^= static_cast<uint16_t>(line_index & 0xFFFF);
+  blk.hash = std::rotl(blk.hash, 4) ^ line_index;
 
-  cur[BK_FIRST + cur[BK_NUM]] = GetLittleEndian(static_cast<uint16_t>(line_index));
-  cur[BK_NUM]++;
+  blk.lines.push_back(line_index);
 }
 
 static void BlockAddLine(level_t &level, const linedef_t *L)
 {
-  int32_t x1 = static_cast<int32_t>(L->start->x);
-  int32_t y1 = static_cast<int32_t>(L->start->y);
-  int32_t x2 = static_cast<int32_t>(L->end->x);
-  int32_t y2 = static_cast<int32_t>(L->end->y);
+  auto x1 = static_cast<int16_t>(L->start->x);
+  auto y1 = static_cast<int16_t>(L->start->y);
+  auto x2 = static_cast<int16_t>(L->end->x);
+  auto y2 = static_cast<int16_t>(L->end->y);
 
   size_t line_index = L->index;
 
@@ -86,10 +62,10 @@ static void BlockAddLine(level_t &level, const linedef_t *L)
     PrintLine(LOG_DEBUG, "[%s] %zu (%d,%d) -> (%d,%d)", __func__, line_index, x1, y1, x2, y2);
   }
 
-  int32_t bx1_temp = (std::min(x1, x2) - level.block_x) / 128;
-  int32_t by1_temp = (std::min(y1, y2) - level.block_y) / 128;
-  int32_t bx2_temp = (std::max(x1, x2) - level.block_x) / 128;
-  int32_t by2_temp = (std::max(y1, y2) - level.block_y) / 128;
+  auto bx1_temp = (std::min(x1, x2) - level.block_x) / 128;
+  auto by1_temp = (std::min(y1, y2) - level.block_y) / 128;
+  auto bx2_temp = (std::max(x1, x2) - level.block_x) / 128;
+  auto by2_temp = (std::max(y1, y2) - level.block_y) / 128;
 
   // handle truncated blockmaps
   size_t bx1 = static_cast<size_t>(std::max(bx1_temp, 0));
@@ -118,7 +94,7 @@ static void BlockAddLine(level_t &level, const linedef_t *L)
   {
     for (size_t by = by1; by <= by2; by++)
     {
-      size_t blk_num = static_cast<size_t>(by * level.block_w + bx1);
+      size_t blk_num = by * level.block_w + bx1;
       BlockAdd(level, blk_num, line_index);
     }
     return;
@@ -130,7 +106,7 @@ static void BlockAddLine(level_t &level, const linedef_t *L)
   {
     for (size_t bx = bx1; bx <= bx2; bx++)
     {
-      size_t blk_num = static_cast<size_t>(bx + by * level.block_w);
+      size_t blk_num = bx + by * level.block_w;
 
       int32_t minx = level.block_x + 128 * static_cast<int32_t>(bx);
       int32_t miny = level.block_y + 128 * static_cast<int32_t>(by);
@@ -147,7 +123,8 @@ static void BlockAddLine(level_t &level, const linedef_t *L)
 
 static void CreateBlockmap(level_t &level)
 {
-  level.block_lines = UtilCalloc<uint16_t *>(level.block_count * sizeof(uint16_t *));
+  // What the fuck?
+  level.block_lines.assign(level.block_count, blocklist_t{.hash = 0x1234123412341234, .lines = {}});
 
   for (size_t i = 0; i < level.linedefs.size(); i++)
   {
@@ -177,21 +154,19 @@ static void CompressBlockmap(level_t &level)
   // of the blocklists in the BLOCKMAP lump.
   for (size_t i = 0; i < level.block_count; i++)
   {
-    level.block_dups[i] = static_cast<uint16_t>(i);
+    level.block_dups[i] = i;
   }
 
-  auto BlockCompare = [&level](const uint16_t &blk_num1, const uint16_t &blk_num2) -> int
+  auto BlockCompare = [&level](const size_t &blk_num1, const size_t &blk_num2) -> int
   {
-    const uint16_t *A = level.block_lines[blk_num1];
-    const uint16_t *B = level.block_lines[blk_num2];
+    const auto &A = level.block_lines[blk_num1];
+    const auto &B = level.block_lines[blk_num2];
 
-    if (A == B) return 0;
-    if (A == nullptr) return -1;
-    if (B == nullptr) return +1;
-    if (A[BK_NUM] != B[BK_NUM]) return A[BK_NUM] - B[BK_NUM];
-    if (A[BK_XOR] != B[BK_XOR]) return A[BK_XOR] - B[BK_XOR];
+    if (A.lines.size() != B.lines.size()) return A.lines.size() < B.lines.size() ? -1 : 1;
+    if (A.hash != B.hash) return A.hash < B.hash ? -1 : 1;
+    if (A.lines == B.lines) return 0;
 
-    return memcmp(A + BK_FIRST, B + BK_FIRST, A[BK_NUM] * sizeof(uint16_t));
+    return A.lines < B.lines ? -1 : 1;
   };
   std::sort(level.block_dups.begin(), level.block_dups.end(), BlockCompare);
 
@@ -205,27 +180,26 @@ static void CompressBlockmap(level_t &level)
     size_t blk_num = level.block_dups[i];
 
     // empty block ?
-    if (level.block_lines[blk_num] == nullptr)
+    if (level.block_lines[blk_num].lines.empty())
     {
-      level.block_ptrs[blk_num] = static_cast<uint16_t>(4 + level.block_count);
+      level.block_ptrs[blk_num] = 4 + level.block_count;
       level.block_dups[i] = DUMMY_DUP;
 
       orig_size += 2;
       continue;
     }
 
-    size_t count = 2 + level.block_lines[blk_num][BK_NUM];
+    size_t count = 2 + level.block_lines[blk_num].lines.size();
 
     // duplicate ?  Only the very last one of a sequence of duplicates
     // will update the current offset value.
     if (i + 1 < level.block_count && BlockCompare(level.block_dups[i], level.block_dups[i + 1]) == 0)
     {
-      level.block_ptrs[blk_num] = static_cast<uint16_t>(cur_offset);
+      level.block_ptrs[blk_num] = cur_offset;
       level.block_dups[i] = DUMMY_DUP;
 
       // free the memory of the duplicated block
-      UtilFree(level.block_lines[blk_num]);
-      level.block_lines[blk_num] = nullptr;
+      level.block_lines[blk_num].lines.clear();
 
       if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
       {
@@ -238,7 +212,7 @@ static void CompressBlockmap(level_t &level)
 
     // OK, this block is either the last of a series of duplicates, or
     // just a singleton.
-    level.block_ptrs[blk_num] = static_cast<uint16_t>(cur_offset);
+    level.block_ptrs[blk_num] = cur_offset;
     cur_offset += count;
     orig_size += count;
     new_size += count;
@@ -265,7 +239,7 @@ static void CompressBlockmap(level_t &level)
   }
 }
 
-static size_t CalcBlockmapSize(level_t &level)
+static size_t CalcBlockmapSize_Vanilla(level_t &level)
 {
   // compute size of final BLOCKMAP lump.
   // it does not need to be exact, but it *does* need to be bigger
@@ -275,7 +249,7 @@ static size_t CalcBlockmapSize(level_t &level)
   size_t size = 20;
 
   // the pointers (offsets to the line lists)
-  size = size + level.block_count * 2;
+  size += level.block_count * 2;
 
   // add size of each block
   for (size_t i = 0; i < level.block_count; i++)
@@ -288,29 +262,28 @@ static size_t CalcBlockmapSize(level_t &level)
       continue;
     }
 
-    uint16_t *blk = level.block_lines[blk_num];
-    SYS_ASSERT(blk);
+    const auto &blk = level.block_lines[blk_num];
 
-    size += static_cast<size_t>(((blk[BK_NUM]) + 1 + 1) * 2);
+    size += ((blk.lines.size() + 1 + 1) * 2);
   }
 
   return size;
 }
 
-static void WriteBlockmap(level_t &level)
+static void WriteBlockmap_Vanilla(level_t &level)
 {
-  size_t max_size = CalcBlockmapSize(level);
+  size_t max_size = CalcBlockmapSize_Vanilla(level);
   Lump_c *lump = CreateLevelLump(level, "BLOCKMAP", max_size);
 
-  uint16_t null_block[2] = {0x0000, 0xFFFF};
-  uint16_t m_zero = 0x0000;
-  uint16_t m_neg1 = 0xFFFF;
+  uint16_t m_zero = ZERO_INDEX_INT16;
+  uint16_t m_neg1 = NO_INDEX_INT16;
+  uint16_t null_block[2] = {m_zero, m_neg1};
 
   // fill in header
   raw_blockmap_header_t header;
 
-  header.x_origin = GetLittleEndian(static_cast<int16_t>(level.block_x));
-  header.y_origin = GetLittleEndian(static_cast<int16_t>(level.block_y));
+  header.x_origin = GetLittleEndian(level.block_x);
+  header.y_origin = GetLittleEndian(level.block_y);
   header.x_blocks = GetLittleEndian(static_cast<int16_t>(level.block_w));
   header.y_blocks = GetLittleEndian(static_cast<int16_t>(level.block_h));
 
@@ -319,7 +292,7 @@ static void WriteBlockmap(level_t &level)
   // handle pointers
   for (size_t i = 0; i < level.block_count; i++)
   {
-    uint16_t ptr = GetLittleEndian(level.block_ptrs[i]);
+    uint16_t ptr = GetLittleEndian(static_cast<uint16_t>(level.block_ptrs[i]));
 
     if (ptr == 0)
     {
@@ -335,7 +308,7 @@ static void WriteBlockmap(level_t &level)
   // handle each block list
   for (size_t i = 0; i < level.block_count; i++)
   {
-    int blk_num = level.block_dups[i];
+    size_t blk_num = level.block_dups[i];
 
     // ignore duplicate or empty blocks
     if (blk_num == DUMMY_DUP)
@@ -343,11 +316,14 @@ static void WriteBlockmap(level_t &level)
       continue;
     }
 
-    uint16_t *blk = level.block_lines[blk_num];
-    SYS_ASSERT(blk);
+    const auto &blk = level.block_lines[blk_num];
 
     lump->Write(&m_zero, sizeof(uint16_t));
-    lump->Write(blk + BK_FIRST, blk[BK_NUM] * sizeof(uint16_t));
+    for (size_t line : blk.lines)
+    {
+      uint16_t le_line = GetLittleEndian(static_cast<uint16_t>(line));
+      lump->Write(&le_line, sizeof(uint16_t));
+    }
     lump->Write(&m_neg1, sizeof(uint16_t));
   }
 
@@ -358,13 +334,10 @@ static void FreeBlockmap(level_t &level)
 {
   for (size_t i = 0; i < level.block_count; i++)
   {
-    if (level.block_lines[i])
-    {
-      UtilFree(level.block_lines[i]);
-    }
+    level.block_lines[i].lines.clear();
   }
 
-  UtilFree(level.block_lines);
+  level.block_lines.clear();
   level.block_ptrs.clear();
   level.block_dups.clear();
 }
@@ -470,7 +443,7 @@ void PutBlockmap(level_t &level)
   }
   else
   {
-    WriteBlockmap(level);
+    WriteBlockmap_Vanilla(level);
     if (config.verbose)
     {
       PrintLine(LOG_NORMAL, "Blockmap size: %zux%zu (compression: %d%%)", level.block_w, level.block_h,
