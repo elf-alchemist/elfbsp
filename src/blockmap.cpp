@@ -200,12 +200,7 @@ static void CompressBlockmap(level_t &level)
 
       // free the memory of the duplicated block
       level.block_lines[blk_num].lines.clear();
-
-      if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
-      {
-        dup_count++;
-      }
-
+      dup_count++;
       orig_size += count;
       continue;
     }
@@ -224,7 +219,8 @@ static void CompressBlockmap(level_t &level)
     return;
   }
 
-  if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
+  // TODO: this is temporary
+  if (config.verbose)
   {
     PrintLine(LOG_DEBUG, "[%s] Last ptr = %zu  duplicates = %zu", __func__, cur_offset, dup_count);
   }
