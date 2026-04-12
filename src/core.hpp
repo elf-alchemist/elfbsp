@@ -38,6 +38,7 @@
 #include <cstring>
 
 #include <bit>
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -164,6 +165,10 @@ constexpr long_angle_t LONG_ANGLE_1 = (LONG_ANGLE_45 / 45);
 constexpr uint32_t FRACBITS = 16;
 constexpr fixed_t FRACUNIT = (1 << FRACBITS);
 constexpr double FRACFACTOR = FRACUNIT;
+
+constexpr size_t ZERO_INDEX = static_cast<size_t>(0);
+constexpr uint16_t ZERO_INDEX_INT16 = static_cast<uint16_t>(0);
+constexpr uint32_t ZERO_INDEX_INT32 = static_cast<uint32_t>(0);
 
 constexpr size_t NO_INDEX = static_cast<size_t>(-1);
 constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
@@ -1715,3 +1720,31 @@ build_result_e BuildLevel(struct level_t &level, const char *filename);
 void SetupAnalysisFile(const char *filepath);
 void GenerateAnalysis(level_t &level, const char *filename);
 void WriteAnalysis(const char *filename);
+
+//
+// Benchmark
+//
+
+struct Benchmarker
+{
+  using clock = std::chrono::steady_clock;
+  clock::time_point start;
+  const char *name;
+  bool enabled;
+
+  Benchmarker(const char *_name, bool _enabled = true)
+  {
+    if (!_enabled) return;
+    enabled = _enabled;
+    name = _name;
+    start = clock::now();
+  };
+
+  ~Benchmarker(void)
+  {
+    if (!enabled) return;
+    auto end = clock::now();
+    auto time = std::chrono::duration<double, std::milli>(end - start);
+    PrintLine(LOG_NORMAL, "[Benchmarker] '%s' runtime: %.2f ms", name, time.count());
+  };
+};

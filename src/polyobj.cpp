@@ -203,6 +203,7 @@ void MarkPolyobjPoint(level_t &level, double x, double y)
 //
 void DetectPolyobjSectors(buildinfo_t &ctx, level_t &level)
 {
+  auto mark = Benchmarker(__func__);
   // -JL- First go through all lines to see if level contains any polyobjs
   size_t i;
   for (i = 0; i < level.linedefs.size(); i++)

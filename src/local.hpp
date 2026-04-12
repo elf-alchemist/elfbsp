@@ -383,6 +383,12 @@ struct intersection_t
   bool open_after;
 };
 
+using blocklist_t = struct blocklist_t
+{
+  size_t hash;
+  std::vector<size_t> lines;
+};
+
 // Note: ZDoom format support based on code (C) 2002,2003 Marisa "Randi" Heit
 
 using level_t = struct level_t
@@ -411,14 +417,13 @@ using level_t = struct level_t
   size_t reject_size;
   std::vector<size_t> reject_groups;
 
-  int block_x, block_y;
+  int16_t block_x, block_y;
   size_t block_w, block_h;
   size_t block_count;
 
-  uint16_t **block_lines;
-
-  std::vector<uint16_t> block_ptrs;
-  std::vector<uint16_t> block_dups;
+  std::vector<blocklist_t> block_lines;
+  std::vector<size_t> block_ptrs;
+  std::vector<size_t> block_dups;
 
   int32_t block_compression;
   bool block_overflowed = false;
@@ -541,12 +546,6 @@ static constexpr double DIST_EPSILON_HI = (1.0 / FRACFACTOR);
 // smallest degrees between two angles before being considered equal
 static constexpr double ANG_EPSILON = (1.0 / 1024.0);
 
-inline void ListAddSeg(seg_t **list_ptr, seg_t *seg)
-{
-  seg->next = *list_ptr;
-  *list_ptr = seg;
-}
-
 //------------------------------------------------------------------------
 // NODE : Recursively create nodes and return the pointers.
 //------------------------------------------------------------------------
@@ -591,6 +590,10 @@ void RoundOffVertices(void);
 // vertices to integer coordinates (for example, removing segs whose
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree(level_t &level);
+
+void InitBlockmap(level_t &level);
+void PutBlockmap(level_t &level);
+void PutReject(level_t &level);
 
 void SaveDoom_Vanilla(level_t &level, node_t *root_node);
 void SaveDoom_DeePBSPV4(level_t &level, node_t *root_node);
