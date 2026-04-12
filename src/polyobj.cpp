@@ -73,17 +73,17 @@ void MarkPolyobjPoint(level_t &level, double x, double y)
   //       directly on a linedef or even a vertex.  We check all lines
   //       that intersect a small box around the spawn point.
 
-  int32_t bminx = static_cast<int32_t>(x - POLY_BOX_SZ);
-  int32_t bminy = static_cast<int32_t>(y - POLY_BOX_SZ);
-  int32_t bmaxx = static_cast<int32_t>(x + POLY_BOX_SZ);
-  int32_t bmaxy = static_cast<int32_t>(y + POLY_BOX_SZ);
+  auto bminx = FloatToShort(x - POLY_BOX_SZ);
+  auto bminy = FloatToShort(y - POLY_BOX_SZ);
+  auto bmaxx = FloatToShort(x + POLY_BOX_SZ);
+  auto bmaxy = FloatToShort(y + POLY_BOX_SZ);
 
   for (size_t i = 0; i < level.linedefs.size(); i++)
   {
     const linedef_t *L = level.linedefs[i];
 
-    if (CheckLinedefInsideBox(bminx, bminy, bmaxx, bmaxy, static_cast<int32_t>(L->start->x), static_cast<int32_t>(L->start->y),
-                              static_cast<int32_t>(L->end->x), static_cast<int32_t>(L->end->y)))
+    if (CheckLinedefInsideBox(bminx, bminy, bmaxx, bmaxy, FloatToShort(L->start->x), FloatToShort(L->start->y),
+                              FloatToShort(L->end->x), FloatToShort(L->end->y)))
     {
       if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
       {

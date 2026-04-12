@@ -378,8 +378,7 @@ vertex_t *NewVertexDegenerate(level_t &level, vertex_t *start, vertex_t *end)
   dx /= dlen;
   dy /= dlen;
 
-  while (static_cast<int32_t>(floor(vert->x)) == static_cast<int32_t>(floor(start->x))
-         && static_cast<int32_t>(floor(vert->y)) == static_cast<int32_t>(floor(start->y)))
+  while (FloatToShort(vert->x) == FloatToShort(start->x) && FloatToShort(vert->y) == FloatToShort(start->y))
   {
     vert->x += dx;
     vert->y += dy;

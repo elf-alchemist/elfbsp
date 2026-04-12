@@ -26,8 +26,6 @@
 
 /* ----- create blockmap ------------------------------------ */
 
-static constexpr size_t DUMMY_DUP = NO_INDEX;
-
 static void BlockAdd(level_t &level, size_t blk_num, size_t line_index)
 {
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
@@ -50,10 +48,10 @@ static void BlockAdd(level_t &level, size_t blk_num, size_t line_index)
 
 static void BlockAddLine(level_t &level, const linedef_t *L)
 {
-  auto x1 = static_cast<int16_t>(L->start->x);
-  auto y1 = static_cast<int16_t>(L->start->y);
-  auto x2 = static_cast<int16_t>(L->end->x);
-  auto y2 = static_cast<int16_t>(L->end->y);
+  auto x1 = FloatToShort(L->start->x);
+  auto y1 = FloatToShort(L->start->y);
+  auto x2 = FloatToShort(L->end->x);
+  auto y2 = FloatToShort(L->end->y);
 
   size_t line_index = L->index;
 
@@ -83,7 +81,7 @@ static void BlockAddLine(level_t &level, const linedef_t *L)
   {
     for (size_t bx = bx1; bx <= bx2; bx++)
     {
-      size_t blk_num = static_cast<size_t>(by1 * level.block_w + bx);
+      size_t blk_num = by1 * level.block_w + bx;
       BlockAdd(level, blk_num, line_index);
     }
     return;
@@ -183,7 +181,7 @@ static void CompressBlockmap(level_t &level)
     if (level.block_lines[blk_num].lines.empty())
     {
       level.block_ptrs[blk_num] = 4 + level.block_count;
-      level.block_dups[i] = DUMMY_DUP;
+      level.block_dups[i] = NO_INDEX;
 
       orig_size += 2;
       continue;
@@ -196,7 +194,7 @@ static void CompressBlockmap(level_t &level)
     if (i + 1 < level.block_count && BlockCompare(level.block_dups[i], level.block_dups[i + 1]) == 0)
     {
       level.block_ptrs[blk_num] = cur_offset;
-      level.block_dups[i] = DUMMY_DUP;
+      level.block_dups[i] = NO_INDEX;
 
       // free the memory of the duplicated block
       level.block_lines[blk_num].lines.clear();
@@ -253,7 +251,7 @@ static size_t CalcBlockmapSize_Vanilla(level_t &level)
     size_t blk_num = level.block_dups[i];
 
     // ignore duplicate or empty blocks
-    if (blk_num == DUMMY_DUP)
+    if (blk_num == NO_INDEX)
     {
       continue;
     }
@@ -280,15 +278,15 @@ static void WriteBlockmap_Vanilla(level_t &level)
 
   header.x_origin = GetLittleEndian(level.block_x);
   header.y_origin = GetLittleEndian(level.block_y);
-  header.x_blocks = GetLittleEndian(static_cast<int16_t>(level.block_w));
-  header.y_blocks = GetLittleEndian(static_cast<int16_t>(level.block_h));
+  header.x_blocks = GetLittleEndian(IndexToShort(level.block_w));
+  header.y_blocks = GetLittleEndian(IndexToShort(level.block_h));
 
   lump->Write(&header, sizeof(header));
 
   // handle pointers
   for (size_t i = 0; i < level.block_count; i++)
   {
-    uint16_t ptr = GetLittleEndian(static_cast<uint16_t>(level.block_ptrs[i]));
+    uint16_t ptr = GetLittleEndian(IndexToShort(level.block_ptrs[i]));
 
     if (ptr == 0)
     {
@@ -307,7 +305,7 @@ static void WriteBlockmap_Vanilla(level_t &level)
     size_t blk_num = level.block_dups[i];
 
     // ignore duplicate or empty blocks
-    if (blk_num == DUMMY_DUP)
+    if (blk_num == NO_INDEX)
     {
       continue;
     }
@@ -317,7 +315,7 @@ static void WriteBlockmap_Vanilla(level_t &level)
     lump->Write(&m_zero, sizeof(uint16_t));
     for (size_t line : blk.lines)
     {
-      uint16_t le_line = GetLittleEndian(static_cast<uint16_t>(line));
+      uint16_t le_line = GetLittleEndian(IndexToShort(line));
       lump->Write(&le_line, sizeof(uint16_t));
     }
     lump->Write(&m_neg1, sizeof(uint16_t));
@@ -362,10 +360,10 @@ static void FindBlockmapLimits(level_t &level, bbox_t *bbox)
     double x2 = L->end->x;
     double y2 = L->end->y;
 
-    int16_t lx = static_cast<int16_t>(floor(std::min(x1, x2)));
-    int16_t ly = static_cast<int16_t>(floor(std::min(y1, y2)));
-    int16_t hx = static_cast<int16_t>(ceil(std::max(x1, x2)));
-    int16_t hy = static_cast<int16_t>(ceil(std::max(y1, y2)));
+    int16_t lx = FloatToShort(floor(std::min(x1, x2)));
+    int16_t ly = FloatToShort(floor(std::min(y1, y2)));
+    int16_t hx = FloatToShort(ceil(std::max(x1, x2)));
+    int16_t hy = FloatToShort(ceil(std::max(y1, y2)));
 
     if (lx < bbox->minx) bbox->minx = lx;
     if (ly < bbox->miny) bbox->miny = ly;
@@ -379,8 +377,8 @@ static void FindBlockmapLimits(level_t &level, bbox_t *bbox)
 
   if (level.linedefs.size() > 0)
   {
-    block_mid_x = static_cast<int16_t>(floor(mid_x / static_cast<double>(level.linedefs.size())));
-    block_mid_y = static_cast<int16_t>(floor(mid_y / static_cast<double>(level.linedefs.size())));
+    block_mid_x = FloatToShort(floor(mid_x / static_cast<double>(level.linedefs.size())));
+    block_mid_y = FloatToShort(floor(mid_y / static_cast<double>(level.linedefs.size())));
   }
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
