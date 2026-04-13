@@ -144,8 +144,8 @@ static void PutVertices_Doom64(level_t &level)
     // do not ignore vertex_t::is_new
     // it is required for leafs
 
-    raw.x = GetLittleEndian(static_cast<fixed_t>(floor(vert->x * FRACFACTOR)));
-    raw.y = GetLittleEndian(static_cast<fixed_t>(floor(vert->y * FRACFACTOR)));
+    raw.x = GetLittleEndian(FloatToFixed(vert->x));
+    raw.y = GetLittleEndian(FloatToFixed(vert->y));
 
     lump->Write(&raw, sizeof(raw_vertex_doom64_t));
   }
@@ -333,7 +333,7 @@ static void PutLeafs_Vanilla(level_t &level)
       raw_leaf_vanilla_t raw;
       vertex_t *vert = seg->start;
 
-      raw.vertex = GetLittleEndian(static_cast<uint16_t>(vert->index));
+      raw.vertex = GetLittleEndian(IndexToShort(vert->index));
       if (seg->linedef)
       // if (seg->linedef && !vert->is_new)
       {
@@ -538,7 +538,7 @@ static void PutLeafs_DeePBSPV4(level_t &level)
       raw_leaf_deepbspv4_t raw;
       vertex_t *vert = seg->start;
 
-      raw.vertex = GetLittleEndian(static_cast<uint16_t>(vert->index));
+      raw.vertex = GetLittleEndian(IndexToShort(vert->index));
       if (seg->linedef)
       // if (seg->linedef && !vert->is_new)
       {
