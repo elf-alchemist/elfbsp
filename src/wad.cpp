@@ -65,8 +65,8 @@ void Lump_c::MakeEntry(raw_wad_entry_t *entry)
   memset(entry->name, 0, 8);
   memcpy(entry->name, lumpname.c_str(), lumpname.size());
 
-  entry->pos = GetLittleEndian(static_cast<uint32_t>(l_start));
-  entry->size = GetLittleEndian(static_cast<uint32_t>(l_length));
+  entry->pos = GetLittleEndian(IndexToInt(l_start));
+  entry->size = GetLittleEndian(IndexToInt(l_length));
 }
 
 //------------------------------------------------------------------------
@@ -331,18 +331,11 @@ size_t Wad_file::LevelHeader(size_t lev_num)
 
 map_format_e Wad_file::LevelFormat(size_t lev_num)
 {
-  size_t start = LevelHeader(lev_num);
-
   // UDMF maps can contain BEHAVIOR or MACROS
   // check exclusively TEXTMAP
-  if (start + 2 < NumLumps())
+  if (LevelLookupLump(lev_num, "TEXTMAP") != NO_INDEX)
   {
-    const char *name = GetLump(start + LL_TEXTMAP)->Name();
-
-    if (StringCaseCmp(name, "TEXTMAP") == 0)
-    {
-      return MapFormat_UDMF;
-    }
+    return MapFormat_Hexen;
   }
 
   if (LevelLookupLump(lev_num, "BEHAVIOR") != NO_INDEX)
@@ -728,53 +721,6 @@ void Wad_file::EndWrite(void)
   insert_point = NO_INDEX;
 }
 
-void Wad_file::RemoveLumps(size_t index, size_t count)
-{
-  SYS_ASSERT(begun_write);
-  SYS_ASSERT(index < NumLumps());
-  SYS_ASSERT(directory[index]);
-
-  for (size_t i = 0; i < count; i++)
-  {
-    delete directory[index + i];
-  }
-
-  for (size_t i = index; i + count < NumLumps(); i++)
-  {
-    directory[i] = directory[i + count];
-  }
-
-  directory.resize(directory.size() - count);
-
-  // fix various arrays containing lump indices
-  FixGroup(levels, index, 0, count);
-  FixGroup(patches, index, 0, count);
-  FixGroup(sprites, index, 0, count);
-  FixGroup(flats, index, 0, count);
-  FixGroup(tx_tex, index, 0, count);
-
-  // reset the insertion point
-  insert_point = NO_INDEX;
-}
-
-void Wad_file::RemoveZNodes(size_t lev_num)
-{
-  SYS_ASSERT(begun_write);
-  SYS_ASSERT(lev_num < LevelCount());
-
-  size_t start = LevelHeader(lev_num);
-  size_t finish = LevelLastLump(lev_num);
-
-  for (; start <= finish; start++)
-  {
-    if (StringCaseCmp(directory[start]->Name(), "ZNODES") == 0)
-    {
-      RemoveLumps(start, 1);
-      break;
-    }
-  }
-}
-
 void Wad_file::FixGroup(std::vector<size_t> &group, size_t index, size_t num_added, size_t num_removed)
 {
   bool did_remove = false;
@@ -1084,8 +1030,8 @@ void Wad_file::WriteDirectory(void)
 
   memcpy(header.ident, (kind == 'I') ? "IWAD" : "PWAD", 4);
 
-  header.dir_start = GetLittleEndian(static_cast<uint32_t>(dir_start));
-  header.num_entries = GetLittleEndian(static_cast<uint32_t>(dir_count));
+  header.dir_start = GetLittleEndian(IndexToInt(dir_start));
+  header.num_entries = GetLittleEndian(IndexToInt(dir_count));
 
   if (fwrite(&header, sizeof(header), 1, fp) != 1)
   {

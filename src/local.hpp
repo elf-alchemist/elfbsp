@@ -422,10 +422,10 @@ using level_t = struct level_t
   size_t block_count;
 
   std::vector<blocklist_t> block_lines;
-  std::vector<size_t> block_ptrs;
-  std::vector<size_t> block_dups;
+  std::vector<size_t> block_offsets;
+  std::vector<size_t> block_duplicates;
 
-  int32_t block_compression;
+  double block_compression;
   bool block_overflowed = false;
 
   inline Lump_c *FindLevelLump(const char *name)

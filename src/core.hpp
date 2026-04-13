@@ -210,6 +210,16 @@ constexpr int32_t FixedToInt(const fixed_t x)
   return x >> FRACBITS;
 }
 
+constexpr fixed_t ShortToFixed(const int16_t x)
+{
+  return x << FRACBITS;
+}
+
+constexpr int16_t FixedToShort(const fixed_t x)
+{
+  return x >> FRACBITS;
+}
+
 constexpr double FixedToFloat(const fixed_t x)
 {
   return (static_cast<double>(x) / FRACFACTOR);
@@ -218,6 +228,26 @@ constexpr double FixedToFloat(const fixed_t x)
 constexpr fixed_t FloatToFixed(double x)
 {
   return static_cast<fixed_t>(x * FRACFACTOR);
+}
+
+constexpr int16_t FloatToShort(double x)
+{
+  return static_cast<int16_t>(floor(x));
+}
+
+constexpr double ShortToFloat(int16_t x)
+{
+  return static_cast<double>(x);
+}
+
+constexpr uint16_t IndexToShort(size_t x)
+{
+  return static_cast<uint16_t>(x);
+}
+
+constexpr uint32_t IndexToInt(size_t x)
+{
+  return static_cast<uint32_t>(x);
 }
 
 // binary angular measurement, BAM!
@@ -777,7 +807,7 @@ using raw_sector_doom64_t = struct raw_sector_doom64_s
 //
 // We do not write ZIP-compressed ZDoom nodes
 //
-using bsp_type_t = enum bsp_type_e : uint8_t
+using bsp_format_t = enum bsp_format_e : uint8_t
 {
   BSP_VANILLA,
   BSP_DEEPBSPV4,
@@ -837,7 +867,7 @@ using raw_bbox_t = struct raw_bbox_s
 using raw_blockmap_header_t = struct raw_blockmap_header_s
 {
   int16_t x_origin, y_origin;
-  int16_t x_blocks, y_blocks;
+  uint16_t x_blocks, y_blocks;
 } PACKEDATTR;
 
 //
@@ -1430,9 +1460,6 @@ struct Wad_file
   // (previous results of FindLumpNum or LevelHeader are invalidated).
   void RemoveLumps(size_t index, size_t count = 1);
 
-  // removes any ZNODES lump from a UDMF level.
-  void RemoveZNodes(size_t lev_num);
-
   // insert a new lump.
   // The second form is for a level marker.
   // The 'max_size' parameter (if >= 0) specifies the most data
@@ -1450,7 +1477,7 @@ struct Wad_file
   //
   // passing a negative value or invalid index will reset the
   // insertion point -- future lumps get added at the END.
-  // RemoveLumps(), RemoveLevel() and EndWrite() also reset it.
+  // EndWrite() also reset it.
   void InsertPoint(size_t index = NO_INDEX);
 
   static Wad_file *Create(const char *filename, char mode);
@@ -1646,7 +1673,7 @@ struct buildinfo_s
   size_t total_warnings = 0;
   uint32_t debug = DEBUG_NONE;
 
-  bsp_type_t bsp_type = bsp_type_t::BSP_XNOD;
+  bsp_format_t bsp_format = bsp_format_t::BSP_XNOD;
   bool fast = false;     // use a faster method to pick nodes
   bool backup = false;   // keep a copy of the WAD
   bool analysis = false; // write out CSV for data analysis and visualization

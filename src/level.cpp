@@ -388,8 +388,8 @@ static void GetVertices_Doom(level_t &level)
 
     vertex_t *vert = NewVertex(level);
 
-    vert->x = static_cast<double>(GetLittleEndian(raw.x));
-    vert->y = static_cast<double>(GetLittleEndian(raw.y));
+    vert->x = ShortToFloat(GetLittleEndian(raw.x));
+    vert->y = ShortToFloat(GetLittleEndian(raw.y));
   }
 
   level.num_old_vert = level.vertices.size();
@@ -432,8 +432,8 @@ static void GetSectors_Doom(level_t &level)
 
     sector_t *sector = NewSector(level);
 
-    sector->height_floor = static_cast<double>(GetLittleEndian(raw.floorh));
-    sector->height_ceiling = static_cast<double>(GetLittleEndian(raw.ceilh));
+    sector->height_floor = ShortToFloat(GetLittleEndian(raw.floorh));
+    sector->height_ceiling = ShortToFloat(GetLittleEndian(raw.ceilh));
   }
 }
 
@@ -1339,9 +1339,9 @@ static void CheckBinaryFormatLimits(level_t &level)
   }
 }
 
-bsp_type_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
+bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
 {
-  bsp_type_t level_type = ctx.bsp_type;
+  bsp_format_t level_type = ctx.bsp_format;
 
   if (level.format == MapFormat_Doom64)
   {
@@ -1494,8 +1494,7 @@ build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
   // check for overflows...
   CheckBinaryFormatLimits(level);
 
-
-  bsp_type_t level_type = CheckFormatBSP(config, level);
+  bsp_format_t level_type = CheckFormatBSP(config, level);
 
   if (level.format == MapFormat_Doom64)
   {
@@ -1557,12 +1556,7 @@ build_result_e SaveLevelTextMap(level_t &level, node_t *root_node)
 {
   cur_wad->BeginWrite();
 
-  // remove any existing ZNODES lump
-  cur_wad->RemoveZNodes(level.level_num);
-
-  Lump_c *lump = CreateLevelLump(level, "ZNODES", NO_INDEX);
-
-  // -Elf- Ensure needed lumps exist
+  Lump_c *lump = CreateLevelLump(level, "ZNODES");
   AddMissingLump(level, "REJECT", "ZNODES");
   AddMissingLump(level, "BLOCKMAP", "REJECT");
 
@@ -1575,7 +1569,6 @@ build_result_e SaveLevelTextMap(level_t &level, node_t *root_node)
     SaveTextmap_ZNODES(level, root_node);
   }
 
-  // -Elf-
   PutBlockmap(level);
   PutReject(level);
 

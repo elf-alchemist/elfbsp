@@ -60,7 +60,7 @@ static inline int16_t VanillaSegDist(const seg_t *seg)
   double sx = round(seg->start->x);
   double sy = round(seg->start->y);
 
-  return static_cast<int16_t>(floor(hypot(sx - lx, sy - ly) + 0.5));
+  return FloatToShort(floor(hypot(sx - lx, sy - ly) + 0.5));
 }
 
 static inline short_angle_t VanillaSegAngle(const seg_t *seg)
@@ -113,8 +113,8 @@ static void PutVertices_Doom(level_t &level)
       continue;
     }
 
-    raw.x = GetLittleEndian(static_cast<int16_t>(floor(vert->x)));
-    raw.y = GetLittleEndian(static_cast<int16_t>(floor(vert->y)));
+    raw.x = GetLittleEndian(FloatToShort(floor(vert->x)));
+    raw.y = GetLittleEndian(FloatToShort(floor(vert->y)));
 
     lump->Write(&raw, sizeof(raw_vertex_t));
 
@@ -170,10 +170,10 @@ static void PutSegs_Vanilla(level_t &level)
 
     const seg_t *seg = level.segs[i];
 
-    raw.start = GetLittleEndian(static_cast<uint16_t>(seg->start->index));
-    raw.end = GetLittleEndian(static_cast<uint16_t>(seg->end->index));
+    raw.start = GetLittleEndian(IndexToShort(seg->start->index));
+    raw.end = GetLittleEndian(IndexToShort(seg->end->index));
     raw.angle = GetLittleEndian(VanillaSegAngle(seg));
-    raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef->index));
+    raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
     raw.flip = GetLittleEndian(seg->side);
     raw.dist = GetLittleEndian(VanillaSegDist(seg));
 
@@ -202,8 +202,8 @@ static void PutSubsecs_Vanilla(level_t &level)
 
     const subsec_t *sub = level.subsecs[i];
 
-    raw.first = GetLittleEndian(static_cast<uint16_t>(sub->seg_list->index));
-    raw.num = GetLittleEndian(static_cast<uint16_t>(sub->seg_count));
+    raw.first = GetLittleEndian(IndexToShort(sub->seg_list->index));
+    raw.num = GetLittleEndian(IndexToShort(sub->seg_count));
 
     lump->Write(&raw, sizeof(raw_subsec_vanilla_t));
 
@@ -233,29 +233,28 @@ static void PutOneNode_Vanilla(Lump_c *lump, node_t *node, size_t &node_cur_inde
 
   raw_node_vanilla_t raw;
 
-  // note that x/y/dx/dy are always integral in non-UDMF maps
-  raw.x = GetLittleEndian(static_cast<int16_t>(floor(node->x)));
-  raw.y = GetLittleEndian(static_cast<int16_t>(floor(node->y)));
-  raw.dx = GetLittleEndian(static_cast<int16_t>(floor(node->dx)));
-  raw.dy = GetLittleEndian(static_cast<int16_t>(floor(node->dy)));
+  raw.x = GetLittleEndian(FloatToShort(node->x));
+  raw.y = GetLittleEndian(FloatToShort(node->y));
+  raw.dx = GetLittleEndian(FloatToShort(node->dx));
+  raw.dy = GetLittleEndian(FloatToShort(node->dy));
 
-  raw.b1.minx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.minx));
-  raw.b1.miny = GetLittleEndian(static_cast<int16_t>(node->r.bounds.miny));
-  raw.b1.maxx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxx));
-  raw.b1.maxy = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxy));
+  raw.b1.minx = GetLittleEndian(node->r.bounds.minx);
+  raw.b1.miny = GetLittleEndian(node->r.bounds.miny);
+  raw.b1.maxx = GetLittleEndian(node->r.bounds.maxx);
+  raw.b1.maxy = GetLittleEndian(node->r.bounds.maxy);
 
-  raw.b2.minx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.minx));
-  raw.b2.miny = GetLittleEndian(static_cast<int16_t>(node->l.bounds.miny));
-  raw.b2.maxx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxx));
-  raw.b2.maxy = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxy));
+  raw.b2.minx = GetLittleEndian(node->l.bounds.minx);
+  raw.b2.miny = GetLittleEndian(node->l.bounds.miny);
+  raw.b2.maxx = GetLittleEndian(node->l.bounds.maxx);
+  raw.b2.maxy = GetLittleEndian(node->l.bounds.maxy);
 
   if (node->r.node)
   {
-    raw.right = GetLittleEndian(static_cast<uint16_t>(node->r.node->index));
+    raw.right = GetLittleEndian(IndexToShort(node->r.node->index));
   }
   else if (node->r.subsec)
   {
-    raw.right = GetLittleEndian(static_cast<uint16_t>(node->r.subsec->index | NF_SUBSECTOR_VANILLA));
+    raw.right = GetLittleEndian(IndexToShort(node->r.subsec->index | NF_SUBSECTOR_VANILLA));
   }
   else
   {
@@ -264,11 +263,11 @@ static void PutOneNode_Vanilla(Lump_c *lump, node_t *node, size_t &node_cur_inde
 
   if (node->l.node)
   {
-    raw.left = GetLittleEndian(static_cast<uint16_t>(node->l.node->index));
+    raw.left = GetLittleEndian(IndexToShort(node->l.node->index));
   }
   else if (node->l.subsec)
   {
-    raw.left = GetLittleEndian(static_cast<uint16_t>(node->l.subsec->index | NF_SUBSECTOR_VANILLA));
+    raw.left = GetLittleEndian(IndexToShort(node->l.subsec->index | NF_SUBSECTOR_VANILLA));
   }
   else
   {
@@ -373,10 +372,10 @@ static void PutSegs_DeePBSPV4(level_t &level)
 
     const seg_t *seg = level.segs[i];
 
-    raw.start = GetLittleEndian(static_cast<uint32_t>(seg->start->index));
-    raw.end = GetLittleEndian(static_cast<uint32_t>(seg->end->index));
+    raw.start = GetLittleEndian(IndexToInt(seg->start->index));
+    raw.end = GetLittleEndian(IndexToInt(seg->end->index));
     raw.angle = GetLittleEndian(VanillaSegAngle(seg));
-    raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef->index));
+    raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
     raw.flip = GetLittleEndian(seg->side);
     raw.dist = GetLittleEndian(VanillaSegDist(seg));
 
@@ -405,8 +404,8 @@ static void PutSubsecs_DeePBSPV4(level_t &level)
 
     const subsec_t *sub = level.subsecs[i];
 
-    raw.first = GetLittleEndian(static_cast<uint32_t>(sub->seg_list->index));
-    raw.num = GetLittleEndian(static_cast<uint16_t>(sub->seg_count));
+    raw.first = GetLittleEndian(IndexToInt(sub->seg_list->index));
+    raw.num = GetLittleEndian(IndexToShort(sub->seg_count));
 
     lump->Write(&raw, sizeof(raw_subsec_deepbspv4_t));
 
@@ -436,29 +435,28 @@ static void PutOneNode_DeePBSPV4(Lump_c *lump, node_t *node, size_t &node_cur_in
 
   raw_node_deepbspv4_t raw;
 
-  // note that x/y/dx/dy are always integral in non-UDMF maps
-  raw.x = GetLittleEndian(static_cast<int16_t>(floor(node->x)));
-  raw.y = GetLittleEndian(static_cast<int16_t>(floor(node->y)));
-  raw.dx = GetLittleEndian(static_cast<int16_t>(floor(node->dx)));
-  raw.dy = GetLittleEndian(static_cast<int16_t>(floor(node->dy)));
+  raw.x = GetLittleEndian(FloatToShort(node->x));
+  raw.y = GetLittleEndian(FloatToShort(node->y));
+  raw.dx = GetLittleEndian(FloatToShort(node->dx));
+  raw.dy = GetLittleEndian(FloatToShort(node->dy));
 
-  raw.b1.minx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.minx));
-  raw.b1.miny = GetLittleEndian(static_cast<int16_t>(node->r.bounds.miny));
-  raw.b1.maxx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxx));
-  raw.b1.maxy = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxy));
+  raw.b1.minx = GetLittleEndian(node->r.bounds.minx);
+  raw.b1.miny = GetLittleEndian(node->r.bounds.miny);
+  raw.b1.maxx = GetLittleEndian(node->r.bounds.maxx);
+  raw.b1.maxy = GetLittleEndian(node->r.bounds.maxy);
 
-  raw.b2.minx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.minx));
-  raw.b2.miny = GetLittleEndian(static_cast<int16_t>(node->l.bounds.miny));
-  raw.b2.maxx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxx));
-  raw.b2.maxy = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxy));
+  raw.b2.minx = GetLittleEndian(node->l.bounds.minx);
+  raw.b2.miny = GetLittleEndian(node->l.bounds.miny);
+  raw.b2.maxx = GetLittleEndian(node->l.bounds.maxx);
+  raw.b2.maxy = GetLittleEndian(node->l.bounds.maxy);
 
   if (node->r.node)
   {
-    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.node->index));
+    raw.right = GetLittleEndian(IndexToInt(node->r.node->index));
   }
   else if (node->r.subsec)
   {
-    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.subsec->index | NF_SUBSECTOR));
+    raw.right = GetLittleEndian(IndexToInt(node->r.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -467,11 +465,11 @@ static void PutOneNode_DeePBSPV4(Lump_c *lump, node_t *node, size_t &node_cur_in
 
   if (node->l.node)
   {
-    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.node->index));
+    raw.left = GetLittleEndian(IndexToInt(node->l.node->index));
   }
   else if (node->l.subsec)
   {
-    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.subsec->index | NF_SUBSECTOR));
+    raw.left = GetLittleEndian(IndexToInt(node->l.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -571,10 +569,10 @@ static inline uint32_t VertexIndex_XNOD(level_t &level, const vertex_t *v)
 {
   if (v->is_new)
   {
-    return static_cast<uint32_t>(level.num_old_vert + v->index);
+    return IndexToInt(level.num_old_vert + v->index);
   }
 
-  return static_cast<uint32_t>(v->index);
+  return IndexToInt(v->index);
 }
 
 static void PutVertices_Xnod(level_t &level, Lump_c *lump)
@@ -597,8 +595,8 @@ static void PutVertices_Xnod(level_t &level, Lump_c *lump)
       continue;
     }
 
-    raw.x = GetLittleEndian(static_cast<int32_t>(floor(vert->x * FRACFACTOR)));
-    raw.y = GetLittleEndian(static_cast<int32_t>(floor(vert->y * FRACFACTOR)));
+    raw.x = GetLittleEndian(FloatToFixed(vert->x));
+    raw.y = GetLittleEndian(FloatToFixed(vert->y));
 
     lump->Write(&raw, sizeof(raw_vertex_xnod_t));
 
@@ -666,7 +664,7 @@ static void PutSegs_Xnod(level_t &level, Lump_c *lump)
 
     raw.start = GetLittleEndian(VertexIndex_XNOD(level, seg->start));
     raw.end = GetLittleEndian(VertexIndex_XNOD(level, seg->end));
-    raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef->index));
+    raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
     raw.side = seg->side;
     lump->Write(&raw, sizeof(raw_seg_xnod_t));
   }
@@ -688,28 +686,28 @@ static void PutOneNode_Xnod(Lump_c *lump, node_t *node, size_t &node_cur_index)
 
   node->index = node_cur_index++;
 
-  raw.x = GetLittleEndian(static_cast<int16_t>(floor(node->x)));
-  raw.y = GetLittleEndian(static_cast<int16_t>(floor(node->y)));
-  raw.dx = GetLittleEndian(static_cast<int16_t>(floor(node->dx)));
-  raw.dy = GetLittleEndian(static_cast<int16_t>(floor(node->dy)));
+  raw.x = GetLittleEndian(FloatToShort(node->x));
+  raw.y = GetLittleEndian(FloatToShort(node->y));
+  raw.dx = GetLittleEndian(FloatToShort(node->dx));
+  raw.dy = GetLittleEndian(FloatToShort(node->dy));
 
-  raw.b1.minx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.minx));
-  raw.b1.miny = GetLittleEndian(static_cast<int16_t>(node->r.bounds.miny));
-  raw.b1.maxx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxx));
-  raw.b1.maxy = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxy));
+  raw.b1.minx = GetLittleEndian(node->r.bounds.minx);
+  raw.b1.miny = GetLittleEndian(node->r.bounds.miny);
+  raw.b1.maxx = GetLittleEndian(node->r.bounds.maxx);
+  raw.b1.maxy = GetLittleEndian(node->r.bounds.maxy);
 
-  raw.b2.minx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.minx));
-  raw.b2.miny = GetLittleEndian(static_cast<int16_t>(node->l.bounds.miny));
-  raw.b2.maxx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxx));
-  raw.b2.maxy = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxy));
+  raw.b2.minx = GetLittleEndian(node->l.bounds.minx);
+  raw.b2.miny = GetLittleEndian(node->l.bounds.miny);
+  raw.b2.maxx = GetLittleEndian(node->l.bounds.maxx);
+  raw.b2.maxy = GetLittleEndian(node->l.bounds.maxy);
 
   if (node->r.node)
   {
-    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.node->index));
+    raw.right = GetLittleEndian(IndexToInt(node->r.node->index));
   }
   else if (node->r.subsec)
   {
-    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.subsec->index | NF_SUBSECTOR));
+    raw.right = GetLittleEndian(IndexToInt(node->r.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -718,11 +716,11 @@ static void PutOneNode_Xnod(Lump_c *lump, node_t *node, size_t &node_cur_index)
 
   if (node->l.node)
   {
-    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.node->index));
+    raw.left = GetLittleEndian(IndexToInt(node->l.node->index));
   }
   else if (node->l.subsec)
   {
-    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.subsec->index | NF_SUBSECTOR));
+    raw.left = GetLittleEndian(IndexToInt(node->l.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -792,8 +790,8 @@ static void PutSegs_Xgln(level_t &level, Lump_c *lump)
     raw_seg_xgln_t raw = {};
 
     raw.vertex = GetLittleEndian(VertexIndex_XNOD(level, seg->start));
-    raw.partner = GetLittleEndian(static_cast<uint32_t>(seg->partner ? seg->partner->index : NO_INDEX));
-    raw.linedef = GetLittleEndian(static_cast<uint16_t>(seg->linedef ? seg->linedef->index : NO_INDEX));
+    raw.partner = GetLittleEndian(IndexToInt(seg->partner ? seg->partner->index : NO_INDEX));
+    raw.linedef = GetLittleEndian(IndexToShort(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
     lump->Write(&raw, sizeof(raw_seg_xgln_t));
@@ -823,8 +821,8 @@ static void PutSegs_Xgl2(level_t &level, Lump_c *lump)
     raw_seg_xgl2_t raw = {};
 
     raw.vertex = GetLittleEndian(VertexIndex_XNOD(level, seg->start));
-    raw.partner = GetLittleEndian(static_cast<uint32_t>(seg->partner ? seg->partner->index : NO_INDEX));
-    raw.linedef = GetLittleEndian(static_cast<uint32_t>(seg->linedef ? seg->linedef->index : NO_INDEX));
+    raw.partner = GetLittleEndian(IndexToInt(seg->partner ? seg->partner->index : NO_INDEX));
+    raw.linedef = GetLittleEndian(IndexToInt(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
     lump->Write(&raw, sizeof(raw_seg_xgl2_t));
@@ -853,28 +851,28 @@ static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
 
   node->index = node_cur_index++;
 
-  raw.x = GetLittleEndian(static_cast<int32_t>(floor(node->x * FRACFACTOR)));
-  raw.y = GetLittleEndian(static_cast<int32_t>(floor(node->y * FRACFACTOR)));
-  raw.dx = GetLittleEndian(static_cast<int32_t>(floor(node->dx * FRACFACTOR)));
-  raw.dy = GetLittleEndian(static_cast<int32_t>(floor(node->dy * FRACFACTOR)));
+  raw.x = GetLittleEndian(FloatToFixed(node->x));
+  raw.y = GetLittleEndian(FloatToFixed(node->y));
+  raw.dx = GetLittleEndian(FloatToFixed(node->dx));
+  raw.dy = GetLittleEndian(FloatToFixed(node->dy));
 
-  raw.b1.minx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.minx));
-  raw.b1.miny = GetLittleEndian(static_cast<int16_t>(node->r.bounds.miny));
-  raw.b1.maxx = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxx));
-  raw.b1.maxy = GetLittleEndian(static_cast<int16_t>(node->r.bounds.maxy));
+  raw.b1.minx = GetLittleEndian(node->r.bounds.minx);
+  raw.b1.miny = GetLittleEndian(node->r.bounds.miny);
+  raw.b1.maxx = GetLittleEndian(node->r.bounds.maxx);
+  raw.b1.maxy = GetLittleEndian(node->r.bounds.maxy);
 
-  raw.b2.minx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.minx));
-  raw.b2.miny = GetLittleEndian(static_cast<int16_t>(node->l.bounds.miny));
-  raw.b2.maxx = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxx));
-  raw.b2.maxy = GetLittleEndian(static_cast<int16_t>(node->l.bounds.maxy));
+  raw.b2.minx = GetLittleEndian(node->l.bounds.minx);
+  raw.b2.miny = GetLittleEndian(node->l.bounds.miny);
+  raw.b2.maxx = GetLittleEndian(node->l.bounds.maxx);
+  raw.b2.maxy = GetLittleEndian(node->l.bounds.maxy);
 
   if (node->r.node)
   {
-    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.node->index));
+    raw.right = GetLittleEndian(IndexToInt(node->r.node->index));
   }
   else if (node->r.subsec)
   {
-    raw.right = GetLittleEndian(static_cast<uint32_t>(node->r.subsec->index | NF_SUBSECTOR));
+    raw.right = GetLittleEndian(IndexToInt(node->r.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -883,11 +881,11 @@ static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
 
   if (node->l.node)
   {
-    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.node->index));
+    raw.left = GetLittleEndian(IndexToInt(node->l.node->index));
   }
   else if (node->l.subsec)
   {
-    raw.left = GetLittleEndian(static_cast<uint32_t>(node->l.subsec->index | NF_SUBSECTOR));
+    raw.left = GetLittleEndian(IndexToInt(node->l.subsec->index | NF_SUBSECTOR));
   }
   else
   {
