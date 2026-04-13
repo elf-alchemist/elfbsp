@@ -748,7 +748,7 @@ using raw_thing_hexen_t = struct raw_thing_hexen_s
 //
 // We do not write ZIP-compressed ZDoom nodes
 //
-using bsp_type_t = enum bsp_type_e : uint8_t
+using bsp_format_t = enum bsp_format_e : uint8_t
 {
   BSP_VANILLA,
   BSP_DEEPBSPV4,
@@ -1563,7 +1563,7 @@ struct buildinfo_s
   size_t total_warnings = 0;
   uint32_t debug = DEBUG_NONE;
 
-  bsp_type_t bsp_type = bsp_type_t::BSP_XNOD;
+  bsp_format_t bsp_format = bsp_format_t::BSP_XNOD;
   bool fast = false;     // use a faster method to pick nodes
   bool backup = false;   // keep a copy of the WAD
   bool analysis = false; // write out CSV for data analysis and visualization

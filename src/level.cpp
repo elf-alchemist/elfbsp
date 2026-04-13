@@ -1114,9 +1114,9 @@ static void CheckBinaryFormatLimits(level_t &level)
   }
 }
 
-bsp_type_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
+bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
 {
-  bsp_type_t level_type = ctx.bsp_type;
+  bsp_format_t level_type = ctx.bsp_format;
 
   if (level_type == BSP_VANILLA &&            // always allow for a valid map to be produced
       (level.vertices.size() > LIMIT_VERT     // even if it may not run on some older source ports
@@ -1247,7 +1247,7 @@ build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
   // check for overflows...
   CheckBinaryFormatLimits(level);
 
-  bsp_type_t level_type = CheckFormatBSP(config, level);
+  bsp_format_t level_type = CheckFormatBSP(config, level);
 
   switch (level_type)
   {
