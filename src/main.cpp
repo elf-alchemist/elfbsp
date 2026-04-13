@@ -560,6 +560,23 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
     RaiseValue(config.bsp_format, static_cast<bsp_format_t>(val));
     used = 1;
   }
+  else if (strcmp(name, "--bmap") == 0)
+  {
+    if (argc < 1 || !isdigit(argv[0][0]))
+    {
+      PrintLine(LOG_ERROR, "ERROR: missing value for '--bmap' option");
+    }
+
+    int32_t val = std::stoi(argv[0]);
+
+    if (val < BMAP_MIN || val > BMAP_MAX)
+    {
+      PrintLine(LOG_ERROR, "ERROR: illegal value for '--bmap' option");
+    }
+
+    RaiseValue(config.bmap_format, static_cast<bmap_format_t>(val));
+    used = 1;
+  }
   else if (strcmp(name, "--cost") == 0)
   {
     if (argc < 1 || !isdigit(argv[0][0]))

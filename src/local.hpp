@@ -426,7 +426,7 @@ using level_t = struct level_t
   std::vector<size_t> block_duplicates;
 
   double block_compression;
-  bool block_overflowed = false;
+  bmap_format_t bmap_format = BMAP_VANILLA;
 
   inline Lump_c *FindLevelLump(const char *name)
   {
