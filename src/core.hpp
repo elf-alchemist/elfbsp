@@ -750,24 +750,24 @@ using raw_thing_hexen_t = struct raw_thing_hexen_s
 //
 using bsp_format_t = enum bsp_format_e : uint8_t
 {
-  BSP_VANILLA,
-  BSP_DEEPBSPV4,
+  BSP_DoomBSP,
+  BSP_DeePBSPV4,
   BSP_XNOD,
   BSP_XGLN,
   BSP_XGL2,
   BSP_XGL3,
 
-  BSP_MIN = BSP_VANILLA,
+  BSP_MIN = BSP_DoomBSP,
   BSP_MAX = BSP_XGL3,
 };
 
 using bmap_format_t = enum bmap_format_e : uint8_t
 {
-  BMAP_VANILLA,
+  BMAP_DoomBlockmap,
   BMAP_XBM1,
   BMAP_XBM2,
 
-  BMAP_MIN = BMAP_VANILLA,
+  BMAP_MIN = BMAP_DoomBlockmap,
   BMAP_MAX = BMAP_XBM2,
 };
 
@@ -1593,7 +1593,7 @@ struct buildinfo_s
   uint32_t debug = DEBUG_NONE;
 
   bsp_format_t bsp_format = bsp_format_t::BSP_XNOD;
-  bmap_format_t bmap_format = bmap_format_t::BMAP_VANILLA;
+  bmap_format_t bmap_format = bmap_format_t::BMAP_DoomBlockmap;
   bool fast = false;     // use a faster method to pick nodes
   bool backup = false;   // keep a copy of the WAD
   bool analysis = false; // write out CSV for data analysis and visualization

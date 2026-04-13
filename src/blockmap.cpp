@@ -376,7 +376,7 @@ static size_t CalcBlockmapSize_Vanilla(level_t &level)
   return size;
 }
 
-static void WriteBlockmap_Vanilla(level_t &level)
+static void WriteBlockmap_DoomBlockmap(level_t &level)
 {
   size_t max_size = CalcBlockmapSize_Vanilla(level);
   Lump_c *lump = CreateLevelLump(level, "BLOCKMAP", max_size);
@@ -456,8 +456,8 @@ void PutBlockmap(level_t &level)
 
   switch (bmap_format)
   {
-  case BMAP_VANILLA:
-    WriteBlockmap_Vanilla(level);
+  case BMAP_DoomBlockmap:
+    WriteBlockmap_DoomBlockmap(level);
     break;
   default:
     // leave an empty blockmap lump
