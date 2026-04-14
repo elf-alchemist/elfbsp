@@ -335,11 +335,9 @@ static void CompressBlockmap(level_t &level)
   level.block_compression = std::max(0.0, level.block_compression);
 }
 
+// compute size of final BLOCKMAP lump.
 static size_t CalcBlockmapSize(level_t &level)
 {
-  // compute size of final BLOCKMAP lump.
-  // it does not need to be exact, but it *does* need to be bigger
-  // (or equal) to the actual size of the lump.
   size_t size = sizeof(raw_blockmap_header_t) + sizeof(null_block);
 
   // the pointers (offsets to the line lists)
