@@ -405,7 +405,9 @@ template <typename OffsetType = uint16_t, typename LineType = uint16_t> static s
   return size;
 }
 
-template <typename OffsetType = uint16_t, typename LineType = uint16_t> static void WriteBlockmap(level_t &level)
+// final phase: write it out in the correct format
+template <typename OffsetType = uint16_t, typename LineType = uint16_t>
+static void WriteBlockmap(level_t &level)
 {
   size_t max_size = CalcBlockmapSize<OffsetType, LineType>(level);
   Lump_c *lump = CreateLevelLump(level, "BLOCKMAP", max_size);
