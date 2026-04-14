@@ -235,7 +235,6 @@ static void BlockAddLine(level_t &level, const linedef_t *L)
 // all lines in each block.
 static void CreateBlockmap(level_t &level)
 {
-  // What the fuck?
   level.block_lines.assign(level.block_count, blocklist_t{.hash = 0x1234123412341234, .lines = {}});
 
   for (size_t i = 0; i < level.linedefs.size(); i++)
