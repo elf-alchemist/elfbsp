@@ -41,9 +41,8 @@ static constexpr size_t EXTRA_LINES = LIST_ZERO + LIST_END;
 static constexpr size_t m_zero = ZERO_INDEX;
 static constexpr size_t m_neg1 = NO_INDEX;
 
-static constexpr size_t PrefixHeaderSize = 8; // "XBM1\0\0\0\0"
-static constexpr size_t HeaderSize = 4;
-static constexpr size_t NullBlockSize = 2;
+static constexpr size_t HeaderIndexSize = 4;
+static constexpr size_t NullBlockIndexSize = 2;
 
 /* ----- create blockmap ------------------------------------ */
 
@@ -286,8 +285,8 @@ static void CompressBlockmap(level_t &level)
   };
   std::sort(level.block_duplicates.begin(), level.block_duplicates.end(), BlockCompare);
 
-  current_index = level.block_count + HeaderSize + NullBlockSize;
-  original_size = level.block_count + HeaderSize;
+  current_index = level.block_count + HeaderIndexSize + NullBlockIndexSize;
+  original_size = level.block_count + HeaderIndexSize;
   new_size = current_index;
   duplicate_count = 0;
 
@@ -298,7 +297,7 @@ static void CompressBlockmap(level_t &level)
     // empty block ?
     if (level.block_lines[blk_num].lines.empty())
     {
-      level.block_indexes[blk_num] = level.block_count + HeaderSize;
+      level.block_indexes[blk_num] = level.block_count + HeaderIndexSize;
       level.block_duplicates[i] = NO_INDEX;
 
       original_size += EXTRA_LINES;
@@ -350,18 +349,18 @@ static void CompressBlockmap(level_t &level)
 }
 
 // compute size of final BLOCKMAP lump.
-template <typename NumType>
-static size_t CalcBlockmapSize(level_t &level, std::string prefix)
+static size_t CalcBlockmapSize(level_t &level, std::string prefix = "", size_t PrefixSize = 0,
+                               size_t NumSize = sizeof(uint16_t), size_t RawHeaderSize = sizeof(raw_blockmap_header_t))
 {
-  size_t size = (!prefix.empty() ? PrefixHeaderSize : 0);
+  size_t size = PrefixSize;
 
-  size += sizeof(raw_blockmap_header_t);
+  size += RawHeaderSize;
 
   // null block
-  size += sizeof(NumType) * 2;
+  size += NumSize * 2;
 
   // the pointers (indexes to the line lists)
-  size += level.block_count * sizeof(NumType);
+  size += level.block_count * NumSize;
 
   // add size of each block
   for (size_t i = 0; i < level.block_count; i++)
@@ -375,13 +374,13 @@ static size_t CalcBlockmapSize(level_t &level, std::string prefix)
     }
 
     const auto &blk = level.block_lines[blk_num];
-    size += (blk.lines.size() + EXTRA_LINES) * sizeof(NumType);
+    size += (blk.lines.size() + EXTRA_LINES) * NumSize;
   }
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
     PrintLine(LOG_DEBUG, "[%s] Lump prefix header \'%s\', num type size of %zu, total size of %zu", __func__, prefix.c_str(),
-              sizeof(NumType), size);
+              NumSize, size);
   }
 
   return size;
@@ -391,13 +390,18 @@ static size_t CalcBlockmapSize(level_t &level, std::string prefix)
 template <typename NumType = uint16_t>
 static void WriteBlockmap(level_t &level, std::string prefix = "")
 {
-  size_t max_size = CalcBlockmapSize<NumType>(level, prefix);
+  static constexpr size_t PrefixHeaderSize = 8; // "XBM1\0\0\0\0"
+  size_t PrefixSize = (!prefix.empty() ? PrefixHeaderSize : 0);
+  size_t NumSize = sizeof(NumType);
+  size_t RawHeaderSize = (level.bmap_format == BMAP_XBM1 ? sizeof(raw_blockmap_xbm1_header_t) : sizeof(raw_blockmap_header_t));
+
+  size_t max_size = CalcBlockmapSize(level, prefix, PrefixSize, NumSize, RawHeaderSize);
   Lump_c *lump = CreateLevelLump(level, "BLOCKMAP", max_size);
 
   // fill in header
   if (level.bmap_format == BMAP_XBM1)
   {
-    lump->Write(prefix.c_str(), PrefixHeaderSize);
+    lump->Write(prefix.data(), PrefixHeaderSize);
 
     raw_blockmap_xbm1_header_t xbm1_header;
     xbm1_header.x_origin = GetLittleEndian(IntToFixed(level.block_x));
@@ -426,12 +430,12 @@ static void WriteBlockmap(level_t &level, std::string prefix = "")
       PrintLine(LOG_ERROR, "ERROR: WriteBlockmap: offset %zu not set.", i);
     }
 
-    lump->Write(&ptr, sizeof(NumType));
+    lump->Write(&ptr, NumSize);
   }
 
   // add the null block which *all* empty blocks will use
-  lump->Write(&m_zero, sizeof(NumType));
-  lump->Write(&m_neg1, sizeof(NumType));
+  lump->Write(&m_zero, NumSize);
+  lump->Write(&m_neg1, NumSize);
 
   // handle each block list
   for (size_t i = 0; i < level.block_count; i++)
@@ -446,13 +450,13 @@ static void WriteBlockmap(level_t &level, std::string prefix = "")
 
     const auto &blk = level.block_lines[blk_num];
 
-    lump->Write(&m_zero, sizeof(NumType));
+    lump->Write(&m_zero, NumSize);
     for (size_t line : blk.lines)
     {
       NumType le_line = GetLittleEndian(static_cast<NumType>(line));
-      lump->Write(&le_line, sizeof(NumType));
+      lump->Write(&le_line, NumSize);
     }
-    lump->Write(&m_neg1, sizeof(NumType));
+    lump->Write(&m_neg1, NumSize);
   }
 
   lump->Finish();

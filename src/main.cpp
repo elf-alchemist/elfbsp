@@ -557,7 +557,7 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
       PrintLine(LOG_ERROR, "ERROR: illegal value for '--type' option");
     }
 
-    RaiseValue(config.bsp_format, static_cast<bsp_format_t>(val));
+    config.bsp_format = static_cast<bsp_format_t>(val);
     used = 1;
   }
   else if (strcmp(name, "--bmap") == 0)
@@ -574,7 +574,7 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
       PrintLine(LOG_ERROR, "ERROR: illegal value for '--bmap' option");
     }
 
-    RaiseValue(config.bmap_format, static_cast<bmap_format_t>(val));
+    config.bmap_format = static_cast<bmap_format_t>(val);
     used = 1;
   }
   else if (strcmp(name, "--cost") == 0)
