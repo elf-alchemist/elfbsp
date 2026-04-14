@@ -381,7 +381,6 @@ static void CompressBlockmap(level_t &level)
 template <typename OffsetType = uint16_t, typename LineType = uint16_t>
 static size_t CalcBlockmapSize(level_t &level)
 {
-  // Header + null block
   size_t size = sizeof(raw_blockmap_header_t);
 
   // the pointers (offsets to the line lists)
