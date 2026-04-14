@@ -42,16 +42,9 @@ static constexpr size_t EXTRA_LINES = LIST_ZERO + LIST_END;
 static constexpr size_t m_zero = ZERO_INDEX;
 static constexpr size_t m_neg1 = NO_INDEX;
 
-static constexpr size_t NullBlockSize_Short = sizeof(uint16_t) * 2;
-static constexpr size_t NullBlockSize_Long = sizeof(uint32_t) * 2;
-
-using OffsetListStats = struct OffsetListStats
-{
-  size_t current_offset;
-  size_t original_size;
-  size_t new_size;
-  size_t duplicate_count;
-};
+static constexpr size_t PrefixHeaderSize = 8; // "XBM1\0\0\0\0"
+static constexpr size_t HeaderSize = 4;
+static constexpr size_t NullBlockSize = 2;
 
 /* ----- create blockmap ------------------------------------ */
 
@@ -135,7 +128,7 @@ static void FreeBlockmap(level_t &level)
   }
 
   level.block_lines.clear();
-  level.block_offsets.clear();
+  level.block_indexes.clear();
   level.block_duplicates.clear();
 }
 
@@ -250,74 +243,12 @@ static void CreateBlockmap(level_t &level)
     BlockAddLine(level, L);
   }
 
-  // XBM2 allows 32bit line indices
-  if (level.bmap_format < BMAP_XBM2 && level.linedefs.size() > LIMIT_LINE)
+  // Force extended format
+  if (level.bmap_format < BMAP_XBM1 && level.linedefs.size() > LIMIT_LINE)
   {
-    PrintLine(LOG_NORMAL, "WARNING: Blockmap overflow. Forcing XBM2 format.");
-    config.total_warnings++;
-    RaiseValue(level.bmap_format, BMAP_XBM2);
-  }
-}
-
-// scan duplicate array and build up offset array
-// offsets depend on type size, try with 16bit offset list first
-bool CompressBlockmapWorker(level_t &level, auto &BlockCompare, OffsetListStats &stats, size_t NullBlockSize)
-{
-  stats.current_offset = level.block_count + NullBlockSize + 2;
-  stats.original_size = level.block_count + NullBlockSize;
-  stats.new_size = stats.current_offset;
-  stats.duplicate_count = 0;
-
-  for (size_t i = 0; i < level.block_count; i++)
-  {
-    size_t blk_num = level.block_duplicates[i];
-
-    // empty block ?
-    if (level.block_lines[blk_num].lines.empty())
-    {
-      level.block_offsets[blk_num] = level.block_count + NullBlockSize;
-      level.block_duplicates[i] = NO_INDEX;
-
-      stats.original_size += EXTRA_LINES;
-      continue;
-    }
-
-    size_t count = level.block_lines[blk_num].lines.size() + EXTRA_LINES;
-
-    // duplicate ?  Only the very last one of a sequence of duplicates
-    // will update the current offset value.
-    if (i + 1 < level.block_count && BlockCompare(level.block_duplicates[i], level.block_duplicates[i + 1]) == 0)
-    {
-      level.block_offsets[blk_num] = stats.current_offset;
-      level.block_duplicates[i] = NO_INDEX;
-
-      // free the memory of the duplicated block
-      level.block_lines[blk_num].lines.clear();
-      stats.duplicate_count++;
-      stats.original_size += count;
-      continue;
-    }
-
-    // OK, this block is either the last of a series of duplicates, or
-    // just a singleton.
-    level.block_offsets[blk_num] = stats.current_offset;
-    stats.current_offset += count;
-    stats.original_size += count;
-    stats.new_size += count;
-  }
-
-  if (level.bmap_format == BMAP_DoomBlockmap && stats.current_offset > LIMIT_BMAP_OFFSET)
-  {
-    // Overflowed?
     PrintLine(LOG_NORMAL, "WARNING: Blockmap overflow. Forcing XBM1 format.");
     config.total_warnings++;
     RaiseValue(level.bmap_format, BMAP_XBM1);
-    return true;
-  }
-  else
-  {
-    // Either small map with vanilla format, or any map with either XBM1/XBM2
-    return false;
   }
 }
 
@@ -326,10 +257,12 @@ bool CompressBlockmapWorker(level_t &level, auto &BlockCompare, OffsetListStats 
 //       a large list.  This also detects BLOCKMAP overflow.
 static void CompressBlockmap(level_t &level)
 {
-  OffsetListStats stats = {0, 0, 0, 0};
-  bool overflowed = false;
+  size_t current_index = 0;
+  size_t original_size = 0;
+  size_t new_size = 0;
+  size_t duplicate_count = 0;
 
-  level.block_offsets.reserve(level.block_count);
+  level.block_indexes.reserve(level.block_count);
   level.block_duplicates.reserve(level.block_count);
 
   // sort duplicate-detecting array.  After the sort, all duplicates
@@ -354,41 +287,79 @@ static void CompressBlockmap(level_t &level)
   };
   std::sort(level.block_duplicates.begin(), level.block_duplicates.end(), BlockCompare);
 
-  // Is using vanilla format?
-  if (level.bmap_format == BMAP_DoomBlockmap)
+  current_index = level.block_count + HeaderSize + NullBlockSize;
+  original_size = level.block_count + HeaderSize;
+  new_size = current_index;
+  duplicate_count = 0;
+
+  for (size_t i = 0; i < level.block_count; i++)
   {
-    overflowed = CompressBlockmapWorker(level, BlockCompare, stats, NullBlockSize_Short);
+    size_t blk_num = level.block_duplicates[i];
+
+    // empty block ?
+    if (level.block_lines[blk_num].lines.empty())
+    {
+      level.block_indexes[blk_num] = level.block_count + HeaderSize;
+      level.block_duplicates[i] = NO_INDEX;
+
+      original_size += EXTRA_LINES;
+      continue;
+    }
+
+    size_t count = level.block_lines[blk_num].lines.size() + EXTRA_LINES;
+
+    // duplicate ?  Only the very last one of a sequence of duplicates
+    // will update the current index value.
+    if (i + 1 < level.block_count && BlockCompare(level.block_duplicates[i], level.block_duplicates[i + 1]) == 0)
+    {
+      level.block_indexes[blk_num] = current_index;
+      level.block_duplicates[i] = NO_INDEX;
+
+      // free the memory of the duplicated block
+      level.block_lines[blk_num].lines.clear();
+      duplicate_count++;
+      original_size += count;
+      continue;
+    }
+
+    // OK, this block is either the last of a series of duplicates, or
+    // just a singleton.
+    level.block_indexes[blk_num] = current_index;
+    current_index += count;
+    original_size += count;
+    new_size += count;
   }
 
-  // Is using any other format, OR, previous attempt exceeded vanilla limits?
-  if (level.bmap_format != BMAP_DoomBlockmap || overflowed)
+  if (level.bmap_format < BMAP_XBM1 && current_index > LIMIT_BMAP_INDEX)
   {
-    CompressBlockmapWorker(level, BlockCompare, stats, NullBlockSize_Long);
+    // Overflowed?
+    PrintLine(LOG_NORMAL, "WARNING: Blockmap overflow. Forcing XBM1 format.");
+    config.total_warnings++;
+    RaiseValue(level.bmap_format, BMAP_XBM1);
   }
 
   if (config.verbose)
   {
-    PrintLine(LOG_DEBUG, "[%s] Last ptr = %zu  duplicates = %zu", __func__, stats.current_offset, stats.duplicate_count);
+    PrintLine(LOG_DEBUG, "[%s] Last ptr = %zu  duplicates = %zu", __func__, current_index, duplicate_count);
   }
 
-  level.block_compression = (static_cast<double>(stats.original_size) - static_cast<double>(stats.new_size))
-                            / static_cast<double>(stats.original_size);
+  level.block_compression =
+      (static_cast<double>(original_size) - static_cast<double>(new_size)) / static_cast<double>(original_size);
 
   // there's a tiny chance of new_size > orig_size
   level.block_compression = std::max(0.0, level.block_compression);
 }
 
 // compute size of final BLOCKMAP lump.
-template <typename OffsetType = uint16_t, typename LineType = uint16_t>
-static size_t CalcBlockmapSize(level_t &level, std::string prefix, size_t &line_count)
+template <typename NumType>
+static size_t CalcBlockmapSize(level_t &level, std::string prefix)
 {
-  size_t count = 0;
-  size_t size = sizeof(raw_blockmap_header_t);
+  size_t size = (!prefix.empty() ? PrefixHeaderSize : 0);
 
-  size += prefix.length();
+  size += sizeof(raw_blockmap_header_t);
 
-  // the pointers (offsets to the line lists)
-  size += level.block_count * sizeof(OffsetType);
+  // the pointers (indexes to the line lists)
+  size += level.block_count * sizeof(NumType);
 
   // add size of each block
   for (size_t i = 0; i < level.block_count; i++)
@@ -402,67 +373,63 @@ static size_t CalcBlockmapSize(level_t &level, std::string prefix, size_t &line_
     }
 
     const auto &blk = level.block_lines[blk_num];
-    count += blk.lines.size() + EXTRA_LINES;
-    size += (blk.lines.size() + EXTRA_LINES) * sizeof(LineType);
+    size += (blk.lines.size() + EXTRA_LINES) * sizeof(NumType);
   }
-  line_count = count;
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
-    PrintLine(LOG_DEBUG, "[%s] Lump prefix header \'%s\', %zu lines, offset of %zu, line of %zu, total size of %zu", __func__,
-              prefix.c_str(), count, sizeof(OffsetType), sizeof(LineType), size);
+    PrintLine(LOG_DEBUG, "[%s] Lump prefix header \'%s\', num type size of %zu, total size of %zu", __func__, prefix.c_str(),
+              sizeof(NumType), size);
   }
 
   return size;
 }
 
 // final phase: write it out in the correct format
-template <typename OffsetType = uint16_t, typename LineType = uint16_t>
+template <typename NumType = uint16_t>
 static void WriteBlockmap(level_t &level, std::string prefix = "")
 {
-  size_t total_line_count = 0;
-  size_t max_size = CalcBlockmapSize<OffsetType, LineType>(level, prefix, total_line_count);
+  size_t max_size = CalcBlockmapSize<NumType>(level, prefix);
   Lump_c *lump = CreateLevelLump(level, "BLOCKMAP", max_size);
 
-  // vanilla has no prefix header
-  if (!prefix.empty())
-  {
-    lump->Write(prefix.c_str(), 8);
-  }
-
   // fill in header
-  raw_blockmap_header_t header;
-
-  header.x_origin = GetLittleEndian(level.block_x);
-  header.y_origin = GetLittleEndian(level.block_y);
-  header.x_blocks = GetLittleEndian(IndexToShort(level.block_w));
-  header.y_blocks = GetLittleEndian(IndexToShort(level.block_h));
-
-  lump->Write(&header, sizeof(header));
-
-  // total line count
-  if (!prefix.empty())
+  if (level.bmap_format == BMAP_XBM1)
   {
-    uint32_t le_count = GetLittleEndian(IndexToInt(total_line_count));
-    lump->Write(&le_count, sizeof(uint32_t));
+    lump->Write(prefix.c_str(), PrefixHeaderSize);
+
+    raw_blockmap_xbm1_header_t xbm1_header;
+    xbm1_header.x_origin = GetLittleEndian(IntToFixed(level.block_x));
+    xbm1_header.y_origin = GetLittleEndian(IntToFixed(level.block_y));
+    xbm1_header.x_blocks = GetLittleEndian(IndexToInt(level.block_w));
+    xbm1_header.y_blocks = GetLittleEndian(IndexToInt(level.block_h));
+    lump->Write(&xbm1_header, sizeof(xbm1_header));
+  }
+  else
+  {
+    raw_blockmap_header_t header;
+    header.x_origin = GetLittleEndian(level.block_x);
+    header.y_origin = GetLittleEndian(level.block_y);
+    header.x_blocks = GetLittleEndian(IndexToShort(level.block_w));
+    header.y_blocks = GetLittleEndian(IndexToShort(level.block_h));
+    lump->Write(&header, sizeof(header));
   }
 
   // handle pointers
   for (size_t i = 0; i < level.block_count; i++)
   {
-    OffsetType ptr = GetLittleEndian(static_cast<OffsetType>(level.block_offsets[i]));
+    NumType ptr = GetLittleEndian(static_cast<NumType>(level.block_indexes[i]));
 
     if (ptr == 0)
     {
       PrintLine(LOG_ERROR, "ERROR: WriteBlockmap: offset %zu not set.", i);
     }
 
-    lump->Write(&ptr, sizeof(OffsetType));
+    lump->Write(&ptr, sizeof(NumType));
   }
 
   // add the null block which *all* empty blocks will use
-  lump->Write(&m_zero, sizeof(LineType));
-  lump->Write(&m_neg1, sizeof(LineType));
+  lump->Write(&m_zero, sizeof(NumType));
+  lump->Write(&m_neg1, sizeof(NumType));
 
   // handle each block list
   for (size_t i = 0; i < level.block_count; i++)
@@ -477,13 +444,13 @@ static void WriteBlockmap(level_t &level, std::string prefix = "")
 
     const auto &blk = level.block_lines[blk_num];
 
-    lump->Write(&m_zero, sizeof(LineType));
+    lump->Write(&m_zero, sizeof(NumType));
     for (size_t line : blk.lines)
     {
-      LineType le_line = GetLittleEndian(static_cast<LineType>(line));
-      lump->Write(&le_line, sizeof(LineType));
+      NumType le_line = GetLittleEndian(static_cast<NumType>(line));
+      lump->Write(&le_line, sizeof(NumType));
     }
-    lump->Write(&m_neg1, sizeof(LineType));
+    lump->Write(&m_neg1, sizeof(NumType));
   }
 
   lump->Finish();
@@ -508,13 +475,10 @@ void PutBlockmap(level_t &level)
   switch (level.bmap_format)
   {
   case BMAP_DoomBlockmap:
-    WriteBlockmap<uint16_t, uint16_t>(level, "");
+    WriteBlockmap(level);
     break;
   case BMAP_XBM1:
-    WriteBlockmap<uint32_t, uint16_t>(level, BMAP_MAGIC_XBM1);
-    break;
-  case BMAP_XBM2:
-    WriteBlockmap<uint32_t, uint32_t>(level, BMAP_MAGIC_XBM2);
+    WriteBlockmap<uint32_t>(level, BMAP_MAGIC_XBM1);
     break;
   default:
     // how did we get here

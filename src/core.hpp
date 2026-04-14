@@ -772,10 +772,9 @@ using bmap_format_t = enum bmap_format_e : uint8_t
 {
   BMAP_DoomBlockmap,
   BMAP_XBM1,
-  BMAP_XBM2,
 
   BMAP_MIN = BMAP_DoomBlockmap,
-  BMAP_MAX = BMAP_XBM2,
+  BMAP_MAX = BMAP_XBM1,
 };
 
 // Obviously, vanilla did not include any magic headers
@@ -797,10 +796,8 @@ constexpr auto BSP_MAGIC_GLV4 = "gNd4";
 constexpr auto BSP_MAGIC_GLV5 = "gNd5";
 
 constexpr auto BMAP_MAGIC_XBM1 = "XBM1\0\0\0\0";
-constexpr auto BMAP_MAGIC_XBM2 = "XBM2\0\0\0\0";
 
 constexpr auto BMAP_MAGIC_ZBM1 = "ZBM1\0\0\0\0";
-constexpr auto BMAP_MAGIC_ZBM2 = "ZBM2\0\0\0\0";
 
 // Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
 constexpr uint16_t NF_SUBSECTOR_VANILLA = UINT16_C(0x8000);
@@ -828,7 +825,7 @@ constexpr size_t LIMIT_NODE = INT16_MAX;
 constexpr size_t LIMIT_SUBSEC = INT16_MAX;
 constexpr size_t LIMIT_SEG = UINT16_MAX;
 
-constexpr size_t LIMIT_BMAP_OFFSET = UINT16_MAX;
+constexpr size_t LIMIT_BMAP_INDEX = UINT16_MAX;
 
 //
 // Vanilla blockmap
@@ -845,6 +842,12 @@ using raw_blockmap_header_t = struct raw_blockmap_header_s
 {
   int16_t x_origin, y_origin;
   uint16_t x_blocks, y_blocks;
+} PACKEDATTR;
+
+using raw_blockmap_xbm1_header_t = struct raw_blockmap_xbm1_header_s
+{
+  fixed_t x_origin, y_origin;
+  uint32_t x_blocks, y_blocks;
 } PACKEDATTR;
 
 //

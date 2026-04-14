@@ -422,7 +422,7 @@ using level_t = struct level_t
   size_t block_count;
 
   std::vector<blocklist_t> block_lines;
-  std::vector<size_t> block_offsets;
+  std::vector<size_t> block_indexes;
   std::vector<size_t> block_duplicates;
 
   double block_compression;
