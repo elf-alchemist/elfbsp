@@ -44,6 +44,90 @@ static constexpr uint16_t null_block[2] = {ZERO_INDEX_INT16, NO_INDEX_INT16};
 
 /* ----- create blockmap ------------------------------------ */
 
+static void FindBlockmapLimits(level_t &level, bbox_t *bbox)
+{
+  double mid_x = 0;
+  double mid_y = 0;
+  int16_t block_mid_x = 0;
+  int16_t block_mid_y = 0;
+
+  bbox->minx = bbox->miny = SHRT_MAX;
+  bbox->maxx = bbox->maxy = SHRT_MIN;
+
+  for (size_t i = 0; i < level.linedefs.size(); i++)
+  {
+    const linedef_t *L = level.linedefs[i];
+
+    if (HAS_BIT(L->effects, FX_NoBlockmap | FX_ZeroLength))
+    {
+      continue;
+    }
+
+    double x1 = L->start->x;
+    double y1 = L->start->y;
+    double x2 = L->end->x;
+    double y2 = L->end->y;
+
+    int16_t lx = FloatToShort(floor(std::min(x1, x2)));
+    int16_t ly = FloatToShort(floor(std::min(y1, y2)));
+    int16_t hx = FloatToShort(ceil(std::max(x1, x2)));
+    int16_t hy = FloatToShort(ceil(std::max(y1, y2)));
+
+    if (lx < bbox->minx) bbox->minx = lx;
+    if (ly < bbox->miny) bbox->miny = ly;
+    if (hx > bbox->maxx) bbox->maxx = hx;
+    if (hy > bbox->maxy) bbox->maxy = hy;
+
+    // compute middle of cluster
+    mid_x += (lx + hx) >> 1;
+    mid_y += (ly + hy) >> 1;
+  }
+
+  if (level.linedefs.size() > 0)
+  {
+    block_mid_x = FloatToShort(floor(mid_x / static_cast<double>(level.linedefs.size())));
+    block_mid_y = FloatToShort(floor(mid_y / static_cast<double>(level.linedefs.size())));
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
+  {
+    PrintLine(LOG_DEBUG, "[%s] Blockmap lines centered at (%d,%d)", __func__, block_mid_x, block_mid_y);
+  }
+}
+
+void InitBlockmap(level_t &level)
+{
+  bbox_t map_bbox;
+
+  // find limits of linedefs, and store as map limits
+  FindBlockmapLimits(level, &map_bbox);
+
+  if (config.verbose)
+  {
+    PrintLine(LOG_NORMAL, "Map limits: (%d,%d) to (%d,%d)", map_bbox.minx, map_bbox.miny, map_bbox.maxx, map_bbox.maxy);
+  }
+
+  level.block_x = map_bbox.minx - (map_bbox.minx & 0x7);
+  level.block_y = map_bbox.miny - (map_bbox.miny & 0x7);
+
+  level.block_w = static_cast<size_t>((map_bbox.maxx - level.block_x) / 128) + 1;
+  level.block_h = static_cast<size_t>((map_bbox.maxy - level.block_y) / 128) + 1;
+
+  level.block_count = level.block_w * level.block_h;
+}
+
+static void FreeBlockmap(level_t &level)
+{
+  for (size_t i = 0; i < level.block_count; i++)
+  {
+    level.block_lines[i].lines.clear();
+  }
+
+  level.block_lines.clear();
+  level.block_offsets.clear();
+  level.block_duplicates.clear();
+}
+
 static void BlockAdd(level_t &level, size_t blk_num, size_t line_index)
 {
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
@@ -137,9 +221,10 @@ static void BlockAddLine(level_t &level, const linedef_t *L)
   }
 }
 
+// initial phase: create internal blockmap containing the index of
+// all lines in each block.
 static void CreateBlockmap(level_t &level)
 {
-  // What the fuck?
   level.block_lines.assign(level.block_count, blocklist_t{.hash = 0x1234123412341234, .lines = {}});
 
   for (size_t i = 0; i < level.linedefs.size(); i++)
@@ -155,6 +240,9 @@ static void CreateBlockmap(level_t &level)
   }
 }
 
+// -AJA- second phase: compress the blockmap.  We do this by sorting
+//       the blocks, which is a typical way to detect duplicates in
+//       a large list.  This also detects BLOCKMAP overflow.
 static void CompressBlockmap(level_t &level)
 {
   size_t current_offset;
@@ -247,7 +335,7 @@ static void CompressBlockmap(level_t &level)
   level.block_compression = std::max(0.0, level.block_compression);
 }
 
-static size_t CalcBlockmapSize_Vanilla(level_t &level)
+static size_t CalcBlockmapSize(level_t &level)
 {
   // compute size of final BLOCKMAP lump.
   // it does not need to be exact, but it *does* need to be bigger
@@ -276,9 +364,10 @@ static size_t CalcBlockmapSize_Vanilla(level_t &level)
   return size;
 }
 
-static void WriteBlockmap_Vanilla(level_t &level)
+// final phase: write it out in the correct format
+static void WriteBlockmap(level_t &level)
 {
-  size_t max_size = CalcBlockmapSize_Vanilla(level);
+  size_t max_size = CalcBlockmapSize(level);
   Lump_c *lump = CreateLevelLump(level, "BLOCKMAP", max_size);
 
   // fill in header
@@ -332,90 +421,6 @@ static void WriteBlockmap_Vanilla(level_t &level)
   lump->Finish();
 }
 
-static void FreeBlockmap(level_t &level)
-{
-  for (size_t i = 0; i < level.block_count; i++)
-  {
-    level.block_lines[i].lines.clear();
-  }
-
-  level.block_lines.clear();
-  level.block_offsets.clear();
-  level.block_duplicates.clear();
-}
-
-static void FindBlockmapLimits(level_t &level, bbox_t *bbox)
-{
-  double mid_x = 0;
-  double mid_y = 0;
-  int16_t block_mid_x = 0;
-  int16_t block_mid_y = 0;
-
-  bbox->minx = bbox->miny = SHRT_MAX;
-  bbox->maxx = bbox->maxy = SHRT_MIN;
-
-  for (size_t i = 0; i < level.linedefs.size(); i++)
-  {
-    const linedef_t *L = level.linedefs[i];
-
-    if (HAS_BIT(L->effects, FX_NoBlockmap | FX_ZeroLength))
-    {
-      continue;
-    }
-
-    double x1 = L->start->x;
-    double y1 = L->start->y;
-    double x2 = L->end->x;
-    double y2 = L->end->y;
-
-    int16_t lx = FloatToShort(floor(std::min(x1, x2)));
-    int16_t ly = FloatToShort(floor(std::min(y1, y2)));
-    int16_t hx = FloatToShort(ceil(std::max(x1, x2)));
-    int16_t hy = FloatToShort(ceil(std::max(y1, y2)));
-
-    if (lx < bbox->minx) bbox->minx = lx;
-    if (ly < bbox->miny) bbox->miny = ly;
-    if (hx > bbox->maxx) bbox->maxx = hx;
-    if (hy > bbox->maxy) bbox->maxy = hy;
-
-    // compute middle of cluster
-    mid_x += (lx + hx) >> 1;
-    mid_y += (ly + hy) >> 1;
-  }
-
-  if (level.linedefs.size() > 0)
-  {
-    block_mid_x = FloatToShort(floor(mid_x / static_cast<double>(level.linedefs.size())));
-    block_mid_y = FloatToShort(floor(mid_y / static_cast<double>(level.linedefs.size())));
-  }
-
-  if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
-  {
-    PrintLine(LOG_DEBUG, "[%s] Blockmap lines centered at (%d,%d)", __func__, block_mid_x, block_mid_y);
-  }
-}
-
-void InitBlockmap(level_t &level)
-{
-  bbox_t map_bbox;
-
-  // find limits of linedefs, and store as map limits
-  FindBlockmapLimits(level, &map_bbox);
-
-  if (config.verbose)
-  {
-    PrintLine(LOG_NORMAL, "Map limits: (%d,%d) to (%d,%d)", map_bbox.minx, map_bbox.miny, map_bbox.maxx, map_bbox.maxy);
-  }
-
-  level.block_x = map_bbox.minx - (map_bbox.minx & 0x7);
-  level.block_y = map_bbox.miny - (map_bbox.miny & 0x7);
-
-  level.block_w = static_cast<size_t>((map_bbox.maxx - level.block_x) / 128) + 1;
-  level.block_h = static_cast<size_t>((map_bbox.maxy - level.block_y) / 128) + 1;
-
-  level.block_count = level.block_w * level.block_h;
-}
-
 void PutBlockmap(level_t &level)
 {
   auto mark = Benchmarker(__func__);
@@ -426,16 +431,9 @@ void PutBlockmap(level_t &level)
     return;
   }
 
-  // initial phase: create internal blockmap containing the index of
-  // all lines in each block.
   CreateBlockmap(level);
-
-  // -AJA- second phase: compress the blockmap.  We do this by sorting
-  //       the blocks, which is a typical way to detect duplicates in
-  //       a large list.  This also detects BLOCKMAP overflow.
   CompressBlockmap(level);
 
-  // final phase: write it out in the correct format
   if (level.block_overflowed)
   {
     // leave an empty blockmap lump
@@ -445,7 +443,7 @@ void PutBlockmap(level_t &level)
   }
   else
   {
-    WriteBlockmap_Vanilla(level);
+    WriteBlockmap(level);
     if (config.verbose)
     {
       PrintLine(LOG_NORMAL, "Blockmap size: %zux%zu (compression: %d%%)", level.block_w, level.block_h,
