@@ -325,7 +325,7 @@ bool CompressBlockmapWorker(level_t &level, auto &BlockCompare, OffsetListStats 
 //       a large list.  This also detects BLOCKMAP overflow.
 static void CompressBlockmap(level_t &level)
 {
-  OffsetListStats stats = {0,0,0,0};
+  OffsetListStats stats = {0, 0, 0, 0};
   bool overflowed = false;
 
   level.block_offsets.reserve(level.block_count);
@@ -378,7 +378,8 @@ static void CompressBlockmap(level_t &level)
 }
 
 // compute size of final BLOCKMAP lump.
-template <typename OffsetType = uint16_t, typename LineType = uint16_t> static size_t CalcBlockmapSize(level_t &level)
+template <typename OffsetType = uint16_t, typename LineType = uint16_t>
+static size_t CalcBlockmapSize(level_t &level)
 {
   // Header + null block
   size_t size = sizeof(raw_blockmap_header_t);
