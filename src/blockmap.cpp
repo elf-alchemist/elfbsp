@@ -124,7 +124,7 @@ static void FreeBlockmap(level_t &level)
   }
 
   level.block_lines.clear();
-  level.block_offsets.clear();
+  level.block_indexes.clear();
   level.block_duplicates.clear();
 }
 
@@ -245,11 +245,11 @@ static void CreateBlockmap(level_t &level)
 //       a large list.  This also detects BLOCKMAP overflow.
 static void CompressBlockmap(level_t &level)
 {
-  size_t current_offset;
+  size_t current_index;
   size_t dup_count = 0;
   size_t original_size, new_size;
 
-  level.block_offsets.reserve(level.block_count);
+  level.block_indexes.reserve(level.block_count);
   level.block_duplicates.reserve(level.block_count);
 
   // sort duplicate-detecting array.  After the sort, all duplicates
@@ -273,10 +273,10 @@ static void CompressBlockmap(level_t &level)
   };
   std::sort(level.block_duplicates.begin(), level.block_duplicates.end(), BlockCompare);
 
-  // scan duplicate array and build up offset array
-  current_offset = level.block_count + sizeof(null_block) + 2;
-  original_size = level.block_count + sizeof(null_block);
-  new_size = current_offset;
+  // scan duplicate array and build up index array
+  current_index = level.block_count + 4 + 2;
+  original_size = level.block_count + 4;
+  new_size = current_index;
 
   for (size_t i = 0; i < level.block_count; i++)
   {
@@ -285,7 +285,7 @@ static void CompressBlockmap(level_t &level)
     // empty block ?
     if (level.block_lines[blk_num].lines.empty())
     {
-      level.block_offsets[blk_num] = 4 + level.block_count;
+      level.block_indexes[blk_num] = 4 + level.block_count;
       level.block_duplicates[i] = NO_INDEX;
 
       original_size += EXTRA_LINES;
@@ -295,10 +295,10 @@ static void CompressBlockmap(level_t &level)
     size_t count = level.block_lines[blk_num].lines.size() + EXTRA_LINES;
 
     // duplicate ?  Only the very last one of a sequence of duplicates
-    // will update the current offset value.
+    // will update the current index value.
     if (i + 1 < level.block_count && BlockCompare(level.block_duplicates[i], level.block_duplicates[i + 1]) == 0)
     {
-      level.block_offsets[blk_num] = current_offset;
+      level.block_indexes[blk_num] = current_index;
       level.block_duplicates[i] = NO_INDEX;
 
       // free the memory of the duplicated block
@@ -310,13 +310,13 @@ static void CompressBlockmap(level_t &level)
 
     // OK, this block is either the last of a series of duplicates, or
     // just a singleton.
-    level.block_offsets[blk_num] = current_offset;
-    current_offset += count;
+    level.block_indexes[blk_num] = current_index;
+    current_index += count;
     original_size += count;
     new_size += count;
   }
 
-  if (current_offset > LIMIT_BMAP_OFFSET)
+  if (current_index > LIMIT_BMAP_INDEX)
   {
     level.block_overflowed = true;
     return;
@@ -325,7 +325,7 @@ static void CompressBlockmap(level_t &level)
   // TODO: this is temporary
   if (config.verbose)
   {
-    PrintLine(LOG_DEBUG, "[%s] Last ptr = %zu  duplicates = %zu", __func__, current_offset, dup_count);
+    PrintLine(LOG_DEBUG, "[%s] Last ptr = %zu  duplicates = %zu", __func__, current_index, dup_count);
   }
 
   level.block_compression =
@@ -340,7 +340,7 @@ static size_t CalcBlockmapSize(level_t &level)
 {
   size_t size = sizeof(raw_blockmap_header_t) + sizeof(null_block);
 
-  // the pointers (offsets to the line lists)
+  // the pointers (indexes to the line lists)
   size += level.block_count * sizeof(uint16_t);
 
   // add size of each block
@@ -381,7 +381,7 @@ static void WriteBlockmap(level_t &level)
   // handle pointers
   for (size_t i = 0; i < level.block_count; i++)
   {
-    uint16_t ptr = GetLittleEndian(IndexToShort(level.block_offsets[i]));
+    uint16_t ptr = GetLittleEndian(IndexToShort(level.block_indexes[i]));
 
     if (ptr == 0)
     {

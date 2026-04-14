@@ -801,7 +801,7 @@ constexpr size_t LIMIT_NODE = INT16_MAX;
 constexpr size_t LIMIT_SUBSEC = INT16_MAX;
 constexpr size_t LIMIT_SEG = UINT16_MAX;
 
-constexpr size_t LIMIT_BMAP_OFFSET = UINT16_MAX;
+constexpr size_t LIMIT_BMAP_INDEX = UINT16_MAX;
 
 //
 // Vanilla blockmap
