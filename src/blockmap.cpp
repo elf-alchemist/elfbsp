@@ -424,9 +424,10 @@ static void WriteBlockmap(level_t &level)
 void PutBlockmap(level_t &level)
 {
   auto mark = Benchmarker(__func__);
+
+  // just create an empty blockmap lump
   if (level.linedefs.size() == 0)
   {
-    // just create an empty blockmap lump
     CreateLevelLump(level, "BLOCKMAP")->Finish();
     return;
   }
