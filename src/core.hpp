@@ -103,7 +103,8 @@ constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
 constexpr auto ENDIAN_BIG = (std::endian::native == std::endian::big);
 constexpr auto ENDIAN_LITTLE = !ENDIAN_BIG;
 
-template <typename T> constexpr T byteswap(T value) noexcept
+template <typename T>
+constexpr T byteswap(T value) noexcept
 {
   static_assert(std::is_integral_v<T>, "byteswap: integral required");
   static_assert(sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "byteswap: only 16/32/64-bit supported");
@@ -122,7 +123,8 @@ template <typename T> constexpr T byteswap(T value) noexcept
   }
 }
 
-template <typename T> constexpr T GetLittleEndian(T value)
+template <typename T>
+constexpr T GetLittleEndian(T value)
 {
   if constexpr (ENDIAN_BIG)
   {
@@ -134,7 +136,8 @@ template <typename T> constexpr T GetLittleEndian(T value)
   }
 }
 
-template <typename T> constexpr T GetBigEndian(T value)
+template <typename T>
+constexpr T GetBigEndian(T value)
 {
   if constexpr (ENDIAN_LITTLE)
   {
@@ -146,7 +149,8 @@ template <typename T> constexpr T GetBigEndian(T value)
   }
 }
 
-template <typename T> constexpr void RaiseValue(T &var, T value)
+template <typename T>
+constexpr void RaiseValue(T &var, T value)
 {
   var = std::max(var, value);
 }
@@ -349,7 +353,8 @@ inline void PRINTF_ATTR(2, 3) PrintLine(const log_level_t level, const char *fmt
 //
 // Allocate memory with error checking.  Zeros the memory.
 //
-template <typename T> constexpr T *UtilCalloc(const size_t size)
+template <typename T>
+constexpr T *UtilCalloc(const size_t size)
 {
   T *ret = static_cast<T *>(calloc(1, size));
 
@@ -364,7 +369,8 @@ template <typename T> constexpr T *UtilCalloc(const size_t size)
 //
 // Reallocate memory with error checking.
 //
-template <typename T> constexpr T *UtilRealloc(T *old, const size_t size)
+template <typename T>
+constexpr T *UtilRealloc(T *old, const size_t size)
 {
   T *ret = static_cast<T *>(realloc(old, size));
 
@@ -379,7 +385,8 @@ template <typename T> constexpr T *UtilRealloc(T *old, const size_t size)
 //
 // Free the memory with error checking.
 //
-template <typename T> constexpr void UtilFree(T *data)
+template <typename T>
+constexpr void UtilFree(T *data)
 {
   if (data == nullptr)
   {
