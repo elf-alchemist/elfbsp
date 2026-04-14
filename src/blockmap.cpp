@@ -380,8 +380,9 @@ static void CompressBlockmap(level_t &level)
 
 // compute size of final BLOCKMAP lump.
 template <typename OffsetType = uint16_t, typename LineType = uint16_t>
-static size_t CalcBlockmapSize(level_t &level, std::string prefix = "")
+static size_t CalcBlockmapSize(level_t &level, std::string prefix, size_t &line_count)
 {
+  size_t count = 0;
   size_t size = sizeof(raw_blockmap_header_t);
 
   size += prefix.length();
@@ -401,14 +402,15 @@ static size_t CalcBlockmapSize(level_t &level, std::string prefix = "")
     }
 
     const auto &blk = level.block_lines[blk_num];
-
-    size += ((blk.lines.size() + EXTRA_LINES) * sizeof(LineType));
+    count += blk.lines.size() + EXTRA_LINES;
+    size += (blk.lines.size() + EXTRA_LINES) * sizeof(LineType);
   }
+  line_count = count;
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
-    PrintLine(LOG_DEBUG, "[%s] Blockmap lump has prefix header \'%s\' offset size of %zu, line size of %zu, total size of %zu",
-              __func__, prefix.c_str(), sizeof(OffsetType), sizeof(LineType), size);
+    PrintLine(LOG_DEBUG, "[%s] Lump prefix header \'%s\', %zu lines, offset of %zu, line of %zu, total size of %zu", __func__,
+              prefix.c_str(), count, sizeof(OffsetType), sizeof(LineType), size);
   }
 
   return size;
@@ -418,12 +420,14 @@ static size_t CalcBlockmapSize(level_t &level, std::string prefix = "")
 template <typename OffsetType = uint16_t, typename LineType = uint16_t>
 static void WriteBlockmap(level_t &level, std::string prefix = "")
 {
-  size_t max_size = CalcBlockmapSize<OffsetType, LineType>(level, prefix);
+  size_t total_line_count = 0;
+  size_t max_size = CalcBlockmapSize<OffsetType, LineType>(level, prefix, total_line_count);
   Lump_c *lump = CreateLevelLump(level, "BLOCKMAP", max_size);
 
+  // vanilla has no prefix header
   if (!prefix.empty())
   {
-    lump->Write(prefix.c_str(), prefix.length());
+    lump->Write(prefix.c_str(), 8);
   }
 
   // fill in header
@@ -435,6 +439,13 @@ static void WriteBlockmap(level_t &level, std::string prefix = "")
   header.y_blocks = GetLittleEndian(IndexToShort(level.block_h));
 
   lump->Write(&header, sizeof(header));
+
+  // total line count
+  if (!prefix.empty())
+  {
+    uint32_t le_count = GetLittleEndian(IndexToInt(total_line_count));
+    lump->Write(&le_count, sizeof(uint32_t));
+  }
 
   // handle pointers
   for (size_t i = 0; i < level.block_count; i++)
