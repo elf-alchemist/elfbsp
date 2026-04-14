@@ -23,7 +23,6 @@
 
 #include "core.hpp"
 #include "local.hpp"
-#include <cstdint>
 
 /*
  * Important bullshit to note:
