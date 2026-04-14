@@ -1348,10 +1348,10 @@ bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
     // Clamp Doom64 maps to only vanilla and DeePBSPV4 formats.
     // With support for fractional coordinates, it doesn't
     // make sense for it to need to support XNOD, etc.
-    level_type = BSP_VANILLA;
+    level_type = BSP_DoomBSP;
   }
 
-  if (level_type == BSP_VANILLA &&            // always allow for a valid map to be produced
+  if (level_type == BSP_DoomBSP &&            // always allow for a valid map to be produced
       (level.vertices.size() > LIMIT_VERT     // even if it may not run on some older source ports
        || level.nodes.size() > LIMIT_NODE     // or the vanilla EXE
        || level.subsecs.size() > LIMIT_SUBSEC //
@@ -1359,7 +1359,7 @@ bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
   {
     PrintLine(LOG_NORMAL, "WARNING: BSP overflow. Forcing DeePBSPV4 node format.");
     config.total_warnings++;
-    level_type = BSP_DEEPBSPV4;
+    level_type = BSP_DeePBSPV4;
   }
 
   return level_type;
@@ -1500,11 +1500,11 @@ build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
   {
     switch (level_type)
     {
-    case BSP_DEEPBSPV4:
+    case BSP_DeePBSPV4:
       SaveDoom64_DeePBSPV4(level, root_node);
       break;
-    case BSP_VANILLA:
-      SaveDoom64_Vanilla(level, root_node);
+    case BSP_DoomBSP:
+      SaveDoom64_DoomBSP(level, root_node);
       break;
     default:
       PrintLine(LOG_ERROR, "ERROR: Tried to write unsupported BSP format #%d on Doom64 map format", level_type);
@@ -1527,11 +1527,11 @@ build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
     case BSP_XNOD:
       SaveDoom_XNOD(level, root_node);
       break;
-    case BSP_DEEPBSPV4:
+    case BSP_DeePBSPV4:
       SaveDoom_DeePBSPV4(level, root_node);
       break;
-    case BSP_VANILLA:
-      SaveDoom_Vanilla(level, root_node);
+    case BSP_DoomBSP:
+      SaveDoom_DoomBSP(level, root_node);
       break;
     }
   }

@@ -103,7 +103,8 @@ constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
 constexpr auto ENDIAN_BIG = (std::endian::native == std::endian::big);
 constexpr auto ENDIAN_LITTLE = !ENDIAN_BIG;
 
-template <typename T> constexpr T byteswap(T value) noexcept
+template <typename T>
+constexpr T byteswap(T value) noexcept
 {
   static_assert(std::is_integral_v<T>, "byteswap: integral required");
   static_assert(sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "byteswap: only 16/32/64-bit supported");
@@ -122,7 +123,8 @@ template <typename T> constexpr T byteswap(T value) noexcept
   }
 }
 
-template <typename T> constexpr T GetLittleEndian(T value)
+template <typename T>
+constexpr T GetLittleEndian(T value)
 {
   if constexpr (ENDIAN_BIG)
   {
@@ -134,7 +136,8 @@ template <typename T> constexpr T GetLittleEndian(T value)
   }
 }
 
-template <typename T> constexpr T GetBigEndian(T value)
+template <typename T>
+constexpr T GetBigEndian(T value)
 {
   if constexpr (ENDIAN_LITTLE)
   {
@@ -146,7 +149,8 @@ template <typename T> constexpr T GetBigEndian(T value)
   }
 }
 
-template <typename T> constexpr void RaiseValue(T &var, T value)
+template <typename T>
+constexpr void RaiseValue(T &var, T value)
 {
   var = std::max(var, value);
 }
@@ -349,7 +353,8 @@ inline void PRINTF_ATTR(2, 3) PrintLine(const log_level_t level, const char *fmt
 //
 // Allocate memory with error checking.  Zeros the memory.
 //
-template <typename T> constexpr T *UtilCalloc(const size_t size)
+template <typename T>
+constexpr T *UtilCalloc(const size_t size)
 {
   T *ret = static_cast<T *>(calloc(1, size));
 
@@ -364,7 +369,8 @@ template <typename T> constexpr T *UtilCalloc(const size_t size)
 //
 // Reallocate memory with error checking.
 //
-template <typename T> constexpr T *UtilRealloc(T *old, const size_t size)
+template <typename T>
+constexpr T *UtilRealloc(T *old, const size_t size)
 {
   T *ret = static_cast<T *>(realloc(old, size));
 
@@ -379,7 +385,8 @@ template <typename T> constexpr T *UtilRealloc(T *old, const size_t size)
 //
 // Free the memory with error checking.
 //
-template <typename T> constexpr void UtilFree(T *data)
+template <typename T>
+constexpr void UtilFree(T *data)
 {
   if (data == nullptr)
   {
@@ -809,23 +816,47 @@ using raw_sector_doom64_t = struct raw_sector_doom64_s
 //
 using bsp_format_t = enum bsp_format_e : uint8_t
 {
-  BSP_VANILLA,
-  BSP_DEEPBSPV4,
+  BSP_DoomBSP,
+  BSP_DeePBSPV4,
   BSP_XNOD,
   BSP_XGLN,
   BSP_XGL2,
   BSP_XGL3,
 
-  BSP_MIN = BSP_VANILLA,
+  BSP_MIN = BSP_DoomBSP,
   BSP_MAX = BSP_XGL3,
+};
+
+using bmap_format_t = enum bmap_format_e : uint8_t
+{
+  BMAP_DoomBlockmap,
+  BMAP_XBM1,
+
+  BMAP_MIN = BMAP_DoomBlockmap,
+  BMAP_MAX = BMAP_XBM1,
 };
 
 // Obviously, vanilla did not include any magic headers
 constexpr auto BSP_MAGIC_DEEPBSPV4 = "xNd4\0\0\0\0";
+
 constexpr auto BSP_MAGIC_XNOD = "XNOD";
 constexpr auto BSP_MAGIC_XGLN = "XGLN";
 constexpr auto BSP_MAGIC_XGL2 = "XGL2";
 constexpr auto BSP_MAGIC_XGL3 = "XGL3";
+
+constexpr auto BSP_MAGIC_ZNOD = "ZNOD";
+constexpr auto BSP_MAGIC_ZGLN = "ZGLN";
+constexpr auto BSP_MAGIC_ZGL2 = "ZGL2";
+constexpr auto BSP_MAGIC_ZGL3 = "ZGL3";
+
+constexpr auto BSP_MAGIC_GLV2 = "gNd2";
+constexpr auto BSP_MAGIC_GLV3 = "gNd3";
+constexpr auto BSP_MAGIC_GLV4 = "gNd4";
+constexpr auto BSP_MAGIC_GLV5 = "gNd5";
+
+constexpr auto BMAP_MAGIC_XBM1 = "XBM1\0\0\0\0";
+
+constexpr auto BMAP_MAGIC_ZBM1 = "ZBM1\0\0\0\0";
 
 // Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
 constexpr uint16_t NF_SUBSECTOR_VANILLA = UINT16_C(0x8000);
@@ -853,6 +884,8 @@ constexpr size_t LIMIT_NODE = INT16_MAX;
 constexpr size_t LIMIT_SUBSEC = INT16_MAX;
 constexpr size_t LIMIT_SEG = UINT16_MAX;
 
+constexpr size_t LIMIT_BMAP_INDEX = UINT16_MAX;
+
 //
 // Vanilla blockmap
 //
@@ -868,6 +901,12 @@ using raw_blockmap_header_t = struct raw_blockmap_header_s
 {
   int16_t x_origin, y_origin;
   uint16_t x_blocks, y_blocks;
+} PACKEDATTR;
+
+using raw_blockmap_xbm1_header_t = struct raw_blockmap_xbm1_header_s
+{
+  fixed_t x_origin, y_origin;
+  uint32_t x_blocks, y_blocks;
 } PACKEDATTR;
 
 //
@@ -1674,6 +1713,7 @@ struct buildinfo_s
   uint32_t debug = DEBUG_NONE;
 
   bsp_format_t bsp_format = bsp_format_t::BSP_XNOD;
+  bmap_format_t bmap_format = bmap_format_t::BMAP_DoomBlockmap;
   bool fast = false;     // use a faster method to pick nodes
   bool backup = false;   // keep a copy of the WAD
   bool analysis = false; // write out CSV for data analysis and visualization

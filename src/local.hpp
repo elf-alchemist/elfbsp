@@ -422,11 +422,11 @@ using level_t = struct level_t
   size_t block_count;
 
   std::vector<blocklist_t> block_lines;
-  std::vector<size_t> block_offsets;
+  std::vector<size_t> block_indexes;
   std::vector<size_t> block_duplicates;
 
   double block_compression;
-  bool block_overflowed = false;
+  bmap_format_t bmap_format = BMAP_DoomBlockmap;
 
   inline Lump_c *FindLevelLump(const char *name)
   {
@@ -591,18 +591,22 @@ void RoundOffVertices(void);
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree(level_t &level);
 
+// both BLOCKAMP and REJECT exist as single lumps on all supported map formats
 void InitBlockmap(level_t &level);
 void PutBlockmap(level_t &level);
 void PutReject(level_t &level);
 
-void SaveDoom_Vanilla(level_t &level, node_t *root_node);
+// the BSP tree lumps differ notably on each map format -- Doom/Hexen/Doom64
+// have NODES, SSECTORS & SEGS, but UDMF is generally only ZNODES, and there's
+// some format overlap between them
+void SaveDoom_DoomBSP(level_t &level, node_t *root_node);
 void SaveDoom_DeePBSPV4(level_t &level, node_t *root_node);
 void SaveDoom_XNOD(level_t &level, node_t *root_node);
 void SaveDoom_XGLN(level_t &level, node_t *root_node);
 void SaveDoom_XGL2(level_t &level, node_t *root_node);
 void SaveDoom_XGL3(level_t &level, node_t *root_node);
 
-void SaveDoom64_Vanilla(level_t &level, node_t *root_node);
+void SaveDoom64_DoomBSP(level_t &level, node_t *root_node);
 void SaveDoom64_DeePBSPV4(level_t &level, node_t *root_node);
 
 void SaveTextmap_ZNODES(level_t &level, node_t *root_node);

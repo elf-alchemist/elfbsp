@@ -922,7 +922,7 @@ static void PutNodes_Xgl3(level_t &level, Lump_c *lump, node_t *root)
 // Lump writing procedures
 //
 
-void SaveDoom_Vanilla(level_t &level, node_t *root_node)
+void SaveDoom_DoomBSP(level_t &level, node_t *root_node)
 {
   auto mark = Benchmarker(__func__);
   // remove all the minisegs from subsectors
@@ -1045,7 +1045,7 @@ void SaveDoom_XGL3(level_t &level, node_t *root_node)
 // This could also be shared with PSX Doom and PSX Final Doom, but we don't support those
 //
 
-void SaveDoom64_Vanilla(level_t &level, node_t *root_node)
+void SaveDoom64_DoomBSP(level_t &level, node_t *root_node)
 {
   // We need minisegs just for leafs
   PutLeafs_Vanilla(level);
