@@ -324,7 +324,7 @@ bool CompressBlockmapWorker(level_t &level, auto &BlockCompare, OffsetListStats 
 // -AJA- second phase: compress the blockmap.  We do this by sorting
 //       the blocks, which is a typical way to detect duplicates in
 //       a large list.  This also detects BLOCKMAP overflow.
-static void CompressBlockmap(level_t &level, auto &BlockCompare)
+static void CompressBlockmap(level_t &level)
 {
   OffsetListStats stats = {0,0,0,0};
   bool overflowed = false;
@@ -340,6 +340,18 @@ static void CompressBlockmap(level_t &level, auto &BlockCompare)
     level.block_duplicates[i] = i;
   }
 
+  // Sorting for compression
+  auto BlockCompare = [&level](const size_t &blk_num1, const size_t &blk_num2) -> int
+  {
+    const auto &A = level.block_lines[blk_num1];
+    const auto &B = level.block_lines[blk_num2];
+
+    if (A.lines.size() != B.lines.size()) return A.lines.size() < B.lines.size() ? -1 : 1;
+    if (A.hash != B.hash) return A.hash < B.hash ? -1 : 1;
+    if (A.lines == B.lines) return 0;
+
+    return A.lines < B.lines ? -1 : 1;
+  };
   std::sort(level.block_duplicates.begin(), level.block_duplicates.end(), BlockCompare);
 
   // Is using vanilla format?
@@ -462,25 +474,12 @@ void PutBlockmap(level_t &level)
     return;
   }
 
-  // Sorting for compression
-  auto BlockCompare = [&level](const size_t &blk_num1, const size_t &blk_num2) -> int
-  {
-    const auto &A = level.block_lines[blk_num1];
-    const auto &B = level.block_lines[blk_num2];
-
-    if (A.lines.size() != B.lines.size()) return A.lines.size() < B.lines.size() ? -1 : 1;
-    if (A.hash != B.hash) return A.hash < B.hash ? -1 : 1;
-    if (A.lines == B.lines) return 0;
-
-    return A.lines < B.lines ? -1 : 1;
-  };
+  RaiseValue(level.bmap_format, config.bmap_format);
 
   CreateBlockmap(level);
-  CompressBlockmap(level, BlockCompare);
+  CompressBlockmap(level);
 
-  bmap_format_t bmap_format = std::max(config.bmap_format, level.bmap_format);
-
-  switch (bmap_format)
+  switch (level.bmap_format)
   {
   case BMAP_DoomBlockmap:
     WriteBlockmap<uint16_t, uint16_t>(level);
