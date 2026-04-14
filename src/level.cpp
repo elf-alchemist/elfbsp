@@ -1118,7 +1118,7 @@ bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
 {
   bsp_format_t level_type = ctx.bsp_format;
 
-  if (level_type == BSP_VANILLA &&            // always allow for a valid map to be produced
+  if (level_type == BSP_DoomBSP &&            // always allow for a valid map to be produced
       (level.vertices.size() > LIMIT_VERT     // even if it may not run on some older source ports
        || level.nodes.size() > LIMIT_NODE     // or the vanilla EXE
        || level.subsecs.size() > LIMIT_SUBSEC //
@@ -1126,7 +1126,7 @@ bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
   {
     PrintLine(LOG_NORMAL, "WARNING: BSP overflow. Forcing DeePBSPV4 node format.");
     config.total_warnings++;
-    level_type = BSP_DEEPBSPV4;
+    level_type = BSP_DeePBSPV4;
   }
 
   return level_type;
@@ -1263,11 +1263,11 @@ build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
   case BSP_XNOD:
     SaveDoom_XNOD(level, root_node);
     break;
-  case BSP_DEEPBSPV4:
+  case BSP_DeePBSPV4:
     SaveDoom_DeePBSPV4(level, root_node);
     break;
-  case BSP_VANILLA:
-    SaveDoom_Vanilla(level, root_node);
+  case BSP_DoomBSP:
+    SaveDoom_DoomBSP(level, root_node);
     break;
   }
 

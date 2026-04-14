@@ -750,14 +750,14 @@ using raw_thing_hexen_t = struct raw_thing_hexen_s
 //
 using bsp_format_t = enum bsp_format_e : uint8_t
 {
-  BSP_VANILLA,
-  BSP_DEEPBSPV4,
+  BSP_DoomBSP,
+  BSP_DeePBSPV4,
   BSP_XNOD,
   BSP_XGLN,
   BSP_XGL2,
   BSP_XGL3,
 
-  BSP_MIN = BSP_VANILLA,
+  BSP_MIN = BSP_DoomBSP,
   BSP_MAX = BSP_XGL3,
 };
 
@@ -793,6 +793,8 @@ constexpr size_t LIMIT_SECTOR = UINT16_MAX;
 constexpr size_t LIMIT_NODE = INT16_MAX;
 constexpr size_t LIMIT_SUBSEC = INT16_MAX;
 constexpr size_t LIMIT_SEG = UINT16_MAX;
+
+constexpr size_t LIMIT_BMAP_OFFSET = UINT16_MAX;
 
 //
 // Vanilla blockmap

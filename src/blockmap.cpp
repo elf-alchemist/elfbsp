@@ -316,7 +316,7 @@ static void CompressBlockmap(level_t &level)
     new_size += count;
   }
 
-  if (current_offset > 65535)
+  if (current_offset > LIMIT_BMAP_OFFSET)
   {
     level.block_overflowed = true;
     return;

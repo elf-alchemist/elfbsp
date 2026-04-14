@@ -23,7 +23,6 @@ Check our documentation for:
 * Node building [special effects](https://github.com/elf-alchemist/elfbsp/blob/main/docs/special_effects.md)
 * Historical [changelog](https://github.com/elf-alchemist/elfbsp/blob/main/docs/changelog.md)
 * Instructions for local [compilation](https://github.com/elf-alchemist/elfbsp/blob/main/docs/compiling_locally.md)
-* Internal [binary formats](https://github.com/elf-alchemist/elfbsp/blob/main/docs/binary_formats.md), as development reference
 
 ## Legalese
 
