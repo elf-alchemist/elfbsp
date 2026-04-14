@@ -357,6 +357,9 @@ static size_t CalcBlockmapSize(level_t &level, std::string prefix)
 
   size += sizeof(raw_blockmap_header_t);
 
+  // null block
+  size += sizeof(NumType) * 2;
+
   // the pointers (indexes to the line lists)
   size += level.block_count * sizeof(NumType);
 
