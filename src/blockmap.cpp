@@ -23,6 +23,7 @@
 
 #include "core.hpp"
 #include "local.hpp"
+#include <cstdint>
 
 /*
  * Important bullshit to note:
@@ -379,9 +380,11 @@ static void CompressBlockmap(level_t &level)
 
 // compute size of final BLOCKMAP lump.
 template <typename OffsetType = uint16_t, typename LineType = uint16_t>
-static size_t CalcBlockmapSize(level_t &level)
+static size_t CalcBlockmapSize(level_t &level, std::string prefix = "")
 {
   size_t size = sizeof(raw_blockmap_header_t);
+
+  size += prefix.length();
 
   // the pointers (offsets to the line lists)
   size += level.block_count * sizeof(OffsetType);
@@ -402,15 +405,26 @@ static size_t CalcBlockmapSize(level_t &level)
     size += ((blk.lines.size() + EXTRA_LINES) * sizeof(LineType));
   }
 
+  if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
+  {
+    PrintLine(LOG_DEBUG, "[%s] Blockmap lump has prefix header \'%s\' offset size of %zu, line size of %zu, total size of %zu",
+              __func__, prefix.c_str(), sizeof(OffsetType), sizeof(LineType), size);
+  }
+
   return size;
 }
 
 // final phase: write it out in the correct format
 template <typename OffsetType = uint16_t, typename LineType = uint16_t>
-static void WriteBlockmap(level_t &level)
+static void WriteBlockmap(level_t &level, std::string prefix = "")
 {
-  size_t max_size = CalcBlockmapSize<OffsetType, LineType>(level);
+  size_t max_size = CalcBlockmapSize<OffsetType, LineType>(level, prefix);
   Lump_c *lump = CreateLevelLump(level, "BLOCKMAP", max_size);
+
+  if (!prefix.empty())
+  {
+    lump->Write(prefix.c_str(), prefix.length());
+  }
 
   // fill in header
   raw_blockmap_header_t header;
@@ -483,13 +497,13 @@ void PutBlockmap(level_t &level)
   switch (level.bmap_format)
   {
   case BMAP_DoomBlockmap:
-    WriteBlockmap<uint16_t, uint16_t>(level);
+    WriteBlockmap<uint16_t, uint16_t>(level, "");
     break;
   case BMAP_XBM1:
-    WriteBlockmap<uint32_t, uint16_t>(level);
+    WriteBlockmap<uint32_t, uint16_t>(level, BMAP_MAGIC_XBM1);
     break;
   case BMAP_XBM2:
-    WriteBlockmap<uint32_t, uint32_t>(level);
+    WriteBlockmap<uint32_t, uint32_t>(level, BMAP_MAGIC_XBM2);
     break;
   default:
     // how did we get here
