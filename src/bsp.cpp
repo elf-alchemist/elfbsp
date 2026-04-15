@@ -318,12 +318,12 @@ static void PutLeafs_Vanilla(level_t &level)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] Leafs: %zu", __func__, i, seg_count);
+      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] leaf references: %zu", __func__, i, seg_count);
     }
 
     if (seg_count < 3)
     {
-      PrintLine(LOG_ERROR, "[%s] Subsector[%zu] has fewer than 3 leafs", __func__, i);
+      PrintLine(LOG_ERROR, "[%s] Subsector[%zu] has fewer than 3 leaf references", __func__, i);
     }
 
     for (size_t j = 0; j < seg_count; j++)
@@ -523,12 +523,12 @@ static void PutLeafs_DeePBSPV4(level_t &level)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] Leafs: %zu", __func__, i, seg_count);
+      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] leaf references: %zu", __func__, i, seg_count);
     }
 
     if (seg_count < 3)
     {
-      PrintLine(LOG_ERROR, "[%s] Subsector[%zu] has fewer than 3 leafs", __func__, i);
+      PrintLine(LOG_ERROR, "[%s] Subsector[%zu] has fewer than 3 leaf references", __func__, i);
     }
 
     for (size_t j = 0; j < seg_count; j++)
@@ -1047,12 +1047,14 @@ void SaveDoom_XGL3(level_t &level, node_t *root_node)
 
 void SaveDoom64_DoomBSP(level_t &level, node_t *root_node)
 {
+  // Needed for LEAFS
+  RoundOffVertices(level);
+  PutVertices_Doom64(level);
   // We need minisegs just for leafs
   PutLeafs_Vanilla(level);
   // remove all the minisegs from subsectors
   NormaliseBspTree(level);
   SortSegs(level);
-  PutVertices_Doom64(level);
   PutSegs_Vanilla(level);
   PutSubsecs_Vanilla(level);
   PutNodes_Vanilla(level, root_node);
@@ -1060,12 +1062,14 @@ void SaveDoom64_DoomBSP(level_t &level, node_t *root_node)
 
 void SaveDoom64_DeePBSPV4(level_t &level, node_t *root_node)
 {
+  // Needed for LEAFS
+  RoundOffVertices(level);
+  PutVertices_Doom64(level);
   // We need minisegs just for leafs
   PutLeafs_DeePBSPV4(level);
   // remove all the minisegs from subsectors
   NormaliseBspTree(level);
   SortSegs(level);
-  PutVertices_Doom64(level);
   PutSegs_DeePBSPV4(level);
   PutSubsecs_DeePBSPV4(level);
   PutNodes_DeePBSPV4(level, root_node);

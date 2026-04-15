@@ -584,7 +584,7 @@ void NormaliseBspTree(level_t &level);
 
 // Mark new vertices as old for writing into the VERTEXES lump
 // Needed for RoundOffBspTree and saving to Doom 64 map formats directly
-void RoundOffVertices(void);
+void RoundOffVertices(level_t &level);
 
 // traverse the BSP tree, doing whatever is necessary to round
 // vertices to integer coordinates (for example, removing segs whose
