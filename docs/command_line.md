@@ -60,14 +60,28 @@ Several map names and/or ranges can be given, using commas to separate them, suc
 NOTE: spaces cannot be used to separate map names.
 
 #### `-t --type <0...5>`
-Forces a specific BSP tree lump format at build time. The default is 0, using vanilla lumps.
+Forces a specific BSP tree lump format at build time for the Doom & Hexen map formats.
+Only DoomBSP and DeePBSPV4 are support in Doom 64 map format.
+Only XGL3 is supported on UDMF map format.
+In case of overflow from the DoomBSP format, ELFBSP will automatically promote to DeePBSPV4.
+The default is 2, using ZDBSP's XNOD.
 Supported formats are as follows:
-* 0 -> vanilla (default)
+* 0 -> DoomBSP
 * 1 -> DeePBSPV4
-* 2 -> XNOD
+* 2 -> XNOD (default)
 * 3 -> XGLN
 * 4 -> XGL2
 * 5 -> XGL3
+
+#### `--bmap <0...1>`
+Forces the use of a specific blockmap lump at build time, for all supported map formats.
+In case of overflow from the DoomBSP format, ELFBSP will automatically promote to XBM1.
+The default is 0, using the vanilla format.
+* 0 -> DoomBSP (default)
+* 1 -> XBM1
+
+#### `--no-effects`
+Prevents the application of built time [special effects](./special_effects.md), causing them to be ignored.
 
 #### `-p, --polyobj`
 Use Hexen's original polyobject editor numbers (3000, 3001, 3002), instead of ZDoom's polyobject editor numbers (9300, 9301, 9302, 9303).
@@ -77,6 +91,10 @@ Sets the cost for making seg splits. The value is a number between 1 and 32. The
 Larger values try to reduce the number of seg splits, whereas smaller values produce more balanced BSP trees.
 
 NOTE: this option has little effect when the --fast option is enabled.
+
+#### `-a --analysis`
+Generates CSV files containing multiple builds of the input maps, used for data visualization purposes.
+"Multiple builds" refers to re-building each map across every valid "split cost" value, from 1 to 32.
 
 #### `-o --output  FILE`
 This option is provided *only* for compatibility with existing node builders.
