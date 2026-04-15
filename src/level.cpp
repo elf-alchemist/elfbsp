@@ -737,6 +737,231 @@ static void GetLinedefs_Hexen(level_t &level)
   }
 }
 
+static void GetVertices_Doom64(level_t &level)
+{
+  size_t count = 0;
+
+  Lump_c *lump = level.FindLevelLump("VERTEXES");
+
+  if (lump)
+  {
+    count = lump->Length() / sizeof(raw_vertex_doom64_t);
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+  }
+
+  if (lump == nullptr || count == 0)
+  {
+    return;
+  }
+
+  if (!lump->Seek(0))
+  {
+    PrintLine(LOG_ERROR, "Error seeking to 32bit vertices.");
+  }
+
+  for (size_t i = 0; i < count; i++)
+  {
+    raw_vertex_doom64_t raw;
+
+    if (!lump->Read(&raw, sizeof(raw)))
+    {
+      PrintLine(LOG_ERROR, "Error reading 32bit vertices.");
+    }
+
+    vertex_t *vert = NewVertex(level);
+
+    vert->x = static_cast<double>(GetLittleEndian(raw.x) / FRACFACTOR);
+    vert->y = static_cast<double>(GetLittleEndian(raw.y) / FRACFACTOR);
+  }
+
+  level.num_old_vert = level.vertices.size();
+}
+
+static void GetSectors_Doom64(level_t &level)
+{
+  size_t count = 0;
+
+  Lump_c *lump = level.FindLevelLump("SECTORS");
+
+  if (lump)
+  {
+    count = lump->Length() / sizeof(raw_sector_doom64_t);
+  }
+
+  if (lump == nullptr || count == 0)
+  {
+    return;
+  }
+
+  if (!lump->Seek(0))
+  {
+    PrintLine(LOG_ERROR, "Error seeking to Doom64 sectors.");
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+  }
+
+  for (size_t i = 0; i < count; i++)
+  {
+    raw_sector_doom64_t raw;
+
+    if (!lump->Read(&raw, sizeof(raw)))
+    {
+      PrintLine(LOG_ERROR, "Error reading Doom64 sectors.");
+    }
+
+    sector_t *sector = NewSector(level);
+
+    sector->height_floor = static_cast<double>(GetLittleEndian(raw.floorh));
+    sector->height_ceiling = static_cast<double>(GetLittleEndian(raw.ceilh));
+  }
+}
+
+static void GetSidedefs_Doom64(level_t &level)
+{
+  size_t count = 0;
+
+  Lump_c *lump = level.FindLevelLump("SIDEDEFS");
+
+  if (lump)
+  {
+    count = lump->Length() / sizeof(raw_sidedef_doom64_t);
+  }
+
+  if (lump == nullptr || count == 0)
+  {
+    return;
+  }
+
+  if (!lump->Seek(0))
+  {
+    PrintLine(LOG_ERROR, "Error seeking to Doom64 sidedefs.");
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+  }
+
+  for (size_t i = 0; i < count; i++)
+  {
+    raw_sidedef_doom64_t raw;
+
+    if (!lump->Read(&raw, sizeof(raw)))
+    {
+      PrintLine(LOG_ERROR, "Error reading Doom64 sidedefs.");
+    }
+
+    sidedef_t *side = NewSidedef(level);
+
+    side->offset_x = GetLittleEndian(raw.x_offset);
+    side->offset_y = GetLittleEndian(raw.y_offset);
+    // We don't care about texture indexes here
+    side->sector = level.SafeLookupSector(GetLittleEndian(raw.sector), i);
+  }
+}
+
+static void GetLinedefs_Doom64(level_t &level)
+{
+  size_t count = 0;
+
+  Lump_c *lump = level.FindLevelLump("LINEDEFS");
+
+  if (lump)
+  {
+    count = lump->Length() / sizeof(raw_linedef_doom64_t);
+  }
+
+  if (lump == nullptr || count == 0)
+  {
+    return;
+  }
+
+  if (!lump->Seek(0))
+  {
+    PrintLine(LOG_ERROR, "Error seeking to Doom64 linedefs.");
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+  }
+
+  for (size_t i = 0; i < count; i++)
+  {
+    raw_linedef_doom64_t raw;
+
+    if (!lump->Read(&raw, sizeof(raw)))
+    {
+      PrintLine(LOG_ERROR, "Error reading Doom64 linedefs.");
+    }
+
+    linedef_t *line = NewLinedef(level);
+
+    line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), i);
+    line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), i);
+    line->flags = GetLittleEndian(raw.flags);
+    line->special = GetLittleEndian(raw.special);
+    line->args[0] = GetLittleEndian(raw.tag);
+    line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
+    line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
+
+    line->start->is_used = true;
+    line->end->is_used = true;
+
+    ValidateLinedef(level, line);
+  }
+}
+
+static void GetThings_Doom64(level_t &level)
+{
+  size_t count = 0;
+
+  Lump_c *lump = level.FindLevelLump("THINGS");
+
+  if (lump)
+  {
+    count = lump->Length() / sizeof(raw_thing_doom64_t);
+  }
+
+  if (lump == nullptr || count == 0)
+  {
+    return;
+  }
+
+  if (!lump->Seek(0))
+  {
+    PrintLine(LOG_ERROR, "Error seeking to Doom64 things.");
+  }
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+  }
+
+  for (size_t i = 0; i < count; i++)
+  {
+    raw_thing_doom64_t raw;
+
+    if (!lump->Read(&raw, sizeof(raw)))
+    {
+      PrintLine(LOG_ERROR, "Error reading Doom64 things.");
+    }
+
+    thing_t *thing = NewThing(level);
+
+    thing->x = GetLittleEndian(raw.x);
+    thing->y = GetLittleEndian(raw.y);
+    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
+  }
+}
+
 /* ----- UDMF reading routines ------------------------- */
 
 static constexpr uint32_t UDMF_THING = 1;
@@ -1118,6 +1343,14 @@ bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
 {
   bsp_format_t level_type = ctx.bsp_format;
 
+  if (level.format == MapFormat_Doom64)
+  {
+    // Clamp Doom64 maps to only vanilla and DeePBSPV4 formats.
+    // With support for fractional coordinates, it doesn't
+    // make sense for it to need to support XNOD, etc.
+    level_type = BSP_DoomBSP;
+  }
+
   if (level_type == BSP_DoomBSP &&            // always allow for a valid map to be produced
       (level.vertices.size() > LIMIT_VERT     // even if it may not run on some older source ports
        || level.nodes.size() > LIMIT_NODE     // or the vanilla EXE
@@ -1162,6 +1395,14 @@ void LoadLevel(level_t &level)
     GetSidedefs_Doom(level);
     GetLinedefs_Hexen(level);
     GetThings_Hexen(level);
+    PruneVerticesAtEnd(level);
+    break;
+  case MapFormat_Doom64:
+    GetVertices_Doom64(level);
+    GetSectors_Doom64(level);
+    GetSidedefs_Doom64(level);
+    GetLinedefs_Doom64(level);
+    GetThings_Doom64(level);
     PruneVerticesAtEnd(level);
     break;
   case MapFormat_UDMF:
@@ -1244,31 +1485,55 @@ build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
   AddMissingLump(level, "REJECT", "SECTORS");
   AddMissingLump(level, "BLOCKMAP", "REJECT");
 
+  // No need to add BEHAVIOR, LIGHTS or MACROS
+  if (level.format == MapFormat_Doom64)
+  {
+    AddMissingLump(level, "LEAFS", "BLOCKMAP");
+  }
+
   // check for overflows...
   CheckBinaryFormatLimits(level);
 
   bsp_format_t level_type = CheckFormatBSP(config, level);
 
-  switch (level_type)
+  if (level.format == MapFormat_Doom64)
   {
-  case BSP_XGL3:
-    SaveDoom_XGL3(level, root_node);
-    break;
-  case BSP_XGL2:
-    SaveDoom_XGL2(level, root_node);
-    break;
-  case BSP_XGLN:
-    SaveDoom_XGLN(level, root_node);
-    break;
-  case BSP_XNOD:
-    SaveDoom_XNOD(level, root_node);
-    break;
-  case BSP_DeePBSPV4:
-    SaveDoom_DeePBSPV4(level, root_node);
-    break;
-  case BSP_DoomBSP:
-    SaveDoom_DoomBSP(level, root_node);
-    break;
+    switch (level_type)
+    {
+    case BSP_DeePBSPV4:
+      SaveDoom64_DeePBSPV4(level, root_node);
+      break;
+    case BSP_DoomBSP:
+      SaveDoom64_DoomBSP(level, root_node);
+      break;
+    default:
+      PrintLine(LOG_ERROR, "ERROR: Tried to write unsupported BSP format #%d on Doom64 map format", level_type);
+      break;
+    }
+  }
+  else // MapFormat_Doom or MapFormat_Hexen
+  {
+    switch (level_type)
+    {
+    case BSP_XGL3:
+      SaveDoom_XGL3(level, root_node);
+      break;
+    case BSP_XGL2:
+      SaveDoom_XGL2(level, root_node);
+      break;
+    case BSP_XGLN:
+      SaveDoom_XGLN(level, root_node);
+      break;
+    case BSP_XNOD:
+      SaveDoom_XNOD(level, root_node);
+      break;
+    case BSP_DeePBSPV4:
+      SaveDoom_DeePBSPV4(level, root_node);
+      break;
+    case BSP_DoomBSP:
+      SaveDoom_DoomBSP(level, root_node);
+      break;
+    }
   }
 
   PutBlockmap(level);
@@ -1441,6 +1706,7 @@ build_result_e BuildLevel(level_t &level, const char *filename)
   {
   case MapFormat_Doom:
   case MapFormat_Hexen:
+  case MapFormat_Doom64:
     ret = SaveLevelBinaryFormat(level, root_node);
     break;
   case MapFormat_UDMF:

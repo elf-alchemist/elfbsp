@@ -635,6 +635,7 @@ using map_format_t = enum map_format_e
 
   MapFormat_Doom,
   MapFormat_Hexen,
+  MapFormat_Doom64,
   MapFormat_UDMF,
 };
 
@@ -655,6 +656,11 @@ using lump_order_t = enum lump_order_e
   LL_BLOCKMAP,  // LUT, motion clipping, walls/grid element
   LL_BEHAVIOR,  // ACS bytecode
   LL_SCRIPTS,   // ACS source code
+
+  D64_LEAFS = LL_BLOCKMAP + 1, // PSX/N64 hardware rendering
+  D64_LIGHTS,                  // Colored sectors
+  D64_MACROS,                  // BLAM
+  D64_SCRIPTS,                 // BLAM
 
   LL_TEXTMAP = LL_LABEL + 1, // UDMF geometry
   LL_ENDMAP,                 // UDMF end marker
@@ -747,6 +753,59 @@ using raw_thing_hexen_t = struct raw_thing_hexen_s
   uint8_t special;  // special type
   uint8_t args[5];  // special arguments
 } PACKEDATTR;
+
+// -Elf- Doom64 definitions
+// Some are shared with PSX Doom's and PSX Final Doom's formats
+// but we don't support those
+
+using raw_vertex_doom64_t = struct raw_vertex_doom64_s
+{
+  fixed_t x;
+  fixed_t y;
+} PACKEDATTR;
+
+using raw_thing_doom64_t = struct raw_thing_doom64_s
+{
+  int16_t x;        // x position of thing
+  int16_t y;        // y position of thing
+  int16_t z;        // y position of thing
+  int16_t angle;    // angle thing faces (degrees)
+  int16_t type;     // type of thing
+  uint16_t options; // when appears, deaf, etc..
+} PACKEDATTR;
+
+using raw_linedef_doom64_t = struct raw_linedef_doom64_s
+{
+  uint16_t start;   // from this vertex...
+  uint16_t end;     // ... to this vertex
+  uint32_t flags;   // linedef flags (impassible, etc)
+  uint16_t special; // special type
+  uint16_t tag;     // this linedef activates the sector with same tag
+  uint16_t right;   // right sidedef
+  uint16_t left;    // left sidedef (only if this line adjoins 2 sectors)
+} PACKEDATTR;
+
+using raw_sidedef_doom64_t = struct raw_sidedef_doom64_s
+{
+  int16_t x_offset;   // X offset for texture
+  int16_t y_offset;   // Y offset for texture
+  uint16_t upper_tex; // texture index for the part above
+  uint16_t lower_tex; // texture index for the part below
+  uint16_t mid_tex;   // texture index for the regular part
+  uint16_t sector;    // adjacent sector
+} PACKEDATTR;
+
+using raw_sector_doom64_t = struct raw_sector_doom64_s
+{
+  int16_t floorh;     // floor height
+  int16_t ceilh;      // ceiling height
+  uint16_t floor_tex; // floor texture
+  uint16_t ceil_tex;  // ceiling texture
+  uint16_t colors[5]; // hardware rendering colors, LIGHTS
+  uint16_t special;   // special type
+  uint16_t tag;       // tag number
+  uint16_t flags;     // reverb, damage, water, etc
+};
 
 //------------------------------------------------------------------------
 // BSP TREE STRUCTURES
@@ -877,6 +936,12 @@ using raw_seg_vanilla_t = struct raw_seg_vanilla_s
   int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
+using raw_leaf_vanilla_t = struct raw_leaf_vanilla_s
+{
+  uint16_t vertex;
+  uint16_t seg;
+} PACKEDATTR;
+
 //
 // DeepSea BSP
 // * compared to vanilla, some types were raise to 32bit
@@ -903,6 +968,12 @@ using raw_seg_deepbspv4_t = struct raw_seg_deepbspv4_s
   uint16_t linedef; // linedef that this seg goes along
   uint16_t flip;    // true if not the same direction as linedef
   int16_t dist;     // distance from starting point
+} PACKEDATTR;
+
+using raw_leaf_deepbspv4_t = struct raw_leaf_deepbspv4_s
+{
+  uint32_t vertex;
+  uint32_t seg;
 } PACKEDATTR;
 
 //
@@ -1101,6 +1172,43 @@ using lineflag_hexen_t = enum lineflag_hexen_e : uint16_t
   MLF_HEXEN_MONCANACTIVATE = BIT(13),
   MLF_HEXEN_BLOCKPLAYERS = BIT(14),
   MLF_HEXEN_BLOCKEVERYTHING = BIT(15),
+};
+
+// See https://www.doom64.com/maps/linedefs.html
+using lineflag_doom64_t = enum lineflag_doom64_e : uint32_t
+{
+  MLF_DOOM64_BLOCKING = MLF_BLOCKING,
+  MLF_DOOM64_BLOCKMONSTERS = MLF_BLOCKMONSTERS,
+  MLF_DOOM64_TWOSIDED = MLF_TWOSIDED,
+  MLF_DOOM64_UPPERUNPEGGED = MLF_UPPERUNPEGGED,
+  MLF_DOOM64_LOWERUNPEGGED = MLF_LOWERUNPEGGED,
+  MLF_DOOM64_AUTOMAP_ONESIDED = BIT(5),
+  MLF_DOOM64_BLOCKSOUND = BIT(6),
+  MLF_DOOM64_AUTOMAP_HIDE = BIT(7),
+  MLF_DOOM64_AUTOMAP_SHOW = BIT(8),
+  MLF_DOOM64_RENDER_MIDTEX = BIT(9),
+  MLF_DOOM64_NO_OCCLUSION = BIT(10),
+  MLF_DOOM64_BLOCKPROJ = BIT(11),
+  MLF_DOOM64_DEAD_TRIGGER = BIT(12),
+  MLF_DOOM64_DECAL_UPPER = BIT(13),
+  MLF_DOOM64_DECAL_LOWER = BIT(14),
+  MLF_DOOM64_SWITCH_UPPER = BIT(15),
+  MLF_DOOM64_SWITCH_LOWER = BIT(16),
+  MLF_DOOM64_SCROLL_LEFT = BIT(17),
+  MLF_DOOM64_SCROLL_RIGHT = BIT(18),
+  MLF_DOOM64_SCROLL_UP = BIT(19),
+  MLF_DOOM64_SCROLL_DOWN = BIT(20),
+  MLF_DOOM64_PEG_COLOR_UPPER = BIT(21),
+  MLF_DOOM64_PEG_COLOR_LOWER = BIT(22),
+  MLF_DOOM64_UPPER_WALL_COLOR_BLEND = BIT(23),
+  MLF_DOOM64_TRIGGER_FRONT = BIT(24),
+  MLF_DOOM64_AUTOMAP_HIDE_SPECIAL = BIT(25),
+  MLF_DOOM64_FLIP_UPPER_PEGGED_COLOR = BIT(26),
+  MLF_DOOM64EXPLUS_BLOCKPLAYER = BIT(27),
+  MLF_DOOM64_UNUSED_28 = BIT(28),
+  MLF_DOOM64_UNUSED_29 = BIT(29),
+  MLF_DOOM64_MIRROR_HORI = BIT(30),
+  MLF_DOOM64_MIRROR_VERT = BIT(31),
 };
 
 using hexen_activation_t = enum hexen_activation_e
@@ -1514,6 +1622,8 @@ struct Lump_c
     {
       l_start = 0;
     }
+
+    parent->FinishLump(l_length);
   }
 };
 

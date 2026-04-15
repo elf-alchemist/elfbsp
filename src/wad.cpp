@@ -250,6 +250,18 @@ static bool IsLevelLump(const char *name)
   {
     return true;
   }
+  if (StringCaseCmp(name, "LEAFS") == 0)
+  {
+    return true;
+  }
+  if (StringCaseCmp(name, "LIGHTS") == 0)
+  {
+    return true;
+  }
+  if (StringCaseCmp(name, "MACROS") == 0)
+  {
+    return true;
+  }
 
   return WhatLevelPart(name) != 0;
 }
@@ -329,6 +341,11 @@ map_format_e Wad_file::LevelFormat(size_t lev_num)
   if (LevelLookupLump(lev_num, "BEHAVIOR") != NO_INDEX)
   {
     return MapFormat_Hexen;
+  }
+
+  if (LevelLookupLump(lev_num, "LIGHTS") != NO_INDEX && LevelLookupLump(lev_num, "MACROS") != NO_INDEX)
+  {
+    return MapFormat_Doom64;
   }
 
   return MapFormat_Doom;

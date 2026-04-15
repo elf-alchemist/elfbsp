@@ -144,7 +144,7 @@ struct linedef_t
   sidedef_t *left;  // left sidedef, or nullptr if none
 
   int32_t special; //
-  uint16_t flags;  // currently we only care about two-sided lines, but who knows
+  uint32_t flags;  // currently we only care about two-sided lines, but who knows
   int32_t args[5]; // Tag => arg0/id split
   int32_t id;      //
 
@@ -582,6 +582,10 @@ void ClockwiseBspTree(level_t &level);
 // removing minisegs).
 void NormaliseBspTree(level_t &level);
 
+// Mark new vertices as old for writing into the VERTEXES lump
+// Needed for RoundOffBspTree and saving to Doom 64 map formats directly
+void RoundOffVertices(level_t &level);
+
 // traverse the BSP tree, doing whatever is necessary to round
 // vertices to integer coordinates (for example, removing segs whose
 // rounded coordinates degenerate to the same point).
@@ -601,5 +605,8 @@ void SaveDoom_XNOD(level_t &level, node_t *root_node);
 void SaveDoom_XGLN(level_t &level, node_t *root_node);
 void SaveDoom_XGL2(level_t &level, node_t *root_node);
 void SaveDoom_XGL3(level_t &level, node_t *root_node);
+
+void SaveDoom64_DoomBSP(level_t &level, node_t *root_node);
+void SaveDoom64_DeePBSPV4(level_t &level, node_t *root_node);
 
 void SaveTextmap_ZNODES(level_t &level, node_t *root_node);

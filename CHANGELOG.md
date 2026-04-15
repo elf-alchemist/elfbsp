@@ -1,2 +1,7 @@
 Changes since ELFBSP 1.2
 ========================
+
+New features:
+* Added simple performance profiler, benchmarking the time needed for certain parts of the code to finish work.
+* Added support for the brand new XBM1 32-bit blockmap lump format.
+* Added support for the Doom 64 binary map format, and its `LEAFS` lump.
