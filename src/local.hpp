@@ -113,6 +113,9 @@ struct sector_t
   // RING, containing all sectors of the same group.
   size_t rej_group;
 
+  sector_t *rej_next;
+  sector_t *rej_prev;
+
   double height_floor;
   double height_ceiling;
 };
@@ -415,7 +418,6 @@ using level_t = struct level_t
 
   uint8_t *reject_matrix;
   size_t reject_size;
-  std::vector<size_t> reject_groups;
 
   int16_t block_x, block_y;
   size_t block_w, block_h;

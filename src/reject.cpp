@@ -21,6 +21,7 @@
 //
 //------------------------------------------------------------------------------
 
+#include "core.hpp"
 #include "local.hpp"
 
 //------------------------------------------------------------------------
@@ -37,11 +38,12 @@ static void Reject_Init(level_t &level)
   level.reject_matrix = new uint8_t[level.reject_size];
   memset(level.reject_matrix, 0, level.reject_size);
 
-  level.reject_groups.resize(level.sectors.size());
-
   for (size_t i = 0; i < level.sectors.size(); i++)
   {
-    level.reject_groups[i] = i;
+    sector_t *sec = level.sectors[i];
+
+    sec->rej_group = i;
+    sec->rej_next = sec->rej_prev = sec;
   }
 }
 
@@ -49,7 +51,6 @@ static void Reject_Free(level_t &level)
 {
   delete[] level.reject_matrix;
   level.reject_matrix = nullptr;
-  level.reject_groups.clear();
 }
 
 //
@@ -70,6 +71,7 @@ static void Reject_GroupSectors(level_t &level)
 
     sector_t *sec1 = line->right->sector;
     sector_t *sec2 = line->left->sector;
+    sector_t *tmp;
 
     if (!sec1 || !sec2 || sec1 == sec2)
     {
@@ -77,28 +79,38 @@ static void Reject_GroupSectors(level_t &level)
     }
 
     // already in the same group ?
-    size_t group1 = level.reject_groups[sec1->index];
-    size_t group2 = level.reject_groups[sec2->index];
-
-    if (group1 == group2)
+    if (sec1->rej_group == sec2->rej_group)
     {
       continue;
     }
 
-    // prefer the group numbers to become lower
-    if (group1 > group2)
+    // swap sectors so that the smallest group is added to the biggest
+    // group.  This is based on the assumption that sector numbers in
+    // wads will generally increase over the set of linedefs, and so
+    // (by swapping) we'll tend to add small groups into larger groups,
+    // thereby minimising the updates to 'rej_group' fields when merging.
+    if (sec1->rej_group > sec2->rej_group)
     {
-      std::swap(group1, group2);
+      tmp = sec1;
+      sec1 = sec2;
+      sec2 = tmp;
     }
 
-    // merge the groups
-    for (size_t s = 0; s < level.sectors.size(); s++)
+    // update the group numbers in the second group
+    sec2->rej_group = sec1->rej_group;
+
+    for (tmp = sec2->rej_next; tmp != sec2; tmp = tmp->rej_next)
     {
-      if (level.reject_groups[s] == group2)
-      {
-        level.reject_groups[s] = group1;
-      }
+      tmp->rej_group = sec1->rej_group;
     }
+
+    // merge 'em baby...
+    sec1->rej_next->rej_prev = sec2;
+    sec2->rej_next->rej_prev = sec1;
+
+    tmp = sec1->rej_next;
+    sec1->rej_next = sec2->rej_next;
+    sec2->rej_next = tmp;
   }
 }
 
@@ -108,7 +120,10 @@ static void Reject_ProcessSectors(level_t &level)
   {
     for (size_t target = 0; target < view; target++)
     {
-      if (level.reject_groups[view] == level.reject_groups[target])
+      sector_t *view_sec = level.sectors[view];
+      sector_t *targ_sec = level.sectors[target];
+
+      if (view_sec->rej_group == targ_sec->rej_group)
       {
         continue;
       }
@@ -121,6 +136,32 @@ static void Reject_ProcessSectors(level_t &level)
       level.reject_matrix[p1 >> 3] |= (1 << (p1 & 7));
       level.reject_matrix[p2 >> 3] |= (1 << (p2 & 7));
     }
+  }
+}
+
+// Note: this routine is destructive to the group numbers
+static void Reject_DebugGroups(level_t &level)
+{
+  if (HAS_NONE(config.debug, DEBUG_REJECT)) return;
+
+  for (size_t i = 0; i < level.sectors.size(); i++)
+  {
+    sector_t *sec = level.sectors[i];
+    size_t group = sec->rej_group;
+    size_t num = 0;
+
+    if (group == NO_INDEX) continue;
+
+    sec->rej_group = NO_INDEX;
+    num++;
+
+    for (sector_t *tmp = sec->rej_next; tmp != sec; tmp = tmp->rej_next)
+    {
+      tmp->rej_group = NO_INDEX;
+      num++;
+    }
+
+    PrintLine(LOG_NORMAL, "[%s] Group %zu  Sectors %zu", __func__, group, num);
   }
 }
 
@@ -149,6 +190,7 @@ void PutReject(level_t &level)
   Reject_Init(level);
   Reject_GroupSectors(level);
   Reject_ProcessSectors(level);
+  Reject_DebugGroups(level);
   Reject_WriteLump(level);
   Reject_Free(level);
   if (config.verbose)
