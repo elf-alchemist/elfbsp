@@ -29,10 +29,10 @@
 * `2019-06-14` — Fabian and Graf retroactively add ZNOD support to PrBoom+um [^prboom-znod]
 * `2019-10-20` — Apted adds XGL3 support to Eureka [^eureka-xgl3]
 * `2023-01-14` — Kraflab adds the reading of XGLN/ZGLN format in UDMF maps, without adding XGLN segs [^dsda-xgl-part1]
-* `2023-01-23` — Kraflab implements code for parsing XGLN/ZGLN Segs support in DSDA [^dsda-xgl-part2]
+* `2023-01-23` — Kraflab implements code for parsing XGLN/ZGLN Segs in DSDA [^dsda-xgl-part2]
 * `2023-01-23` — Roman Fomin adds DeePBSPV4, XNOD and ZNOD formats to Crispy-Heretic [^crispy-heretic-extnodes]
 * `2023-01-30` — Kraflab adds XGL2/ZGL2 and XGL3/ZGL3 support to DSDA, for UDMF maps [^dsda-xgl-part3] and adds XGLN/2/3 node support to binary format maps [^dsda-xgl-part4]
-* `2026-04-01` — Elf-Alchemist adds the remaining ZDBSP nodes to Crispy Doom, Heretic, Hexen and Strife [^crispy-zdbsp]
+* `2026-04-01` — Elf-Alchemist adds all the remaining nodes to Crispy Doom, Heretic, Hexen and Strife [^crispy-zdbsp]
 
 [^glbsp-v1-v2]: https://github.com/elf-alchemist/glbsp-archive/commit/12188e7b46bb27422b452f972315631c308bb7bc
 [^deepbspv4-origin]: https://www.doomworld.com/forum/topic/23391-new-node-format/
