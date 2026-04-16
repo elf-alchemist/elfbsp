@@ -47,6 +47,13 @@ static void Reject_Init(level_t &level)
   }
 }
 
+static void Reject_WriteLump(level_t &level)
+{
+  Lump_c *lump = CreateLevelLump(level, "REJECT", level.reject_size);
+  lump->Write(level.reject_matrix, level.reject_size);
+  lump->Finish();
+}
+
 static void Reject_Free(level_t &level)
 {
   delete[] level.reject_matrix;
@@ -163,13 +170,6 @@ static void Reject_DebugGroups(level_t &level)
 
     PrintLine(LOG_NORMAL, "[%s] Group %zu  Sectors %zu", __func__, group, num);
   }
-}
-
-static void Reject_WriteLump(level_t &level)
-{
-  Lump_c *lump = CreateLevelLump(level, "REJECT", level.reject_size);
-  lump->Write(level.reject_matrix, level.reject_size);
-  lump->Finish();
 }
 
 //

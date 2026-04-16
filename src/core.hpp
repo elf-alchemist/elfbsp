@@ -1309,6 +1309,9 @@ using bsp_effects_t = enum bsp_effects_e : uint32_t
 {
   FX_Nothing = 0,
 
+  // Two-sided line
+  FX_TwoSided = BIT(25),
+
   // Zero-length line
   FX_ZeroLength = BIT(26),
 

@@ -567,12 +567,16 @@ static void GetLinedefs_Doom(level_t &level)
     line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), i);
     line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
     line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
-    line->flags = GetLittleEndian(raw.flags);
     line->special = GetLittleEndian(raw.special);
     line->args[0] = GetLittleEndian(raw.tag);
 
     line->start->is_used = true;
     line->end->is_used = true;
+
+    if (HAS_BIT(GetLittleEndian(raw.flags), MLF_TWOSIDED))
+    {
+      line->effects |= FX_TwoSided;
+    }
 
     ValidateLinedef(level, line);
 
@@ -706,7 +710,6 @@ static void GetLinedefs_Hexen(level_t &level)
 
     line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), i);
     line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), i);
-    line->flags = GetLittleEndian(raw.flags);
     line->special = raw.special;
     line->args[0] = raw.args[0];
     line->args[1] = raw.args[1];
@@ -718,6 +721,11 @@ static void GetLinedefs_Hexen(level_t &level)
 
     line->start->is_used = true;
     line->end->is_used = true;
+
+    if (HAS_BIT(GetLittleEndian(raw.flags), MLF_HEXEN_TWOSIDED))
+    {
+      line->effects |= FX_TwoSided;
+    }
 
     ValidateLinedef(level, line);
 
@@ -906,7 +914,6 @@ static void GetLinedefs_Doom64(level_t &level)
 
     line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), i);
     line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), i);
-    line->flags = GetLittleEndian(raw.flags);
     line->special = GetLittleEndian(raw.special);
     line->args[0] = GetLittleEndian(raw.tag);
     line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
@@ -914,6 +921,11 @@ static void GetLinedefs_Doom64(level_t &level)
 
     line->start->is_used = true;
     line->end->is_used = true;
+
+    if (HAS_BIT(GetLittleEndian(raw.flags), MLF_TWOSIDED))
+    {
+      line->effects |= FX_TwoSided;
+    }
 
     ValidateLinedef(level, line);
   }
@@ -1044,7 +1056,7 @@ static void ParseLinedefField(level_t &level, linedef_t *line, const std::string
   {
     if (LEX_Boolean(value))
     {
-      line->flags |= MLF_TWOSIDED;
+      line->effects |= FX_TwoSided;
     };
   }
 

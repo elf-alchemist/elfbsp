@@ -147,9 +147,7 @@ struct linedef_t
   sidedef_t *left;  // left sidedef, or nullptr if none
 
   int32_t special; //
-  uint32_t flags;  // currently we only care about two-sided lines, but who knows
   int32_t args[5]; // Tag => arg0/id split
-  int32_t id;      //
 
   uint32_t effects = FX_Nothing;
   seg_rotation_t angle = FX_DoNotRotate;
