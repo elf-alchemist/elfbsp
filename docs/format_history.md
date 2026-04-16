@@ -32,6 +32,7 @@
 * `2023-01-23` — Kraflab implements code for parsing XGLN/ZGLN Segs support in DSDA [^dsda-xgl-part2]
 * `2023-01-23` — Roman Fomin adds DeePBSPV4, XNOD and ZNOD formats to Crispy-Heretic [^crispy-heretic-extnodes]
 * `2023-01-30` — Kraflab adds XGL2/ZGL2 and XGL3/ZGL3 support to DSDA, for UDMF maps [^dsda-xgl-part3] and adds XGLN/2/3 node support to binary format maps [^dsda-xgl-part4]
+* `2026-04-01` — Elf-Alchemist adds the remaining ZDBSP nodes to Crispy Doom, Heretic, Hexen and Strife [^crispy-zdbsp]
 
 [^glbsp-v1-v2]: https://github.com/elf-alchemist/glbsp-archive/commit/12188e7b46bb27422b452f972315631c308bb7bc
 [^deepbspv4-origin]: https://www.doomworld.com/forum/topic/23391-new-node-format/
@@ -59,3 +60,4 @@
 [^crispy-heretic-extnodes]: https://github.com/fabiangreffrath/crispy-doom/commit/3a62c5364f8dfd73e958833f155e583a374ba472
 [^dsda-xgl-part3]: https://github.com/kraflab/dsda-doom/commit/c79da61db00a97d69178090b42adf7fa309f1511
 [^dsda-xgl-part4]: https://github.com/kraflab/dsda-doom/commit/20ff581810aabf6d3ec4825b5886a483df5d41e2
+[^crispy-zdbsp]: https://github.com/fabiangreffrath/crispy-doom/commit/27ca593c30ae56528e388733b1eb5dc4fef43349
