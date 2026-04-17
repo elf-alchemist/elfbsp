@@ -2,7 +2,7 @@
 
 * `1998-05-03` — Lee Killough defines the first attempt at an internal blockmap builder during Boom's development [^boom-blockmap-part1]
 * `1998-10-06` — James Flynn disables Killough's first attempt, in favor a new and improved algorithm [^boom-blockmap-part2]
-* `1998-10` —  Lee Killough creates yet another blockmap rebuilding algorithm in MBF.
+* `1998-10` —  Lee Killough creates yet another blockmap rebuilding algorithm in MBF [^mbf-blockmap]
 * `1999-09` — Andrew Apted starts working on glBSP and designing the earliest spec for GL nodes
 * `2000-06` — Andrew Apted releases EDGE, with support for GL nodes, rebuilding with internal builder if not present
 * `2000-09-04` — Earliest SVN revision of glBSP, already contains V1 and V2 GL nodes [^glbsp-v1-v2]  
@@ -51,8 +51,9 @@
 * `2025-12-08` — Immorpher forks Diema's DMA-BSP64, starting BSP64-Enhanced and adding even more special effects and improving sidedef compression [^d64bsp-enhanced]
 * `2026-04-01` — Elf-Alchemist adds all the remaining node formats, and extended vanilla blockmap support, to Crispy Doom, Heretic, Hexen and Strife [^crispy-full-extnodes-blockmap]
 
-[^boom-blockmap-part1]: 
-[^boom-blockmap-part2]: 
+[^boom-blockmap-part1]: https://github.com/doom-cross-port-collab/boom/blob/2a11d37040be9ac40a61f4c7b7f4541bef2411bf/src/p_setup.c#L921-L923
+[^boom-blockmap-part2]: https://github.com/doom-cross-port-collab/boom/blob/2a11d37040be9ac40a61f4c7b7f4541bef2411bf/src/p_setup.c#L605-L609
+[^mbf-blockmap]
 [^glbsp-v1-v2]: https://github.com/elf-alchemist/glbsp-archive/commit/12188e7b46bb27422b452f972315631c308bb7bc
 [^deepbspv4-origin]: https://www.doomworld.com/forum/topic/23391-new-node-format/
 [^glbsp-glv3]: https://github.com/elf-alchemist/glbsp-archive/commit/efdeccfcfd56016ce2e18ec8dc90e4eb2c668eb9
@@ -80,7 +81,7 @@
 [^eureka-xnod]: https://github.com/ioan-chera/eureka-editor/commit/426358794acd32d82efddc0542255b149b67db2b
 [^prboom-znod]: https://github.com/kraflab/dsda-doom/commit/aaa3877f83277a12bbcd8b14e8c204ed048066d2
 [^eureka-xgl3]: https://github.com/ioan-chera/eureka-editor/commit/de449b796f02c30b04473c15884e79d58b70a4e7
-[^woof-reject] https://github.com/fabiangreffrath/woof/commit/00e17c0e1fe95a922957ba5e458c2ab514cd3650
+[^woof-reject]: https://github.com/fabiangreffrath/woof/commit/00e17c0e1fe95a922957ba5e458c2ab514cd3650
 [^woof-extnodes]: https://github.com/fabiangreffrath/woof/commit/0a690dc10e0c985b3e3a29757d5ac0e8635e0e8b
 [^woof-boom-blockmap]: https://github.com/fabiangreffrath/woof/commit/b1daa874c56640beebcdb4649dce2f51eb5c7174
 [^dsda-xgl-part1]: https://github.com/kraflab/dsda-doom/commit/9caaa25824765338f631027d2ecd79cb8ee57a9d
@@ -91,6 +92,6 @@
 [^woof-xgl-part1]:https://github.com/fabiangreffrath/woof/commit/483e4e7892a1b3e0d0f5fec592bee71a66da1b65
 [^d64bsp-diema]: https://github.com/darkhaven3/dma-bsp64/commits/490fea6b330fc1e23c4015af311c2f87ea17bcd8
 [^chocolate-reject-part2]: https://github.com/chocolate-doom/chocolate-doom/commit/c52a135e5a606fa1fc91e68845d3eae6ac6adefc
-https://github.com/fabiangreffrath/woof/commit/cd9f22574039d3473c37e7f02072f338f0273d30
+[^woof-xgl-part2]: https://github.com/fabiangreffrath/woof/commit/cd9f22574039d3473c37e7f02072f338f0273d30
 [^d64bsp-enhanced]: https://github.com/darkhaven3/dma-bsp64/compare/490fea6b...Immorpher:BSP64Enhanced:66482413
 [^crispy-full-extnodes-blockmap]: https://github.com/fabiangreffrath/crispy-doom/commit/27ca593c30ae56528e388733b1eb5dc4fef43349
