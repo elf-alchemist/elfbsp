@@ -13,11 +13,11 @@
 * `2004-04-30` — Deep (Jack) discusses on Doomworld the creation and design of a new node format [^deepbspv4-origin]
 * `2004-07-13` — glBSP adds GL V3 nodes [^glbsp-glv3]
 * `2004-10-09` — DeePsea 11.92f (quietly) releases with DeePBSPV4 and GL V4 nodes support [^deepbspv4-release]
-* `2004-11-04` Colin Phipps creates the original PrBoom reject padding implementation, without overflow emulation [^prboom-reject-padding]
+* `2004-11-04` — Colin Phipps creates the original PrBoom reject padding implementation, without overflow emulation [^prboom-reject-padding]
 * `2004-11-24` — Graf Zahl  points out concerns over the limitations of the GL V3 spec, prompting the sharing of the GL V4 spec, and the later development of GL V5 [^glv3-concern]
 * `2005-04-19` — Andrew Apted starts a discussion on the development of GL V5 nodes [^glv5-origin]
-* `2005-05-20` — glBSP adds GL V5 nodes [^glbsp-glv5]
-* `2005-05-20` — glBSP adds ZNOD support [^glbsp-znod]
+* `2005-05-20` — Andrew Apted adds GL V5 nodes to glBSP [^glbsp-glv5]
+* `2005-05-20` — Andrew Apted adds ZNOD support to glBSP [^glbsp-znod]
 * `2005-07-09` — GL V5 spec is publicly frozen [^glv5-spec]
 * `2006-02-24` — earliest SVN revision of ZDoom, already supports ZNOD and ZGLN nodes
 * `2006-07-21` — Andrey Budko adds in overflow emulation for reject padding [^prboom-reject-overflow]
@@ -50,10 +50,13 @@
 * `2025-11-25` — Elf-Alchemist adds XGL2/ZGL2 & XGL3/ZGL3 format support to Woof! [^woof-xgl-part2]
 * `2025-12-08` — Immorpher forks Diema's DMA-BSP64, starting BSP64-Enhanced and adding even more special effects and improving sidedef compression [^d64bsp-enhanced]
 * `2026-04-01` — Elf-Alchemist adds all the remaining node formats, and extended vanilla blockmap support, to Crispy Doom, Heretic, Hexen and Strife [^crispy-full-extnodes-blockmap]
+* `2026-04-14` — Elf-Alchemist adds XBM1 blockmap lump support to ELFBSP [^elfbsp-xbm1]
+* `2026-04-14` — Elf-Alchemist adds Doom64 LEAFS format support to ELFBSP, with vanilla and DeePBSPV4 lump support [^elfbsp-leafs]
+* `2026-04-16` — Elf-Alchemist adds XBM1 blockmap lump support to Woof! [^woof-xbm1]
 
 [^boom-blockmap-part1]: https://github.com/doom-cross-port-collab/boom/blob/2a11d37040be9ac40a61f4c7b7f4541bef2411bf/src/p_setup.c#L921-L923
 [^boom-blockmap-part2]: https://github.com/doom-cross-port-collab/boom/blob/2a11d37040be9ac40a61f4c7b7f4541bef2411bf/src/p_setup.c#L605-L609
-[^mbf-blockmap]
+[^mbf-blockmap]: https://github.com/doom-cross-port-collab/mbf/blob/8f705abd36ed2edc3ba64abb855f05a12dd71bc9/src/p_setup.c#L535-L546
 [^glbsp-v1-v2]: https://github.com/elf-alchemist/glbsp-archive/commit/12188e7b46bb27422b452f972315631c308bb7bc
 [^deepbspv4-origin]: https://www.doomworld.com/forum/topic/23391-new-node-format/
 [^glbsp-glv3]: https://github.com/elf-alchemist/glbsp-archive/commit/efdeccfcfd56016ce2e18ec8dc90e4eb2c668eb9
@@ -95,3 +98,6 @@
 [^woof-xgl-part2]: https://github.com/fabiangreffrath/woof/commit/cd9f22574039d3473c37e7f02072f338f0273d30
 [^d64bsp-enhanced]: https://github.com/darkhaven3/dma-bsp64/compare/490fea6b...Immorpher:BSP64Enhanced:66482413
 [^crispy-full-extnodes-blockmap]: https://github.com/fabiangreffrath/crispy-doom/commit/27ca593c30ae56528e388733b1eb5dc4fef43349
+[^elfbsp-xbm1]: https://github.com/elf-alchemist/elfbsp/commit/f06fa8f564ac61afcea7c5e8ca3b03c873cbe02c
+[^elfbsp-leafs]: https://github.com/elf-alchemist/elfbsp/commit/26116023a3bd5682a42039fa3e1ad6ddc5de9ed1
+[^woof-xbm1]: https://github.com/fabiangreffrath/woof/commit/d99cf96cb3d3f21c4e9fbaf2c70f15477aabde25
