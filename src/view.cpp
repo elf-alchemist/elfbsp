@@ -37,12 +37,14 @@ struct ViewContext_t
 
   // User requests
   std::string wad_path_from_dialog = "";
-  bool build_all_levels = false;
+  bool build_current_level = false;
 
   // Loaded data
   std::string wad_path = "";
   std::string wad_name = "";
   size_t wad_levels = 0;
+  level_t level;
+
   Job wad_build_state = Job::IDLE;
   ImGuiTextBuffer logger;
   bool scroll_to_bottom = true;
@@ -75,8 +77,8 @@ static void SystemInit(ViewContext_t &ctx)
 {
   SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_NAME_STRING, PROJECT_NAME);
   SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_VERSION_STRING, PROJECT_VERSION);
-  SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_IDENTIFIER_STRING, PROJECT_APPID);
-  SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_CREATOR_STRING, PROJECT_COMPANY);
+  SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_IDENTIFIER_STRING, PROJECT_IDENTIFIER);
+  SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_CREATOR_STRING, PROJECT_CREATOR);
   SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_COPYRIGHT_STRING, PROJECT_COPYRIGHT);
   SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_URL_STRING, PROJECT_URL);
   SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_TYPE_STRING, PROJECT_TYPE);
@@ -173,15 +175,12 @@ void WadFileDialog(ViewContext_t &ctx)
 
 //------------------------------------------------------------------------------
 
-static int SDLCALL BuildAllLevels(void *data)
+static int SDLCALL BuildCurrentLevel(void *data)
 {
   ViewContext_t *ctx = static_cast<ViewContext_t *>(data);
 
   // loop over each level in the wad
-  for (size_t n = 0; n < ctx->wad_levels; n++)
-  {
-    BuildLevel(n, ctx->wad_path.c_str());
-  }
+  BuildLevel(ctx->level, ctx->wad_path.c_str());
 
   ctx->wad_build_state = Job::SUCCESS;
   return 0;
@@ -205,13 +204,13 @@ void ProcessEvents(ViewContext_t &ctx)
   }
 
   // Build all levels form selected WAD
-  if (ctx.build_all_levels)
+  if (ctx.build_current_level)
   {
-    ctx.build_all_levels = false;
+    ctx.build_current_level = false;
     if (ctx.wad_build_state != Job::BUSY)
     {
       ctx.wad_build_state = Job::BUSY;
-      SDL_CreateThreadRuntime(BuildAllLevels, "BuildAllLevels", &ctx, nullptr, nullptr);
+      SDL_CreateThreadRuntime(BuildCurrentLevel, "BuildAllLevels", &ctx, nullptr, nullptr);
     }
   }
 }
@@ -221,7 +220,7 @@ void ProcessEvents(ViewContext_t &ctx)
 static auto MainWindow = [](ViewContext_t &ctx) -> void
 {
   ImGui::SetNextWindowSizeConstraints(ImVec2(200, -1), ImVec2(800, -1));
-  ImGui::Begin("ELFBSP", &ctx.active, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysAutoResize);
+  ImGui::Begin(PROJECT_STRING, &ctx.active, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_AlwaysAutoResize);
   ImGui::Text("FPS: %.1f", ctx.io->Framerate);
 
   if (ImGui::BeginMenuBar())
@@ -262,7 +261,7 @@ static auto MainWindow = [](ViewContext_t &ctx) -> void
     }
     if (ImGui::Button("Build All Levels"))
     {
-      ctx.build_all_levels = true;
+      ctx.build_current_level = true;
     }
   }
 
@@ -271,26 +270,27 @@ static auto MainWindow = [](ViewContext_t &ctx) -> void
 
 static auto WadWindow = [](ViewContext_t &ctx) -> void
 {
-  // GOD THIS SUCKS I NEED CONTEXT STRUCTS
-  if (ctx.wad_levels == 0 && lev_current_idx >= 0)
+  if (ctx.wad_levels == 0)
   {
     return;
   }
+  auto &level = ctx.level;
+
   ImGui::Begin("Currently loaded", &ctx.active, ImGuiWindowFlags_AlwaysAutoResize);
 
-  ImGui::Text("Level: %s", GetLevelName(lev_current_idx));
+  ImGui::Text("Level: %s", level.GetLevelName());
 
-  ImGui::Text("Vertices: %zu", lev_vertices.size());
-  ImGui::Text("Lines: %zu", lev_linedefs.size());
-  ImGui::Text("Sides: %zu", lev_sidedefs.size());
-  ImGui::Text("Sectors: %zu", lev_sectors.size());
-  ImGui::Text("Things: %zu", lev_things.size());
+  ImGui::Text("Vertices: %zu", level.vertices.size());
+  ImGui::Text("Lines: %zu", level.linedefs.size());
+  ImGui::Text("Sides: %zu", level.sidedefs.size());
+  ImGui::Text("Sectors: %zu", level.sectors.size());
+  ImGui::Text("Things: %zu", level.things.size());
 
-  ImGui::Text("Walltips: %zu", lev_walltips.size());
+  ImGui::Text("Walltips: %zu", level.walltips.size());
 
-  ImGui::Text("Nodes: %zu", lev_nodes.size());
-  ImGui::Text("Subsectors: %zu", lev_subsecs.size());
-  ImGui::Text("Segments: %zu", lev_segs.size());
+  ImGui::Text("Nodes: %zu", level.nodes.size());
+  ImGui::Text("Subsectors: %zu", level.subsecs.size());
+  ImGui::Text("Segments: %zu", level.segs.size());
 
   ImGui::End();
 };
@@ -321,7 +321,7 @@ static auto ConfigWindow = [](ViewContext_t &ctx) -> void
     ImGui::CheckboxFlags("Segment splitting", &config.debug, DEBUG_SPLIT);
     ImGui::CheckboxFlags("Cut list and minisegs", &config.debug, DEBUG_CUTLIST);
     ImGui::CheckboxFlags("Node builder", &config.debug, DEBUG_BUILDER);
-    ImGui::CheckboxFlags("Cloackwise segment sorting", &config.debug, DEBUG_SORTER);
+    ImGui::CheckboxFlags("Clockwise segment sorting", &config.debug, DEBUG_SORTER);
     ImGui::CheckboxFlags("Subsector generation", &config.debug, DEBUG_SUBSEC);
     ImGui::CheckboxFlags("WAD loading", &config.debug, DEBUG_WAD);
 

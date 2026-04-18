@@ -88,6 +88,19 @@ add_executable(${PROJECT_NAME}
     src/wad.cpp
 )
 
+string(TOUPPER "${PROJECT_NAME}" PROJECT_TITLE)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    PROJECT_NAME="${PROJECT_TITLE}"
+    PROJECT_VERSION="${PROJECT_VERSION}"
+    PROJECT_STRING="${PROJECT_TITLE} ${PROJECT_VERSION}"
+    PROJECT_IDENTIFIER="io.github.elf-alchemist.elfbsp"
+    PROJECT_CREATOR="elf-alchemist"
+    PROJECT_COPYRIGHT="Copyright \(C\) 1994-2026 - Guilherme Miranda, et al"
+    PROJECT_URL="https://github.com/elf-alchemist/elfbsp"
+    PROJECT_TYPE="application"
+)
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
     C_STANDARD 23
     CXX_STANDARD 20

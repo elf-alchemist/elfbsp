@@ -758,7 +758,7 @@ int32_t main(const int32_t argc, const char *argv[])
 
   if (opt_version)
   {
-    PrintLine(LOG_NORMAL, "ELFBSP v1.3");
+    PrintLine(LOG_NORMAL, PROJECT_STRING);
     return 0;
   }
 
