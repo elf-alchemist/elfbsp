@@ -33,3 +33,11 @@ This is used to protect deep water and invisible lifts/stairs from being messed 
 | #   | Name | Arg1 | Arg2 | Arg3 | Arg4 | Arg5 | Supported in ELFBSP? | Description |
 |-----|------|------|------|------|------|------|----------------------|-------------|
 | 108 | `BSP_SpecialEffects` | Do Not Add To Blockmap (boolean) | Do Not Split Seg (boolean) | Do Not Render Back Seg (boolean) | Do Not Render Front Seg (boolean) | | :heavy_check_mark:   | Apply special effects during the BSP tree building process, must be otherwise ignored by ports. |
+
+## Doom 64 map format
+
+Currently no special effects are supported on the Doom 64 map format.
+
+## UDMF
+
+Currently no special effects are supported on the UDMF format.

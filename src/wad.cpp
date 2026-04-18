@@ -65,8 +65,8 @@ void Lump_c::MakeEntry(raw_wad_entry_t *entry)
   memset(entry->name, 0, 8);
   memcpy(entry->name, lumpname.c_str(), lumpname.size());
 
-  entry->pos = GetLittleEndian(static_cast<uint32_t>(l_start));
-  entry->size = GetLittleEndian(static_cast<uint32_t>(l_length));
+  entry->pos = GetLittleEndian(IndexToInt(l_start));
+  entry->size = GetLittleEndian(IndexToInt(l_length));
 }
 
 //------------------------------------------------------------------------
@@ -250,6 +250,18 @@ static bool IsLevelLump(const char *name)
   {
     return true;
   }
+  if (StringCaseCmp(name, "LEAFS") == 0)
+  {
+    return true;
+  }
+  if (StringCaseCmp(name, "LIGHTS") == 0)
+  {
+    return true;
+  }
+  if (StringCaseCmp(name, "MACROS") == 0)
+  {
+    return true;
+  }
 
   return WhatLevelPart(name) != 0;
 }
@@ -261,8 +273,6 @@ Lump_c *Wad_file::GetLump(size_t index)
 
   return directory[index];
 }
-
-static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
 
 size_t Wad_file::LevelLookupLump(size_t lev_num, const char *name)
 {
@@ -321,21 +331,21 @@ size_t Wad_file::LevelHeader(size_t lev_num)
 
 map_format_e Wad_file::LevelFormat(size_t lev_num)
 {
-  size_t start = LevelHeader(lev_num);
-
-  if (start + 2 < NumLumps())
+  // UDMF maps can contain BEHAVIOR or MACROS
+  // check exclusively TEXTMAP
+  if (LevelLookupLump(lev_num, "TEXTMAP") != NO_INDEX)
   {
-    const char *name = GetLump(start + 1)->Name();
-
-    if (StringCaseCmp(name, "TEXTMAP") == 0)
-    {
-      return MapFormat_UDMF;
-    }
+    return MapFormat_UDMF;
   }
 
   if (LevelLookupLump(lev_num, "BEHAVIOR") != NO_INDEX)
   {
     return MapFormat_Hexen;
+  }
+
+  if (LevelLookupLump(lev_num, "LIGHTS") != NO_INDEX && LevelLookupLump(lev_num, "MACROS") != NO_INDEX)
+  {
+    return MapFormat_Doom64;
   }
 
   return MapFormat_Doom;
@@ -711,53 +721,6 @@ void Wad_file::EndWrite(void)
   insert_point = NO_INDEX;
 }
 
-void Wad_file::RemoveLumps(size_t index, size_t count)
-{
-  SYS_ASSERT(begun_write);
-  SYS_ASSERT(index < NumLumps());
-  SYS_ASSERT(directory[index]);
-
-  for (size_t i = 0; i < count; i++)
-  {
-    delete directory[index + i];
-  }
-
-  for (size_t i = index; i + count < NumLumps(); i++)
-  {
-    directory[i] = directory[i + count];
-  }
-
-  directory.resize(directory.size() - count);
-
-  // fix various arrays containing lump indices
-  FixGroup(levels, index, 0, count);
-  FixGroup(patches, index, 0, count);
-  FixGroup(sprites, index, 0, count);
-  FixGroup(flats, index, 0, count);
-  FixGroup(tx_tex, index, 0, count);
-
-  // reset the insertion point
-  insert_point = NO_INDEX;
-}
-
-void Wad_file::RemoveZNodes(size_t lev_num)
-{
-  SYS_ASSERT(begun_write);
-  SYS_ASSERT(lev_num < LevelCount());
-
-  size_t start = LevelHeader(lev_num);
-  size_t finish = LevelLastLump(lev_num);
-
-  for (; start <= finish; start++)
-  {
-    if (StringCaseCmp(directory[start]->Name(), "ZNODES") == 0)
-    {
-      RemoveLumps(start, 1);
-      break;
-    }
-  }
-}
-
 void Wad_file::FixGroup(std::vector<size_t> &group, size_t index, size_t num_added, size_t num_removed)
 {
   bool did_remove = false;
@@ -969,13 +932,14 @@ size_t Wad_file::PositionForWrite(size_t max_size)
 
   if (HAS_BIT(config.debug, DEBUG_WAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] POSITION FOR WRITE: %zu  (total_size %zu)", __func__, static_cast<size_t>(want_pos), static_cast<size_t>(total_size));
+    PrintLine(LOG_DEBUG, "[%s] POSITION FOR WRITE: %zu  (total_size %zu)", __func__, static_cast<size_t>(want_pos),
+              static_cast<size_t>(total_size));
   }
 
   return static_cast<size_t>(want_pos);
 }
 
-bool Wad_file::FinishLump(size_t final_size)
+void Wad_file::FinishLump(size_t final_size)
 {
   fflush(fp);
 
@@ -993,7 +957,6 @@ bool Wad_file::FinishLump(size_t final_size)
   }
 
   fflush(fp);
-  return true;
 }
 
 size_t Wad_file::WritePadding(size_t count)
@@ -1067,8 +1030,8 @@ void Wad_file::WriteDirectory(void)
 
   memcpy(header.ident, (kind == 'I') ? "IWAD" : "PWAD", 4);
 
-  header.dir_start = GetLittleEndian(static_cast<uint32_t>(dir_start));
-  header.num_entries = GetLittleEndian(static_cast<uint32_t>(dir_count));
+  header.dir_start = GetLittleEndian(IndexToInt(dir_start));
+  header.num_entries = GetLittleEndian(IndexToInt(dir_count));
 
   if (fwrite(&header, sizeof(header), 1, fp) != 1)
   {

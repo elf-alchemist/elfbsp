@@ -74,6 +74,7 @@ target_include_directories(imgui PUBLIC
 target_link_libraries(imgui PUBLIC SDL3::SDL3)
 
 add_executable(${PROJECT_NAME}
+    src/blockmap.cpp
     src/bsp.cpp
     src/core.hpp
     src/info.cpp
@@ -85,6 +86,7 @@ add_executable(${PROJECT_NAME}
     src/parse.cpp
     src/polyobj.cpp
     src/view.cpp
+    src/reject.cpp
     src/wad.cpp
 )
 
@@ -160,11 +162,17 @@ set(CPACK_GENERATOR ZIP)
 if(WIN32)
     install(FILES LICENSE.txt DESTINATION .)
     install(FILES elfbsp.cfg DESTINATION .)
+    install(FILES docs/changelog.md DESTINATION .)
+    install(FILES docs/command_line.md DESTINATION .)
+    install(FILES docs/special_effects.md DESTINATION .)
     install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION .)
 else()
     include(GNUInstallDirs)
     install(FILES LICENSE.txt DESTINATION "share/doc/${PROJECT_NAME}")
     install(FILES elfbsp.cfg DESTINATION "share/doc/${PROJECT_NAME}")
+    install(FILES docs/changelog.md DESTINATION "share/doc/${PROJECT_NAME}")
+    install(FILES docs/command_line.md DESTINATION "share/doc/${PROJECT_NAME}")
+    install(FILES docs/special_effects.md DESTINATION "share/doc/${PROJECT_NAME}")
     install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 

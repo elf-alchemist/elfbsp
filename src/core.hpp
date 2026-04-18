@@ -24,15 +24,6 @@
 
 #pragma once
 
-constexpr auto PROJECT_LICENSE = "GNU General Public License, version 2";
-
-constexpr auto PROJECT_NAME = "ELFBSP";
-constexpr auto PROJECT_VERSION = "v1.1";
-constexpr auto PROJECT_APPID = "io.github.";
-constexpr auto PROJECT_COMPANY = "elf-alchemist";
-constexpr auto PROJECT_COPYRIGHT = "Copyright (C) 1994-2026 - Guilherme Miranda, et al";
-constexpr auto PROJECT_URL = "https://github.com/elf-alchemist/elfbsp";
-constexpr auto PROJECT_TYPE = "application";
 /*
  *  Standard headers
  */
@@ -47,6 +38,7 @@ constexpr auto PROJECT_TYPE = "application";
 #include <cstring>
 
 #include <bit>
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -111,7 +103,8 @@ constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
 constexpr auto ENDIAN_BIG = (std::endian::native == std::endian::big);
 constexpr auto ENDIAN_LITTLE = !ENDIAN_BIG;
 
-template <typename T> constexpr T byteswap(T value) noexcept
+template <typename T>
+constexpr T byteswap(T value) noexcept
 {
   static_assert(std::is_integral_v<T>, "byteswap: integral required");
   static_assert(sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "byteswap: only 16/32/64-bit supported");
@@ -130,7 +123,8 @@ template <typename T> constexpr T byteswap(T value) noexcept
   }
 }
 
-template <typename T> constexpr T GetLittleEndian(T value)
+template <typename T>
+constexpr T GetLittleEndian(T value)
 {
   if constexpr (ENDIAN_BIG)
   {
@@ -142,7 +136,8 @@ template <typename T> constexpr T GetLittleEndian(T value)
   }
 }
 
-template <typename T> constexpr T GetBigEndian(T value)
+template <typename T>
+constexpr T GetBigEndian(T value)
 {
   if constexpr (ENDIAN_LITTLE)
   {
@@ -154,7 +149,8 @@ template <typename T> constexpr T GetBigEndian(T value)
   }
 }
 
-template <typename T> constexpr void RaiseValue(T &var, T value)
+template <typename T>
+constexpr void RaiseValue(T &var, T value)
 {
   var = std::max(var, value);
 }
@@ -173,6 +169,10 @@ constexpr long_angle_t LONG_ANGLE_1 = (LONG_ANGLE_45 / 45);
 constexpr uint32_t FRACBITS = 16;
 constexpr fixed_t FRACUNIT = (1 << FRACBITS);
 constexpr double FRACFACTOR = FRACUNIT;
+
+constexpr size_t ZERO_INDEX = static_cast<size_t>(0);
+constexpr uint16_t ZERO_INDEX_INT16 = static_cast<uint16_t>(0);
+constexpr uint32_t ZERO_INDEX_INT32 = static_cast<uint32_t>(0);
 
 constexpr size_t NO_INDEX = static_cast<size_t>(-1);
 constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
@@ -214,6 +214,16 @@ constexpr int32_t FixedToInt(const fixed_t x)
   return x >> FRACBITS;
 }
 
+constexpr fixed_t ShortToFixed(const int16_t x)
+{
+  return x << FRACBITS;
+}
+
+constexpr int16_t FixedToShort(const fixed_t x)
+{
+  return x >> FRACBITS;
+}
+
 constexpr double FixedToFloat(const fixed_t x)
 {
   return (static_cast<double>(x) / FRACFACTOR);
@@ -222,6 +232,26 @@ constexpr double FixedToFloat(const fixed_t x)
 constexpr fixed_t FloatToFixed(double x)
 {
   return static_cast<fixed_t>(x * FRACFACTOR);
+}
+
+constexpr int16_t FloatToShort(double x)
+{
+  return static_cast<int16_t>(floor(x));
+}
+
+constexpr double ShortToFloat(int16_t x)
+{
+  return static_cast<double>(x);
+}
+
+constexpr uint16_t IndexToShort(size_t x)
+{
+  return static_cast<uint16_t>(x);
+}
+
+constexpr uint32_t IndexToInt(size_t x)
+{
+  return static_cast<uint32_t>(x);
 }
 
 // binary angular measurement, BAM!
@@ -305,7 +335,8 @@ extern void PRINTF_ATTR(2, 3) PrintLineCLI(const log_level_t level, const char *
 //
 // Allocate memory with error checking.  Zeros the memory.
 //
-template <typename T> constexpr T *UtilCalloc(const size_t size)
+template <typename T>
+constexpr T *UtilCalloc(const size_t size)
 {
   T *ret = static_cast<T *>(calloc(1, size));
 
@@ -320,7 +351,8 @@ template <typename T> constexpr T *UtilCalloc(const size_t size)
 //
 // Reallocate memory with error checking.
 //
-template <typename T> constexpr T *UtilRealloc(T *old, const size_t size)
+template <typename T>
+constexpr T *UtilRealloc(T *old, const size_t size)
 {
   T *ret = static_cast<T *>(realloc(old, size));
 
@@ -335,7 +367,8 @@ template <typename T> constexpr T *UtilRealloc(T *old, const size_t size)
 //
 // Free the memory with error checking.
 //
-template <typename T> constexpr void UtilFree(T *data)
+template <typename T>
+constexpr void UtilFree(T *data)
 {
   if (data == nullptr)
   {
@@ -584,6 +617,7 @@ using map_format_t = enum map_format_e
 
   MapFormat_Doom,
   MapFormat_Hexen,
+  MapFormat_Doom64,
   MapFormat_UDMF,
 };
 
@@ -604,7 +638,31 @@ using lump_order_t = enum lump_order_e
   LL_BLOCKMAP,  // LUT, motion clipping, walls/grid element
   LL_BEHAVIOR,  // ACS bytecode
   LL_SCRIPTS,   // ACS source code
+
+  D64_LEAFS = LL_BLOCKMAP + 1, // PSX/N64 hardware rendering
+  D64_LIGHTS,                  // Colored sectors
+  D64_MACROS,                  // BLAM
+  D64_SCRIPTS,                 // BLAM
+
+  LL_TEXTMAP = LL_LABEL + 1, // UDMF geometry
+  LL_ENDMAP,                 // UDMF end marker
+
+  GL_LABEL = 0,
+  GL_VERT,
+  GL_SEGS,
+  GL_SSECT,
+  GL_NODES,
+  GL_PVS,
+
+  LM_LABEL = 0,
+  LM_CELLS,
+  LM_SUN,
+  LM_SURFS,
+  LM_TXCRD,
+  LM_LMAPS,
 };
+
+static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
 
 using raw_vertex_t = struct raw_vertex_s
 {
@@ -612,7 +670,7 @@ using raw_vertex_t = struct raw_vertex_s
   int16_t y;
 } PACKEDATTR;
 
-using raw_linedef_t = struct raw_linedef_s
+using raw_linedef_doom_t = struct raw_linedef_doom_s
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
@@ -623,18 +681,7 @@ using raw_linedef_t = struct raw_linedef_s
   uint16_t left;    // left sidedef (only if this line adjoins 2 sectors)
 } PACKEDATTR;
 
-using raw_hexen_linedef_t = struct raw_hexen_linedef_s
-{
-  uint16_t start;  // from this vertex...
-  uint16_t end;    // ... to this vertex
-  uint16_t flags;  // linedef flags (impassible, etc)
-  uint8_t special; // special type
-  uint8_t args[5]; // special arguments
-  uint16_t right;  // right sidedef
-  uint16_t left;   // left sidedef
-} PACKEDATTR;
-
-using raw_sidedef_t = struct raw_sidedef_s
+using raw_sidedef_doom_t = struct raw_sidedef_doom_s
 {
   int16_t x_offset;  // X offset for texture
   int16_t y_offset;  // Y offset for texture
@@ -644,7 +691,7 @@ using raw_sidedef_t = struct raw_sidedef_s
   uint16_t sector;   // adjacent sector
 } PACKEDATTR;
 
-using raw_sector_t = struct raw_sector_s
+using raw_sector_doom_t = struct raw_sector_doom_s
 {
   int16_t floorh;    // floor height
   int16_t ceilh;     // ceiling height
@@ -655,7 +702,7 @@ using raw_sector_t = struct raw_sector_s
   uint16_t tag;      // sector activated by a linedef with same tag
 } PACKEDATTR;
 
-using raw_thing_t = struct raw_thing_s
+using raw_thing_doom_t = struct raw_thing_doom_s
 {
   int16_t x;        // x position of thing
   int16_t y;        // y position of thing
@@ -664,8 +711,19 @@ using raw_thing_t = struct raw_thing_s
   uint16_t options; // when appears, deaf, etc..
 } PACKEDATTR;
 
-// -JL- Hexen thing definition
-using raw_hexen_thing_t = struct raw_hexen_thing_s
+// -JL- Hexen definition
+using raw_linedef_hexen_t = struct raw_linedef_hexen_s
+{
+  uint16_t start;  // from this vertex...
+  uint16_t end;    // ... to this vertex
+  uint16_t flags;  // linedef flags (impassible, etc)
+  uint8_t special; // special type
+  uint8_t args[5]; // special arguments
+  uint16_t right;  // right sidedef
+  uint16_t left;   // left sidedef
+} PACKEDATTR;
+
+using raw_thing_hexen_t = struct raw_thing_hexen_s
 {
   int16_t tid;      // tag id (for scripts/specials)
   int16_t x;        // x position
@@ -678,6 +736,59 @@ using raw_hexen_thing_t = struct raw_hexen_thing_s
   uint8_t args[5];  // special arguments
 } PACKEDATTR;
 
+// -Elf- Doom64 definitions
+// Some are shared with PSX Doom's and PSX Final Doom's formats
+// but we don't support those
+
+using raw_vertex_doom64_t = struct raw_vertex_doom64_s
+{
+  fixed_t x;
+  fixed_t y;
+} PACKEDATTR;
+
+using raw_thing_doom64_t = struct raw_thing_doom64_s
+{
+  int16_t x;        // x position of thing
+  int16_t y;        // y position of thing
+  int16_t z;        // y position of thing
+  int16_t angle;    // angle thing faces (degrees)
+  int16_t type;     // type of thing
+  uint16_t options; // when appears, deaf, etc..
+} PACKEDATTR;
+
+using raw_linedef_doom64_t = struct raw_linedef_doom64_s
+{
+  uint16_t start;   // from this vertex...
+  uint16_t end;     // ... to this vertex
+  uint32_t flags;   // linedef flags (impassible, etc)
+  uint16_t special; // special type
+  uint16_t tag;     // this linedef activates the sector with same tag
+  uint16_t right;   // right sidedef
+  uint16_t left;    // left sidedef (only if this line adjoins 2 sectors)
+} PACKEDATTR;
+
+using raw_sidedef_doom64_t = struct raw_sidedef_doom64_s
+{
+  int16_t x_offset;   // X offset for texture
+  int16_t y_offset;   // Y offset for texture
+  uint16_t upper_tex; // texture index for the part above
+  uint16_t lower_tex; // texture index for the part below
+  uint16_t mid_tex;   // texture index for the regular part
+  uint16_t sector;    // adjacent sector
+} PACKEDATTR;
+
+using raw_sector_doom64_t = struct raw_sector_doom64_s
+{
+  int16_t floorh;     // floor height
+  int16_t ceilh;      // ceiling height
+  uint16_t floor_tex; // floor texture
+  uint16_t ceil_tex;  // ceiling texture
+  uint16_t colors[5]; // hardware rendering colors, LIGHTS
+  uint16_t special;   // special type
+  uint16_t tag;       // tag number
+  uint16_t flags;     // reverb, damage, water, etc
+};
+
 //------------------------------------------------------------------------
 // BSP TREE STRUCTURES
 //------------------------------------------------------------------------
@@ -685,25 +796,49 @@ using raw_hexen_thing_t = struct raw_hexen_thing_s
 //
 // We do not write ZIP-compressed ZDoom nodes
 //
-using bsp_type_t = enum bsp_type_e : uint8_t
+using bsp_format_t = enum bsp_format_e : uint8_t
 {
-  BSP_VANILLA,
-  BSP_DEEPBSPV4,
+  BSP_DoomBSP,
+  BSP_DeePBSPV4,
   BSP_XNOD,
   BSP_XGLN,
   BSP_XGL2,
   BSP_XGL3,
 
-  BSP_MIN = BSP_VANILLA,
+  BSP_MIN = BSP_DoomBSP,
   BSP_MAX = BSP_XGL3,
+};
+
+using bmap_format_t = enum bmap_format_e : uint8_t
+{
+  BMAP_DoomBlockmap,
+  BMAP_XBM1,
+
+  BMAP_MIN = BMAP_DoomBlockmap,
+  BMAP_MAX = BMAP_XBM1,
 };
 
 // Obviously, vanilla did not include any magic headers
 constexpr auto BSP_MAGIC_DEEPBSPV4 = "xNd4\0\0\0\0";
+
 constexpr auto BSP_MAGIC_XNOD = "XNOD";
 constexpr auto BSP_MAGIC_XGLN = "XGLN";
 constexpr auto BSP_MAGIC_XGL2 = "XGL2";
 constexpr auto BSP_MAGIC_XGL3 = "XGL3";
+
+constexpr auto BSP_MAGIC_ZNOD = "ZNOD";
+constexpr auto BSP_MAGIC_ZGLN = "ZGLN";
+constexpr auto BSP_MAGIC_ZGL2 = "ZGL2";
+constexpr auto BSP_MAGIC_ZGL3 = "ZGL3";
+
+constexpr auto BSP_MAGIC_GLV2 = "gNd2";
+constexpr auto BSP_MAGIC_GLV3 = "gNd3";
+constexpr auto BSP_MAGIC_GLV4 = "gNd4";
+constexpr auto BSP_MAGIC_GLV5 = "gNd5";
+
+constexpr auto BMAP_MAGIC_XBM1 = "XBM1\0\0\0\0";
+
+constexpr auto BMAP_MAGIC_ZBM1 = "ZBM1\0\0\0\0";
 
 // Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
 constexpr uint16_t NF_SUBSECTOR_VANILLA = UINT16_C(0x8000);
@@ -711,7 +846,7 @@ constexpr uint32_t NF_SUBSECTOR = UINT32_C(0x80000000);
 
 //
 // Binary format upper bounds.
-// Some of these, namely the BSP tree indexes, are addressed by using later formats, such as DeepBSPV4, etc
+// Some of these, namely the BSP tree indexes, are addressed by using later formats, such as DeePBSPV4, etc
 //
 // * No known ports seem to reserve 0xFFFF for vertices
 // * The linedef index 0xFFFF is reserved for minisegs in XGLN/XGL2/XGL3 nodes
@@ -731,6 +866,8 @@ constexpr size_t LIMIT_NODE = INT16_MAX;
 constexpr size_t LIMIT_SUBSEC = INT16_MAX;
 constexpr size_t LIMIT_SEG = UINT16_MAX;
 
+constexpr size_t LIMIT_BMAP_INDEX = UINT16_MAX;
+
 //
 // Vanilla blockmap
 //
@@ -745,7 +882,13 @@ using raw_bbox_t = struct raw_bbox_s
 using raw_blockmap_header_t = struct raw_blockmap_header_s
 {
   int16_t x_origin, y_origin;
-  int16_t x_blocks, y_blocks;
+  uint16_t x_blocks, y_blocks;
+} PACKEDATTR;
+
+using raw_blockmap_xbm1_header_t = struct raw_blockmap_xbm1_header_s
+{
+  fixed_t x_origin, y_origin;
+  uint32_t x_blocks, y_blocks;
 } PACKEDATTR;
 
 //
@@ -773,6 +916,12 @@ using raw_seg_vanilla_t = struct raw_seg_vanilla_s
   uint16_t linedef; // linedef that this seg goes along
   uint16_t flip;    // true if not the same direction as linedef
   int16_t dist;     // distance from starting point
+} PACKEDATTR;
+
+using raw_leaf_vanilla_t = struct raw_leaf_vanilla_s
+{
+  uint16_t vertex;
+  uint16_t seg;
 } PACKEDATTR;
 
 //
@@ -803,18 +952,24 @@ using raw_seg_deepbspv4_t = struct raw_seg_deepbspv4_s
   int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
+using raw_leaf_deepbspv4_t = struct raw_leaf_deepbspv4_s
+{
+  uint32_t vertex;
+  uint32_t seg;
+} PACKEDATTR;
+
 //
 // ZDoom BSP
 // * compared to vanilla, some types were raise to 32bit
 // * each version (XNOD->XGLN->XGL2->XGL3) builds on top of the previous
 //
-using raw_xnod_vertex_t = struct raw_xnod_vertex_s
+using raw_vertex_xnod_t = struct raw_vertex_xnod_s
 {
   int32_t x;
   int32_t y;
 } PACKEDATTR;
 
-using raw_xnod_node_t = struct raw_xnod_node_s
+using raw_node_xnod_t = struct raw_node_xnod_s
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
@@ -822,7 +977,7 @@ using raw_xnod_node_t = struct raw_xnod_node_s
   uint32_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-using raw_xnod_subsec_t = struct raw_xnod_subsec_s
+using raw_subsec_xnod_t = struct raw_subsec_xnod_s
 {
   uint32_t segnum;
   // NOTE : no "first" value, segs must be contiguous and appear
@@ -831,7 +986,7 @@ using raw_xnod_subsec_t = struct raw_xnod_subsec_s
   //        all segs of the first subsector.
 } PACKEDATTR;
 
-using raw_xnod_seg_t = struct raw_xnod_seg_s
+using raw_seg_xnod_t = struct raw_seg_xnod_s
 {
   uint32_t start;   // from this vertex...
   uint32_t end;     // ... to this vertex
@@ -839,7 +994,7 @@ using raw_xnod_seg_t = struct raw_xnod_seg_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-using raw_xgln_seg_t = struct raw_xgln_seg_s
+using raw_seg_xgln_t = struct raw_seg_xgln_s
 {
   uint32_t vertex;  // from this vertex ... to the next
   uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
@@ -847,7 +1002,7 @@ using raw_xgln_seg_t = struct raw_xgln_seg_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-using raw_xgl2_seg_t = struct raw_xgl2_seg_s
+using raw_seg_xgl2_t = struct raw_seg_xgl2_s
 {
   uint32_t vertex;  // from this vertex ... to the next
   uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
@@ -855,7 +1010,7 @@ using raw_xgl2_seg_t = struct raw_xgl2_seg_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-using raw_xgl3_node_t = struct raw_xgl3_node_s
+using raw_node_xgl3_t = struct raw_node_xgl3_s
 {
   int32_t x, y;         // starting point
   int32_t dx, dy;       // offset to ending point
@@ -927,12 +1082,12 @@ using raw_patch_t = struct patch_s
 static_assert(sizeof(raw_wad_header_t) == 12, "Size mismatch for 'raw_wad_header_t'. Should be 12.");
 static_assert(sizeof(raw_wad_entry_t) == 16, "Size mismatch for 'raw_wad_entry_t'. Should be 16.");
 static_assert(sizeof(raw_vertex_t) == 4, "Size mismatch for 'raw_vertex_t'. Should be 4.");
-static_assert(sizeof(raw_linedef_t) == 14, "Size mismatch for 'raw_linedef_t'. Should be 14.");
-static_assert(sizeof(raw_hexen_linedef_t) == 16, "Size mismatch for 'raw_hexen_linedef_t'. Should be 16.");
-static_assert(sizeof(raw_sidedef_t) == 30, "Size mismatch for 'raw_sidedef_t'. Should be 30.");
-static_assert(sizeof(raw_sector_t) == 26, "Size mismatch for 'raw_sector_t'. Should be 26.");
-static_assert(sizeof(raw_thing_t) == 10, "Size mismatch for 'raw_thing_t'. Should be 10.");
-static_assert(sizeof(raw_hexen_thing_t) == 20, "Size mismatch for 'raw_hexen_thing_t'. Should be 20.");
+static_assert(sizeof(raw_linedef_doom_t) == 14, "Size mismatch for 'raw_linedef_doom_t'. Should be 14.");
+static_assert(sizeof(raw_linedef_hexen_t) == 16, "Size mismatch for 'raw_linedef_hexen_t'. Should be 16.");
+static_assert(sizeof(raw_sidedef_doom_t) == 30, "Size mismatch for 'raw_sidedef_doom_t'. Should be 30.");
+static_assert(sizeof(raw_sector_doom_t) == 26, "Size mismatch for 'raw_sector_doom_t'. Should be 26.");
+static_assert(sizeof(raw_thing_doom_t) == 10, "Size mismatch for 'raw_thing_doom_t'. Should be 10.");
+static_assert(sizeof(raw_thing_hexen_t) == 20, "Size mismatch for 'raw_thing_hexen_t'. Should be 20.");
 static_assert(sizeof(raw_bbox_t) == 8, "Size mismatch for 'raw_bbox_t'. Should be 8.");
 static_assert(sizeof(raw_blockmap_header_t) == 8, "Size mismatch for 'raw_blockmap_header_t'. Should be 8.");
 static_assert(sizeof(raw_node_vanilla_t) == 28, "Size mismatch for 'raw_node_vanilla_t'. Should be 28.");
@@ -941,13 +1096,13 @@ static_assert(sizeof(raw_seg_vanilla_t) == 12, "Size mismatch for 'raw_seg_vanil
 static_assert(sizeof(raw_node_deepbspv4_t) == 32, "Size mismatch for 'raw_node_deepbspv4_t'. Should be 32.");
 static_assert(sizeof(raw_subsec_deepbspv4_t) == 6, "Size mismatch for 'raw_subsec_deepbspv4_t'. Should be 6.");
 static_assert(sizeof(raw_seg_deepbspv4_t) == 16, "Size mismatch for 'raw_seg_deepbspv4_t'. Should be 16.");
-static_assert(sizeof(raw_xnod_vertex_t) == 8, "Size mismatch for 'raw_xnod_vertex_t'. Should be 8.");
-static_assert(sizeof(raw_xnod_node_t) == 32, "Size mismatch for 'raw_xnod_node_t'. Should be 32.");
-static_assert(sizeof(raw_xnod_subsec_t) == 4, "Size mismatch for 'raw_xnod_subsec_t'. Should be 4.");
-static_assert(sizeof(raw_xnod_seg_t) == 11, "Size mismatch for 'raw_xnod_seg_t'. Should be 11.");
-static_assert(sizeof(raw_xgln_seg_t) == 11, "Size mismatch for 'raw_xgln_seg_t'. Should be 11.");
-static_assert(sizeof(raw_xgl2_seg_t) == 13, "Size mismatch for 'raw_xgl2_seg_t'. Should be 13.");
-static_assert(sizeof(raw_xgl3_node_t) == 40, "Size mismatch for 'raw_xgl3_node_t'. Should be 40.");
+static_assert(sizeof(raw_vertex_xnod_t) == 8, "Size mismatch for 'raw_vertex_xnod_t'. Should be 8.");
+static_assert(sizeof(raw_node_xnod_t) == 32, "Size mismatch for 'raw_node_xnod_t'. Should be 32.");
+static_assert(sizeof(raw_subsec_xnod_t) == 4, "Size mismatch for 'raw_subsec_xnod_t'. Should be 4.");
+static_assert(sizeof(raw_seg_xnod_t) == 11, "Size mismatch for 'raw_seg_xnod_t'. Should be 11.");
+static_assert(sizeof(raw_seg_xgln_t) == 11, "Size mismatch for 'raw_seg_xgln_t'. Should be 11.");
+static_assert(sizeof(raw_seg_xgl2_t) == 13, "Size mismatch for 'raw_seg_xgl2_t'. Should be 13.");
+static_assert(sizeof(raw_node_xgl3_t) == 40, "Size mismatch for 'raw_node_xgl3_t'. Should be 40.");
 static_assert(sizeof(raw_patchdef_t) == 10, "Size mismatch for 'raw_patchdef_t'. Should be 10.");
 static_assert(sizeof(raw_strife_patchdef_t) == 6, "Size mismatch for 'raw_strife_patchdef_t'. Should be 6.");
 static_assert(sizeof(raw_texture_t) == 32, "Size mismatch for 'raw_texture_t'. Should be 32.");
@@ -958,42 +1113,17 @@ static_assert(sizeof(raw_patch_t) == 12, "Size mismatch for 'raw_patch_t'. Shoul
 // LineDef attributes.
 //
 
-using vanilla_lineflag_t = enum vanilla_lineflag_e : uint16_t
+using lineflag_doom_t = enum lineflag_doom_e : uint16_t
 {
   MLF_BLOCKING = BIT(0),      // Solid, is an obstacle
   MLF_BLOCKMONSTERS = BIT(1), // Blocks monsters only
   MLF_TWOSIDED = BIT(2),      // Backside will not be present at all if not two sided
-
-  // If a texture is pegged, the texture will have
-  // the end exposed to air held constant at the
-  // top or bottom of the texture (stairs or pulled
-  // down things) and will move with a height change
-  // of one of the neighbor sectors.
-  //
-  // Unpegged textures always have the first row of
-  // the texture at the top pixel of the line for both
-  // top and bottom textures (use next to windows).
-
   MLF_UPPERUNPEGGED = BIT(3), // Upper texture unpegged
   MLF_LOWERUNPEGGED = BIT(4), // Lower texture unpegged
   MLF_SECRET = BIT(5),        // In AutoMap: don't map as two sided: IT'S A SECRET!
   MLF_SOUNDBLOCK = BIT(6),    // Sound rendering: don't let sound cross two of these
   MLF_DONTDRAW = BIT(7),      // Don't draw on the automap at all
   MLF_MAPPED = BIT(8),        // Set as if already seen, thus drawn in automap
-};
-
-using boom_lineflag_t = enum boom_lineflag_e : uint16_t
-{
-  // Inherited from vanilla
-  MLF_BOOM_BLOCKING = MLF_BLOCKING,
-  MLF_BOOM_BLOCKMONSTERS = MLF_BLOCKMONSTERS,
-  MLF_BOOM_TWOSIDED = MLF_TWOSIDED,
-  MLF_BOOM_UPPERUNPEGGED = MLF_UPPERUNPEGGED,
-  MLF_BOOM_LOWERUNPEGGED = MLF_LOWERUNPEGGED,
-  MLF_BOOM_SECRET = MLF_SECRET,
-  MLF_BOOM_SOUNDBLOCK = MLF_SOUNDBLOCK,
-  MLF_BOOM_DONTDRAW = MLF_DONTDRAW,
-  MLF_BOOM_MAPPED = MLF_MAPPED,
 
   // Boom lineage
   MLF_BOOM_PASSUSE = BIT(9),       // Allow multiple lines to be pushed simultaneously.
@@ -1003,7 +1133,7 @@ using boom_lineflag_t = enum boom_lineflag_e : uint16_t
   MLF_BOOM_BLOCKPLAYERS = BIT(13), // Block Players Only
 };
 
-using hexen_lineflag_t = enum hexen_lineflag_e : uint16_t
+using lineflag_hexen_t = enum lineflag_hexen_e : uint16_t
 {
   // Inherited from vanilla Doom
   MLF_HEXEN_BLOCKING = MLF_BLOCKING,
@@ -1024,6 +1154,43 @@ using hexen_lineflag_t = enum hexen_lineflag_e : uint16_t
   MLF_HEXEN_MONCANACTIVATE = BIT(13),
   MLF_HEXEN_BLOCKPLAYERS = BIT(14),
   MLF_HEXEN_BLOCKEVERYTHING = BIT(15),
+};
+
+// See https://www.doom64.com/maps/linedefs.html
+using lineflag_doom64_t = enum lineflag_doom64_e : uint32_t
+{
+  MLF_DOOM64_BLOCKING = MLF_BLOCKING,
+  MLF_DOOM64_BLOCKMONSTERS = MLF_BLOCKMONSTERS,
+  MLF_DOOM64_TWOSIDED = MLF_TWOSIDED,
+  MLF_DOOM64_UPPERUNPEGGED = MLF_UPPERUNPEGGED,
+  MLF_DOOM64_LOWERUNPEGGED = MLF_LOWERUNPEGGED,
+  MLF_DOOM64_AUTOMAP_ONESIDED = BIT(5),
+  MLF_DOOM64_BLOCKSOUND = BIT(6),
+  MLF_DOOM64_AUTOMAP_HIDE = BIT(7),
+  MLF_DOOM64_AUTOMAP_SHOW = BIT(8),
+  MLF_DOOM64_RENDER_MIDTEX = BIT(9),
+  MLF_DOOM64_NO_OCCLUSION = BIT(10),
+  MLF_DOOM64_BLOCKPROJ = BIT(11),
+  MLF_DOOM64_DEAD_TRIGGER = BIT(12),
+  MLF_DOOM64_DECAL_UPPER = BIT(13),
+  MLF_DOOM64_DECAL_LOWER = BIT(14),
+  MLF_DOOM64_SWITCH_UPPER = BIT(15),
+  MLF_DOOM64_SWITCH_LOWER = BIT(16),
+  MLF_DOOM64_SCROLL_LEFT = BIT(17),
+  MLF_DOOM64_SCROLL_RIGHT = BIT(18),
+  MLF_DOOM64_SCROLL_UP = BIT(19),
+  MLF_DOOM64_SCROLL_DOWN = BIT(20),
+  MLF_DOOM64_PEG_COLOR_UPPER = BIT(21),
+  MLF_DOOM64_PEG_COLOR_LOWER = BIT(22),
+  MLF_DOOM64_UPPER_WALL_COLOR_BLEND = BIT(23),
+  MLF_DOOM64_TRIGGER_FRONT = BIT(24),
+  MLF_DOOM64_AUTOMAP_HIDE_SPECIAL = BIT(25),
+  MLF_DOOM64_FLIP_UPPER_PEGGED_COLOR = BIT(26),
+  MLF_DOOM64EXPLUS_BLOCKPLAYER = BIT(27),
+  MLF_DOOM64_UNUSED_28 = BIT(28),
+  MLF_DOOM64_UNUSED_29 = BIT(29),
+  MLF_DOOM64_MIRROR_HORI = BIT(30),
+  MLF_DOOM64_MIRROR_VERT = BIT(31),
 };
 
 using hexen_activation_t = enum hexen_activation_e
@@ -1314,9 +1481,6 @@ struct Wad_file
   // (previous results of FindLumpNum or LevelHeader are invalidated).
   void RemoveLumps(size_t index, size_t count = 1);
 
-  // removes any ZNODES lump from a UDMF level.
-  void RemoveZNodes(size_t lev_num);
-
   // insert a new lump.
   // The second form is for a level marker.
   // The 'max_size' parameter (if >= 0) specifies the most data
@@ -1334,7 +1498,7 @@ struct Wad_file
   //
   // passing a negative value or invalid index will reset the
   // insertion point -- future lumps get added at the END.
-  // RemoveLumps(), RemoveLevel() and EndWrite() also reset it.
+  // EndWrite() also reset it.
   void InsertPoint(size_t index = NO_INDEX);
 
   static Wad_file *Create(const char *filename, char mode);
@@ -1362,7 +1526,7 @@ struct Wad_file
   // be no more than a few bytes).  Returns new position.
   size_t PositionForWrite(size_t max_size = NO_INDEX);
 
-  bool FinishLump(size_t final_size);
+  void FinishLump(size_t final_size);
   size_t WritePadding(size_t count);
 
   // write the new directory, updating the dir_xxx variables
@@ -1434,14 +1598,14 @@ struct Lump_c
   }
 
   // mark the lump as finished (after writing data to it).
-  bool Finish(void)
+  void Finish(void)
   {
     if (l_length == 0)
     {
       l_start = 0;
     }
 
-    return parent->FinishLump(l_length);
+    parent->FinishLump(l_length);
   }
 };
 
@@ -1530,15 +1694,14 @@ struct buildinfo_s
   size_t total_warnings = 0;
   uint32_t debug = DEBUG_NONE;
 
-  bsp_type_t bsp_type = bsp_type_t::BSP_VANILLA;
+  bsp_format_t bsp_format = bsp_format_t::BSP_XNOD;
+  bmap_format_t bmap_format = bmap_format_t::BMAP_DoomBlockmap;
   bool fast = false;     // use a faster method to pick nodes
   bool backup = false;   // keep a copy of the WAD
   bool analysis = false; // write out CSV for data analysis and visualization
   bool verbose = false;  // this affects how some messages are shown
   bool effects = true;   // disable special effects
 };
-
-extern size_t lev_current_idx;
 
 struct AnalysisData
 {
@@ -1573,9 +1736,6 @@ constexpr const char PRINT_HELP[] = "\n"
                                     "    -m --map   XXXX    Control which map(s) are built\n"
                                     "    -c --cost  ##      Cost assigned to seg splits (1-32)\n"
                                     "\n"
-                                    "    -x --xnod          Use XNOD format in NODES lump\n"
-                                    "    -s --ssect         Use XGL3 format in SSECTORS lump\n"
-                                    "\n"
                                     "Short options may be mixed, for example: -fbv\n"
                                     "Long options must always begin with a double hyphen\n"
                                     "\n"
@@ -1591,8 +1751,6 @@ using build_result_t = enum build_result_e
   BUILD_LumpOverflow
 };
 
-extern bool lev_overflows;
-
 // attempt to open a wad.  on failure, the FatalError method in the
 // buildinfo_t interface is called.
 void OpenWad(const char *filename);
@@ -1603,18 +1761,41 @@ void CloseWad(void);
 // give the number of levels detected in the wad.
 size_t LevelsInWad(void);
 
-// retrieve the name of a particular level.
-const char *GetLevelName(size_t lev_idx);
-
 // build the nodes of a particular level. otherwise the wad
 // is updated to store the new lumps and returns either BUILD_OK or
 // BUILD_LumpOverflow if some limits were exceeded.
-build_result_e BuildLevel(size_t lev_idx, const char *filename);
+build_result_e BuildLevel(struct level_t &level, const char *filename);
 
 void SetupAnalysisFile(const char *filepath);
-void GenerateAnalysis(const char *filename);
+void GenerateAnalysis(level_t &level, const char *filename);
 void WriteAnalysis(const char *filename);
-void AnalysisPushLine(size_t level_index, bool is_fast, double split_cost, size_t segs, size_t subsecs, size_t nodes,
-                      int32_t left_size, int32_t right_size);
 
 void EnterGUI(void);
+
+//
+// Benchmark
+//
+
+struct Benchmarker
+{
+  using clock = std::chrono::steady_clock;
+  clock::time_point start;
+  const char *name;
+  bool enabled;
+
+  Benchmarker(const char *_name, bool _enabled = true)
+  {
+    if (!_enabled) return;
+    enabled = _enabled;
+    name = _name;
+    start = clock::now();
+  };
+
+  ~Benchmarker(void)
+  {
+    if (!enabled) return;
+    auto end = clock::now();
+    auto time = std::chrono::duration<double, std::milli>(end - start);
+    PrintLine(LOG_NORMAL, "[Benchmarker] '%s' runtime: %.2f ms", name, time.count());
+  };
+};

@@ -93,8 +93,6 @@ struct vertex_t
 // angle, it is closed, likewise if line is in void space.
 bool CheckOpen(const vertex_t *vertex, double dx, double dy);
 
-void AddWallTip(const vertex_t *vertex, double dx, double dy, bool open_left, bool open_right);
-
 bool Overlaps(const vertex_t *vertex, const vertex_t *other);
 
 struct sector_t
@@ -115,6 +113,9 @@ struct sector_t
   // RING, containing all sectors of the same group.
   size_t rej_group;
 
+  sector_t *rej_next;
+  sector_t *rej_prev;
+
   double height_floor;
   double height_ceiling;
 };
@@ -126,9 +127,9 @@ struct sidedef_t
 
   double offset_x = 0.0;
   double offset_y = 0.0;
-  char tex_upper[8];
-  char tex_middle[8];
-  char tex_lower[8];
+  char tex_upper[8] = "-";
+  char tex_middle[8] = "-";
+  char tex_lower[8] = "-";
 
   // sidedef index.  Always valid after loading & pruning.
   size_t index;
@@ -146,7 +147,7 @@ struct linedef_t
   sidedef_t *left;  // left sidedef, or nullptr if none
 
   int32_t special; //
-  uint16_t flags;  // currently we only care about two-sided lines, but who knows
+  uint32_t flags;  // currently we only care about two-sided lines, but who knows
   int32_t args[5]; // Tag => arg0/id split
   int32_t id;      //
 
@@ -205,9 +206,7 @@ struct seg_t
   size_t index = NO_INDEX;
 
   // when true, this seg has become zero length (integer rounding of the
-  // start and end vertices produces the same location).  It should be
-  // ignored when writing the SEGS or V1 GL_SEGS lumps.  [Note: there
-  // won't be any of these when writing the V2 GL_SEGS lump].
+  // start and end vertices produces the same location).
   bool is_degenerate;
 
   // the quad-tree node that contains this seg, or nullptr if the seg
@@ -276,7 +275,7 @@ void DetermineMiddle(subsec_t *subsec);
 void ClockwiseOrder(subsec_t *subsec);
 void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index);
 
-void RoundOff(subsec_t *subsec);
+void RoundOffSubsector(level_t &level, subsec_t *subsec);
 void Normalise(subsec_t *subsec);
 
 void SanityCheckClosed(subsec_t *subsec);
@@ -284,8 +283,8 @@ void SanityCheckHasRealSeg(subsec_t *subsec);
 
 struct bbox_t
 {
-  int minx, miny;
-  int maxx, maxy;
+  int16_t minx, miny;
+  int16_t maxx, maxy;
 };
 
 struct child_t
@@ -311,8 +310,7 @@ struct node_t
   child_t r;
   child_t l;
 
-  // node index.  Only valid once the NODES or GL_NODES lump has been
-  // created.
+  // node index.  Only valid once the NODES lump has been created.
   size_t index;
 };
 
@@ -360,89 +358,6 @@ void ConvertToList(quadtree_c *quadtree, seg_t **__list);
 // or 0 if the line intersects or touches the box.
 int OnLineSide(quadtree_c *quadtree, const seg_t *part);
 
-/* ----- Level data arrays ----------------------- */
-
-extern std::vector<vertex_t *> lev_vertices;
-extern std::vector<linedef_t *> lev_linedefs;
-extern std::vector<sidedef_t *> lev_sidedefs;
-extern std::vector<sector_t *> lev_sectors;
-extern std::vector<thing_t *> lev_things;
-
-extern std::vector<seg_t *> lev_segs;
-extern std::vector<subsec_t *> lev_subsecs;
-extern std::vector<node_t *> lev_nodes;
-extern std::vector<walltip_t *> lev_walltips;
-
-extern size_t num_old_vert;
-extern size_t num_new_vert;
-
-/* ----- function prototypes ----------------------- */
-
-// allocation routines
-vertex_t *NewVertex(void);
-linedef_t *NewLinedef(void);
-sidedef_t *NewSidedef(void);
-sector_t *NewSector(void);
-thing_t *NewThing(void);
-
-seg_t *NewSeg(void);
-subsec_t *NewSubsec(void);
-node_t *NewNode(void);
-walltip_t *NewWallTip(void);
-
-void FreeSegs(void);
-void FreeSubsecs(void);
-void FreeNodes(void);
-
-Lump_c *CreateLevelLump(const char *name, size_t max_size = NO_INDEX);
-Lump_c *FindLevelLump(const char *name);
-
-//------------------------------------------------------------------------
-// ANALYZE : Analyzing level structures
-//------------------------------------------------------------------------
-
-// detection routines
-void DetectOverlappingVertices(void);
-void DetectOverlappingLines(void);
-void DetectPolyobjSectors(buildinfo_t &config);
-
-// pruning routines
-void ClearNewVertices(void);
-void PruneVerticesAtEnd(void);
-
-// computes the wall tips for all of the vertices
-void CalculateWallTips(void);
-
-// return a new vertex (with correct wall-tip info) for the split that
-// happens along the given seg at the given location.
-vertex_t *NewVertexFromSplitSeg(seg_t *seg, double x, double y);
-
-// return a new end vertex to compensate for a seg that would end up
-// being zero-length (after integer rounding).  Doesn't compute the wall-tip
-// info (thus this routine should only be used *after* node building).
-vertex_t *NewVertexDegenerate(vertex_t *start, vertex_t *end);
-
-//------------------------------------------------------------------------
-// SEG : Choose the best Seg to use for a node line.
-//------------------------------------------------------------------------
-
-static constexpr double IFFY_LEN = 4.0;
-
-// smallest distance between two points before being considered equal
-static constexpr double DIST_EPSILON = (1.0 / 1024.0);
-
-// smallest distance between two points before being considered equal
-static constexpr double DIST_EPSILON_HI = (1.0 / 65536.0);
-
-// smallest degrees between two angles before being considered equal
-static constexpr double ANG_EPSILON = (1.0 / 1024.0);
-
-inline void ListAddSeg(seg_t **list_ptr, seg_t *seg)
-{
-  seg->next = *list_ptr;
-  *list_ptr = seg;
-}
-
 // an "intersection" remembers the vertex that touches a BSP divider
 // line (especially a new vertex that is created at a seg split).
 
@@ -471,32 +386,167 @@ struct intersection_t
   bool open_after;
 };
 
-/* -------- functions ---------------------------- */
+using blocklist_t = struct blocklist_t
+{
+  size_t hash;
+  std::vector<size_t> lines;
+};
 
-// scan all the segs in the list, and choose the best seg to use as a
-// partition line, returning it.  If no seg can be used, returns nullptr.
-// The 'depth' parameter is the current depth in the tree, used for
-// computing the current progress.
-seg_t *PickNode(quadtree_c *tree, int depth, double split_cost, bool fast);
+// Note: ZDoom format support based on code (C) 2002,2003 Marisa "Randi" Heit
 
-// take the given seg 'cur', compare it with the partition line, and
-// determine its fate: moving it into either the left or right lists
-// (perhaps both, when splitting it in two).  Handles partners as
-// well.  Updates the intersection list if the seg lies on or crosses
-// the partition line.
-void DivideOneSeg(seg_t *cur, seg_t *part, quadtree_c *left_list, quadtree_c *right_list, intersection_t **cut_list);
+using level_t = struct level_t
+{
+  map_format_t format = MapFormat_INVALID;
+  size_t num_old_vert = 0;
+  size_t num_new_vert = 0;
+  size_t num_real_lines = 0;
+  size_t level_num = NO_INDEX;
+  size_t level_header_lump_index = NO_INDEX;
+  bool overflows = false;
 
-// remove all the segs from the list, partitioning them into the left
-// or right lists based on the given partition line.  Adds any
-// intersections into the intersection list as it goes.
-void SeparateSegs(quadtree_c *seg_list, seg_t *part, quadtree_c *left_list, quadtree_c *right_list, intersection_t **cut_list);
+  std::vector<vertex_t *> vertices;
+  std::vector<linedef_t *> linedefs;
+  std::vector<sidedef_t *> sidedefs;
+  std::vector<sector_t *> sectors;
+  std::vector<thing_t *> things;
 
-// analyse the intersection list, and add any needed minisegs to the
-// given seg lists (one miniseg on each side).  All the intersection
-// structures will be freed back into a quick-alloc list.
-void AddMinisegs(seg_t *part, quadtree_c *left_list, quadtree_c *right_list, intersection_t *cut_list);
+  std::vector<seg_t *> segs;
+  std::vector<subsec_t *> subsecs;
+  std::vector<node_t *> nodes;
+  std::vector<walltip_t *> walltips;
+  std::vector<intersection_t *> intercuts;
 
-void FreeIntersections(void);
+  uint8_t *reject_matrix;
+  size_t reject_size;
+
+  int16_t block_x, block_y;
+  size_t block_w, block_h;
+  size_t block_count;
+
+  std::vector<blocklist_t> block_lines;
+  std::vector<size_t> block_indexes;
+  std::vector<size_t> block_duplicates;
+
+  double block_compression;
+  bmap_format_t bmap_format = BMAP_DoomBlockmap;
+
+  inline Lump_c *FindLevelLump(const char *name)
+  {
+    SYS_ASSERT(cur_wad != nullptr);
+    size_t idx = cur_wad->LevelLookupLump(level_num, name);
+    return (idx != NO_INDEX) ? cur_wad->GetLump(idx) : nullptr;
+  }
+
+  inline const char *GetLevelName(void)
+  {
+    SYS_ASSERT(cur_wad != nullptr);
+    size_t lump_idx = cur_wad->LevelHeader(level_num);
+    return cur_wad->GetLump(lump_idx)->Name();
+  }
+
+  vertex_t *SafeLookupVertex(size_t num, size_t num_line)
+  {
+    if (num >= vertices.size())
+    {
+      PrintLine(LOG_ERROR, "ERROR: Illegal map-vertex number #%zu, on line #%zu, maximum is #%zu", num, num_line,
+                vertices.size());
+    }
+    return vertices[num];
+  }
+
+  sector_t *SafeLookupSector(size_t num, size_t num_side)
+  {
+    if (num >= NO_INDEX_INT16)
+    {
+      return nullptr;
+    }
+
+    if (num >= sectors.size())
+    {
+      PrintLine(LOG_ERROR, "ERROR: Illegal sector number #%zu, on side #%zu, maximum is #%zu", num, num_side,
+                sectors.size() - 1);
+    }
+
+    return sectors[num];
+  }
+
+  inline sidedef_t *SafeLookupSidedef(uint16_t num)
+  {
+    // silently ignore illegal sidedef numbers
+    if (num >= NO_INDEX_INT16 || num >= sidedefs.size())
+    {
+      return nullptr;
+    }
+
+    return sidedefs[num];
+  }
+};
+
+vertex_t *NewVertex(level_t &level);
+linedef_t *NewLinedef(level_t &level);
+sidedef_t *NewSidedef(level_t &level);
+sector_t *NewSector(level_t &level);
+thing_t *NewThing(level_t &level);
+
+seg_t *NewSeg(level_t &level);
+subsec_t *NewSubsec(level_t &level);
+node_t *NewNode(level_t &level);
+walltip_t *NewWallTip(level_t &level);
+intersection_t *NewIntersection(level_t &level);
+
+void FreeVertices(level_t &level);
+void FreeSidedefs(level_t &level);
+void FreeLinedefs(level_t &level);
+void FreeSectors(level_t &level);
+void FreeThings(level_t &level);
+
+void FreeSegs(level_t &level);
+void FreeSubsecs(level_t &level);
+void FreeNodes(level_t &level);
+void FreeWallTips(level_t &level);
+void FreeIntersections(level_t &level);
+
+Lump_c *CreateLevelLump(level_t &level, const char *name, size_t max_size = NO_INDEX);
+
+//------------------------------------------------------------------------
+// ANALYZE : Analyzing level structures
+//------------------------------------------------------------------------
+
+// detection routines
+void DetectOverlappingVertices(level_t &level);
+void DetectOverlappingLines(level_t &level);
+void DetectPolyobjSectors(buildinfo_t &config, level_t &level);
+
+// pruning routines
+void ClearNewVertices(level_t &level);
+void PruneVerticesAtEnd(level_t &level);
+
+// computes the wall tips for all of the vertices
+void CalculateWallTips(level_t &level);
+
+// return a new vertex (with correct wall-tip info) for the split that
+// happens along the given seg at the given location.
+vertex_t *NewVertexFromSplitSeg(level_t &level, seg_t *seg, double x, double y);
+
+// return a new end vertex to compensate for a seg that would end up
+// being zero-length (after integer rounding).  Doesn't compute the wall-tip
+// info (thus this routine should only be used *after* node building).
+vertex_t *NewVertexDegenerate(level_t &level, vertex_t *start, vertex_t *end);
+
+//------------------------------------------------------------------------
+// SEG : Choose the best Seg to use for a node line.
+//------------------------------------------------------------------------
+
+static constexpr double IFFY_LEN = 4.0;
+
+// smallest distance between two points before being considered equal
+static constexpr double DIST_EPSILON = (1.0 / 1024.0);
+
+// smallest distance between two points before being considered equal
+static constexpr double DIST_EPSILON_HI = (1.0 / FRACFACTOR);
+
+// smallest degrees between two angles before being considered equal
+static constexpr double ANG_EPSILON = (1.0 / 1024.0);
 
 //------------------------------------------------------------------------
 // NODE : Recursively create nodes and return the pointers.
@@ -504,7 +554,7 @@ void FreeIntersections(void);
 
 // scan all the linedef of the level and convert each sidedef into a
 // seg (or seg pair).  Returns the list of segs.
-seg_t *CreateSegs(void);
+seg_t *CreateSegs(level_t &level);
 
 quadtree_c *TreeFromSegList(seg_t *list);
 
@@ -515,7 +565,8 @@ quadtree_c *TreeFromSegList(seg_t *list);
 // and '*N' is the new node (and '*S' is set to nullptr).  Normally
 // returns BUILD_OK.
 
-void BuildNodes(seg_t *list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost, bool fast, bool analysis);
+void BuildNodes(level_t &level, seg_t *seg_list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost,
+                bool fast, bool analysis);
 
 // compute the height of the bsp tree, starting at 'node'.
 size_t ComputeBspHeight(const node_t *node);
@@ -526,25 +577,38 @@ size_t ComputeBspHeight(const node_t *node);
 // [ This cannot be done DURING BuildNodes() since splitting a seg with
 //   a partner will insert another seg into that partner's list, usually
 //   in the wrong place order-wise. ]
-void ClockwiseBspTree(void);
+void ClockwiseBspTree(level_t &level);
 
 // traverse the BSP tree and do whatever is necessary to convert the
 // node information from GL standard to normal standard (for example,
 // removing minisegs).
-void NormaliseBspTree(void);
+void NormaliseBspTree(level_t &level);
+
+// Mark new vertices as old for writing into the VERTEXES lump
+// Needed for RoundOffBspTree and saving to Doom 64 map formats directly
+void RoundOffVertices(level_t &level);
 
 // traverse the BSP tree, doing whatever is necessary to round
 // vertices to integer coordinates (for example, removing segs whose
 // rounded coordinates degenerate to the same point).
-void RoundOffBspTree(void);
+void RoundOffBspTree(level_t &level);
 
-extern size_t lev_current_idx;
+// both BLOCKAMP and REJECT exist as single lumps on all supported map formats
+void InitBlockmap(level_t &level);
+void PutBlockmap(level_t &level);
+void PutReject(level_t &level);
 
-void SaveBinaryFormat_Vanilla(node_t *root_node);
-void SaveBinaryFormat_DeepBSPV4(node_t *root_node);
-void SaveBinaryFormat_XNOD(node_t *root_node);
-void SaveBinaryFormat_XGLN(node_t *root_node);
-void SaveBinaryFormat_XGL2(node_t *root_node);
-void SaveBinaryFormat_XGL3(node_t *root_node);
+// the BSP tree lumps differ notably on each map format -- Doom/Hexen/Doom64
+// have NODES, SSECTORS & SEGS, but UDMF is generally only ZNODES, and there's
+// some format overlap between them
+void SaveDoom_DoomBSP(level_t &level, node_t *root_node);
+void SaveDoom_DeePBSPV4(level_t &level, node_t *root_node);
+void SaveDoom_XNOD(level_t &level, node_t *root_node);
+void SaveDoom_XGLN(level_t &level, node_t *root_node);
+void SaveDoom_XGL2(level_t &level, node_t *root_node);
+void SaveDoom_XGL3(level_t &level, node_t *root_node);
 
-void SaveTextmap_ZNODES(node_t *root_node);
+void SaveDoom64_DoomBSP(level_t &level, node_t *root_node);
+void SaveDoom64_DeePBSPV4(level_t &level, node_t *root_node);
+
+void SaveTextmap_ZNODES(level_t &level, node_t *root_node);

@@ -50,6 +50,7 @@ void SetupAnalysisFile(const char *filepath)
 // expects AnalysisPushLine to have been called with all 0-32 split costs during node-building
 void WriteAnalysis(const char *filename)
 {
+  auto mark = Benchmarker(__func__);
   auto csv_path = std::string(filename);
 
   if (const auto ext_pos = FindExtension(filename); ext_pos > 0)
@@ -109,9 +110,10 @@ static void ComputeTotalBspHeights(const node_t *node, size_t depth, double &lea
   }
 }
 
-void GenerateAnalysis(const char *filename)
+void GenerateAnalysis(level_t &level, const char *filename)
 {
-  auto generate_analysis_data = [](size_t level_index, bool is_fast, size_t split_cost) -> auto
+  auto mark = Benchmarker(__func__);
+  auto generate_analysis_data = [](level_t &level, bool is_fast, size_t split_cost) -> auto
   {
     AnalysisData data;
     node_t *analysis_node = nullptr;
@@ -133,22 +135,22 @@ void GenerateAnalysis(const char *filename)
     double max_epl = 0.0;
 
     bbox_t dummy = {0, 0, 0, 0};
-    analysis_seg = CreateSegs();
-    BuildNodes(analysis_seg, 0, &dummy, &analysis_node, &analysis_sub, static_cast<double>(split_cost), is_fast, true);
+    analysis_seg = CreateSegs(level);
+    BuildNodes(level, analysis_seg, 0, &dummy, &analysis_node, &analysis_sub, static_cast<double>(split_cost), is_fast, true);
 
     // TODO: pass level data by context instead of globally :v
-    data.vertex = num_old_vert;
-    data.lines = lev_linedefs.size();
-    data.sides = lev_sidedefs.size();
-    data.sectors = lev_sectors.size();
+    data.vertex = level.num_old_vert;
+    data.lines = level.linedefs.size();
+    data.sides = level.sidedefs.size();
+    data.sectors = level.sectors.size();
 
-    data.bsp_vertex = num_new_vert;
-    data.nodes = lev_nodes.size();
-    data.subsecs = lev_subsecs.size();
-    data.segs = lev_segs.size();
+    data.bsp_vertex = level.num_new_vert;
+    data.nodes = level.nodes.size();
+    data.subsecs = level.subsecs.size();
+    data.segs = level.segs.size();
 
     // TODO: sidedef math should account for non-seg-generating sides, actually
-    data.splits = lev_segs.size() - lev_sidedefs.size();
+    data.splits = level.segs.size() - level.sidedefs.size();
     num_leafs = static_cast<double>(data.subsecs);
 
     ComputeTotalBspHeights(analysis_node, 0, total_depth_sum);
@@ -172,19 +174,17 @@ void GenerateAnalysis(const char *filename)
     data.worst_case_ratio = min_epl / max_epl;
     data.tree_quality = ((min_epl / total_depth_sum) - data.worst_case_ratio) / (1 - data.worst_case_ratio);
 
-    std::string line =
-        std::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}", GetLevelName(level_index), is_fast, split_cost,
-                    data.vertex, data.lines, data.sides, data.sectors, data.bsp_vertex, data.nodes, data.subsecs, data.segs,
-                    data.splits, data.left_depth, data.right_depth, data.average_depth, data.optimal_depth, data.tree_balance,
-                    data.worst_case_ratio, data.tree_quality);
+    std::string line = std::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}", level.GetLevelName(), is_fast,
+                                   split_cost, data.vertex, data.lines, data.sides, data.sectors, data.bsp_vertex, data.nodes,
+                                   data.subsecs, data.segs, data.splits, data.left_depth, data.right_depth, data.average_depth,
+                                   data.optimal_depth, data.tree_balance, data.worst_case_ratio, data.tree_quality);
     analysis_csv.push_back(line);
 
-    // TODO: pass level data by context instead of globally :v
-    FreeNodes();
-    FreeSubsecs();
-    FreeSegs();
-    ClearNewVertices();
-    num_new_vert = 0;
+    FreeNodes(level);
+    FreeSubsecs(level);
+    FreeSegs(level);
+    ClearNewVertices(level);
+    level.num_new_vert = 0;
   };
 
   // normal mode, and fast mode
@@ -193,8 +193,9 @@ void GenerateAnalysis(const char *filename)
     // across all split costs
     for (size_t split_cost = 1; split_cost <= 32; split_cost++)
     {
-      generate_analysis_data(lev_current_idx, is_fast != 0, split_cost);
-      PrintLine(LOG_NORMAL, "[%s] Analyzed %s, %s mode, split cost factor of %zu", __func__, GetLevelName(lev_current_idx), is_fast ? "fast" : "normal", split_cost);
+      generate_analysis_data(level, is_fast != 0, split_cost);
+      PrintLine(LOG_NORMAL, "[%s] Analyzed %s, %s mode, split cost factor of %zu", __func__, level.GetLevelName(),
+                is_fast ? "fast" : "normal", split_cost);
     }
   }
 }

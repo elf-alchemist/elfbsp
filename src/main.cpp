@@ -21,11 +21,13 @@
 //
 //------------------------------------------------------------------------------
 
+#include "core.hpp"
+#include "local.hpp"
+
 #include <cstring>
 #include <string>
 #include <vector>
 
-#include "core.hpp"
 
 void PRINTF_ATTR(2, 3) PrintLineCLI(const log_level_t level, const char *fmt, ...)
 {
@@ -96,15 +98,13 @@ bool CheckMapInRange(const map_range_t *range, const char *name)
   return true;
 }
 
-bool CheckMapInMapList(const size_t lev_idx)
+bool CheckMapInMapList(const char *name)
 {
   // when --map is not used, allow everything
   if (map_list.empty())
   {
     return true;
   }
-
-  const char *name = GetLevelName(lev_idx);
 
   for (auto &map : map_list)
   {
@@ -138,14 +138,20 @@ static void BuildFile(const char *filename)
   // loop over each level in the wad
   for (size_t n = 0; n < num_levels; n++)
   {
-    if (!CheckMapInMapList(n))
+    // IMPORTANT: always ensure a valid map
+    level_t level;
+    level.level_num = n;
+    level.level_header_lump_index = cur_wad->LevelHeader(level.level_num);
+    level.format = cur_wad->LevelFormat(level.level_num);
+
+    if (!CheckMapInMapList(level.GetLevelName()))
     {
       continue;
     }
 
     visited += 1;
 
-    res = BuildLevel(n, filename);
+    res = BuildLevel(level, filename);
 
     // handle a failed map (due to lump overflow)
     if (res == BUILD_LumpOverflow)
@@ -581,7 +587,24 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
       PrintLine(LOG_ERROR, "ERROR: illegal value for '--type' option");
     }
 
-    RaiseValue(config.bsp_type, static_cast<bsp_type_t>(val));
+    config.bsp_format = static_cast<bsp_format_t>(val);
+    used = 1;
+  }
+  else if (strcmp(name, "--bmap") == 0)
+  {
+    if (argc < 1 || !isdigit(argv[0][0]))
+    {
+      PrintLine(LOG_ERROR, "ERROR: missing value for '--bmap' option");
+    }
+
+    int32_t val = std::stoi(argv[0]);
+
+    if (val < BMAP_MIN || val > BMAP_MAX)
+    {
+      PrintLine(LOG_ERROR, "ERROR: illegal value for '--bmap' option");
+    }
+
+    config.bmap_format = static_cast<bmap_format_t>(val);
     used = 1;
   }
   else if (strcmp(name, "--cost") == 0)
@@ -735,7 +758,7 @@ int32_t main(const int32_t argc, const char *argv[])
 
   if (opt_version)
   {
-    PrintLine(LOG_NORMAL, "%s %s", PROJECT_NAME, PROJECT_VERSION);
+    PrintLine(LOG_NORMAL, "ELFBSP v1.3");
     return 0;
   }
 

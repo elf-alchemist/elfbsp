@@ -12,8 +12,8 @@ The simplest possible operation will rebuild nodes in all of the maps in a provi
 elfbsp example.wad
 ```
 
-## Ouput separate file
-The following will rebuild all of the nodes in a seperate copy of the provided WAD:
+## Output separate file
+The following will rebuild all of the nodes in a separate copy of the provided WAD:
 ```bash
 elfbsp example1.wad --output example2.wad
 ```
@@ -59,26 +59,42 @@ Several map names and/or ranges can be given, using commas to separate them, suc
 
 NOTE: spaces cannot be used to separate map names.
 
-#### `-x --xnod`
-Forces XNOD (ZDoom extended) format of normal nodes.
-Without this option, normal nodes will be built using the standard DOOM format, and only switch to XNOD format when the level is too large (e.g. has too many segs).
+#### `-t --type <0...5>`
+Forces a specific BSP tree lump format at build time for the Doom & Hexen map formats.
+Only DoomBSP and DeePBSPV4 are support in Doom 64 map format.
+Only XGL3 is supported on UDMF map format.
+In case of overflow from the DoomBSP format, ELFBSP will automatically promote to DeePBSPV4.
+The default is 2, using ZDBSP's XNOD.
+Supported formats are as follows:
+* 0 -> DoomBSP
+* 1 -> DeePBSPV4
+* 2 -> XNOD (default)
+* 3 -> XGLN
+* 4 -> XGL2
+* 5 -> XGL3
 
-Using XNOD format can be better for source ports which support it, since it provides higher accuracy for seg splits.
-However, it cannot be used with the original DOOM.EXE or with Chocolate-Doom.
+#### `--bmap <0...1>`
+Forces the use of a specific blockmap lump at build time, for all supported map formats.
+In case of overflow from the DoomBSP format, ELFBSP will automatically promote to XBM1.
+The default is 0, using the vanilla format.
+* 0 -> DoomBSP (default)
+* 1 -> XBM1
 
-#### `-s --ssect`
-Build XGL3 (extended Nodes) format in the SSECTORS lump.
-This option will disable the building of normal nodes, leaving the NODES and SEGS lumps empty.
-Although it can be used with the `-x` option to store XNOD format nodes in the NODES lump as well.
+#### `--no-effects`
+Prevents the application of built time [special effects](./special_effects.md), causing them to be ignored.
 
 #### `-p, --polyobj`
 Use Hexen's original polyobject editor numbers (3000, 3001, 3002), instead of ZDoom's polyobject editor numbers (9300, 9301, 9302, 9303).
 
-#### `-c --cost  ##`
+#### `-c --cost  <1...32>`
 Sets the cost for making seg splits. The value is a number between 1 and 32. The default value is 11.
 Larger values try to reduce the number of seg splits, whereas smaller values produce more balanced BSP trees.
 
 NOTE: this option has little effect when the --fast option is enabled.
+
+#### `-a --analysis`
+Generates CSV files containing multiple builds of the input maps, used for data visualization purposes.
+"Multiple builds" refers to re-building each map across every valid "split cost" value, from 1 to 32.
 
 #### `-o --output  FILE`
 This option is provided *only* for compatibility with existing node builders.
@@ -89,7 +105,7 @@ This option *cannot* be used with multiple input files, or with the --backup opt
 Displays a brief help screen, then exits.
 
 #### `-d --doc`
-Displays this documentaion screen, then exits.
+Displays this documentation screen, then exits.
 
 #### `--version`
 Displays the version of ELFBSP, then exits.
