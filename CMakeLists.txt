@@ -76,10 +76,8 @@ target_link_libraries(imgui PUBLIC SDL3::SDL3)
 add_executable(${PROJECT_NAME}
     src/blockmap.cpp
     src/bsp.cpp
-    src/core.hpp
     src/info.cpp
     src/level.cpp
-    src/local.hpp
     src/main.cpp
     src/misc.cpp
     src/node.cpp
