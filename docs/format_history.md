@@ -19,7 +19,7 @@
 * `2005-05-20` — Andrew Apted adds GL V5 nodes to glBSP [^glbsp-glv5]
 * `2005-05-20` — Andrew Apted adds ZNOD support to glBSP [^glbsp-znod]
 * `2005-07-09` — GL V5 spec is publicly frozen [^glv5-spec]
-* `2006-02-24` — earliest SVN revision of ZDoom, already supports ZNOD and ZGLN nodes
+* `2006-02-24` — Earliest SVN revision of ZDoom, already supports ZNOD and ZGLN nodes
 * `2006-07-21` — Andrey Budko adds in overflow emulation for reject padding [^prboom-reject-overflow]
 * `2006-10-07` — Andrey Budko adds CLI flag `-reject_pad_with_ff` for erroneous historical PrBoom padding [^prboom-reject-ff]
 * `2006-11-05` — Kaiser publishes the "Console Doom hacking project" thread, with the first description of the LEAFS lump [^console-leafs]
@@ -30,7 +30,7 @@
 * `2010-04-17` — Graf Zahl adds the uncompressed versions, XNOD, XGLN and XGL2, to ZDoom/ZDBSP [^zdoom-xnod-xgln]
 * `2010-04-18` — Andrey Budko adds support for XNOD [^prboom-xnod]
 * `2010-04-23` — Fraggle adds PrBoom+'s reject matrix overflow emulation padding to Chocolate-Doom [^chocolate-reject-part1]
-* `2012-11-08` — Andrew Apted starts importing glBSP [^eureka-glbsp-part1]
+* `2012-11-08` — Andrew Apted starts importing glBSP into Eureka [^eureka-glbsp-part1]
 * `2012-12-07` — Randi adds ZGL3 and XGL3 to ZDoom/ZDBSP, addressing coordinate precision on BSP nodes [^zdoom-xgl3-zgl3]
 * `2013-04-25` — Andrew Apted completes the initial Eureka+glBSP integration [^eureka-glbsp-part2]
 * `2015-02-10` — Fabian Greffrath adds support for DeePBSPV4, XNOD and ZNOD formats to Crispy-Doom [^crispy-doom-extnodes]
