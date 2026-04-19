@@ -1,8 +1,11 @@
 # ELFBSP CMake Script
 cmake_minimum_required(VERSION 3.15)
 project(elfbsp
-        VERSION "1.2"
-        LANGUAGES C CXX)
+        VERSION "1.3"
+        LANGUAGES C CXX
+        HOMEPAGE_URL "https://elf-alchemist.github.io/elfbsp"
+        SPDX_LICENSE "GPL-2.0+"
+        DESCRIPTION "Modern BSP tree builder for idTech1 games and source ports.")
 
 include(CheckIncludeFile)
 
@@ -60,6 +63,48 @@ add_executable(${PROJECT_NAME}
     src/polyobj.cpp
     src/reject.cpp
     src/wad.cpp
+)
+
+string(TOUPPER "${PROJECT_NAME}" PROJECT_TITLE)
+string(TIMESTAMP PROJECT_DATE "%Y-%m-%d" UTC)
+
+set(PROJECT_GENERIC_NAME "idTech1 BSP node builder")
+set(PROJECT_CREATOR "elf-alchemist")
+set(PROJECT_COPYRIGHT "Copyright \(C\) 1994-2026 - Guilherme Miranda, et al")
+set(PROJECT_LICENSE "GNU General Public License, version 2")
+
+set(PROJECT_URL "https://github.com/elf-alchemist/elfbsp")
+set(PROJECT_WIKI "${PROJECT_URL}/wiki")
+set(PROJECT_ISSUES "${PROJECT_URL}/issues")
+
+set(PROJECT_DEVELOPER_IDENTIFIER "io.github.elf-alchemist")
+set(PROJECT_IDENTIFIER "${PROJECT_IDENTIFIER}.elfbsp")
+
+set(PROJECT_VERSION_RC "${PROJECT_VERSION_MAJOR},${PROJECT_VERSION_MINOR},${PROJECT_VERSION_PATCH},0")
+set(PROJECT_ICO "${PROJECT_IDENTIFIER}.windows.ico")
+set()
+
+set(MACOSX_BUNDLE_EXECUTABLE_NAME "${PROJECT_NAME}")
+set(MACOSX_BUNDLE_BUNDLE_NAME "${PROJECT_NAME}")
+set(MACOSX_BUNDLE_INFO_STRING "${PROJECT_COPYRIGHT}")
+set(MACOSX_BUNDLE_LONG_VERSION_STRING "${PROJECT_VERSION}")
+set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
+set(MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}")
+set(MACOSX_BUNDLE_ICON_FILE "${PROJECT_IDENTIFIER}.macosx") # the *.icns extension is implied
+set(MACOSX_BUNDLE_GUI_IDENTIFIER "${PROJECT_IDENTIFIER}")
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    # These are required for SDL
+    PROJECT_NAME="${PROJECT_TITLE}"
+    PROJECT_VERSION="${PROJECT_VERSION}"
+    PROJECT_IDENTIFIER="${PROJECT_IDENTIFIER}"
+    PROJECT_CREATOR="${PROJECT_CREATOR}"
+    PROJECT_COPYRIGHT="${PROJECT_COPYRIGHT}"
+    PROJECT_URL="${PROJECT_URL}"
+    PROJECT_TYPE="application"
+    # These are extras
+    PROJECT_STRING="${PROJECT_TITLE} ${PROJECT_VERSION}"
+    PROJECT_DATE="${PROJECT_DATE}"
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
