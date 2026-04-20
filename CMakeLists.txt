@@ -1,7 +1,7 @@
 # ELFBSP CMake Script
 cmake_minimum_required(VERSION 3.15)
 project(elfbsp
-        VERSION "1.3"
+        VERSION "1.3.0"
         LANGUAGES C CXX
         HOMEPAGE_URL "https://elf-alchemist.github.io/elfbsp"
         # SPDX_LICENSE "GPL-2.0+" doesn't work?
