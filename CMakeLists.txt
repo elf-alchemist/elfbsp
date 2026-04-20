@@ -48,6 +48,28 @@ if(SAN_COUNT GREATER 0)
   endif()
 endif()
 
+if(USE_LTO)
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT HAS_LTO OUTPUT HAS_LTO_ERROR)
+  if(HAS_LTO)
+    message(STATUS "Link Time Optimization: ON")
+  else()
+    message(STATUS "Link Time Optimization: OFF")
+  endif()
+endif()
+
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
+
+# Grabs the git hash and branch a few different ways.
+include(GetGitBranch)
+include(GetGitRevisionDescription)
+include(GetGitRevisionNumber)
+get_git_head_revision(HEAD GIT_HASH)
+git_describe(GIT_DESCRIBE --all --long --abbrev=8)
+git_rev_count(HEAD GIT_REV_COUNT)
+git_branch(HEAD GIT_BRANCH)
+string(REGEX REPLACE "^(heads\/|tags\/)(.+)(-0-g)([0-9a-f]+)" "\\8" GIT_SHORT_HASH "${GIT_DESCRIBE}")
+
 add_executable(${PROJECT_NAME}
   src/blockmap.cpp
   src/bsp.cpp
@@ -75,11 +97,17 @@ set(PROJECT_WIKI "${PROJECT_URL}/wiki")
 set(PROJECT_ISSUES "${PROJECT_URL}/issues")
 
 set(PROJECT_DEVELOPER_IDENTIFIER "io.github.elf-alchemist")
-set(PROJECT_IDENTIFIER "${PROJECT_IDENTIFIER}.elfbsp")
+set(PROJECT_IDENTIFIER "${PROJECT_DEVELOPER_IDENTIFIER}.elfbsp")
 
 set(PROJECT_VERSION_RC "${PROJECT_VERSION_MAJOR},${PROJECT_VERSION_MINOR},${PROJECT_VERSION_PATCH},0")
 set(PROJECT_ICO "${PROJECT_IDENTIFIER}.windows.ico")
 set(PROJECT_SUMMARY "${PROJECT_DESCRIPTION} Based on Andrew Apted's AJBSP, with even more features.")
+
+set(PROJECT_DESKTOP "${PROJECT_IDENTIFIER}.desktop")
+set(PROJECT_INFO_PLIST "${PROJECT_IDENTIFIER}.Info.plist")
+set(PROJECT_MANIFEST "${PROJECT_IDENTIFIER}.manifest.xml")
+set(PROJECT_METAINFO "${PROJECT_IDENTIFIER}.metainfo.xml")
+set(PROJECT_RESOURSE_RC "${PROJECT_IDENTIFIER}.version.rc")
 
 set(MACOSX_BUNDLE_EXECUTABLE_NAME "${PROJECT_NAME}")
 set(MACOSX_BUNDLE_INFO_STRING "${PROJECT_COPYRIGHT}")
@@ -90,6 +118,18 @@ set(MACOSX_BUNDLE_BUNDLE_NAME "${PROJECT_NAME}")
 set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
 set(MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}")
 set(MACOSX_BUNDLE_COPYRIGHT "${PROJECT_COPYRIGHT}")
+
+if(WIN32)
+  configure_file("res/${PROJECT_MANIFEST}.in" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_MANIFEST}" @ONLY)
+  configure_file("res/${PROJECT_RESOURSE_RC}.in" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_RESOURSE_RC}" @ONLY)
+  target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_MANIFEST}" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_RESOURSE_RC}")
+elseif(APPLE)
+  configure_file("res/${PROJECT_INFO_PLIST}.in" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_INFO_PLIST}" @ONLY)
+  set_target_properties(${PROJECT_NAME} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_INFO_PLIST}")
+elseif(UNIX)
+  configure_file("res/${PROJECT_DESKTOP}.in" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_DESKTOP}"  @ONLY)
+  configure_file("res/${PROJECT_METAINFO}.in" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_METAINFO}" @ONLY)
+endif()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
   # These are required for SDL
@@ -103,6 +143,11 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
   # These are extras
   PROJECT_STRING="${PROJECT_TITLE} ${PROJECT_VERSION}"
   PROJECT_DATE="${PROJECT_DATE}"
+  # Build stuff
+  GIT_BRANCH="${GIT_BRANCH}"
+  GIT_HASH="${GIT_HASH}"
+  GIT_REV_COUNT="${GIT_REV_COUNT}"
+  GIT_SHORT_HASH="${GIT_SHORT_HASH}"
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -183,6 +228,10 @@ else()
   install(FILES docs/changelog.md DESTINATION "share/doc/${PROJECT_NAME}")
   install(FILES docs/command_line.md DESTINATION "share/doc/${PROJECT_NAME}")
   install(FILES docs/special_effects.md DESTINATION "share/doc/${PROJECT_NAME}")
+  if(NOT APPLE)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_IDENTIFIER}.desktop DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_IDENTIFIER}.metainfo.xml DESTINATION "${CMAKE_INSTALL_DATADIR}/metainfo")
+  endif()
   install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component type="desktop">
+  <id>@PROJECT_IDENTIFIER@</id>
+  <launchable type="desktop-id">@PROJECT_IDENTIFIER@.desktop</launchable>
+  <name>@PROJECT_TITLE@</name>
+  <summary>@PROJECT_SUMMARY@</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>@PROJECT_SPDX_LICENSE@</project_license>
+
+  <developer id="@PROJECT_DEVELOPER_IDENTIFIER@">
+    <name>@PROJECT_CREATOR@</name>
+  </developer>
+
+  <url type="homepage">@PROJECT_HOMEPAGE_URL@</url>
+  <url type="bugtracker">@PROJECT_ISSUES@</url>
+  <!-- <url type="contact"> @PROJECT_CONTACT@ contact by what means?? github is already right there?? </url> -->
+  <!-- <url type="contribute"> @PROJECT_CONTRIBUTE@ TODO, make a guide for this </url> -->
+  <!-- <url type="faq"> @PROJECT_FAQ@ TODO, we don't have one yet </url> -->
+  <url type="help">@PROJECT_WIKI@</url>
+  <!-- <url type="translate"> @PROJECT_XLAT@ when should we? </url> -->
+  <url type="vcs-browser">@PROJECT_URL@</url>
+
+  <description>
+    @PROJECT_DESCRIPTION@
+  </description>
+
+  <keywords>
+    <keyword>doom</keyword>
+    <keyword>heretic</keyword>
+    <keyword>hexen</keyword>
+    <keyword>strife</keyword>
+    <keyword>doom64</keyword>
+    <keyword>idtech1</keyword>
+    <keyword>bsp</keyword>
+    <keyword>nodebuilder</keyword>
+  </keywords>
+
+  <content_rating type="oars-1.1">
+    <!-- It's a node builder. Nothing really applies :v
+         Maybe some mild humor/profanity will be present in the future.
+
+    <content_attribute id="drugs-alcohol">none</content_attribute>
+    <content_attribute id="drugs-narcotics">none</content_attribute>
+    <content_attribute id="drugs-tobacco">none</content_attribute>
+    <content_attribute id="language-discrimination">none</content_attribute>
+    <content_attribute id="language-humor">none</content_attribute>
+    <content_attribute id="language-profanity">none</content_attribute>
+    <content_attribute id="money-gambling">none</content_attribute>
+    <content_attribute id="money-purchasing">none</content_attribute>
+    <content_attribute id="sex-nudity">none</content_attribute>
+    <content_attribute id="sex-themes">none</content_attribute>
+    <content_attribute id="social-audio">none</content_attribute>
+    <content_attribute id="social-chat">none</content_attribute>
+    <content_attribute id="social-contacts">none</content_attribute>
+    <content_attribute id="social-info">none</content_attribute>
+    <content_attribute id="social-location">none</content_attribute>
+    <content_attribute id="violence-bloodshed">none</content_attribute>
+    <content_attribute id="violence-cartoon">none</content_attribute>
+    <content_attribute id="violence-desecration">none</content_attribute>
+    <content_attribute id="violence-fantasy">none</content_attribute>
+    <content_attribute id="violence-realistic">none</content_attribute>
+    <content_attribute id="violence-sexual">none</content_attribute>
+    <content_attribute id="violence-slavery">none</content_attribute>
+
+    -->
+  </content_rating>
+
+  <releases>
+    <release version="@PROJECT_VERSION@" date="@PROJECT_DATE@"/>
+    <!-- TODO: autoconvert markdown changelog to html in here -->
+  </releases>
+
+</component>

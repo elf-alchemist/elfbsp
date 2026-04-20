@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=@PROJECT_TITLE@
+GenericName=@PROJECT_GENERIC_NAME@
+Icon=@PROJECT_IDENTIFIER@
+Exec=@PROJECT_NAME@
+TryExec=@PROJECT_NAME@
+Type=Application
+Terminal=false
+Comment=@PROJECT_DESCRIPTION@
+Categories=Development;Game;Utility
+MimeType=application/x-doom-wad;
+Keywords=doom;heretic;hexen;strife;doom64;idtech1;bsp;nodebuilder;
