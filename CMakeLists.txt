@@ -4,7 +4,7 @@ project(elfbsp
         VERSION "1.3"
         LANGUAGES C CXX
         HOMEPAGE_URL "https://elf-alchemist.github.io/elfbsp"
-        SPDX_LICENSE "GPL-2.0+"
+        # SPDX_LICENSE "GPL-2.0+" doesn't work?
         DESCRIPTION "Modern BSP tree builder for idTech1 games and source ports.")
 
 include(CheckIncludeFile)
@@ -58,9 +58,8 @@ if(USE_LTO)
   endif()
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
-
 # Grabs the git hash and branch a few different ways.
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 include(GetGitBranch)
 include(GetGitRevisionDescription)
 include(GetGitRevisionNumber)
@@ -68,7 +67,7 @@ get_git_head_revision(HEAD GIT_HASH)
 git_describe(GIT_DESCRIBE --all --long --abbrev=8)
 git_rev_count(HEAD GIT_REV_COUNT)
 git_branch(HEAD GIT_BRANCH)
-string(REGEX REPLACE "^(heads\/|tags\/)(.+)(-0-g)([0-9a-f]+)" "\\8" GIT_SHORT_HASH "${GIT_DESCRIBE}")
+string(REGEX REPLACE "^(heads\/|tags\/)(.+)(-0-g)([0-9a-f]+)" "\\4" GIT_SHORT_HASH "${GIT_DESCRIBE}")
 
 add_executable(${PROJECT_NAME}
   src/blockmap.cpp
@@ -91,6 +90,7 @@ set(PROJECT_GENERIC_NAME "idTech1 BSP node builder")
 set(PROJECT_CREATOR "elf-alchemist")
 set(PROJECT_COPYRIGHT "Copyright \(C\) 1994-2026 - Guilherme Miranda, et al")
 set(PROJECT_LICENSE "GNU General Public License, version 2")
+set(PROJECT_SPDX_LICENSE "GPL-2.0+")
 
 set(PROJECT_URL "https://github.com/elf-alchemist/elfbsp")
 set(PROJECT_WIKI "${PROJECT_URL}/wiki")
@@ -143,6 +143,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
   # These are extras
   PROJECT_STRING="${PROJECT_TITLE} ${PROJECT_VERSION}"
   PROJECT_DATE="${PROJECT_DATE}"
+  PROJECT_SPDX_LICENSE="${PROJECT_SPDX_LICENSE}"
   # Build stuff
   GIT_BRANCH="${GIT_BRANCH}"
   GIT_HASH="${GIT_HASH}"
