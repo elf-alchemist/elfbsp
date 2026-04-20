@@ -84,7 +84,7 @@ add_executable(${PROJECT_NAME}
 )
 
 string(TOUPPER "${PROJECT_NAME}" PROJECT_TITLE)
-string(TIMESTAMP PROJECT_DATE "%Y-%m-%d" UTC)
+string(TIMESTAMP PROJECT_DATE "%Y-%m-%d %H:%M:%S UTC" UTC)
 
 set(PROJECT_GENERIC_NAME "idTech1 BSP node builder")
 set(PROJECT_CREATOR "elf-alchemist")
