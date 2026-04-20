@@ -153,8 +153,10 @@ jobs:
       - name: Update Nightly Tag
         if: ${{ !contains(github.ref, 'tags') && github.ref == 'refs/heads/main' }}
         run: |
-          git tag -f nightly
-          git push -f origin nightly
+          git tag -d nightly || true
+          git push origin :refs/tags/nightly || true
+          git tag nightly HEAD
+          git push origin nightly
 
       - name: Nightly Pre-Release
         if: ${{ !contains(github.ref, 'tags') && github.ref == 'refs/heads/main' }}
