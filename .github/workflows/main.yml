@@ -91,7 +91,7 @@ jobs:
           msystem: ${{ matrix.config.msystem }}
           update: true
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0   # Required so we can move and push tags
 
@@ -136,7 +136,7 @@ jobs:
         run: echo "VERSION=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: elfbsp_${{ env.VERSION }}_${{ matrix.config.package_name }}
           path: ${{ matrix.config.artifact_path }}
@@ -153,8 +153,10 @@ jobs:
       - name: Update Nightly Tag
         if: ${{ !contains(github.ref, 'tags') && github.ref == 'refs/heads/main' }}
         run: |
-          git tag -f nightly
-          git push -f origin nightly
+          git tag -d nightly || true
+          git push origin :refs/tags/nightly || true
+          git tag nightly HEAD
+          git push origin nightly
 
       - name: Nightly Pre-Release
         if: ${{ !contains(github.ref, 'tags') && github.ref == 'refs/heads/main' }}

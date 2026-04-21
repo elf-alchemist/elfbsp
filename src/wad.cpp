@@ -335,7 +335,7 @@ map_format_e Wad_file::LevelFormat(size_t lev_num)
   // check exclusively TEXTMAP
   if (LevelLookupLump(lev_num, "TEXTMAP") != NO_INDEX)
   {
-    return MapFormat_Hexen;
+    return MapFormat_UDMF;
   }
 
   if (LevelLookupLump(lev_num, "BEHAVIOR") != NO_INDEX)
