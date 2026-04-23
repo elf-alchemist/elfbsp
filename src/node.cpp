@@ -1337,7 +1337,7 @@ seg_t *CreateSegs(level_t &level)
       ListAddSeg(&list, right);
     }
 
-    if (line->left == nullptr && HAS_BIT(line->flags, MLF_TWOSIDED))
+    if (line->left == nullptr && HAS_BIT(line->effects, FX_TwoSided))
     {
       PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is 2s but has no back/left sidedef", line->index);
       config.total_warnings++;

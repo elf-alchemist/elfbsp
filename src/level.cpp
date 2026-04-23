@@ -432,8 +432,7 @@ static void GetSectors_Doom(level_t &level)
 
     sector_t *sector = NewSector(level);
 
-    sector->height_floor = ShortToFloat(GetLittleEndian(raw.floorh));
-    sector->height_ceiling = ShortToFloat(GetLittleEndian(raw.ceilh));
+    sector->effects = FX_Sector_None;
   }
 }
 
@@ -567,22 +566,29 @@ static void GetLinedefs_Doom(level_t &level)
     line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), i);
     line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
     line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
-    line->flags = GetLittleEndian(raw.flags);
     line->special = GetLittleEndian(raw.special);
-    line->args[0] = GetLittleEndian(raw.tag);
+    line->tag = GetLittleEndian(raw.tag);
 
     line->start->is_used = true;
     line->end->is_used = true;
+
+    if (HAS_BIT(GetLittleEndian(raw.flags), MLF_TWOSIDED))
+    {
+      line->effects |= FX_TwoSided;
+    }
 
     ValidateLinedef(level, line);
 
     if (!config.effects) continue;
 
     // Line tags ( 900 <= x <=999 ) are considered "precious" and will, therefore, have a much higher seg split cost
-    switch (line->args[0])
+    switch (line->tag)
     {
-    case 900 ... 997:
+    case 900 ... 996:
       line->effects |= FX_DoNotSplitSeg;
+      break;
+    case Tag_NoReject:
+      line->effects |= FX_NoReject | FX_DoNotSplitSeg;
       break;
     case Tag_DoNotRender:
       line->effects |= FX_DoNotRenderFront | FX_DoNotRenderBack | FX_DoNotSplitSeg;
@@ -706,18 +712,17 @@ static void GetLinedefs_Hexen(level_t &level)
 
     line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), i);
     line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), i);
-    line->flags = GetLittleEndian(raw.flags);
     line->special = raw.special;
-    line->args[0] = raw.args[0];
-    line->args[1] = raw.args[1];
-    line->args[2] = raw.args[2];
-    line->args[3] = raw.args[3];
-    line->args[4] = raw.args[4];
     line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
     line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
 
     line->start->is_used = true;
     line->end->is_used = true;
+
+    if (HAS_BIT(GetLittleEndian(raw.flags), MLF_HEXEN_TWOSIDED))
+    {
+      line->effects |= FX_TwoSided;
+    }
 
     ValidateLinedef(level, line);
 
@@ -726,10 +731,11 @@ static void GetLinedefs_Hexen(level_t &level)
     switch (line->special)
     {
     case BSP_SpecialEffects:
-      if (line->args[0]) line->effects |= FX_NoBlockmap;
-      if (line->args[1]) line->effects |= FX_DoNotSplitSeg;
-      if (line->args[2]) line->effects |= FX_DoNotRenderBack;
-      if (line->args[3]) line->effects |= FX_DoNotRenderFront;
+      if (raw.args[0]) line->effects |= FX_NoBlockmap;
+      if (raw.args[1]) line->effects |= FX_DoNotSplitSeg;
+      if (raw.args[2]) line->effects |= FX_DoNotRenderBack;
+      if (raw.args[3]) line->effects |= FX_DoNotRenderFront;
+      if (raw.args[4]) line->effects |= FX_NoReject;
       break;
     default:
       break;
@@ -818,8 +824,12 @@ static void GetSectors_Doom64(level_t &level)
 
     sector_t *sector = NewSector(level);
 
-    sector->height_floor = static_cast<double>(GetLittleEndian(raw.floorh));
-    sector->height_ceiling = static_cast<double>(GetLittleEndian(raw.ceilh));
+    if (!config.effects) continue;
+
+    if (GetLittleEndian(raw.special) == SS_Doom64_NoReject)
+    {
+      sector->effects = FX_Sector_NoReject;
+    }
   }
 }
 
@@ -906,16 +916,33 @@ static void GetLinedefs_Doom64(level_t &level)
 
     line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), i);
     line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), i);
-    line->flags = GetLittleEndian(raw.flags);
     line->special = GetLittleEndian(raw.special);
-    line->args[0] = GetLittleEndian(raw.tag);
+    line->tag = GetLittleEndian(raw.tag);
     line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
     line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
 
     line->start->is_used = true;
     line->end->is_used = true;
 
+    auto flags = GetLittleEndian(raw.flags);
+
+    if (HAS_BIT(flags, MLF_DOOM64_TWOSIDED))
+    {
+      line->effects |= FX_TwoSided;
+    }
+
     ValidateLinedef(level, line);
+
+    if (!config.effects) continue;
+
+    if (HAS_BIT(flags, MLF_DOOM64_NO_BLOCKMAP))
+    {
+      line->effects |= FX_NoBlockmap;
+    }
+    if (HAS_ALL(flags, MLF_DOOM64_AUTOMAP_SHOW | MLF_DOOM64_AUTOMAP_HIDE))
+    {
+      line->effects |= FX_NoBlockmap;
+    }
   }
 }
 
@@ -1044,7 +1071,7 @@ static void ParseLinedefField(level_t &level, linedef_t *line, const std::string
   {
     if (LEX_Boolean(value))
     {
-      line->flags |= MLF_TWOSIDED;
+      line->effects |= FX_TwoSided;
     };
   }
 

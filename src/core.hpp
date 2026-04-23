@@ -617,6 +617,13 @@ inline double ComputeAngle(double dx, double dy)
   return angle + (angle < 0.0) * 360.0;
 }
 
+inline short_angle_t ComputeAngle_BAM(double dx, double dy)
+{
+  double angle = atan2(dy, dx) * 180.0 / M_PI;
+  angle = angle + (angle < 0.0) * 360.0;
+  return static_cast<short_angle_t>(floor(angle * FRACFACTOR / 360.0 + 0.5));
+}
+
 //------------------------------------------------------------------------
 // WAD STRUCTURES
 //------------------------------------------------------------------------
@@ -1113,13 +1120,19 @@ static_assert(sizeof(raw_wad_header_t) == 12, "Size mismatch for 'raw_wad_header
 static_assert(sizeof(raw_wad_entry_t) == 16, "Size mismatch for 'raw_wad_entry_t'. Should be 16.");
 static_assert(sizeof(raw_vertex_t) == 4, "Size mismatch for 'raw_vertex_t'. Should be 4.");
 static_assert(sizeof(raw_linedef_doom_t) == 14, "Size mismatch for 'raw_linedef_doom_t'. Should be 14.");
-static_assert(sizeof(raw_linedef_hexen_t) == 16, "Size mismatch for 'raw_linedef_hexen_t'. Should be 16.");
 static_assert(sizeof(raw_sidedef_doom_t) == 30, "Size mismatch for 'raw_sidedef_doom_t'. Should be 30.");
 static_assert(sizeof(raw_sector_doom_t) == 26, "Size mismatch for 'raw_sector_doom_t'. Should be 26.");
 static_assert(sizeof(raw_thing_doom_t) == 10, "Size mismatch for 'raw_thing_doom_t'. Should be 10.");
+static_assert(sizeof(raw_linedef_hexen_t) == 16, "Size mismatch for 'raw_linedef_hexen_t'. Should be 16.");
 static_assert(sizeof(raw_thing_hexen_t) == 20, "Size mismatch for 'raw_thing_hexen_t'. Should be 20.");
+static_assert(sizeof(raw_vertex_doom64_t) == 8, "Size mismatch for 'raw_vertex_doom64_t'. Should be 8.");
+static_assert(sizeof(raw_thing_doom64_t) == 12, "Size mismatch for 'raw_thing_doom64_t'. Should be 12.");
+static_assert(sizeof(raw_linedef_doom64_t) == 16, "Size mismatch for 'raw_linedef_doom64_t'. Should be 16.");
+static_assert(sizeof(raw_sidedef_doom64_t) == 12, "Size mismatch for 'raw_sidedef_doom64_t'. Should be 12.");
+static_assert(sizeof(raw_sector_doom64_t) == 24, "Size mismatch for 'raw_sector_doom64_t'. Should be 24.");
 static_assert(sizeof(raw_bbox_t) == 8, "Size mismatch for 'raw_bbox_t'. Should be 8.");
 static_assert(sizeof(raw_blockmap_header_t) == 8, "Size mismatch for 'raw_blockmap_header_t'. Should be 8.");
+static_assert(sizeof(raw_blockmap_xbm1_header_t) == 16, "Size mismatch for 'raw_blockmap_xbm1_header_t'. Should be 16.");
 static_assert(sizeof(raw_node_vanilla_t) == 28, "Size mismatch for 'raw_node_vanilla_t'. Should be 28.");
 static_assert(sizeof(raw_subsec_vanilla_t) == 4, "Size mismatch for 'raw_subsec_vanilla_t'. Should be 4.");
 static_assert(sizeof(raw_seg_vanilla_t) == 12, "Size mismatch for 'raw_seg_vanilla_t'. Should be 12.");
@@ -1216,14 +1229,14 @@ using lineflag_doom64_t = enum lineflag_doom64_e : uint32_t
   MLF_DOOM64_TRIGGER_FRONT = BIT(24),
   MLF_DOOM64_AUTOMAP_HIDE_SPECIAL = BIT(25),
   MLF_DOOM64_FLIP_UPPER_PEGGED_COLOR = BIT(26),
-  MLF_DOOM64EXPLUS_BLOCKPLAYER = BIT(27),
-  MLF_DOOM64_UNUSED_28 = BIT(28),
-  MLF_DOOM64_UNUSED_29 = BIT(29),
+  MLF_DOOM64_BLOCKPLAYER = BIT(27),  // Doom 64 EX+ & EX+ Enhanced
+  MLF_DOOM64_NO_BLOCKMAP = BIT(28),  // BSP64 Enhanced
+  MLF_DOOM64_COMB_SIDEDEF = BIT(29), // BSP64 Enhanced
   MLF_DOOM64_MIRROR_HORI = BIT(30),
   MLF_DOOM64_MIRROR_VERT = BIT(31),
 };
 
-using hexen_activation_t = enum hexen_activation_e
+using line_spac_hexen_t = enum line_spac_hexen_e
 {
   SPAC_Cross = 0,   // when line is crossed (W1 / WR)
   SPAC_Use = 1,     // when line is used    (S1 / SR)
@@ -1233,7 +1246,7 @@ using hexen_activation_t = enum hexen_activation_e
   SPAC_PCross = 5,  // when projectile crosses the line
 };
 
-using doom_special_t = enum doom_special_e : int32_t
+using line_special_doom_t = enum line_special_doom_e : int32_t
 {
   Special_ScrollLeft = 48,
   Special_ScrollRight = 85,
@@ -1257,13 +1270,14 @@ using doom_special_t = enum doom_special_e : int32_t
   Special_ChangeSegLine,
 };
 
-using doom_tags_t = enum doom_tags_e : uint16_t
+using line_tags_doom_t = enum line_tags_doom_e : uint16_t
 {
+  Tag_NoReject = 997,
   Tag_DoNotRender = 998,
   Tag_NoBlockmap = 999,
 };
 
-using hexen_special_t = enum hexen_special_e : int32_t
+using line_special_hexen_t = enum line_special_hexen_e : int32_t
 {
   // We need to be aware of parameterized actions 1 and 5
   Polyobj_StartLine = 1,
@@ -1317,29 +1331,21 @@ using hexen_special_t = enum hexen_special_e : int32_t
 };
 
 // The power of node building manipulation!
-using bsp_effects_t = enum bsp_effects_e : uint32_t
+using line_effects_t = enum line_effects_e : uint32_t
 {
   FX_Nothing = 0,
+  FX_TwoSided = BIT(0),
+  FX_ZeroLength = BIT(1),
+  FX_SelfReferential = BIT(2),
 
-  // Zero-length line
-  FX_ZeroLength = BIT(26),
-
-  // Self-referencing
-  FX_SelfReferential = BIT(27),
-
-  // Segment generation
+  FX_NoReject = BIT(27),
   FX_DoNotRenderFront = BIT(28),
   FX_DoNotRenderBack = BIT(29),
-
-  // Segment splitting
   FX_DoNotSplitSeg = BIT(30),
-
-  // Blockmap generation
   FX_NoBlockmap = BIT(31),
 };
 
 // Segment rotation
-// currently only vanilla & deepbspv4 segs encode angle
 using seg_rotation_t = enum seg_rotation_e : uint8_t
 {
   FX_DoNotRotate = 0,
@@ -1353,57 +1359,20 @@ using seg_rotation_t = enum seg_rotation_e : uint8_t
 // Sector attributes.
 //
 
-using compatible_sectorflag_t = enum compatible_sectorflag_e : uint16_t
+using sector_special_doom64_t = enum sector_special_doom64_e : uint16_t
 {
-  SF_TypeMask = 31,
-  SF_DamageMask = BIT(5) | BIT(6),
-
-  SF_Secret = BIT(7),
-  SF_Friction = BIT(8),
-  SF_Wind = BIT(9),
-  SF_NoSounds = BIT(10),
-  SF_QuietPlane = BIT(11),
-
-  SF_AltDeathMode = BIT(12),
-  SF_MonsterDeath = BIT(13),
+  SS_Doom64_NoReject = 666,
 };
 
-constexpr uint32_t SF_BoomFlags = SF_DamageMask | SF_Secret | SF_Friction | SF_Wind;
-constexpr uint32_t SF_MBF21Flags = SF_DamageMask | SF_Secret | SF_Friction | SF_Wind | SF_AltDeathMode | SF_MonsterDeath;
+using sector_effects_t = enum sector_effects_e : uint8_t
+{
+  FX_Sector_None = 0,
+  FX_Sector_NoReject = BIT(0),
+};
 
 //
 // Thing attributes.
 //
-
-using doom_mobj_option_t = enum doom_mobj_option_e : uint16_t
-{
-  MTF_Easy = BIT(0),
-  MTF_Medium = BIT(1),
-  MTF_Hard = BIT(2),
-  MTF_Ambush = BIT(3),
-
-  MTF_Not_SP = BIT(4),
-  MTF_Not_DM = BIT(5),
-  MTF_Not_COOP = BIT(6),
-  MTF_Friend = BIT(7),
-};
-
-using hexen_mobj_option_t = enum hexen_mobj_option_e : uint16_t
-{
-  MTF_Hexen_Easy = BIT(0),
-  MTF_Hexen_Medium = BIT(1),
-  MTF_Hexen_Hard = BIT(2),
-  MTF_Hexen_Ambush = BIT(3),
-
-  MTF_Hexen_Dormant = BIT(4),
-  MTF_Hexen_Fighter = BIT(5),
-  MTF_Hexen_Cleric = BIT(6),
-  MTF_Hexen_Mage = BIT(7),
-
-  MTF_Hexen_SP = BIT(8),
-  MTF_Hexen_COOP = BIT(9),
-  MTF_Hexen_DM = BIT(10),
-};
 
 using doomednum_t = enum doomednum_e : int16_t
 {
