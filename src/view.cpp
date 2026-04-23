@@ -152,7 +152,7 @@ void WadFileDialog(ViewContext_t &ctx)
   {
     if (!filelist)
     {
-      PrintLine(LOG_WARN, "An error ocurred: %s", SDL_GetError());
+      PrintLine(LOG_WARN, "An error occurred: %s", SDL_GetError());
       return;
     }
 
@@ -162,12 +162,9 @@ void WadFileDialog(ViewContext_t &ctx)
       return;
     }
 
-    for (int i = 0; filelist[i] != NULL; i++)
-    {
-      PrintLine(LOG_NORMAL, "Selected file: %s", filelist[i]);
-      auto *ctx = static_cast<ViewContext_t *>(userdata);
-      ctx->wad_path_from_dialog = filelist[i];
-    }
+    PrintLine(LOG_NORMAL, "Selected file: %s", filelist[0]);
+    auto *ctx = static_cast<ViewContext_t *>(userdata);
+    ctx->wad_path_from_dialog = filelist[0];
   };
 
   SDL_ShowOpenFileDialog(WadFileDialogCallback, &ctx, ctx.window, wad_filter, SDL_arraysize(wad_filter), nullptr, false);
@@ -203,14 +200,17 @@ void ProcessEvents(ViewContext_t &ctx)
     ctx.wad_levels = LevelsInWad();
   }
 
-  // Build all levels form selected WAD
-  if (ctx.build_current_level)
+  // Build currently selected level form loaded WAD
+  if (ctx.build_current_level && ctx.level.level_num != NO_INDEX)
   {
+    ctx.level.level_header_lump_index = cur_wad->LevelHeader(ctx.level.level_num);
+    ctx.level.format = cur_wad->LevelFormat(ctx.level.level_num);
+
     ctx.build_current_level = false;
     if (ctx.wad_build_state != Job::BUSY)
     {
       ctx.wad_build_state = Job::BUSY;
-      SDL_CreateThreadRuntime(BuildCurrentLevel, "BuildAllLevels", &ctx, nullptr, nullptr);
+      SDL_CreateThreadRuntime(BuildCurrentLevel, "BuildCurrentLevel", &ctx, nullptr, nullptr);
     }
   }
 }
@@ -259,7 +259,24 @@ static auto MainWindow = [](ViewContext_t &ctx) -> void
       ImGui::Text("Job status: Error.");
       break;
     }
-    if (ImGui::Button("Build All Levels"))
+
+    if (ctx.wad_levels > 0)
+    {
+      if (ImGui::BeginListBox("Levels"))
+      {
+        for (size_t i = 0; i < ctx.wad_levels; i++)
+        {
+          const char *name = cur_wad->GetLump(cur_wad->LevelHeader(i))->Name();
+          if (ImGui::Selectable(name, ctx.level.level_num == i))
+          {
+            ctx.level.level_num = i;
+          }
+        }
+        ImGui::EndListBox();
+      }
+    }
+
+    if (ctx.level.level_num != NO_INDEX && ImGui::Button("Build level"))
     {
       ctx.build_current_level = true;
     }
@@ -270,7 +287,7 @@ static auto MainWindow = [](ViewContext_t &ctx) -> void
 
 static auto WadWindow = [](ViewContext_t &ctx) -> void
 {
-  if (ctx.wad_levels == 0)
+  if (ctx.wad_levels == 0 || ctx.level.level_num == NO_INDEX)
   {
     return;
   }
@@ -305,8 +322,9 @@ static auto ConfigWindow = [](ViewContext_t &ctx) -> void
     ImGui::InputDouble("Segment split cost", &config.split_cost, 1.0, 1.0, "%.0f");
     ImGui::Checkbox("Use faster node-picking algorithm", &config.fast);
     ImGui::Checkbox("Make backup of loaded WAD", &config.backup);
-    ImGui::Checkbox("Analisys mode", &config.analysis);
+    ImGui::Checkbox("Analysis mode", &config.analysis);
     ImGui::Checkbox("Verbose logging", &config.verbose);
+    ImGui::Checkbox("Special effects", &config.effects);
 
     ImGui::TableNextColumn();
 
