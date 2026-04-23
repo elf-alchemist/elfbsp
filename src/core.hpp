@@ -328,6 +328,18 @@ extern void PRINTF_ATTR(2, 3) PrintLineCLI(const log_level_t level, const char *
 #define SYS_ASSERT(cond) \
   (cond) ? (void)0 : PrintLine(LOG_ERROR, "ERROR: Assertion failed! In function %s (%s:%d)", __func__, __FILE__, __LINE__);
 
+//
+// Version info
+//
+
+#define VERSION_INFO \
+  PROJECT_NAME " version " PROJECT_VERSION "\n" \
+  "Branch: " GIT_BRANCH "\n"                    \
+  "Timestamp: " PROJECT_DATE "\n"               \
+  "Revision: " GIT_REV_COUNT "\n"               \
+  "Commit: " GIT_SHORT_HASH "\n"                \
+
+
 //------------------------------------------------------------------------
 // MEMORY ALLOCATION
 //------------------------------------------------------------------------
