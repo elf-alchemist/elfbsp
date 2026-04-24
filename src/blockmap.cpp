@@ -349,7 +349,7 @@ static void CompressBlockmap(level_t &level)
 }
 
 // compute size of final BLOCKMAP lump.
-static size_t CalcBlockmapSize(level_t &level, std::string prefix = "", size_t PrefixSize = 0,
+static size_t CalcBlockmapSize(level_t &level, std::string_view prefix = "", size_t PrefixSize = 0,
                                size_t NumSize = sizeof(uint16_t), size_t RawHeaderSize = sizeof(raw_blockmap_header_t))
 {
   size_t size = PrefixSize;
@@ -379,8 +379,8 @@ static size_t CalcBlockmapSize(level_t &level, std::string prefix = "", size_t P
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
-    PrintLine(LOG_DEBUG, "[%s] Lump prefix header \'%s\', num type size of %zu, total size of %zu", __func__, prefix.c_str(),
-              NumSize, size);
+    PrintLine(LOG_DEBUG, "[%s] Lump prefix header \'%.*s\', num type size of %zu, total size of %zu", __func__,
+              static_cast<int32_t>(prefix.size()), prefix.data(), NumSize, size);
   }
 
   return size;
@@ -388,7 +388,7 @@ static size_t CalcBlockmapSize(level_t &level, std::string prefix = "", size_t P
 
 // final phase: write it out in the correct format
 template <typename NumType = uint16_t>
-static void WriteBlockmap(level_t &level, std::string prefix = "")
+static void WriteBlockmap(level_t &level, std::string_view prefix = "")
 {
   static constexpr size_t PrefixHeaderSize = 8; // "XBM1\0\0\0\0"
   size_t PrefixSize = (!prefix.empty() ? PrefixHeaderSize : 0);
