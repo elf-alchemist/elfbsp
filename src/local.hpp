@@ -117,6 +117,9 @@ struct sector_t
 
   sector_t *rej_next = nullptr;
   sector_t *rej_prev = nullptr;
+
+  // -Elf- reject portal visibility checks
+  std::vector<size_t> reject_portals;
 };
 
 struct sidedef_t
@@ -387,6 +390,7 @@ using blocklist_t = struct blocklist_t
 {
   size_t hash;
   std::vector<size_t> lines;
+  std::vector<size_t> lines_block_reject;
 };
 
 // Note: ZDoom format support based on code (C) 2002,2003 Marisa "Randi" Heit
@@ -413,7 +417,7 @@ using level_t = struct level_t
   std::vector<walltip_t *> walltips;
   std::vector<intersection_t *> intercuts;
 
-  uint8_t *reject_matrix;
+  byte *reject_matrix;
   size_t reject_size;
 
   int16_t block_x, block_y;
