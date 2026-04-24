@@ -98,26 +98,25 @@ bool Overlaps(const vertex_t *vertex, const vertex_t *other);
 struct sector_t
 {
   // sector index.  Always valid after loading & pruning.
-  size_t index;
+  size_t index = NO_INDEX;
 
   // most info (floor_h, floor_tex, etc) omitted.  We don't need to
   // write the SECTORS lump, only read it.
 
+  sector_effects_t effects = FX_Sector_None;
+
   // -JL- non-zero if this sector contains a polyobj.
-  bool has_polyobj;
+  bool has_polyobj = false;
 
   // used when building REJECT table.  Each set of sectors that are
   // isolated from other sectors will have a different group number.
   // Thus: on every 2-sided linedef, the sectors on both sides will be
   // in the same group.  The rej_next, rej_prev fields are a link in a
   // RING, containing all sectors of the same group.
-  size_t rej_group;
+  size_t rej_group = NO_INDEX;
 
-  sector_t *rej_next;
-  sector_t *rej_prev;
-
-  double height_floor;
-  double height_ceiling;
+  sector_t *rej_next = nullptr;
+  sector_t *rej_prev = nullptr;
 };
 
 struct sidedef_t
@@ -147,9 +146,7 @@ struct linedef_t
   sidedef_t *left;  // left sidedef, or nullptr if none
 
   int32_t special; //
-  uint32_t flags;  // currently we only care about two-sided lines, but who knows
-  int32_t args[5]; // Tag => arg0/id split
-  int32_t id;      //
+  uint16_t tag;    //
 
   uint32_t effects = FX_Nothing;
   seg_rotation_t angle = FX_DoNotRotate;

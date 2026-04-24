@@ -69,25 +69,26 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
   double dx = round(seg->end->x) - round(seg->start->x);
   double dy = round(seg->end->y) - round(seg->start->y);
 
-  double angle = ComputeAngle(dx, dy);
-
-  auto result = static_cast<short_angle_t>(floor(angle * FRACFACTOR / 360.0 + 0.5));
+  short_angle_t result = 0;
 
   switch (seg->linedef->angle)
   {
   case FX_RotateRelativeDegrees:
-    result += DegreesToShortBAM(seg->linedef->args[0]);
+    result = ComputeAngle_BAM(dx, dy);
+    result += DegreesToShortBAM(seg->linedef->tag);
     break;
   case FX_RotateAbsoluteDegrees:
-    result = DegreesToShortBAM(seg->linedef->args[0]);
+    result = DegreesToShortBAM(seg->linedef->tag);
     break;
   case FX_RotateRelativeBAM:
-    result += static_cast<short_angle_t>(seg->linedef->args[0]);
+    result = ComputeAngle_BAM(dx, dy);
+    result += static_cast<short_angle_t>(seg->linedef->tag);
     break;
   case FX_RotateAbsoluteBAM:
-    result = static_cast<short_angle_t>(seg->linedef->args[0]);
+    result = static_cast<short_angle_t>(seg->linedef->tag);
     break;
-  default:
+  case FX_DoNotRotate:
+    result = ComputeAngle_BAM(dx, dy);
     break;
   }
 
