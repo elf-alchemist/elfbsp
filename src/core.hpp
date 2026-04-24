@@ -40,6 +40,7 @@
 #include <bit>
 #include <chrono>
 #include <string>
+#include <string_view>
 #include <vector>
 
 //
@@ -873,9 +874,11 @@ constexpr auto BSP_MAGIC_GLV3 = "gNd3";
 constexpr auto BSP_MAGIC_GLV4 = "gNd4";
 constexpr auto BSP_MAGIC_GLV5 = "gNd5";
 
-constexpr auto BMAP_MAGIC_XBM1 = "XBM1\0\0\0\0";
+using namespace std::string_view_literals;
 
-constexpr auto BMAP_MAGIC_ZBM1 = "ZBM1\0\0\0\0";
+constexpr std::string_view BMAP_MAGIC_XBM1 = "XBM1\0\0\0\0"sv;
+
+constexpr std::string_view BMAP_MAGIC_ZBM1 = "ZBM1\0\0\0\0"sv;
 
 // Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
 constexpr uint16_t NF_SUBSECTOR_VANILLA = UINT16_C(0x8000);
