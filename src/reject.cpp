@@ -152,7 +152,7 @@ static bool VisibilityRaycastBSP(level_t &level, vertex_t *A, vertex_t *B)
   return IsVisibilityRaycastBlocked(level, root_child, A, B);
 }
 
-static bool Reject_CheckSectorPortalVisibility(level_t &level, sector_t *view_sec, sector_t *targ_sec)
+static bool Reject_CheckSectorPortals(level_t &level, sector_t *view_sec, sector_t *targ_sec)
 {
   for (auto Portal1 : view_sec->reject_portals)
   {
@@ -260,6 +260,8 @@ static void Reject_ProcessGroups(level_t &level)
 
 static void Reject_ProcessPortals(level_t &level)
 {
+  if (config.fast) return;
+
   for (size_t view = 0; view < level.sectors.size(); view++)
   {
     for (size_t target = 0; target < view; target++)
@@ -272,7 +274,7 @@ static void Reject_ProcessPortals(level_t &level)
         continue;
       }
 
-      if (Reject_CheckSectorPortalVisibility(level, view_sec, targ_sec))
+      if (Reject_CheckSectorPortals(level, view_sec, targ_sec))
       {
         continue;
       }
