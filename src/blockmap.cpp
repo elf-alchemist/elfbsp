@@ -120,21 +120,17 @@ void InitBlockmap(level_t &level)
 
 static void FreeBlockmap(level_t &level)
 {
-  // Intentionally leave `lines_block_reject` untouched
-  // As we need it for reject matrix speed ups
-
   for (size_t i = 0; i < level.block_count; i++)
   {
     level.block_lines[i].lines.clear();
-    // level.block_lines[i].lines_block_reject.clear();
   }
 
-  // level.block_lines.clear();
+  level.block_lines.clear();
   level.block_indexes.clear();
   level.block_duplicates.clear();
 }
 
-static void BlockAdd(level_t &level, size_t blk_num, size_t line_index, bool reject)
+static void BlockAdd(level_t &level, size_t blk_num, size_t line_index)
 {
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
@@ -152,7 +148,6 @@ static void BlockAdd(level_t &level, size_t blk_num, size_t line_index, bool rej
   blk.hash = std::rotl(blk.hash, 4) ^ line_index;
 
   blk.lines.push_back(line_index);
-  if (reject) blk.lines_block_reject.push_back(line_index);
 }
 
 static void BlockAddLine(level_t &level, const linedef_t *L)
@@ -163,9 +158,6 @@ static void BlockAddLine(level_t &level, const linedef_t *L)
   auto y2 = FloatToShort(L->end->y);
 
   size_t line_index = L->index;
-
-  bool reject = HAS_NONE(L->effects, FX_RejectPortal) // isn't already a portal
-                || HAS_BIT(L->effects, FX_NoReject);  // is a manually blocked portal
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
@@ -194,7 +186,7 @@ static void BlockAddLine(level_t &level, const linedef_t *L)
     for (size_t bx = bx1; bx <= bx2; bx++)
     {
       size_t blk_num = by1 * level.block_w + bx;
-      BlockAdd(level, blk_num, line_index, reject);
+      BlockAdd(level, blk_num, line_index);
     }
     return;
   }
@@ -205,7 +197,7 @@ static void BlockAddLine(level_t &level, const linedef_t *L)
     for (size_t by = by1; by <= by2; by++)
     {
       size_t blk_num = by * level.block_w + bx1;
-      BlockAdd(level, blk_num, line_index, reject);
+      BlockAdd(level, blk_num, line_index);
     }
     return;
   }
@@ -225,7 +217,7 @@ static void BlockAddLine(level_t &level, const linedef_t *L)
 
       if (CheckLinedefInsideBox(minx, miny, maxx, maxy, x1, y1, x2, y2))
       {
-        BlockAdd(level, blk_num, line_index, reject);
+        BlockAdd(level, blk_num, line_index);
       }
     }
   }
@@ -235,7 +227,7 @@ static void BlockAddLine(level_t &level, const linedef_t *L)
 // all lines in each block.
 static void CreateBlockmap(level_t &level)
 {
-  level.block_lines.assign(level.block_count, blocklist_t{.hash = 0x1234123412341234, .lines = {}, .lines_block_reject = {}});
+  level.block_lines.assign(level.block_count, blocklist_t{.hash = 0x1234123412341234, .lines = {}});
 
   for (size_t i = 0; i < level.linedefs.size(); i++)
   {

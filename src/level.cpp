@@ -357,8 +357,8 @@ void ValidateLinedef(level_t &level, linedef_t *line)
   )
   {
     line->effects |= FX_RejectPortal;
-    line->right->sector->reject_portals.push_back(line->index);
-    line->left->sector->reject_portals.push_back(line->index);
+    line->right->sector->reject_portals.push_back(line);
+    line->left->sector->reject_portals.push_back(line);
   }
 }
 

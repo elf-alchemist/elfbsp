@@ -119,7 +119,7 @@ struct sector_t
   sector_t *rej_prev = nullptr;
 
   // -Elf- reject portal visibility checks
-  std::vector<size_t> reject_portals;
+  std::vector<struct linedef_t *> reject_portals;
 };
 
 struct sidedef_t
@@ -390,7 +390,6 @@ using blocklist_t = struct blocklist_t
 {
   size_t hash;
   std::vector<size_t> lines;
-  std::vector<size_t> lines_block_reject;
 };
 
 // Note: ZDoom format support based on code (C) 2002,2003 Marisa "Randi" Heit
