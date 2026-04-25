@@ -94,7 +94,7 @@ static bool IsVisibilityRaycastBlocked(level_t &level, child_t &child, vertex_t 
   {
     for (seg_t *seg = child.subsec->seg_list; seg; seg = seg->next)
     {
-      if (!seg->linedef)
+      if (!seg->linedef || seg->is_degenerate)
       {
         continue;
       }
