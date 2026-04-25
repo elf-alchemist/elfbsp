@@ -90,14 +90,30 @@ static bool PointOnPartitionLineSide(vertex_t *p, node_t *node)
 
 static bool IsVisibilityRaycastBlocked(level_t &level, child_t &child, vertex_t *A, vertex_t *B)
 {
+  double minX = std::min(A->x, B->x);
+  double maxX = std::max(A->x, B->x);
+  double minY = std::min(A->y, B->y);
+  double maxY = std::max(A->y, B->y);
+
+  if (maxX < child.bounds.minx || maxY < child.bounds.miny || minX > child.bounds.maxx || minY > child.bounds.maxy)
+  {
+    return false;
+  }
+
   if (child.subsec)
   {
     for (seg_t *seg = child.subsec->seg_list; seg; seg = seg->next)
     {
-      if (!seg->linedef || seg->is_degenerate)
+      linedef_t *line = seg->linedef;
+
+      if (!line                                       // is miniseg
+          || HAS_NONE(line->effects, FX_RejectPortal) // isn't a valid portal
+          || HAS_BIT(line->effects, FX_NoReject)      // is blocking
+          || seg->is_degenerate)                      // zero length
       {
         continue;
       }
+
       if (Intersect(A, B, seg->start, seg->end))
       {
         return true;
@@ -127,7 +143,7 @@ static bool IsVisibilityRaycastBlocked(level_t &level, child_t &child, vertex_t 
   }
 
   // same side
-  if ((sideA && sideB) || (!sideA && !sideB))
+  if (sideA == sideB)
   {
     return IsVisibilityRaycastBlocked(level, *front, A, B);
   }
@@ -154,6 +170,12 @@ static bool VisibilityRaycastBSP(level_t &level, vertex_t *A, vertex_t *B)
 
 static bool Reject_CheckSectorPortals(level_t &level, sector_t *view_sec, sector_t *targ_sec)
 {
+  // control sectors
+  if (view_sec->reject_portals.empty() || targ_sec->reject_portals.empty())
+  {
+    return false;
+  }
+
   for (auto Portal1 : view_sec->reject_portals)
   {
     for (auto Portal2 : targ_sec->reject_portals)
@@ -163,14 +185,14 @@ static bool Reject_CheckSectorPortals(level_t &level, sector_t *view_sec, sector
       vertex_t *C = Portal2->start;
       vertex_t *D = Portal2->end;
 
-      // Check all combos between two line portals
-      if (VisibilityRaycastBSP(level, A, C)) return false;
-      if (VisibilityRaycastBSP(level, A, D)) return false;
-      if (VisibilityRaycastBSP(level, B, C)) return false;
-      if (VisibilityRaycastBSP(level, B, D)) return false;
+      // potentially visible
+      if (VisibilityRaycastBSP(level, A, C)) return true;
+      if (VisibilityRaycastBSP(level, A, D)) return true;
+      if (VisibilityRaycastBSP(level, B, C)) return true;
+      if (VisibilityRaycastBSP(level, B, D)) return true;
     }
   }
-  return true; // Okay it's potentially visible
+  return false; // completely blocked
 }
 
 //
