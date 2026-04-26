@@ -28,8 +28,34 @@
 #include <string>
 #include <vector>
 
+
+void PRINTF_ATTR(2, 3) PrintLineCLI(const log_level_t level, const char *fmt, ...)
+{
+  FILE *const stream = (level == LOG_NORMAL) ? stdout : stderr;
+  char buffer[MSG_BUFFER_LENGTH];
+
+  va_list arg_ptr;
+
+  va_start(arg_ptr, fmt);
+  M_vsnprintf(buffer, fmt, arg_ptr);
+  va_end(arg_ptr);
+
+  buffer[MSG_BUFFER_LENGTH - 1] = '\0';
+
+  fprintf(stream, "%s\n", buffer);
+  fflush(stream);
+
+  if (level == LOG_ERROR)
+  {
+    exit(3);
+  }
+}
+
+void PRINTF_ATTR(2, 3) (*PrintLine)(const log_level_t level, const char *fmt, ...) = PrintLineCLI;
+
 static bool opt_help = false;
 static bool opt_version = false;
+static bool opt_view = false;
 
 static std::string opt_output;
 
@@ -512,6 +538,10 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
   {
     opt_version = true;
   }
+  else if (strcmp(name, "--view") == 0)
+  {
+    opt_view = true;
+  }
   else if (strcmp(name, "--analysis") == 0)
   {
     config.analysis = true;
@@ -719,6 +749,12 @@ void ParseCommandLine(int32_t argc, const char *argv[])
 int32_t main(const int32_t argc, const char *argv[])
 {
   ParseCommandLine(argc, argv);
+
+  if (opt_view)
+  {
+    EnterGUI();
+    return 0;
+  }
 
   if (opt_version)
   {
