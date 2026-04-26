@@ -349,6 +349,17 @@ void ValidateLinedef(level_t &level, linedef_t *line)
     PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is VERY long, it may cause problems", line->index);
     config.total_warnings++;
   }
+
+  if (HAS_BIT(line->effects, FX_TwoSided)            // Has flag
+      && (line->right && line->left)                 // Valid sides
+      && (line->right->sector && line->left->sector) // Valid sectors
+      && (line->right->sector != line->left->sector) // Not the same
+  )
+  {
+    line->effects |= FX_RejectPortal;
+    line->right->sector->reject_portals.push_back(line);
+    line->left->sector->reject_portals.push_back(line);
+  }
 }
 
 static void GetVertices_Doom(level_t &level)

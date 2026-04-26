@@ -47,10 +47,152 @@ static void Reject_Init(level_t &level)
   }
 }
 
+static void Reject_WriteLump(level_t &level)
+{
+  Lump_c *lump = CreateLevelLump(level, "REJECT", level.reject_size);
+  lump->Write(level.reject_matrix, level.reject_size);
+  lump->Finish();
+}
+
 static void Reject_Free(level_t &level)
 {
   delete[] level.reject_matrix;
   level.reject_matrix = nullptr;
+}
+
+//
+// Utilities
+//
+
+// https://bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
+static bool CCW(vertex_t *V1, vertex_t *V2, vertex_t *V3)
+{
+  return (V3->y - V1->y) * (V2->x - V1->x) > (V2->y - V1->y) * (V3->x - V1->x);
+}
+
+static bool Intersect(vertex_t *A, vertex_t *B, vertex_t *C, vertex_t *D)
+{
+  return CCW(A, C, D) != CCW(B, C, D) && CCW(A, B, C) != CCW(A, B, D);
+}
+
+//
+// -Elf-
+// Reject grouping is great, but for better results a portal-based
+// 2D raycaster is used to do validation within a given group.
+// Use BSP tree to perform additional visibility culling.
+//
+
+static bool PointOnPartitionLineSide(vertex_t *p, node_t *node)
+{
+  double side = (p->x - node->x) * node->dy - (p->y - node->y) * node->dx;
+  return side >= 0;
+}
+
+static bool IsVisibilityRaycastBlocked(level_t &level, child_t &child, vertex_t *A, vertex_t *B)
+{
+  double minX = std::min(A->x, B->x);
+  double maxX = std::max(A->x, B->x);
+  double minY = std::min(A->y, B->y);
+  double maxY = std::max(A->y, B->y);
+
+  if (maxX < child.bounds.minx || maxY < child.bounds.miny || minX > child.bounds.maxx || minY > child.bounds.maxy)
+  {
+    return false;
+  }
+
+  if (child.subsec)
+  {
+    for (seg_t *seg = child.subsec->seg_list; seg; seg = seg->next)
+    {
+      linedef_t *line = seg->linedef;
+
+      if (!line                                       // is miniseg
+          || HAS_NONE(line->effects, FX_RejectPortal) // isn't a valid portal
+          || HAS_BIT(line->effects, FX_NoReject)      // is blocking
+          || seg->is_degenerate)                      // zero length
+      {
+        continue;
+      }
+
+      if (Intersect(A, B, seg->start, seg->end))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  node_t *node = child.node;
+
+  bool sideA = PointOnPartitionLineSide(A, node);
+  bool sideB = PointOnPartitionLineSide(B, node);
+
+  child_t *front;
+  child_t *back;
+
+  if (sideA)
+  {
+    front = &node->r;
+    back = &node->l;
+  }
+  else
+  {
+    front = &node->l;
+    back = &node->r;
+  }
+
+  // same side
+  if (sideA == sideB)
+  {
+    return IsVisibilityRaycastBlocked(level, *front, A, B);
+  }
+
+  if (IsVisibilityRaycastBlocked(level, *front, A, B))
+  {
+    return true;
+  }
+
+  return IsVisibilityRaycastBlocked(level, *back, A, B);
+}
+
+static bool VisibilityRaycastBSP(level_t &level, vertex_t *A, vertex_t *B)
+{
+  if (level.nodes.empty()) return false;
+
+  node_t *root = level.nodes.back();
+  child_t root_child;
+  root_child.node = root;
+  root_child.subsec = nullptr;
+
+  return IsVisibilityRaycastBlocked(level, root_child, A, B);
+}
+
+static bool Reject_CheckSectorPortals(level_t &level, sector_t *view_sec, sector_t *targ_sec)
+{
+  // control sectors
+  if (view_sec->reject_portals.empty() || targ_sec->reject_portals.empty())
+  {
+    return false;
+  }
+
+  for (auto Portal1 : view_sec->reject_portals)
+  {
+    for (auto Portal2 : targ_sec->reject_portals)
+    {
+      vertex_t *A = Portal1->start;
+      vertex_t *B = Portal1->end;
+      vertex_t *C = Portal2->start;
+      vertex_t *D = Portal2->end;
+
+      // potentially visible
+      if (VisibilityRaycastBSP(level, A, C)) return true;
+      if (VisibilityRaycastBSP(level, A, D)) return true;
+      if (VisibilityRaycastBSP(level, B, C)) return true;
+      if (VisibilityRaycastBSP(level, B, D)) return true;
+    }
+  }
+  return false; // completely blocked
 }
 
 //
@@ -65,7 +207,7 @@ static void Reject_GroupSectors(level_t &level)
     const linedef_t *line = level.linedefs[i];
 
     // must be valid two-sided line
-    if (!line->right || !line->left)
+    if (HAS_NONE(line->effects, FX_RejectPortal))
     {
       continue;
     }
@@ -74,13 +216,10 @@ static void Reject_GroupSectors(level_t &level)
     sector_t *sec2 = line->left->sector;
     sector_t *tmp;
 
-    if (!sec1                                         // invalid
-        || !sec2                                      // invalid
-        || sec1 == sec2                               // same
+    if (sec1->rej_group == sec2->rej_group            // already in the same group
         || HAS_BIT(sec1->effects, FX_Sector_NoReject) // blind in sector
         || HAS_BIT(sec2->effects, FX_Sector_NoReject) // blind in sector
         || HAS_BIT(line->effects, FX_NoReject)        // blocked by line
-        || sec1->rej_group == sec2->rej_group         // already in the same group
     )
     {
       continue;
@@ -116,7 +255,7 @@ static void Reject_GroupSectors(level_t &level)
   }
 }
 
-static void Reject_ProcessSectors(level_t &level)
+static void Reject_ProcessGroups(level_t &level)
 {
   for (size_t view = 0; view < level.sectors.size(); view++)
   {
@@ -126,6 +265,38 @@ static void Reject_ProcessSectors(level_t &level)
       sector_t *targ_sec = level.sectors[target];
 
       if (view_sec->rej_group == targ_sec->rej_group)
+      {
+        continue;
+      }
+
+      // for symmetry, do both sides at same time
+
+      size_t p1 = view * level.sectors.size() + target;
+      size_t p2 = target * level.sectors.size() + view;
+
+      level.reject_matrix[p1 >> 3] |= (1 << (p1 & 7));
+      level.reject_matrix[p2 >> 3] |= (1 << (p2 & 7));
+    }
+  }
+}
+
+static void Reject_ProcessPortals(level_t &level)
+{
+  if (config.fast) return;
+
+  for (size_t view = 0; view < level.sectors.size(); view++)
+  {
+    for (size_t target = 0; target < view; target++)
+    {
+      sector_t *view_sec = level.sectors[view];
+      sector_t *targ_sec = level.sectors[target];
+
+      if (view_sec->rej_group != targ_sec->rej_group)
+      {
+        continue;
+      }
+
+      if (Reject_CheckSectorPortals(level, view_sec, targ_sec))
       {
         continue;
       }
@@ -167,13 +338,6 @@ static void Reject_DebugGroups(level_t &level)
   }
 }
 
-static void Reject_WriteLump(level_t &level)
-{
-  Lump_c *lump = CreateLevelLump(level, "REJECT", level.reject_size);
-  lump->Write(level.reject_matrix, level.reject_size);
-  lump->Finish();
-}
-
 //
 // For now we only do very basic reject processing, limited to
 // determining all isolated groups of sectors (islands that are
@@ -191,7 +355,8 @@ void PutReject(level_t &level)
 
   Reject_Init(level);
   Reject_GroupSectors(level);
-  Reject_ProcessSectors(level);
+  Reject_ProcessGroups(level);
+  Reject_ProcessPortals(level);
   Reject_DebugGroups(level);
   Reject_WriteLump(level);
   Reject_Free(level);

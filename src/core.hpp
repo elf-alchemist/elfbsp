@@ -1333,11 +1333,14 @@ using line_special_hexen_t = enum line_special_hexen_e : int32_t
 // The power of node building manipulation!
 using line_effects_t = enum line_effects_e : uint32_t
 {
+  // internal state representation
   FX_Nothing = 0,
   FX_TwoSided = BIT(0),
   FX_ZeroLength = BIT(1),
   FX_SelfReferential = BIT(2),
+  FX_RejectPortal = BIT(3),
 
+  // user-defined special effects
   FX_NoReject = BIT(27),
   FX_DoNotRenderFront = BIT(28),
   FX_DoNotRenderBack = BIT(29),
