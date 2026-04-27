@@ -41,7 +41,7 @@ jobs:
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
-              -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+              -DCMAKE_CXX_FLAGS="-stdlib=libc++ -static" \
               -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,-Bstatic,-lc++,-lc++abi,-Bdynamic -Wl,--gc-sections"
 
           - name: MacOS Clang Universal
