@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - name: Linux x86_64
+          - name: Linux Clang x86_64
             os: ubuntu-latest
             shell: bash
             package_name: linux_x86_64
@@ -41,11 +41,10 @@ jobs:
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
-              -DCMAKE_LINKER=lld \
               -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
-              -DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections"
+              -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,-Bstatic,-lc++,-lc++abi,-Bdynamic -Wl,--gc-sections"
 
-          - name: MacOS Universal
+          - name: MacOS Clang Universal
             os: macos-latest
             shell: bash
             package_name: macos_universal
@@ -59,29 +58,26 @@ jobs:
               -DCMAKE_CXX_COMPILER=clang++ \
               -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
 
-          - name: Windows MinGW x86_64
+          - name: Windows MSYS2 Clang x86_64
             os: windows-latest
             shell: "msys2 {0}"
-            msystem: mingw64
-            msys-env: mingw-w64-x86_64
+            msystem: clang64
             package_name: windows_x86_64
             artifact_path: build/*.zip
             install: |
               pacman -Syu --noconfirm
               pacman -S --noconfirm \
-                mingw-w64-x86_64-clang \
-                mingw-w64-x86_64-clang-tools-extra \
-                mingw-w64-x86_64-lld \
-                mingw-w64-x86_64-cmake \
-                mingw-w64-x86_64-ninja \
-                mingw-w64-x86_64-git
+                mingw-w64-clang-x86_64-clang \
+                mingw-w64-clang-x86_64-lld \
+                mingw-w64-clang-x86_64-cmake \
+                mingw-w64-clang-x86_64-ninja \
+                mingw-w64-clang-x86_64-git
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
-              -DCMAKE_LINKER=lld \
-              -DCMAKE_EXE_LINKER_FLAGS="-static -Wl,--gc-sections" \
-              -DCMAKE_SHARED_LINKER_FLAGS="-static"
+              -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -static -Wl,--gc-sections" \
+              -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld -static"
 
     steps:
       - name: Setup MSYS2
