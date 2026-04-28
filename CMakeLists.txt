@@ -159,6 +159,24 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 20
 )
 
+target_compile_options(${PROJECT_NAME} PRIVATE -stdlib=libc++)
+target_link_options(${PROJECT_NAME} PRIVATE -stdlib=libc++ "-fuse-ld=lld")
+
+if(NOT APPLE)
+  target_compile_options(${PROJECT_NAME} PRIVATE 
+    $<$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>:-ffunction-sections -fdata-sections>)
+  target_link_options(${PROJECT_NAME} PRIVATE 
+    $<$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>:-Wl,--gc-sections>)
+endif()
+
+if(ELFBSP_STATIC AND NOT APPLE)
+  if(WIN32)
+    target_link_options(${PROJECT_NAME} PRIVATE -static)
+  else()
+    target_link_options(${PROJECT_NAME} PRIVATE "-Wl,-Bstatic,-lc++,-lc++abi,-Bdynamic")
+  endif()
+endif()
+
 target_compile_options(${PROJECT_NAME} PRIVATE
   -Wall
   -Wextra
