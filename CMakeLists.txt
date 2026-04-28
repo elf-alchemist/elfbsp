@@ -1,13 +1,16 @@
 # ELFBSP CMake Script
 cmake_minimum_required(VERSION 3.15)
+
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
+include(CheckIncludeFile)
+
 project(elfbsp
         VERSION "1.3.0"
         LANGUAGES C CXX
         HOMEPAGE_URL "https://elf-alchemist.github.io/elfbsp"
         # SPDX_LICENSE "GPL-2.0+" doesn't work?
         DESCRIPTION "Modern BSP tree builder for idTech1 games and source ports.")
-
-include(CheckIncludeFile)
 
 set(CMAKE_INSTALL_DO_STRIP TRUE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
@@ -29,37 +32,7 @@ option(ENABLE_TSAN "Enable TSan" OFF)
 option(ENABLE_HARDENING "Enable hardening flags" OFF)
 option(ENABLE_LTO "Enable link time Optimization" OFF)
 
-set(SAN_COUNT 0)
-foreach(san ENABLE_ASAN ENABLE_UBSAN ENABLE_TSAN)
-  if(${san})
-    math(EXPR SAN_COUNT "${SAN_COUNT} + 1")
-  endif()
-endforeach()
-
-if(ENABLE_LTO AND SAN_COUNT GREATER 0)
-  message(FATAL_ERROR "LTO cannot be enabled together with sanitizers.")
-endif()
-
-if(SAN_COUNT GREATER 0)
-  if(NOT CMAKE_BUILD_TYPE MATCHES "Debug|RelWithDebInfo")
-    message(FATAL_ERROR
-                "Sanitizers require Debug or RelWithDebInfo build type "
-                "(current: ${CMAKE_BUILD_TYPE}).")
-  endif()
-endif()
-
-if(ENABLE_LTO)
-  include(CheckIPOSupported)
-  check_ipo_supported(RESULT HAS_LTO OUTPUT HAS_LTO_ERROR)
-  if(HAS_LTO)
-    message(STATUS "Link Time Optimization: ON")
-  else()
-    message(STATUS "Link Time Optimization: OFF")
-  endif()
-endif()
-
 # Grabs the git hash and branch a few different ways.
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 include(GetGitBranch)
 include(GetGitRevisionDescription)
 include(GetGitRevisionNumber)
@@ -155,71 +128,45 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-  C_STANDARD 23
   CXX_STANDARD 20
 )
 
+include(CheckedFlags)
+
 if(NOT APPLE)
-  target_compile_options(${PROJECT_NAME} PRIVATE -stdlib=libc++)
-  target_link_options(${PROJECT_NAME} PRIVATE -stdlib=libc++ "-fuse-ld=lld")
-  target_compile_options(${PROJECT_NAME} PRIVATE 
-    $<$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>:-ffunction-sections -fdata-sections>)
-  target_link_options(${PROJECT_NAME} PRIVATE 
-    $<$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>:-Wl,--gc-sections>)
+  _checked_add_compile_option(-stdlib=libc++)
+  _checked_add_link_option(-stdlib=libc++ "-fuse-ld=lld")
+  if (CONFIG MATCHES "Release" OR "RelWithDebInfo")
+    _checked_add_compile_option(-ffunction-sections)
+    _checked_add_compile_option(-fdata-sections)
+    _checked_add_link_option(-Wl,--gc-sections)
+  endif()
 endif()
 
 if(ELFBSP_STATIC AND NOT APPLE)
   if(WIN32)
-    target_link_options(${PROJECT_NAME} PRIVATE -static)
+    _checked_add_link_option(-static)
   else()
-    target_link_options(${PROJECT_NAME} PRIVATE "-Wl,-Bstatic,-lc++,-lc++abi,-Bdynamic")
+    _checked_add_link_option("-Wl,-Bstatic,-lc++,-lc++abi,-Bdynamic")
   endif()
 endif()
 
-target_compile_options(${PROJECT_NAME} PRIVATE
-  -Wall
-  -Wextra
-  -Wshadow
-  -Wconversion
-  -Wsign-conversion
-  -Wno-unused-parameter
-)
+_checked_add_compile_option(-Wextra)
+_checked_add_compile_option(-Wshadow)
+_checked_add_compile_option(-Wconversion)
+_checked_add_compile_option(-Wsign-conversion)
+_checked_add_compile_option(-Wno-unused-parameter)
 
-target_compile_options(${PROJECT_NAME} PRIVATE
-  $<$<CONFIG:Release>:-O3>
-  $<$<CONFIG:RelWithDebInfo>:-O3>
-  $<$<CONFIG:Debug>:-O0>
-  $<$<CONFIG:MinSizeRel>:-Os>
-)
+_checked_add_compile_option(-fno-exceptions)
+_checked_add_compile_option(-fno-rtti)
+_checked_add_compile_option(-Wold-style-cast)
 
-target_compile_options(${PROJECT_NAME} PRIVATE
-  $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
-  $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
-  $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
-)
-
-if(ENABLE_WERROR)
-  target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
-endif()
-
-if(ENABLE_ASAN)
-  target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
-  target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address)
-endif()
-
-if(ENABLE_UBSAN)
-  target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=undefined)
-  target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=undefined)
-endif()
-
-if(ENABLE_TSAN)
-  target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=thread)
-  target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=thread)
-endif()
-
-if(ENABLE_HARDENING)
-  target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong)
-  target_link_options(${PROJECT_NAME} PRIVATE -Wl,-z,relro -Wl,-z,now)
+if(CONFIG MATCHES "Release" OR "RelWithDebInfo")
+  _checked_add_compile_option(-O3)
+elseif(CONFIG MATCHES "Debug")
+  _checked_add_compile_option(-O0)
+elseif(CONFIG MATCHES "MinSizeRel")
+  _checked_add_compile_option(-Os)
 endif()
 
 if(ENABLE_LTO)

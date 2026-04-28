@@ -51,8 +51,7 @@ jobs:
             package_name: macos_universal
             artifact_path: build/*.zip
             install: |
-              brew update
-              brew install ninja || true
+              true
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
