@@ -38,9 +38,10 @@ jobs:
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
-              -DCMAKE_CXX_COMPILER=clang++ \
-              -DCMAKE_CXX_FLAGS="-stdlib=libstdc++" \
-              -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,--gc-sections"
+              -DCMAKE_CXX_COMPILER=clang++\
+              -DELFBSP_STATIC=ON \
+              -DENABLE_HARDENING=ON \
+              -DENABLE_LTO=ON
 
           - name: MacOS Clang Universal
             os: macos-latest
@@ -50,13 +51,14 @@ jobs:
             install: |
               brew update
               brew install ninja
-            # HACK: temporarily disable the x86 part of the universal build
-            # need to move to lipo instead of CMAKE_OSX_ARCHITECTURES
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
-              -DCMAKE_OSX_ARCHITECTURES="arm64"
+              -DCMAKE_OSX_ARCHITECTURES="arm64" \
+              -DELFBSP_STATIC=ON \
+              -DENABLE_HARDENING=ON \
+              -DENABLE_LTO=ON
 
           - name: Windows MSYS2 Clang x86_64
             os: windows-latest
@@ -75,9 +77,10 @@ jobs:
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
-              -DCMAKE_CXX_COMPILER=clang++ \
-              -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,--gc-sections" \
-              -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld"
+              -DCMAKE_CXX_COMPILER=clang++\
+              -DELFBSP_STATIC=ON \
+              -DENABLE_HARDENING=ON \
+              -DENABLE_LTO=ON
 
     steps:
       - name: Setup MSYS2
