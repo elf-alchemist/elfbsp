@@ -38,7 +38,7 @@ jobs:
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
-              -DCMAKE_CXX_COMPILER=clang++\
+              -DCMAKE_CXX_COMPILER=clang++ \
               -DELFBSP_STATIC=ON \
               -DENABLE_HARDENING=ON \
               -DENABLE_LTO=ON
@@ -54,7 +54,7 @@ jobs:
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
-              -DCMAKE_CXX_COMPILER=clang++\
+              -DCMAKE_CXX_COMPILER=clang++ \
               -DELFBSP_STATIC=ON \
               -DENABLE_HARDENING=ON \
               -DENABLE_LTO=ON
@@ -76,7 +76,7 @@ jobs:
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
-              -DCMAKE_CXX_COMPILER=clang++\
+              -DCMAKE_CXX_COMPILER=clang++ \
               -DELFBSP_STATIC=ON \
               -DENABLE_HARDENING=ON \
               -DENABLE_LTO=ON
