@@ -159,10 +159,9 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 20
 )
 
-target_compile_options(${PROJECT_NAME} PRIVATE -stdlib=libc++)
-target_link_options(${PROJECT_NAME} PRIVATE -stdlib=libc++ "-fuse-ld=lld")
-
 if(NOT APPLE)
+  target_compile_options(${PROJECT_NAME} PRIVATE -stdlib=libc++)
+  target_link_options(${PROJECT_NAME} PRIVATE -stdlib=libc++ "-fuse-ld=lld")
   target_compile_options(${PROJECT_NAME} PRIVATE 
     $<$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>:-ffunction-sections -fdata-sections>)
   target_link_options(${PROJECT_NAME} PRIVATE 
