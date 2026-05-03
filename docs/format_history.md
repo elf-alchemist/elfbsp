@@ -5,11 +5,9 @@
 * `1998-10` —  Lee Killough creates yet another blockmap rebuilding algorithm in MBF [^mbf-blockmap]
 * `1999-09` — Andrew Apted starts working on glBSP and designing the earliest spec for GL nodes
 * `2000-06` — Andrew Apted releases EDGE, with support for GL nodes, rebuilding with internal builder if not present
-* `2000-09-04` — Earliest SVN revision of glBSP, already contains V1 and V2 GL nodes [^glbsp-v1-v2]  
-???
-* `2003-09-24` — (from Randi's devlog) adds support for ZNOD on ZDoom
-* `2003-09-27` — (from Randi's devlog) adds support for ZGLN on ZDoom??  
-???
+* `2000-09-04` — Earliest SVN revision of glBSP, already contains V1 and V2 GL nodes [^glbsp-v1-v2]
+* `2003-09-24` — ZDoom adds support for ZNOD (from Marisa Heit's devlog)
+* `2003-09-27` — ZDoom adds support for ZGLN (from Marisa Heit's devlog)
 * `2004-04-30` — Deep (Jack) discusses on Doomworld the creation and design of a new node format [^deepbspv4-origin]
 * `2004-07-13` — glBSP adds GL V3 nodes [^glbsp-glv3]
 * `2004-10-09` — DeePsea 11.92f (quietly) releases with DeePBSPV4 and GL V4 nodes support [^deepbspv4-release]
@@ -19,11 +17,11 @@
 * `2005-05-20` — Andrew Apted adds GL V5 nodes to glBSP [^glbsp-glv5]
 * `2005-05-20` — Andrew Apted adds ZNOD support to glBSP [^glbsp-znod]
 * `2005-07-09` — GL V5 spec is publicly frozen [^glv5-spec]
-* `2006-02-24` — Earliest SVN revision of ZDoom, already supports ZNOD and ZGLN nodes
+* `2006-02-24` — Earliest SVN revision of ZDoom, already supports ZNOD and ZGLN nodes [^zdoom-znod-zgln]
 * `2006-07-21` — Andrey Budko adds in overflow emulation for reject padding [^prboom-reject-overflow]
 * `2006-10-07` — Andrey Budko adds CLI flag `-reject_pad_with_ff` for erroneous historical PrBoom padding [^prboom-reject-ff]
 * `2006-11-05` — Kaiser publishes the "Console Doom hacking project" thread, with the first description of the LEAFS lump [^console-leafs]
-* `2009-03-17` — Randi adds ZGL2 (with 32bit sidedef indexes to address large UDMF maps) to ZDoom/ZDBSP [^zdoom-zgl2]
+* `2009-03-17` — Marisa Heit adds ZGL2 (with 32bit sidedef indexes to address large UDMF maps) to ZDoom/ZDBSP [^zdoom-zgl2]
 * `2010-04-12` — Sunder's development unearths the DeePBSPV4 format and triggers a discussion for its wider adoption [^sunder-deepbspv4] as well as the issues of the compressed ZDoom nodes
 * `2010-04-15` — Andrey Budko adds DeePBSPV4 node support to PrBoom+ [^prboom-deepbspv4]
 * `2010-04-17` — Graf Zahl adds DeePBSPV4 node support to ZDoom [^zdoom-deepbspv4]
@@ -31,7 +29,7 @@
 * `2010-04-18` — Andrey Budko adds support for XNOD [^prboom-xnod]
 * `2010-04-23` — Fraggle adds PrBoom+'s reject matrix overflow emulation padding to Chocolate-Doom [^chocolate-reject-part1]
 * `2012-11-08` — Andrew Apted starts importing glBSP into Eureka [^eureka-glbsp-part1]
-* `2012-12-07` — Randi adds ZGL3 and XGL3 to ZDoom/ZDBSP, addressing coordinate precision on BSP nodes [^zdoom-xgl3-zgl3]
+* `2012-12-07` — Marisa Heit adds ZGL3 and XGL3 to ZDoom/ZDBSP, addressing coordinate precision on BSP nodes [^zdoom-xgl3-zgl3]
 * `2013-04-25` — Andrew Apted completes the initial Eureka+glBSP integration [^eureka-glbsp-part2]
 * `2015-02-10` — Fabian Greffrath adds support for DeePBSPV4, XNOD and ZNOD formats to Crispy-Doom [^crispy-doom-extnodes]
 * `2016-11-30` — Andrew Apted adds XNOD support to Eureka [^eureka-xnod]
@@ -67,6 +65,7 @@
 [^glbsp-glv5]: https://github.com/elf-alchemist/glbsp-archive/commit/182c158da4aa918eccd2d25b42c7f3d4c2e5eec8
 [^glbsp-znod]: https://github.com/elf-alchemist/glbsp-archive/commit/40fb3f670ea99920c51f5b06b1fdbf582e7af24a
 [^glv5-spec]: https://www.doomworld.com/forum/topic/32807-v5-gl-node-update/
+[^zdoom-znod-zgln]: https://github.com/UZDoom/UZDoom/blob/cf11cbdb307cb86624e9288134106caaec8b754c/src/p_setup.cpp#L3061-L3071
 [^prboom-reject-overflow]: https://github.com/kraflab/dsda-doom/commit/b9866ccdcdf152b88c1ae0b46bd6a584af84b59c
 [^prboom-reject-ff]: https://github.com/kraflab/dsda-doom/commit/a119dc6eb14a602f6c2a092c2bcc0d9038bb400f
 [^console-leafs]: https://www.doomworld.com/forum/topic/38608-the-console-doom-hacking-project-console-specs/
