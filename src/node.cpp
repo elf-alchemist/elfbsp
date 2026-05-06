@@ -651,8 +651,7 @@ seg_t *FindFastSeg(quadtree_c *tree, double split_cost)
   return (V_cost < H_cost) ? best_V : best_H;
 }
 
-/* returns false if cancelled */
-bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, double *best_cost, double split_cost)
+static void PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, double *best_cost, double split_cost)
 {
   /* try each Seg as partition */
   for (seg_t *part = part_list->list; part; part = part->next)
@@ -689,14 +688,9 @@ bool PickNodeWorker(quadtree_c *part_list, quadtree_c *tree, seg_t **best, doubl
   {
     if (part_list->subs[c] != nullptr && !part_list->subs[c]->Empty())
     {
-      if (!PickNodeWorker(part_list->subs[c], tree, best, best_cost, split_cost))
-      {
-        return false;
-      }
+      PickNodeWorker(part_list->subs[c], tree, best, best_cost, split_cost);
     }
   }
-
-  return true;
 }
 
 //
@@ -741,11 +735,7 @@ seg_t *PickNode(quadtree_c *tree, int depth, double split_cost, bool fast)
     }
   }
 
-  if (!PickNodeWorker(tree, tree, &best, &best_cost, split_cost))
-  {
-    /* hack here : BuildNodes will detect the cancellation */
-    return nullptr;
-  }
+  PickNodeWorker(tree, tree, &best, &best_cost, split_cost);
 
   if (HAS_BIT(config.debug, DEBUG_PICKNODE))
   {
