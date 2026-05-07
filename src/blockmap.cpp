@@ -34,6 +34,9 @@
  *
  */
 
+static constexpr size_t size_int16 = sizeof(uint16_t);
+static constexpr size_t size_int32 = sizeof(uint32_t);
+
 static constexpr size_t LIST_ZERO = 1;
 static constexpr size_t LIST_END = 1;
 static constexpr size_t EXTRA_LINES = LIST_ZERO + LIST_END;
@@ -349,93 +352,72 @@ static void CompressBlockmap(level_t &level)
 }
 
 // compute size of final BLOCKMAP lump.
-static size_t CalcBlockmapSize(level_t &level, std::string prefix = "", size_t PrefixSize = 0,
-                               size_t NumSize = sizeof(uint16_t), size_t RawHeaderSize = sizeof(raw_blockmap_header_t))
+static size_t CalcBlockmapSize(level_t &level, bmap_format_t format)
 {
+  // Vanilla blockmap format
+  std::string Prefix = "";
+  size_t PrefixSize = 0;
+  size_t NumSize = sizeof(uint16_t);
+  size_t RawHeaderSize = sizeof(raw_blockmap_header_t);
+
+  if (format == BMAP_XBM1)
+  {
+    Prefix = "XBM1";
+    PrefixSize = 8;
+    NumSize = sizeof(uint32_t);
+    RawHeaderSize = sizeof(raw_blockmap_xbm1_header_t);
+  }
+
   size_t size = PrefixSize;
-
   size += RawHeaderSize;
-
-  // null block
-  size += NumSize * 2;
-
-  // the pointers (indexes to the line lists)
-  size += level.block_count * NumSize;
+  size += EXTRA_LINES * NumSize;       // null block
+  size += level.block_count * NumSize; // the pointers (indexes to the line lists)
 
   // add size of each block
   for (size_t i = 0; i < level.block_count; i++)
   {
     size_t blk_num = level.block_duplicates[i];
-
-    // ignore duplicate or empty blocks
-    if (blk_num == NO_INDEX)
-    {
-      continue;
-    }
-
+    if (blk_num == NO_INDEX) continue; // ignore duplicate or empty blocks
     const auto &blk = level.block_lines[blk_num];
     size += (blk.lines.size() + EXTRA_LINES) * NumSize;
   }
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
-    PrintLine(LOG_DEBUG, "[%s] Lump prefix header \'%s\', num type size of %zu, total size of %zu", __func__, prefix.c_str(),
+    PrintLine(LOG_DEBUG, "[%s] Lump prefix header \'%s\', num type size of %zu, total size of %zu", __func__, Prefix.c_str(),
               NumSize, size);
   }
 
   return size;
 }
 
-// final phase: write it out in the correct format
-template <typename NumType = uint16_t>
-static void WriteBlockmap(level_t &level, std::string prefix = "")
+static void WriteBlockmap_Doom(level_t &level)
 {
-  static constexpr size_t PrefixHeaderSize = 8; // "XBM1\0\0\0\0"
-  size_t PrefixSize = (!prefix.empty() ? PrefixHeaderSize : 0);
-  size_t NumSize = sizeof(NumType);
-  size_t RawHeaderSize = (level.bmap_format == BMAP_XBM1 ? sizeof(raw_blockmap_xbm1_header_t) : sizeof(raw_blockmap_header_t));
-
-  size_t max_size = CalcBlockmapSize(level, prefix, PrefixSize, NumSize, RawHeaderSize);
+  size_t max_size = CalcBlockmapSize(level, BMAP_DoomBSP);
   Lump_c *lump = CreateLevelLump(level, "BLOCKMAP", max_size);
 
   // fill in header
-  if (level.bmap_format == BMAP_XBM1)
-  {
-    lump->Write(prefix.data(), PrefixHeaderSize);
-
-    raw_blockmap_xbm1_header_t xbm1_header;
-    xbm1_header.x_origin = GetLittleEndian(IntToFixed(level.block_x));
-    xbm1_header.y_origin = GetLittleEndian(IntToFixed(level.block_y));
-    xbm1_header.x_blocks = GetLittleEndian(IndexToInt(level.block_w));
-    xbm1_header.y_blocks = GetLittleEndian(IndexToInt(level.block_h));
-    lump->Write(&xbm1_header, sizeof(xbm1_header));
-  }
-  else
-  {
-    raw_blockmap_header_t header;
-    header.x_origin = GetLittleEndian(level.block_x);
-    header.y_origin = GetLittleEndian(level.block_y);
-    header.x_blocks = GetLittleEndian(IndexToShort(level.block_w));
-    header.y_blocks = GetLittleEndian(IndexToShort(level.block_h));
-    lump->Write(&header, sizeof(header));
-  }
+  raw_blockmap_header_t header;
+  header.x_origin = GetLittleEndian(level.block_x);
+  header.y_origin = GetLittleEndian(level.block_y);
+  header.x_blocks = GetLittleEndian(IndexToShort(level.block_w));
+  header.y_blocks = GetLittleEndian(IndexToShort(level.block_h));
+  lump->Write(&header, sizeof(header));
 
   // handle pointers
   for (size_t i = 0; i < level.block_count; i++)
   {
-    NumType ptr = GetLittleEndian(static_cast<NumType>(level.block_indexes[i]));
-
+    uint16_t ptr = GetLittleEndian(static_cast<uint16_t>(level.block_indexes[i]));
     if (ptr == 0)
     {
       PrintLine(LOG_ERROR, "ERROR: WriteBlockmap: offset %zu not set.", i);
     }
-
-    lump->Write(&ptr, NumSize);
+    lump->Write(&ptr, size_int16);
   }
 
   // add the null block which *all* empty blocks will use
-  lump->Write(&m_zero, NumSize);
-  lump->Write(&m_neg1, NumSize);
+  lump->Write(&m_zero, size_int16);
+  lump->Write(&m_neg1, size_int16);
 
   // handle each block list
   for (size_t i = 0; i < level.block_count; i++)
@@ -443,20 +425,62 @@ static void WriteBlockmap(level_t &level, std::string prefix = "")
     size_t blk_num = level.block_duplicates[i];
 
     // ignore duplicate or empty blocks
-    if (blk_num == NO_INDEX)
-    {
-      continue;
-    }
+    if (blk_num == NO_INDEX) continue;
 
     const auto &blk = level.block_lines[blk_num];
 
-    lump->Write(&m_zero, NumSize);
+    lump->Write(&m_zero, size_int16);
     for (size_t line : blk.lines)
     {
-      NumType le_line = GetLittleEndian(static_cast<NumType>(line));
-      lump->Write(&le_line, NumSize);
+      uint16_t le_line = GetLittleEndian(static_cast<uint16_t>(line));
+      lump->Write(&le_line, size_int16);
     }
-    lump->Write(&m_neg1, NumSize);
+    lump->Write(&m_neg1, size_int16);
+  }
+
+  lump->Finish();
+}
+
+static void WriteBlockmap_XBM1(level_t &level)
+{
+  size_t max_size = CalcBlockmapSize(level, BMAP_XBM1);
+  Lump_c *lump = CreateLevelLump(level, "BLOCKMAP", max_size);
+
+  lump->Write("XBM1\0\0\0\0", 8);
+  raw_blockmap_xbm1_header_t header;
+  header.x_origin = GetLittleEndian(IntToFixed(level.block_x));
+  header.y_origin = GetLittleEndian(IntToFixed(level.block_y));
+  header.x_blocks = GetLittleEndian(IndexToInt(level.block_w));
+  header.y_blocks = GetLittleEndian(IndexToInt(level.block_h));
+  lump->Write(&header, sizeof(header));
+
+  for (size_t i = 0; i < level.block_count; i++)
+  {
+    auto ptr = GetLittleEndian(IndexToInt(level.block_indexes[i]));
+    if (ptr == 0)
+    {
+      PrintLine(LOG_ERROR, "ERROR: WriteBlockmap: offset %zu not set.", i);
+    }
+    lump->Write(&ptr, size_int32);
+  }
+
+  lump->Write(&m_zero, size_int32);
+  lump->Write(&m_neg1, size_int32);
+
+  for (size_t i = 0; i < level.block_count; i++)
+  {
+    size_t blk_num = level.block_duplicates[i];
+
+    if (blk_num == NO_INDEX) continue;
+    const auto &blk = level.block_lines[blk_num];
+
+    lump->Write(&m_zero, size_int32);
+    for (size_t line : blk.lines)
+    {
+      auto le_line = GetLittleEndian(IndexToInt(line));
+      lump->Write(&le_line, size_int32);
+    }
+    lump->Write(&m_neg1, size_int32);
   }
 
   lump->Finish();
@@ -480,11 +504,11 @@ void PutBlockmap(level_t &level)
 
   switch (level.bmap_format)
   {
-  case BMAP_DoomBlockmap:
-    WriteBlockmap(level);
+  case BMAP_DoomBSP:
+    WriteBlockmap_Doom(level);
     break;
   case BMAP_XBM1:
-    WriteBlockmap<uint32_t>(level, BMAP_MAGIC_XBM1);
+    WriteBlockmap_XBM1(level);
     break;
   default:
     // how did we get here
