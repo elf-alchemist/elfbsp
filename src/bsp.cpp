@@ -26,6 +26,10 @@
 #include "core.hpp"
 #include "local.hpp"
 
+// Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
+constexpr uint16_t NF_SUBSECTOR_VANILLA = UINT16_C(0x8000);
+constexpr uint32_t NF_SUBSECTOR = UINT32_C(0x80000000);
+
 //
 // Utility
 //
@@ -494,7 +498,7 @@ static void PutNodes_DeePBSPV4(level_t &level, node_t *root_node)
   size_t node_cur_index = 0;
 
   Lump_c *lump = CreateLevelLump(level, "NODES");
-  lump->Write(BSP_MAGIC_DEEPBSPV4, 8);
+  lump->Write("xNd4\0\0\0\0", 8);
 
   if (root_node != nullptr)
   {
@@ -965,7 +969,7 @@ void SaveDoom_XNOD(level_t &level, node_t *root_node)
   SortSegs(level);
 
   Lump_c *lump = CreateLevelLump(level, "NODES", CalcXnodNodesSize(level));
-  lump->Write(BSP_MAGIC_XNOD, 4);
+  lump->Write("XNOD", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xnod(level, lump);
@@ -984,7 +988,7 @@ void SaveDoom_XGLN(level_t &level, node_t *root_node)
   SortSegs(level);
 
   Lump_c *lump = CreateLevelLump(level, "SSECTORS", CalcXnodNodesSize(level));
-  lump->Write(BSP_MAGIC_XGLN, 4);
+  lump->Write("XGLN", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xgln(level, lump);
@@ -1006,7 +1010,7 @@ void SaveDoom_XGL2(level_t &level, node_t *root_node)
   SortSegs(level);
 
   Lump_c *lump = CreateLevelLump(level, "SSECTORS", CalcXnodNodesSize(level));
-  lump->Write(BSP_MAGIC_XGL2, 4);
+  lump->Write("XGL2", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xgl2(level, lump);
@@ -1028,7 +1032,7 @@ void SaveDoom_XGL3(level_t &level, node_t *root_node)
   SortSegs(level);
 
   Lump_c *lump = CreateLevelLump(level, "SSECTORS", CalcXnodNodesSize(level));
-  lump->Write(BSP_MAGIC_XGL3, 4);
+  lump->Write("XGL3", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xgl2(level, lump);
@@ -1086,7 +1090,7 @@ void SaveTextmap_ZNODES(level_t &level, node_t *root_node)
   SortSegs(level);
 
   Lump_c *lump = CreateLevelLump(level, "ZNODES", CalcXnodNodesSize(level));
-  lump->Write(BSP_MAGIC_XGL3, 4);
+  lump->Write("XGL3", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xgl2(level, lump);
