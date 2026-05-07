@@ -116,7 +116,7 @@ static void BuildFile(const char *filename)
     level_t level;
     level.level_num = n;
     level.level_header_lump_index = cur_wad->LevelHeader(level.level_num);
-    level.format = cur_wad->LevelFormat(level.level_num);
+    level.map_format = cur_wad->LevelFormat(level.level_num);
 
     if (!CheckMapInMapList(level.GetLevelName()))
     {
@@ -380,18 +380,20 @@ void ParseShortArgument(const char *arg)
     case 'h':
       opt_help = true;
       continue;
-    case 'b':
-      config.backup = true;
+    case 'a':
+      config.analysis = true;
       continue;
-
     case 'v':
       config.verbose = true;
+      continue;
+    case 'b':
+      config.backup = true;
       continue;
     case 'f':
       config.fast = true;
       continue;
-    case 'a':
-      config.analysis = true;
+    case 'z':
+      config.bsp_compress = true;
       continue;
 
     case 'm':
@@ -531,6 +533,10 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
   else if (strcmp(name, "--no-effects") == 0)
   {
     config.effects = false;
+  }
+  else if (strcmp(name, "--compress") == 0)
+  {
+    config.bsp_compress = true;
   }
   else if (strcmp(name, "--map") == 0 || strcmp(name, "--maps") == 0)
   {
@@ -694,10 +700,6 @@ void ParseCommandLine(int32_t argc, const char *argv[])
     if (strcmp(arg, "-o") == 0)
     {
       arg = "--output";
-    }
-    if (strcmp(arg, "-a") == 0)
-    {
-      arg = "--analysis";
     }
 
     if (arg[1] != '-')

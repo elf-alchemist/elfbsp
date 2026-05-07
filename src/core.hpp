@@ -28,6 +28,7 @@
  *  Standard headers
  */
 
+#include "zutil.h"
 #include <cassert>
 #include <cctype>
 #include <climits>
@@ -160,7 +161,6 @@ using byte = uint8_t;
 using fixed_t = int32_t;
 using long_angle_t = uint32_t;
 using short_angle_t = uint16_t;
-using lump_t = char[8];
 
 // misc constants
 constexpr long_angle_t LONG_ANGLE_45 = 0x20000000;
@@ -350,13 +350,12 @@ inline void PRINTF_ATTR(2, 3) PrintLine(const log_level_t level, const char *fmt
 // Version info
 //
 
-#define VERSION_INFO \
+#define VERSION_INFO                            \
   PROJECT_NAME " version " PROJECT_VERSION "\n" \
-  "Branch: " GIT_BRANCH "\n"                    \
-  "Timestamp: " PROJECT_DATE "\n"               \
-  "Revision: " GIT_REV_COUNT "\n"               \
-  "Commit: " GIT_SHORT_HASH "\n"                \
-
+               "Branch: " GIT_BRANCH "\n"       \
+               "Timestamp: " PROJECT_DATE "\n"  \
+               "Revision: " GIT_REV_COUNT "\n"  \
+               "Commit: " GIT_SHORT_HASH "\n"
 
 //------------------------------------------------------------------------
 // MEMORY ALLOCATION
@@ -830,9 +829,6 @@ using raw_sector_doom64_t = struct raw_sector_doom64_s
 // BSP TREE STRUCTURES
 //------------------------------------------------------------------------
 
-//
-// We do not write ZIP-compressed ZDoom nodes
-//
 using bsp_format_t = enum bsp_format_e : uint8_t
 {
   BSP_DoomBSP,
@@ -1517,6 +1513,10 @@ struct Lump_c
   size_t l_start;
   size_t l_length;
 
+  bool zlib_init = false;
+  zng_stream zout_stream;
+  uint8_t zout_buffer[1024];
+
   void MakeEntry(raw_wad_entry_t *entry);
 
   [[nodiscard]] const char *Name(void) const
@@ -1579,6 +1579,90 @@ struct Lump_c
     }
 
     parent->FinishLump(l_length);
+  }
+
+  //
+  // Zlib compression support
+  //
+
+  void Begin_Zlib(void)
+  {
+    zlib_init = true;
+    zout_stream.zalloc = nullptr;
+    zout_stream.zfree = nullptr;
+    zout_stream.opaque = nullptr;
+    if (Z_OK != zng_deflateInit(&zout_stream, Z_DEFAULT_COMPRESSION))
+    {
+      PrintLine(LOG_ERROR, "ERROR: Trouble starting Zlib compression.");
+    }
+    zout_stream.next_out = zout_buffer;
+    zout_stream.avail_out = sizeof(zout_buffer);
+  }
+
+  void WriteZ(const void *data, uint32_t length)
+  {
+    if (!zlib_init)
+    {
+      this->Write(data, length);
+      return;
+    }
+
+    SYS_ASSERT(length > 0);
+
+    zout_stream.next_in = static_cast<const uint8_t *>(data);
+    zout_stream.avail_in = length;
+
+    while (zout_stream.avail_in > 0)
+    {
+      if (Z_OK != zng_deflate(&zout_stream, Z_NO_FLUSH))
+      {
+        PrintLine(LOG_ERROR, "ERROR: Trouble Zlib compressing %d bytes.", length);
+      }
+
+      if (zout_stream.avail_out == 0)
+      {
+        this->Write(zout_buffer, sizeof(zout_buffer));
+
+        zout_stream.next_out = zout_buffer;
+        zout_stream.avail_out = sizeof(zout_buffer);
+      }
+    }
+  }
+
+  void Finish_Zlib(void)
+  {
+    zlib_init = false;
+    SYS_ASSERT(zout_stream.avail_out > 0)
+    size_t left_over;
+
+    zout_stream.next_in = Z_NULL;
+    zout_stream.avail_in = 0;
+
+    while (true)
+    {
+      int32_t err = zng_deflate(&zout_stream, Z_FINISH);
+
+      if (err == Z_STREAM_END) break;
+
+      if (err != Z_OK)
+      {
+        PrintLine(LOG_ERROR, "ERROR: Trouble finishing Zlib compression.");
+      }
+
+      if (zout_stream.avail_out == 0)
+      {
+        this->Write(zout_buffer, sizeof(zout_buffer));
+
+        zout_stream.next_out = zout_buffer;
+        zout_stream.avail_out = sizeof(zout_buffer);
+      }
+    }
+
+    left_over = sizeof(zout_buffer) - zout_stream.avail_out;
+
+    if (left_over > 0) this->Write(zout_buffer, left_over);
+
+    zng_deflateEnd(&zout_stream);
   }
 };
 
@@ -1674,6 +1758,7 @@ struct buildinfo_s
   bool analysis = false; // write out CSV for data analysis and visualization
   bool verbose = false;  // this affects how some messages are shown
   bool effects = true;   // disable special effects
+  bool bsp_compress = false; // compress BSP tree using zlib
 };
 
 struct AnalysisData
