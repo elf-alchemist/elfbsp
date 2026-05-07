@@ -392,9 +392,6 @@ void ParseShortArgument(const char *arg)
     case 'f':
       config.fast = true;
       continue;
-    case 'z':
-      config.bsp_compress = true;
-      continue;
 
     case 'm':
     case 'o':
@@ -536,7 +533,7 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
   }
   else if (strcmp(name, "--compress") == 0)
   {
-    config.bsp_compress = true;
+    config.compress = true;
   }
   else if (strcmp(name, "--map") == 0 || strcmp(name, "--maps") == 0)
   {

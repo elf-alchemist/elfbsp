@@ -1524,8 +1524,8 @@ build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
   // If using DoomBSP format, bump to DeePBSPV4 on overflow
   RaiseValue(level.bsp_format, CheckFormatBSP(config, level));
 
-  // Using Zlib-comrpessed version of ZDBSP lump format
-  level.bsp_compress |= config.bsp_compress;
+  // Using Zlib-compressed version of ZDBSP lump format
+  level.bsp_compress |= config.compress;
 
   if (level.map_format == MapFormat_Doom64)
   {

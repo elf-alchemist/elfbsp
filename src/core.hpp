@@ -1758,7 +1758,7 @@ struct buildinfo_s
   bool analysis = false; // write out CSV for data analysis and visualization
   bool verbose = false;  // this affects how some messages are shown
   bool effects = true;   // disable special effects
-  bool bsp_compress = false; // compress BSP tree using zlib
+  bool compress = false; // compress lumps using zlib
 };
 
 struct AnalysisData

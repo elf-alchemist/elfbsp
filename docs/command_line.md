@@ -83,6 +83,10 @@ The default is 0, using the vanilla format.
 #### `--no-effects`
 Prevents the application of built time [special effects](./special_effects.md), causing them to be ignored.
 
+#### `--compress`
+Forces all relevant lump formats to use their compressed variants, instead of the normal uncompressed ones.
+That is to say, write ZNOD in place of XNOD, write ZGLN in place of XGLN, etc.
+
 #### `-p, --polyobj`
 Use Hexen's original polyobject editor numbers (3000, 3001, 3002), instead of ZDoom's polyobject editor numbers (9300, 9301, 9302, 9303).
 
