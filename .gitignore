@@ -96,8 +96,10 @@ CMakeUserPresets.json
 # End of https://www.toptal.com/developers/gitignore/api/c,c++,cmake
 
 # Build artifacts
-build/
 .cache/
+.github/
+archive/
+build/
 docs/external/
 library/
 

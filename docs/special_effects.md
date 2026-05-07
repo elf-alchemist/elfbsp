@@ -1,12 +1,14 @@
 # Build-time special effects
+When moving from effect-less node builders to ELFBSP, it is important to consider the use of the following special effects on lines and sectors.
+If you particular level editor is old and does not support the bulk-updating of line tags, you can pass the `--no-effects` CLI flag to turn them off.
 
+## Doom map format
 Line tags of value $900 \leq x \leq 999$ are considered "precious" and will not trigger a segment split, unless all other options are exhausted.
 This is used to protect deep water and invisible lifts/stairs from being messed up accidentally by splits
 
-## Doom map format
-
 | Line Tag | Supported in ELFBSP? | Description |
 |----------|----------------------|-------------|
+| 997      | :heavy_check_mark:   | Forcibly block the reject table from "seeing" through this two-sided line. |
 | 998      | :heavy_check_mark:   | Do not render segments for this linedef. |
 | 999      | :heavy_check_mark:   | Do not add this linedef to the blockmap. |
 
@@ -32,11 +34,15 @@ This is used to protect deep water and invisible lifts/stairs from being messed 
 
 | #   | Name | Arg1 | Arg2 | Arg3 | Arg4 | Arg5 | Supported in ELFBSP? | Description |
 |-----|------|------|------|------|------|------|----------------------|-------------|
-| 108 | `BSP_SpecialEffects` | Do Not Add To Blockmap (boolean) | Do Not Split Seg (boolean) | Do Not Render Back Seg (boolean) | Do Not Render Front Seg (boolean) | | :heavy_check_mark:   | Apply special effects during the BSP tree building process, must be otherwise ignored by ports. |
+| 108 | `BSP_SpecialEffects` | Do Not Add To Blockmap (boolean) | Do Not Split Seg (boolean) | Do Not Render Back Seg (boolean) | Do Not Render Front Seg (boolean) | Block reject line-of-sight checks (boolean) | :heavy_check_mark:   | Apply special effects during the BSP tree building process, must be otherwise ignored by ports. |
 
 ## Doom 64 map format
 
-Currently no special effects are supported on the Doom 64 map format.
+| Line Flag                                            | Supported in ELFBSP? | Description |
+|------------------------------------------------------|----------------------|-------------|
+| "Merge sides"                                        | :x:                  | Force sidedef merging/compression |
+| "No Blockmap"                                        | :heavy_check_mark:   | Do not add this linedef to the blockmap |
+| "Never show on automap" AND "Always show on automap" | :heavy_check_mark:   | Do not add this linedef to the blockmap |
 
 ## UDMF
 

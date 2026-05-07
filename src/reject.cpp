@@ -64,6 +64,7 @@ static void Reject_GroupSectors(level_t &level)
   {
     const linedef_t *line = level.linedefs[i];
 
+    // must be valid two-sided line
     if (!line->right || !line->left)
     {
       continue;
@@ -73,13 +74,14 @@ static void Reject_GroupSectors(level_t &level)
     sector_t *sec2 = line->left->sector;
     sector_t *tmp;
 
-    if (!sec1 || !sec2 || sec1 == sec2)
-    {
-      continue;
-    }
-
-    // already in the same group ?
-    if (sec1->rej_group == sec2->rej_group)
+    if (!sec1                                         // invalid
+        || !sec2                                      // invalid
+        || sec1 == sec2                               // same
+        || HAS_BIT(sec1->effects, FX_Sector_NoReject) // blind in sector
+        || HAS_BIT(sec2->effects, FX_Sector_NoReject) // blind in sector
+        || HAS_BIT(line->effects, FX_NoReject)        // blocked by line
+        || sec1->rej_group == sec2->rej_group         // already in the same group
+    )
     {
       continue;
     }
