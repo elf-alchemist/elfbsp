@@ -349,7 +349,7 @@ static void CompressBlockmap(level_t &level)
 }
 
 // compute size of final BLOCKMAP lump.
-static size_t CalcBlockmapSize(level_t &level, std::string Prefix, size_t PrefixSize, size_t NumSize, size_t RawHeaderSize)
+static size_t CalcBlockmapSize(level_t &level, const char *Prefix, size_t PrefixSize, size_t NumSize, size_t RawHeaderSize)
 {
   size_t size = PrefixSize;
   size += RawHeaderSize;
@@ -367,8 +367,8 @@ static size_t CalcBlockmapSize(level_t &level, std::string Prefix, size_t Prefix
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
-    PrintLine(LOG_DEBUG, "[%s] Lump prefix header \'%s\', num type size of %zu, total size of %zu", __func__, Prefix.c_str(),
-              NumSize, size);
+    PrintLine(LOG_DEBUG, "[%s] Lump prefix header \'%s\', num type size of %zu, total size of %zu", __func__, Prefix, NumSize,
+              size);
   }
 
   return size;
