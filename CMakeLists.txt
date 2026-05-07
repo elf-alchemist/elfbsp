@@ -69,6 +69,31 @@ git_rev_count(HEAD GIT_REV_COUNT)
 git_branch(HEAD GIT_BRANCH)
 string(REGEX REPLACE "^(heads\/|tags\/)(.+)(-0-g)([0-9a-f]+)" "\\4" GIT_SHORT_HASH "${GIT_DESCRIBE}")
 
+# SDL3
+set(SDL_TEST OFF CACHE BOOL "" FORCE)
+set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
+set(SDL_STATIC ON CACHE BOOL "" FORCE)
+set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+add_subdirectory(library/sdl)
+
+# Dear ImGui
+add_library(imgui STATIC
+  library/imgui/imgui.cpp
+  library/imgui/imgui_demo.cpp
+  library/imgui/imgui_draw.cpp
+  library/imgui/imgui_tables.cpp
+  library/imgui/imgui_widgets.cpp
+  library/imgui/backends/imgui_impl_sdl3.cpp
+  library/imgui/backends/imgui_impl_sdlrenderer3.cpp
+)
+
+target_include_directories(imgui PUBLIC
+  library/imgui
+  library/imgui/backends
+)
+
+target_link_libraries(imgui PUBLIC SDL3::SDL3)
+
 add_executable(${PROJECT_NAME}
   src/blockmap.cpp
   src/bsp.cpp
@@ -79,6 +104,7 @@ add_executable(${PROJECT_NAME}
   src/node.cpp
   src/parse.cpp
   src/polyobj.cpp
+  src/view.cpp
   src/reject.cpp
   src/wad.cpp
 )
@@ -151,6 +177,19 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
   GIT_SHORT_HASH="${GIT_SHORT_HASH}"
 )
 
+string(TOUPPER "${PROJECT_NAME}" PROJECT_TITLE)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    PROJECT_NAME="${PROJECT_TITLE}"
+    PROJECT_VERSION="${PROJECT_VERSION}"
+    PROJECT_STRING="${PROJECT_TITLE} ${PROJECT_VERSION}"
+    PROJECT_IDENTIFIER="io.github.elf-alchemist.elfbsp"
+    PROJECT_CREATOR="elf-alchemist"
+    PROJECT_COPYRIGHT="Copyright \(C\) 1994-2026 - Guilherme Miranda, et al"
+    PROJECT_URL="https://github.com/elf-alchemist/elfbsp"
+    PROJECT_TYPE="application"
+)
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
   C_STANDARD 23
   CXX_STANDARD 20
@@ -176,6 +215,11 @@ target_compile_options(${PROJECT_NAME} PRIVATE
   $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
   $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
   $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
+)
+
+target_link_libraries(elfbsp PRIVATE
+    SDL3::SDL3
+    imgui
 )
 
 if(ENABLE_WERROR)

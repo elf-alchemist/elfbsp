@@ -103,8 +103,7 @@ build/
 docs/external/
 library/
 
-imgui.ini
-
 *.bak
 *.wad
 *.csv
+imgui.ini
