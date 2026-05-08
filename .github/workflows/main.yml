@@ -58,8 +58,7 @@ jobs:
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
-              -DCMAKE_CXX_COMPILER=clang++ \
-              -DCMAKE_OSX_ARCHITECTURES="arm64"
+              -DCMAKE_CXX_COMPILER=clang++
 
           - name: Windows MinGW x86_64
             os: windows-latest

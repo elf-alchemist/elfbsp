@@ -11,9 +11,6 @@ include(CheckIncludeFile)
 
 set(CMAKE_INSTALL_DO_STRIP TRUE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
-# HACK: temporarily disable the x86 part of the universal build
-# need to move to lipo instead of CMAKE_OSX_ARCHITECTURES
-set(CMAKE_OSX_ARCHITECTURES "arm64")
 
 # Set a default build type if none was specified
 set(default_build_type "RelWithDebInfo")
