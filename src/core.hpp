@@ -28,7 +28,6 @@
  *  Standard headers
  */
 
-#include "zutil.h"
 #include <cassert>
 #include <cctype>
 #include <climits>
@@ -42,6 +41,8 @@
 #include <chrono>
 #include <string>
 #include <vector>
+
+#include "zlib-ng.h"
 
 //
 //  OS support
