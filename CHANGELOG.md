@@ -12,6 +12,9 @@ New features:
 ** Sector special of 999 is blocked from the reject grouping algorithm, makes enemies within it "blind"
 ** Lines containing the "Do not add to blockmap" will be excluded the blockmap
 ** Lines containing both of the "Show on automap" AND "Hide from automap" will be excluded the blockmap
+* (Re-)Added compressed ZDBSP lump format support (ZNOD, ZGLN, ZGL2, ZGL3)
+** ZGL3 is now the default for UDMF levels
+** The new `--compress` CLI flag will force the use of the compressed ZDBSP format counterparts in the Doom & Hexen map formats
 
 Bugfixes:
 * Restored `REJECT` builder's debug logging, i.e fix `--debug-reject` not working before
