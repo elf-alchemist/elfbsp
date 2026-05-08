@@ -101,7 +101,7 @@ CMakeUserPresets.json
 archive/
 build/
 docs/external/
-library/
+library/*
 
 imgui.ini
 

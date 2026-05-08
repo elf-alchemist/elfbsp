@@ -585,8 +585,8 @@ static void PutVertices_Xnod(level_t &level, Lump_c *lump)
   size_t orgverts = GetLittleEndian(level.num_old_vert);
   size_t newverts = GetLittleEndian(level.num_new_vert);
 
-  lump->Write(&orgverts, 4);
-  lump->Write(&newverts, 4);
+  lump->WriteZ(&orgverts, 4);
+  lump->WriteZ(&newverts, 4);
 
   size_t count = 0;
   for (size_t i = 0; i < level.vertices.size(); i++)
@@ -603,7 +603,7 @@ static void PutVertices_Xnod(level_t &level, Lump_c *lump)
     raw.x = GetLittleEndian(FloatToFixed(vert->x));
     raw.y = GetLittleEndian(FloatToFixed(vert->y));
 
-    lump->Write(&raw, sizeof(raw_vertex_xnod_t));
+    lump->WriteZ(&raw, sizeof(raw_vertex_xnod_t));
 
     count++;
   }
@@ -617,7 +617,7 @@ static void PutVertices_Xnod(level_t &level, Lump_c *lump)
 static void PutSubsecs_Xnod(level_t &level, Lump_c *lump)
 {
   size_t raw_num = GetLittleEndian(level.subsecs.size());
-  lump->Write(&raw_num, 4);
+  lump->WriteZ(&raw_num, 4);
 
   size_t cur_seg_index = 0;
   for (size_t i = 0; i < level.subsecs.size(); i++)
@@ -625,7 +625,7 @@ static void PutSubsecs_Xnod(level_t &level, Lump_c *lump)
     const subsec_t *sub = level.subsecs[i];
 
     raw_num = GetLittleEndian(sub->seg_count);
-    lump->Write(&raw_num, 4);
+    lump->WriteZ(&raw_num, 4);
 
     // sanity check the seg index values
     size_t count = 0;
@@ -654,7 +654,7 @@ static void PutSubsecs_Xnod(level_t &level, Lump_c *lump)
 static void PutSegs_Xnod(level_t &level, Lump_c *lump)
 {
   size_t raw_num = GetLittleEndian(level.segs.size());
-  lump->Write(&raw_num, 4);
+  lump->WriteZ(&raw_num, 4);
 
   for (size_t i = 0; i < level.segs.size(); i++)
   {
@@ -671,7 +671,7 @@ static void PutSegs_Xnod(level_t &level, Lump_c *lump)
     raw.end = GetLittleEndian(VertexIndex_XNOD(level, seg->end));
     raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
     raw.side = seg->side;
-    lump->Write(&raw, sizeof(raw_seg_xnod_t));
+    lump->WriteZ(&raw, sizeof(raw_seg_xnod_t));
   }
 }
 
@@ -732,7 +732,7 @@ static void PutOneNode_Xnod(Lump_c *lump, node_t *node, size_t &node_cur_index)
     PrintLine(LOG_ERROR, "ERROR: Bad left child in ZDoom node %zu", node->index);
   }
 
-  lump->Write(&raw, sizeof(raw_node_xnod_t));
+  lump->WriteZ(&raw, sizeof(raw_node_xnod_t));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
@@ -745,7 +745,7 @@ static void PutNodes_Xnod(level_t &level, Lump_c *lump, node_t *root)
 {
   size_t node_cur_index = 0;
   size_t raw_num = GetLittleEndian(level.nodes.size());
-  lump->Write(&raw_num, 4);
+  lump->WriteZ(&raw_num, 4);
 
   if (root)
   {
@@ -781,7 +781,7 @@ static size_t CalcXnodNodesSize(level_t &level)
 static void PutSegs_Xgln(level_t &level, Lump_c *lump)
 {
   size_t raw_num = GetLittleEndian(level.segs.size());
-  lump->Write(&raw_num, 4);
+  lump->WriteZ(&raw_num, 4);
 
   for (size_t i = 0; i < level.segs.size(); i++)
   {
@@ -799,7 +799,7 @@ static void PutSegs_Xgln(level_t &level, Lump_c *lump)
     raw.linedef = GetLittleEndian(IndexToShort(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
-    lump->Write(&raw, sizeof(raw_seg_xgln_t));
+    lump->WriteZ(&raw, sizeof(raw_seg_xgln_t));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -812,7 +812,7 @@ static void PutSegs_Xgln(level_t &level, Lump_c *lump)
 static void PutSegs_Xgl2(level_t &level, Lump_c *lump)
 {
   size_t raw_num = GetLittleEndian(level.segs.size());
-  lump->Write(&raw_num, 4);
+  lump->WriteZ(&raw_num, 4);
 
   for (size_t i = 0; i < level.segs.size(); i++)
   {
@@ -830,7 +830,7 @@ static void PutSegs_Xgl2(level_t &level, Lump_c *lump)
     raw.linedef = GetLittleEndian(IndexToInt(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
-    lump->Write(&raw, sizeof(raw_seg_xgl2_t));
+    lump->WriteZ(&raw, sizeof(raw_seg_xgl2_t));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -897,7 +897,7 @@ static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
     PrintLine(LOG_ERROR, "ERROR: Bad left child in ZDoom node %zu", node->index);
   }
 
-  lump->Write(&raw, sizeof(raw_node_xgl3_t));
+  lump->WriteZ(&raw, sizeof(raw_node_xgl3_t));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
@@ -910,7 +910,7 @@ static void PutNodes_Xgl3(level_t &level, Lump_c *lump, node_t *root)
 {
   size_t node_cur_index = 0;
   size_t raw_num = GetLittleEndian(level.nodes.size());
-  lump->Write(&raw_num, 4);
+  lump->WriteZ(&raw_num, 4);
 
   if (root)
   {
@@ -969,11 +969,16 @@ void SaveDoom_XNOD(level_t &level, node_t *root_node)
   SortSegs(level);
 
   Lump_c *lump = CreateLevelLump(level, "NODES", CalcXnodNodesSize(level));
-  lump->Write("XNOD", 4);
+
+  if (level.bsp_compress) lump->Begin_Zlib();
+
+  lump->Write(level.bsp_compress ? "ZNOD" : "XNOD", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xnod(level, lump);
   PutNodes_Xnod(level, lump, root_node);
+
+  if (level.bsp_compress) lump->Finish_Zlib();
 
   lump->Finish();
   lump = nullptr;
@@ -988,11 +993,16 @@ void SaveDoom_XGLN(level_t &level, node_t *root_node)
   SortSegs(level);
 
   Lump_c *lump = CreateLevelLump(level, "SSECTORS", CalcXnodNodesSize(level));
-  lump->Write("XGLN", 4);
+
+  if (level.bsp_compress) lump->Begin_Zlib();
+
+  lump->Write(level.bsp_compress ? "ZGLN" : "XGLN", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xgln(level, lump);
   PutNodes_Xnod(level, lump, root_node);
+
+  if (level.bsp_compress) lump->Finish_Zlib();
 
   lump->Finish();
   lump = nullptr;
@@ -1010,11 +1020,16 @@ void SaveDoom_XGL2(level_t &level, node_t *root_node)
   SortSegs(level);
 
   Lump_c *lump = CreateLevelLump(level, "SSECTORS", CalcXnodNodesSize(level));
-  lump->Write("XGL2", 4);
+
+  if (level.bsp_compress) lump->Begin_Zlib();
+
+  lump->Write(level.bsp_compress ? "ZGL2" : "XGL2", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xgl2(level, lump);
   PutNodes_Xnod(level, lump, root_node);
+
+  if (level.bsp_compress) lump->Finish_Zlib();
 
   lump->Finish();
   lump = nullptr;
@@ -1032,11 +1047,16 @@ void SaveDoom_XGL3(level_t &level, node_t *root_node)
   SortSegs(level);
 
   Lump_c *lump = CreateLevelLump(level, "SSECTORS", CalcXnodNodesSize(level));
-  lump->Write("XGL3", 4);
+
+  if (level.bsp_compress) lump->Begin_Zlib();
+
+  lump->Write(level.bsp_compress ? "ZGL3" : "XGL3", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xgl2(level, lump);
   PutNodes_Xgl3(level, lump, root_node);
+
+  if (level.bsp_compress) lump->Finish_Zlib();
 
   lump->Finish();
   lump = nullptr;
@@ -1090,11 +1110,14 @@ void SaveTextmap_ZNODES(level_t &level, node_t *root_node)
   SortSegs(level);
 
   Lump_c *lump = CreateLevelLump(level, "ZNODES", CalcXnodNodesSize(level));
-  lump->Write("XGL3", 4);
+
+  lump->Begin_Zlib();
+  lump->Write("ZGL3", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xgl2(level, lump);
   PutNodes_Xgl3(level, lump, root_node);
+  lump->Finish_Zlib();
 
   lump->Finish();
   lump = nullptr;

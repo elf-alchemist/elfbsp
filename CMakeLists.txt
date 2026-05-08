@@ -11,7 +11,6 @@ include(CheckIncludeFile)
 
 set(CMAKE_INSTALL_DO_STRIP TRUE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
-set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
 
 # Set a default build type if none was specified
 set(default_build_type "RelWithDebInfo")
@@ -68,6 +67,11 @@ git_describe(GIT_DESCRIBE --all --long --abbrev=8)
 git_rev_count(HEAD GIT_REV_COUNT)
 git_branch(HEAD GIT_BRANCH)
 string(REGEX REPLACE "^(heads\/|tags\/)(.+)(-0-g)([0-9a-f]+)" "\\4" GIT_SHORT_HASH "${GIT_DESCRIBE}")
+
+# Setup Zlib-ng
+set(ZLIB_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+add_subdirectory(library/zlib-ng EXCLUDE_FROM_ALL)
 
 add_executable(${PROJECT_NAME}
   src/blockmap.cpp
@@ -176,6 +180,10 @@ target_compile_options(${PROJECT_NAME} PRIVATE
   $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
   $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
   $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+  zlibstatic
 )
 
 if(ENABLE_WERROR)

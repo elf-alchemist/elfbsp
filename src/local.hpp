@@ -393,7 +393,7 @@ using blocklist_t = struct blocklist_t
 
 using level_t = struct level_t
 {
-  map_format_t format = MapFormat_INVALID;
+  map_format_t map_format = map_format_t::MapFormat_INVALID;
   size_t num_old_vert = 0;
   size_t num_new_vert = 0;
   size_t num_real_lines = 0;
@@ -412,6 +412,8 @@ using level_t = struct level_t
   std::vector<node_t *> nodes;
   std::vector<walltip_t *> walltips;
   std::vector<intersection_t *> intercuts;
+  bsp_format_t bsp_format = bsp_format_t::BSP_XNOD;
+  bool bsp_compress = false;
 
   uint8_t *reject_matrix;
   size_t reject_size;
@@ -425,7 +427,7 @@ using level_t = struct level_t
   std::vector<size_t> block_duplicates;
 
   double block_compression;
-  bmap_format_t bmap_format = BMAP_DoomBSP;
+  bmap_format_t bmap_format = bmap_format_t::BMAP_DoomBSP;
 
   inline Lump_c *FindLevelLump(const char *name)
   {

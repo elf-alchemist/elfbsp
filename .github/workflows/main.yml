@@ -53,11 +53,13 @@ jobs:
             install: |
               brew update
               brew install ninja
+            # HACK: temporarily disable the x86 part of the universal build
+            # need to move to lipo instead of CMAKE_OSX_ARCHITECTURES
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
-              -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+              -DCMAKE_OSX_ARCHITECTURES="arm64"
 
           - name: Windows MinGW x86_64
             os: windows-latest
@@ -93,6 +95,7 @@ jobs:
 
       - uses: actions/checkout@v6
         with:
+          submodules: recursive
           fetch-depth: 0   # Required so we can move and push tags
 
       - name: Install dependencies

@@ -1370,7 +1370,7 @@ bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
 {
   bsp_format_t level_type = ctx.bsp_format;
 
-  if (level.format == MapFormat_Doom64)
+  if (level.map_format == MapFormat_Doom64)
   {
     // Clamp Doom64 maps to only vanilla and DeePBSPV4 formats.
     // With support for fractional coordinates, it doesn't
@@ -1406,7 +1406,7 @@ void LoadLevel(level_t &level)
   level.num_new_vert = 0;
   level.num_real_lines = 0;
 
-  switch (level.format)
+  switch (level.map_format)
   {
   case MapFormat_Doom:
     GetVertices_Doom(level);
@@ -1452,7 +1452,7 @@ void LoadLevel(level_t &level)
   CalculateWallTips(level);
 
   // -JL- Find sectors containing polyobjs
-  switch (level.format)
+  switch (level.map_format)
   {
   case MapFormat_Hexen:
   case MapFormat_UDMF:
@@ -1513,7 +1513,7 @@ build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
   AddMissingLump(level, "BLOCKMAP", "REJECT");
 
   // No need to add BEHAVIOR, LIGHTS or MACROS
-  if (level.format == MapFormat_Doom64)
+  if (level.map_format == MapFormat_Doom64)
   {
     AddMissingLump(level, "LEAFS", "BLOCKMAP");
   }
@@ -1521,11 +1521,15 @@ build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
   // check for overflows...
   CheckBinaryFormatLimits(level);
 
-  bsp_format_t level_type = CheckFormatBSP(config, level);
+  // If using DoomBSP format, bump to DeePBSPV4 on overflow
+  RaiseValue(level.bsp_format, CheckFormatBSP(config, level));
 
-  if (level.format == MapFormat_Doom64)
+  // Using Zlib-compressed version of ZDBSP lump format
+  level.bsp_compress |= config.compress;
+
+  if (level.map_format == MapFormat_Doom64)
   {
-    switch (level_type)
+    switch (level.bsp_format)
     {
     case BSP_DeePBSPV4:
       SaveDoom64_DeePBSPV4(level, root_node);
@@ -1534,13 +1538,13 @@ build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
       SaveDoom64_DoomBSP(level, root_node);
       break;
     default:
-      PrintLine(LOG_ERROR, "ERROR: Tried to write unsupported BSP format #%d on Doom64 map format", level_type);
+      PrintLine(LOG_ERROR, "ERROR: Tried to write unsupported BSP format #%d on Doom64 map format", level.bsp_format);
       break;
     }
   }
   else // MapFormat_Doom or MapFormat_Hexen
   {
-    switch (level_type)
+    switch (level.bsp_format)
     {
     case BSP_XGL3:
       SaveDoom_XGL3(level, root_node);
@@ -1621,7 +1625,7 @@ Lump_c *CreateLevelLump(level_t &level, const char *name, size_t max_size)
 
     // in UDMF maps, insert before the ENDMAP lump, otherwise insert
     // after the last known lump of the level.
-    if (level.format != MapFormat_UDMF)
+    if (level.map_format != MapFormat_UDMF)
     {
       last_idx += 1;
     }
@@ -1729,7 +1733,7 @@ build_result_e BuildLevel(level_t &level, const char *filename)
   ClockwiseBspTree(level);
 
   build_result_t ret = BUILD_OK;
-  switch (level.format)
+  switch (level.map_format)
   {
   case MapFormat_Doom:
   case MapFormat_Hexen:
