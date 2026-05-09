@@ -27,8 +27,8 @@
 #include "local.hpp"
 
 // Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
-constexpr uint16_t NF_SUBSECTOR_VANILLA = UINT16_C(0x8000);
-constexpr uint32_t NF_SUBSECTOR = UINT32_C(0x80000000);
+constexpr uint16_t NF_SUBSECTOR_VANILLA = BIT(15);
+constexpr uint32_t NF_SUBSECTOR = BIT(31);
 
 //
 // Utility
@@ -567,7 +567,7 @@ static void PutLeafs_DeePBSPV4(level_t &level)
 }
 
 //
-// ZDoom format -- XNOD
+// ZDBSP formats -- XNOD, ZNOD, XGLN, ZGLN, XGL2, ZGL2, XGL3, ZGL3
 //
 
 static inline uint32_t VertexIndex_XNOD(level_t &level, const vertex_t *v)
@@ -716,7 +716,7 @@ static void PutOneNode_Xnod(Lump_c *lump, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: Bad right child in ZDoom node %zu", node->index);
+    PrintLine(LOG_ERROR, "ERROR: Bad right child in XNOD node %zu", node->index);
   }
 
   if (node->l.node)
@@ -729,7 +729,7 @@ static void PutOneNode_Xnod(Lump_c *lump, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: Bad left child in ZDoom node %zu", node->index);
+    PrintLine(LOG_ERROR, "ERROR: Bad left child in XNOD node %zu", node->index);
   }
 
   lump->WriteZ(&raw, sizeof(raw_node_xnod_t));
@@ -760,7 +760,7 @@ static void PutNodes_Xnod(level_t &level, Lump_c *lump, node_t *root)
 
 static size_t CalcXnodNodesSize(level_t &level)
 {
-  // compute size of the ZDoom format nodes.
+  // compute size of the ZDBSP format nodes.
   // it does not need to be exact, but it *does* need to be bigger
   // (or equal) to the actual size of the lump.
 
@@ -773,10 +773,6 @@ static size_t CalcXnodNodesSize(level_t &level)
 
   return size;
 }
-
-//
-// ZDoom format -- XGLN, XGL2, XGL3
-//
 
 static void PutSegs_Xgln(level_t &level, Lump_c *lump)
 {
@@ -881,7 +877,7 @@ static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: Bad right child in ZDoom node %zu", node->index);
+    PrintLine(LOG_ERROR, "ERROR: Bad right child in XGL3 node %zu", node->index);
   }
 
   if (node->l.node)
@@ -894,7 +890,7 @@ static void PutOneNode_Xgl3(Lump_c *lump, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: Bad left child in ZDoom node %zu", node->index);
+    PrintLine(LOG_ERROR, "ERROR: Bad left child in XGL3 node %zu", node->index);
   }
 
   lump->WriteZ(&raw, sizeof(raw_node_xgl3_t));

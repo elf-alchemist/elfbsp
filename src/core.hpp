@@ -934,7 +934,7 @@ using raw_leaf_vanilla_t = struct raw_leaf_vanilla_s
 
 //
 // DeepSea BSP
-// * compared to vanilla, some types were raise to 32bit
+// * compared to vanilla, some types were raised to 32bit
 //
 using raw_node_deepbspv4_t = struct raw_node_deepbspv4_s
 {
@@ -967,14 +967,16 @@ using raw_leaf_deepbspv4_t = struct raw_leaf_deepbspv4_s
 } PACKEDATTR;
 
 //
-// ZDoom BSP
+// ZDBSP
 // * compared to vanilla, some types were raise to 32bit
+// * convex minisegs are required for the GL variants
 // * each version (XNOD->XGLN->XGL2->XGL3) builds on top of the previous
+// * compressed variants (ZNOD->ZGLN->ZGL2->ZGL3) also exist
 //
 using raw_vertex_xnod_t = struct raw_vertex_xnod_s
 {
-  int32_t x;
-  int32_t y;
+  fixed_t x;
+  fixed_t y;
 } PACKEDATTR;
 
 using raw_node_xnod_t = struct raw_node_xnod_s
@@ -1005,7 +1007,7 @@ using raw_seg_xnod_t = struct raw_seg_xnod_s
 using raw_seg_xgln_t = struct raw_seg_xgln_s
 {
   uint32_t vertex;  // from this vertex ... to the next
-  uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
+  uint32_t partner; // partner segment, islands!
   uint16_t linedef; // linedef that this seg goes along, or NO_INDEX
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
@@ -1013,7 +1015,7 @@ using raw_seg_xgln_t = struct raw_seg_xgln_s
 using raw_seg_xgl2_t = struct raw_seg_xgl2_s
 {
   uint32_t vertex;  // from this vertex ... to the next
-  uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
+  uint32_t partner; // partner segment, islands!
   uint32_t linedef; // linedef that this seg goes along, or NO_INDEX
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
@@ -1024,6 +1026,84 @@ using raw_node_xgl3_t = struct raw_node_xgl3_s
   int32_t dx, dy;       // offset to ending point
   raw_bbox_t b1, b2;    // bounding rectangles
   uint32_t right, left; // children: Node or SSector (if high bit is set)
+} PACKEDATTR;
+
+//
+// glBSP
+// * legacy format, hardly supported outside of old GL ports
+// * compared to vanilla, some types were raise to 32bit
+// * convex minisegs are always required
+// * each version (V1->V2->V3->V4->V5) builds on top of the previous
+//
+
+constexpr uint16_t GL_V1_VERT = BIT(15);
+constexpr uint32_t GL_V3_VERT = BIT(30);
+constexpr uint32_t GL_V5_VERT = BIT(31);
+
+using raw_vertex_glv2_t = struct raw_vertex_glv2_s
+{
+  fixed_t x;
+  fixed_t y;
+} PACKEDATTR;
+
+using raw_node_glv1_t = struct raw_node_glv1_s
+{
+  int16_t x, y;         // starting point
+  int16_t dx, dy;       // offset to ending point
+  raw_bbox_t b1, b2;    // bounding rectangles
+  uint16_t right, left; // children: Node or SSector (if high bit is set)
+} PACKEDATTR;
+
+using raw_node_glv4_t = struct raw_node_glv4_s
+{
+  int16_t x, y;         // starting point
+  int16_t dx, dy;       // offset to ending point
+  raw_bbox_t b1, b2;    // bounding rectangles
+  uint32_t right, left; // children: Node or SSector (if high bit is set)
+} PACKEDATTR;
+
+using raw_subsec_glv1_t = struct raw_subsec_glv1_s
+{
+  uint16_t num;   // number of Segs in this Sub-Sector
+  uint16_t first; // first Seg
+} PACKEDATTR;
+
+using raw_subsec_glv3_t = struct raw_subsec_glv3_s
+{
+  uint32_t num;   // number of Segs in this Sub-Sector
+  uint32_t first; // first Seg
+} PACKEDATTR;
+
+using raw_subsec_glv4_t = struct raw_subsec_glv4_s
+{
+  uint16_t num;   // number of Segs in this Sub-Sector
+  uint32_t first; // first Seg
+} PACKEDATTR;
+
+using raw_seg_glv1_t = struct raw_seg_glv1_s
+{
+  uint16_t start;   // from this vertex...
+  uint16_t end;     // ... to this vertex
+  uint16_t linedef; // linedef that this seg goes along
+  uint16_t flip;    // true if not the same direction as linedef
+  uint16_t partner; // partner segment, islands!
+} PACKEDATTR;
+
+using raw_seg_glv3_t = struct raw_seg_glv3_s
+{
+  uint32_t start;   // from this vertex...
+  uint32_t end;     // ... to this vertex
+  uint16_t linedef; // linedef that this seg goes along
+  uint16_t flip;    // true if not the same direction as linedef
+  uint32_t partner; // partner segment, islands!
+} PACKEDATTR;
+
+using raw_seg_glv4_t = struct raw_seg_glv4_s
+{
+  uint32_t start;   // from this vertex...
+  uint32_t end;     // ... to this vertex
+  uint16_t linedef; // linedef that this seg goes along
+  uint16_t flip;    // true if not the same direction as linedef
 } PACKEDATTR;
 
 /* ----- Graphical structures ---------------------- */
@@ -1087,41 +1167,66 @@ using raw_patch_t = struct patch_s
 } PACKEDATTR;
 
 // Fail way earlier
-static_assert(sizeof(raw_wad_header_t) == 12, "Size mismatch for 'raw_wad_header_t'. Should be 12.");
-static_assert(sizeof(raw_wad_entry_t) == 16, "Size mismatch for 'raw_wad_entry_t'. Should be 16.");
-static_assert(sizeof(raw_vertex_t) == 4, "Size mismatch for 'raw_vertex_t'. Should be 4.");
-static_assert(sizeof(raw_linedef_doom_t) == 14, "Size mismatch for 'raw_linedef_doom_t'. Should be 14.");
-static_assert(sizeof(raw_sidedef_doom_t) == 30, "Size mismatch for 'raw_sidedef_doom_t'. Should be 30.");
-static_assert(sizeof(raw_sector_doom_t) == 26, "Size mismatch for 'raw_sector_doom_t'. Should be 26.");
-static_assert(sizeof(raw_thing_doom_t) == 10, "Size mismatch for 'raw_thing_doom_t'. Should be 10.");
-static_assert(sizeof(raw_linedef_hexen_t) == 16, "Size mismatch for 'raw_linedef_hexen_t'. Should be 16.");
-static_assert(sizeof(raw_thing_hexen_t) == 20, "Size mismatch for 'raw_thing_hexen_t'. Should be 20.");
-static_assert(sizeof(raw_vertex_doom64_t) == 8, "Size mismatch for 'raw_vertex_doom64_t'. Should be 8.");
-static_assert(sizeof(raw_thing_doom64_t) == 12, "Size mismatch for 'raw_thing_doom64_t'. Should be 12.");
-static_assert(sizeof(raw_linedef_doom64_t) == 16, "Size mismatch for 'raw_linedef_doom64_t'. Should be 16.");
-static_assert(sizeof(raw_sidedef_doom64_t) == 12, "Size mismatch for 'raw_sidedef_doom64_t'. Should be 12.");
-static_assert(sizeof(raw_sector_doom64_t) == 24, "Size mismatch for 'raw_sector_doom64_t'. Should be 24.");
-static_assert(sizeof(raw_bbox_t) == 8, "Size mismatch for 'raw_bbox_t'. Should be 8.");
-static_assert(sizeof(raw_blockmap_header_t) == 8, "Size mismatch for 'raw_blockmap_header_t'. Should be 8.");
-static_assert(sizeof(raw_blockmap_xbm1_header_t) == 16, "Size mismatch for 'raw_blockmap_xbm1_header_t'. Should be 16.");
-static_assert(sizeof(raw_node_vanilla_t) == 28, "Size mismatch for 'raw_node_vanilla_t'. Should be 28.");
-static_assert(sizeof(raw_subsec_vanilla_t) == 4, "Size mismatch for 'raw_subsec_vanilla_t'. Should be 4.");
-static_assert(sizeof(raw_seg_vanilla_t) == 12, "Size mismatch for 'raw_seg_vanilla_t'. Should be 12.");
-static_assert(sizeof(raw_node_deepbspv4_t) == 32, "Size mismatch for 'raw_node_deepbspv4_t'. Should be 32.");
-static_assert(sizeof(raw_subsec_deepbspv4_t) == 6, "Size mismatch for 'raw_subsec_deepbspv4_t'. Should be 6.");
-static_assert(sizeof(raw_seg_deepbspv4_t) == 16, "Size mismatch for 'raw_seg_deepbspv4_t'. Should be 16.");
-static_assert(sizeof(raw_vertex_xnod_t) == 8, "Size mismatch for 'raw_vertex_xnod_t'. Should be 8.");
-static_assert(sizeof(raw_node_xnod_t) == 32, "Size mismatch for 'raw_node_xnod_t'. Should be 32.");
-static_assert(sizeof(raw_subsec_xnod_t) == 4, "Size mismatch for 'raw_subsec_xnod_t'. Should be 4.");
-static_assert(sizeof(raw_seg_xnod_t) == 11, "Size mismatch for 'raw_seg_xnod_t'. Should be 11.");
-static_assert(sizeof(raw_seg_xgln_t) == 11, "Size mismatch for 'raw_seg_xgln_t'. Should be 11.");
-static_assert(sizeof(raw_seg_xgl2_t) == 13, "Size mismatch for 'raw_seg_xgl2_t'. Should be 13.");
-static_assert(sizeof(raw_node_xgl3_t) == 40, "Size mismatch for 'raw_node_xgl3_t'. Should be 40.");
-static_assert(sizeof(raw_patchdef_t) == 10, "Size mismatch for 'raw_patchdef_t'. Should be 10.");
-static_assert(sizeof(raw_strife_patchdef_t) == 6, "Size mismatch for 'raw_strife_patchdef_t'. Should be 6.");
-static_assert(sizeof(raw_texture_t) == 32, "Size mismatch for 'raw_texture_t'. Should be 32.");
-static_assert(sizeof(raw_strife_texture_t) == 24, "Size mismatch for 'raw_strife_texture_t'. Should be 24.");
-static_assert(sizeof(raw_patch_t) == 12, "Size mismatch for 'raw_patch_t'. Should be 12.");
+#define static_size(x, y) \
+  static_assert(sizeof(x) == y, "Size mismatch for '" #x "'. Should be " #y ".")
+
+// WAD
+static_size(raw_wad_header_t, 12);
+static_size(raw_wad_entry_t, 16);
+// Doom map format
+static_size(raw_vertex_t, 4);
+static_size(raw_linedef_doom_t, 14);
+static_size(raw_sidedef_doom_t, 30);
+static_size(raw_sector_doom_t, 26);
+static_size(raw_thing_doom_t, 10);
+// Hexen map format
+static_size(raw_linedef_hexen_t, 16);
+static_size(raw_thing_hexen_t, 20);
+// Doom64 map format
+static_size(raw_vertex_doom64_t, 8);
+static_size(raw_thing_doom64_t, 12);
+static_size(raw_linedef_doom64_t, 16);
+static_size(raw_sidedef_doom64_t, 12);
+static_size(raw_sector_doom64_t, 24);
+// Bounding box
+static_size(raw_bbox_t, 8);
+// Blockmap
+static_size(raw_blockmap_header_t, 8);
+static_size(raw_blockmap_xbm1_header_t, 16);
+// DoomBSP
+static_size(raw_node_vanilla_t, 28);
+static_size(raw_subsec_vanilla_t, 4);
+static_size(raw_seg_vanilla_t, 12);
+static_size(raw_leaf_vanilla_t, 4);
+// DeePBSPV4
+static_size(raw_node_deepbspv4_t, 32);
+static_size(raw_subsec_deepbspv4_t, 6);
+static_size(raw_seg_deepbspv4_t, 16);
+static_size(raw_leaf_deepbspv4_t, 8);
+// ZDBSP
+static_size(raw_vertex_xnod_t, 8);
+static_size(raw_node_xnod_t, 32);
+static_size(raw_subsec_xnod_t, 4);
+static_size(raw_seg_xnod_t, 11);
+static_size(raw_seg_xgln_t, 11);
+static_size(raw_seg_xgl2_t, 13);
+static_size(raw_node_xgl3_t, 40);
+// glBSP
+static_size(raw_vertex_glv2_t, 8);
+static_size(raw_node_glv1_t, 28);
+static_size(raw_node_glv4_t, 32);
+static_size(raw_subsec_glv1_t, 4);
+static_size(raw_subsec_glv3_t, 8);
+static_size(raw_subsec_glv4_t, 6);
+static_size(raw_seg_glv1_t, 10);
+static_size(raw_seg_glv3_t, 16);
+static_size(raw_seg_glv4_t, 12);
+// Graphics
+static_size(raw_patchdef_t, 10);
+static_size(raw_strife_patchdef_t, 6);
+static_size(raw_texture_t, 32);
+static_size(raw_strife_texture_t, 24);
+static_size(raw_patch_t, 12);
 
 //
 // LineDef attributes.

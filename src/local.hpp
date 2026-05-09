@@ -389,7 +389,7 @@ using blocklist_t = struct blocklist_t
   std::vector<size_t> lines;
 };
 
-// Note: ZDoom format support based on code (C) 2002,2003 Marisa "Randi" Heit
+// Note: ZDBSP format support based on code (C) 2002,2003 Marisa "Randi" Heit
 
 using level_t = struct level_t
 {
