@@ -21,30 +21,30 @@ The "BEHAVIOR" and/or "MACROS" lumps, store compiled ACS or BLAM scripts, create
 
 The "baked lighting" structures store pre-calculated lighting information for the various surfaces around the level.
 
-| Format    | Doom              | Hexen             | Doom 64           | UDMF              |
-|-----------|-------------------|-------------------|-------------------|-------------------|
-| DoomBSP   | :heavy_checkmark: | :heavy_checkmark: | :heavy_checkmark: | N/A               |
-| DeePBSPV4 | :heavy_checkmark: | :heavy_checkmark: | :heavy_checkmark: | N/A               |
-| XNOD/ZNOD | :heavy_checkmark: | :heavy_checkmark: | N/A               | :heavy_checkmark: |
-| XGLN/ZGLN | :heavy_checkmark: | :heavy_checkmark: | N/A               | :heavy_checkmark: |
-| XGL2/ZGL2 | :heavy_checkmark: | :heavy_checkmark: | N/A               | :heavy_checkmark: |
-| XGL3/ZGL3 | :heavy_checkmark: | :heavy_checkmark: | N/A               | :heavy_checkmark: |
-| —         | —                 | —                 | —                 | —                 |
-| GL V1     | :x:               | :x:               | N/A               | N/A               |
-| GL V2     | :x:               | :x:               | N/A               | N/A               |
-| GL V3     | :x:               | :x:               | N/A               | N/A               |
-| GL V4     | :x:               | :x:               | N/A               | N/A               |
-| GL V5     | :x:               | :x:               | N/A               | N/A               |
-| GL PVS    | :x:               | :x:               | N/A               | N/A               |
-| —         | —                 | —                 | —                 | —                 |
-| Blockmap  | :heavy_checkmark: | :heavy_checkmark: | :heavy_checkmark: | :heavy_checkmark: |
-| XBM1      | :heavy_checkmark: | :heavy_checkmark: | :heavy_checkmark: | :heavy_checkmark: |
-| —         | —                 | —                 | —                 | —                 |
-| Reject    | :heavy_checkmark: | :heavy_checkmark: | :heavy_checkmark: | :heavy_checkmark: |
-| —         | —                 | —                 | —                 | —                 |
-| Behavior  | N/A               | :x:               | N/A               | :x:               |
-| Macros    | N/A               | N/A               | :x:               | :x:               |
-| —         | —                 | —                 | —                 | —                 |
-| DLight    | :x:               | :x:               | :x:               | N/A               |
-| ZDRay V?  | N/A               | N/A               | N/A               | :x:               |
-| —         | —                 | —                 | —                 | —                 |
+| Format    | Doom               | Hexen              | Doom 64            | UDMF               |
+|-----------|--------------------|--------------------|--------------------|--------------------|
+| DoomBSP   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | N/A                |
+| DeePBSPV4 | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | N/A                |
+| XNOD/ZNOD | :heavy_check_mark: | :heavy_check_mark: | N/A                | :heavy_check_mark: |
+| XGLN/ZGLN | :heavy_check_mark: | :heavy_check_mark: | N/A                | :heavy_check_mark: |
+| XGL2/ZGL2 | :heavy_check_mark: | :heavy_check_mark: | N/A                | :heavy_check_mark: |
+| XGL3/ZGL3 | :heavy_check_mark: | :heavy_check_mark: | N/A                | :heavy_check_mark: |
+| —         | —                  | —                  | —                  | —                  |
+| GL V1     | :x:                | :x:                | N/A                | N/A                |
+| GL V2     | :x:                | :x:                | N/A                | N/A                |
+| GL V3     | :x:                | :x:                | N/A                | N/A                |
+| GL V4     | :x:                | :x:                | N/A                | N/A                |
+| GL V5     | :x:                | :x:                | N/A                | N/A                |
+| GL PVS    | :x:                | :x:                | N/A                | N/A                |
+| —         | —                  | —                  | —                  | —                  |
+| Blockmap  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| XBM1      | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| —         | —                  | —                  | —                  | —                  |
+| Reject    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| —         | —                  | —                  | —                  | —                  |
+| Behavior  | N/A                | :x:                | N/A                | :x:                |
+| Macros    | N/A                | N/A                | :x:                | :x:                |
+| —         | —                  | —                  | —                  | —                  |
+| DLight    | :x:                | :x:                | :x:                | N/A                |
+| ZDRay V?  | N/A                | N/A                | N/A                | :x:                |
+| —         | —                  | —                  | —                  | —                  |
