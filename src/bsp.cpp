@@ -22,7 +22,6 @@
 //------------------------------------------------------------------------------
 
 #include <algorithm>
-#include <concepts>
 #include <string_view>
 #include <type_traits>
 
@@ -1049,42 +1048,42 @@ void UpdateGLMarker(level_t &level, Lump_c *marker)
 template <glbsp_format_t format, typename RawType, const char *magic_header>
 void PutVertices_GLBSP(level_t &level)
 {
-  GLBSP_ASSERT(BSP_GL_V1, raw_vertex_glv1_t, "", "[PutVertices_GLBSP]: V1 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V2, raw_vertex_glv2_t, "gNd2", "[PutVertices_GLBSP]: V2 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V3, raw_vertex_glv2_t, "gNd2", "[PutVertices_GLBSP]: V3 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V4, raw_vertex_glv2_t, "gNd4", "[PutVertices_GLBSP]: V4 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V5, raw_vertex_glv2_t, "gNd5", "[PutVertices_GLBSP]: V5 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V1, raw_vertex_glv1_t, "", "[PutVertices_GLBSP]: V1 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V2, raw_vertex_glv2_t, "gNd2", "[PutVertices_GLBSP]: V2 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V3, raw_vertex_glv2_t, "gNd2", "[PutVertices_GLBSP]: V3 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V4, raw_vertex_glv2_t, "gNd4", "[PutVertices_GLBSP]: V4 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V5, raw_vertex_glv2_t, "gNd5", "[PutVertices_GLBSP]: V5 format is malformed!");
 
 }
 
 template <glbsp_format_t format, typename RawType, const char *magic_header>
 void PutNodes_GLBSP(level_t &level, node_t *root_node)
 {
-  GLBSP_ASSERT(BSP_GL_V1, raw_node_glv1_t, "", "[PutNodes_GLBSP]: V1 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V2, raw_node_glv1_t, "", "[PutNodes_GLBSP]: V2 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V3, raw_node_glv1_t, "", "[PutNodes_GLBSP]: V3 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V4, raw_node_glv4_t, "", "[PutNodes_GLBSP]: V4 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V5, raw_node_glv4_t, "", "[PutNodes_GLBSP]: V5 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V1, raw_node_glv1_t, "", "[PutNodes_GLBSP]: V1 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V2, raw_node_glv1_t, "", "[PutNodes_GLBSP]: V2 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V3, raw_node_glv1_t, "", "[PutNodes_GLBSP]: V3 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V4, raw_node_glv4_t, "", "[PutNodes_GLBSP]: V4 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V5, raw_node_glv4_t, "", "[PutNodes_GLBSP]: V5 format is malformed!");
 }
 
 template <glbsp_format_t format, typename RawType, const char *magic_header>
 void PutSubsectors_GLBSP(level_t &level)
 {
-  GLBSP_ASSERT(BSP_GL_V1, raw_subsec_glv1_t, "", "[PutSubsectors_GLBSP]: V1 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V2, raw_subsec_glv1_t, "", "[PutSubsectors_GLBSP]: V2 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V3, raw_subsec_glv3_t, "gNd3", "[PutSubsectors_GLBSP]: V3 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V4, raw_subsec_glv4_t, "", "[PutSubsectors_GLBSP]: V4 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V5, raw_subsec_glv3_t, "", "[PutSubsectors_GLBSP]: V5 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V1, raw_subsec_glv1_t, "", "[PutSubsectors_GLBSP]: V1 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V2, raw_subsec_glv1_t, "", "[PutSubsectors_GLBSP]: V2 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V3, raw_subsec_glv3_t, "gNd3", "[PutSubsectors_GLBSP]: V3 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V4, raw_subsec_glv4_t, "", "[PutSubsectors_GLBSP]: V4 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V5, raw_subsec_glv3_t, "", "[PutSubsectors_GLBSP]: V5 format is malformed!");
 }
 
 template <glbsp_format_t format, typename RawType, const char *magic_header>
 void PutSegs_GLBSP(level_t &level)
 {
-  GLBSP_ASSERT(BSP_GL_V1, raw_seg_glv1_t, "", "[PutSegs_GLBSP]: V1 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V2, raw_seg_glv1_t, "", "[PutSegs_GLBSP]: V2 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V3, raw_seg_glv3_t, "gNd3", "[PutSegs_GLBSP]: V3 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V4, raw_seg_glv4_t, "", "[PutSegs_GLBSP]: V4 format is malformed!");
-  GLBSP_ASSERT(BSP_GL_V5, raw_seg_glv3_t, "", "[PutSegs_GLBSP]: V5 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V1, raw_seg_glv1_t, "", "[PutSegs_GLBSP]: V1 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V2, raw_seg_glv1_t, "", "[PutSegs_GLBSP]: V2 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V3, raw_seg_glv3_t, "gNd3", "[PutSegs_GLBSP]: V3 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V4, raw_seg_glv4_t, "", "[PutSegs_GLBSP]: V4 format is malformed!");
+  GLBSP_ASSERT(GLBSP_V5, raw_seg_glv3_t, "", "[PutSegs_GLBSP]: V5 format is malformed!");
 }
 
 #undef GLBSP_ASSERT
@@ -1136,15 +1135,15 @@ void SaveDoom_XNOD(level_t &level, node_t *root_node)
 
   Lump_c *lump = CreateLevelLump(level, "NODES", CalcXnodNodesSize(level));
 
-  if (level.bsp_compress) lump->Begin_Zlib();
+  if (level.zdbsp_compress) lump->Begin_Zlib();
 
-  lump->Write(level.bsp_compress ? "ZNOD" : "XNOD", 4);
+  lump->Write(level.zdbsp_compress ? "ZNOD" : "XNOD", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xnod(level, lump);
   PutNodes_Xnod(level, lump, root_node);
 
-  if (level.bsp_compress) lump->Finish_Zlib();
+  if (level.zdbsp_compress) lump->Finish_Zlib();
 
   lump->Finish();
   lump = nullptr;
@@ -1160,15 +1159,15 @@ void SaveDoom_XGLN(level_t &level, node_t *root_node)
 
   Lump_c *lump = CreateLevelLump(level, "SSECTORS", CalcXnodNodesSize(level));
 
-  if (level.bsp_compress) lump->Begin_Zlib();
+  if (level.zdbsp_compress) lump->Begin_Zlib();
 
-  lump->Write(level.bsp_compress ? "ZGLN" : "XGLN", 4);
+  lump->Write(level.zdbsp_compress ? "ZGLN" : "XGLN", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xgln(level, lump);
   PutNodes_Xnod(level, lump, root_node);
 
-  if (level.bsp_compress) lump->Finish_Zlib();
+  if (level.zdbsp_compress) lump->Finish_Zlib();
 
   lump->Finish();
   lump = nullptr;
@@ -1187,15 +1186,15 @@ void SaveDoom_XGL2(level_t &level, node_t *root_node)
 
   Lump_c *lump = CreateLevelLump(level, "SSECTORS", CalcXnodNodesSize(level));
 
-  if (level.bsp_compress) lump->Begin_Zlib();
+  if (level.zdbsp_compress) lump->Begin_Zlib();
 
-  lump->Write(level.bsp_compress ? "ZGL2" : "XGL2", 4);
+  lump->Write(level.zdbsp_compress ? "ZGL2" : "XGL2", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xgl2(level, lump);
   PutNodes_Xnod(level, lump, root_node);
 
-  if (level.bsp_compress) lump->Finish_Zlib();
+  if (level.zdbsp_compress) lump->Finish_Zlib();
 
   lump->Finish();
   lump = nullptr;
@@ -1214,15 +1213,15 @@ void SaveDoom_XGL3(level_t &level, node_t *root_node)
 
   Lump_c *lump = CreateLevelLump(level, "SSECTORS", CalcXnodNodesSize(level));
 
-  if (level.bsp_compress) lump->Begin_Zlib();
+  if (level.zdbsp_compress) lump->Begin_Zlib();
 
-  lump->Write(level.bsp_compress ? "ZGL3" : "XGL3", 4);
+  lump->Write(level.zdbsp_compress ? "ZGL3" : "XGL3", 4);
   PutVertices_Xnod(level, lump);
   PutSubsecs_Xnod(level, lump);
   PutSegs_Xgl2(level, lump);
   PutNodes_Xgl3(level, lump, root_node);
 
-  if (level.bsp_compress) lump->Finish_Zlib();
+  if (level.zdbsp_compress) lump->Finish_Zlib();
 
   lump->Finish();
   lump = nullptr;

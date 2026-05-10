@@ -1366,30 +1366,41 @@ static void CheckBinaryFormatLimits(level_t &level)
   }
 }
 
-bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
+void CheckFormats_BSP(buildinfo_t &ctx, level_t &level)
 {
+  // Read user provided format, XNOD by default
   bsp_format_t level_type = ctx.bsp_format;
 
+  // Clamp Doom64 maps to only vanilla and DeePBSPV4 formats.
+  // With support for fractional coordinates, it doesn't
+  // make sense for it to need to support ZDBSP formats.
   if (level.map_format == MapFormat_Doom64)
   {
-    // Clamp Doom64 maps to only vanilla and DeePBSPV4 formats.
-    // With support for fractional coordinates, it doesn't
-    // make sense for it to need to support XNOD, etc.
     level_type = BSP_DoomBSP;
   }
 
-  if (level_type == BSP_DoomBSP &&            // always allow for a valid map to be produced
-      (level.vertices.size() > LIMIT_VERT     // even if it may not run on some older source ports
-       || level.nodes.size() > LIMIT_NODE     // or the vanilla EXE
-       || level.subsecs.size() > LIMIT_SUBSEC //
-       || level.segs.size() > LIMIT_SEG))     //
+  // always allow for a valid map to be produced
+  // even if it may not run on some older source ports
+  // or the vanilla EXE
+  if (level_type == BSP_DoomBSP
+      && (level.vertices.size() > LIMIT_VERT || level.nodes.size() > LIMIT_NODE || level.subsecs.size() > LIMIT_SUBSEC
+          || level.segs.size() > LIMIT_SEG))
   {
     PrintLine(LOG_NORMAL, "WARNING: BSP overflow. Forcing DeePBSPV4 node format.");
     config.total_warnings++;
     level_type = BSP_DeePBSPV4;
   }
 
-  return level_type;
+  RaiseValue(level.bsp_format, level_type);
+
+  // GLBSP formats are only valid in some cases
+  if (level.map_format == MapFormat_Doom64  // Doom64 already has LEAFS
+      || level.map_format == MapFormat_UDMF // UDMF does not use loose lumps
+      || level.bsp_format >= BSP_XGLN       // Already HW friendly
+  )
+  {
+    level.glbsp_format = glbsp_format_t::GLBSP_None;
+  }
 }
 
 /* ----- whole-level routines --------------------------- */
@@ -1522,10 +1533,42 @@ build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
   CheckBinaryFormatLimits(level);
 
   // If using DoomBSP format, bump to DeePBSPV4 on overflow
-  RaiseValue(level.bsp_format, CheckFormatBSP(config, level));
+  CheckFormats_BSP(config, level);
 
   // Using Zlib-compressed version of ZDBSP lump format
-  level.bsp_compress |= config.compress;
+  level.zdbsp_compress |= config.compress;
+
+  Lump_c *glbsp_marker = nullptr;
+
+  if (level.glbsp_format == GLBSP_None)
+  {
+    glbsp_marker = level.CreateGLMarker();
+    CreateLevelLump(level, "GL_VERT");
+    CreateLevelLump(level, "GL_SEGS");
+    CreateLevelLump(level, "GL_SSECT");
+    CreateLevelLump(level, "GL_NODES");
+
+    switch (level.glbsp_format)
+    {
+    case GLBSP_V1:
+      SaveGLBSP_V1(level, root_node);
+      break;
+    case GLBSP_V2:
+      SaveGLBSP_V2(level, root_node);
+      break;
+    case GLBSP_V3:
+      SaveGLBSP_V3(level, root_node);
+      break;
+    case GLBSP_V4:
+      SaveGLBSP_V4(level, root_node);
+      break;
+    case GLBSP_V5:
+      SaveGLBSP_V5(level, root_node);
+      break;
+    default:
+      break;
+    }
+  }
 
   if (level.map_format == MapFormat_Doom64)
   {
@@ -1569,6 +1612,13 @@ build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
 
   PutBlockmap(level);
   PutReject(level);
+
+  // keyword support (v5.0 of the specs).
+  // must be done *after* doing normal nodes, for proper checksum.
+  if (glbsp_marker)
+  {
+    UpdateGLMarker(level, glbsp_marker);
+  }
 
   cur_wad->EndWrite();
 

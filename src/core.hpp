@@ -858,15 +858,15 @@ using bsp_format_t = enum bsp_format_e : uint8_t
 
 using glbsp_format_t = enum glbsp_format_e : uint8_t
 {
-  BSP_GL_None,
-  BSP_GL_V1,
-  BSP_GL_V2,
-  BSP_GL_V3,
-  BSP_GL_V4,
-  BSP_GL_V5,
+  GLBSP_None,
+  GLBSP_V1,
+  GLBSP_V2,
+  GLBSP_V3,
+  GLBSP_V4,
+  GLBSP_V5,
 
-  BSP_GL_MIN = BSP_GL_V1,
-  BSP_GL_MAX = BSP_GL_V5,
+  GLBSP_MIN = GLBSP_V1,
+  GLBSP_MAX = GLBSP_V5,
 };
 
 using bmap_format_t = enum bmap_format_e : uint8_t
@@ -1911,6 +1911,7 @@ struct buildinfo_s
   uint32_t debug = DEBUG_NONE;
 
   bsp_format_t bsp_format = bsp_format_t::BSP_XNOD;
+  glbsp_format_t glbsp_format = glbsp_format_t::GLBSP_None;
   bmap_format_t bmap_format = bmap_format_t::BMAP_DoomBSP;
   bool fast = false;     // use a faster method to pick nodes
   bool backup = false;   // keep a copy of the WAD

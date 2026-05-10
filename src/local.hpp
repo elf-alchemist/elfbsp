@@ -400,7 +400,6 @@ using level_t = struct level_t
   size_t level_num = NO_INDEX;
   size_t level_header_lump_index = NO_INDEX;
   bool overflows = false;
-  bool long_name = false;
 
   std::vector<vertex_t *> vertices;
   std::vector<linedef_t *> linedefs;
@@ -413,8 +412,12 @@ using level_t = struct level_t
   std::vector<node_t *> nodes;
   std::vector<walltip_t *> walltips;
   std::vector<intersection_t *> intercuts;
+
   bsp_format_t bsp_format = bsp_format_t::BSP_XNOD;
-  bool bsp_compress = false;
+  bool zdbsp_compress = false;
+
+  glbsp_format_t glbsp_format = glbsp_format_t::GLBSP_None;
+  bool long_name = false;
 
   uint8_t *reject_matrix;
   size_t reject_size;
@@ -636,3 +639,10 @@ void SaveDoom64_DoomBSP(level_t &level, node_t *root_node);
 void SaveDoom64_DeePBSPV4(level_t &level, node_t *root_node);
 
 void SaveTextmap_ZNODES(level_t &level, node_t *root_node);
+
+void UpdateGLMarker(level_t &level, Lump_c *marker);
+void SaveGLBSP_V1(level_t &level, node_t *root_node);
+void SaveGLBSP_V2(level_t &level, node_t *root_node);
+void SaveGLBSP_V3(level_t &level, node_t *root_node);
+void SaveGLBSP_V4(level_t &level, node_t *root_node);
+void SaveGLBSP_V5(level_t &level, node_t *root_node);
