@@ -400,6 +400,7 @@ using level_t = struct level_t
   size_t level_num = NO_INDEX;
   size_t level_header_lump_index = NO_INDEX;
   bool overflows = false;
+  bool long_name = false;
 
   std::vector<vertex_t *> vertices;
   std::vector<linedef_t *> linedefs;
@@ -478,6 +479,30 @@ using level_t = struct level_t
     }
 
     return sidedefs[num];
+  }
+
+  inline Lump_c *CreateGLMarker()
+  {
+    char name_buf[64];
+    const char *level_name = this->GetLevelName();
+
+    // support for level names longer than 5 letters
+    if (strlen(level_name) <= 5)
+    {
+      sprintf(name_buf, "GL_%s", level_name);
+      this->long_name = false;
+    }
+    else
+    {
+      strcpy(name_buf, "GL_LEVEL");
+      this->long_name = true;
+    }
+
+    size_t last_idx = cur_wad->LevelLastLump(level_num);
+    cur_wad->InsertPoint(last_idx + 1);
+    Lump_c *marker = cur_wad->AddLump(name_buf);
+    marker->Finish();
+    return marker;
   }
 };
 

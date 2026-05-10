@@ -22,6 +22,9 @@
 //------------------------------------------------------------------------------
 
 #include <algorithm>
+#include <concepts>
+#include <string_view>
+#include <type_traits>
 
 #include "core.hpp"
 #include "local.hpp"
@@ -98,6 +101,67 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
 
   return result;
 }
+
+//------------------------------------------------------------------------
+//  Adler-32 CHECKSUM Code
+//------------------------------------------------------------------------
+
+void Adler32_AddBlock(uint32_t *crc, const uint8_t *data, size_t length)
+{
+  uint32_t s1 = (*crc) & 0xFFFF;
+  uint32_t s2 = ((*crc) >> 16) & 0xFFFF;
+
+  while (length >= 1)
+  {
+    s1 = (s1 + *data) % 65521;
+    s2 = (s2 + s1) % 65521;
+    data++;
+    length--;
+  }
+
+  *crc = (s2 << 16) | s1;
+}
+
+//
+// TimeString
+//
+constexpr const char time_str[] = "%04d-%02d-%02d %02d:%02d:%02d.%04d";
+constexpr size_t time_str_size = sizeof(time_str);
+
+void TimeString(char buf[time_str_size])
+{
+#ifdef WIN32
+  SYSTEMTIME sys_time;
+  GetSystemTime(&sys_time);
+  M_snprintf(buf, time_str_size, time_str,
+             sys_time.wYear,               // This
+             sys_time.wMonth,              // is
+             sys_time.wDay,                // surely
+             sys_time.wHour,               // too
+             sys_time.wMinute,             // many
+             sys_time.wSecond,             // props,
+             sys_time.wMilliseconds * 10); // right?
+#else                                      // LINUX or MACOSX
+  time_t epoch_time;
+  if (time(&epoch_time) == NO_TIME) return;
+
+  tm *calend_time = localtime(&epoch_time);
+  if (!calend_time) return;
+
+  M_snprintf(buf, time_str_size, time_str,
+             calend_time->tm_year + 1900, // This
+             calend_time->tm_mon + 1,     // is
+             calend_time->tm_mday,        // surely
+             calend_time->tm_hour,        // too
+             calend_time->tm_min,         // many
+             calend_time->tm_sec,         // props,
+             0);                          // right?
+#endif
+}
+
+//
+// Write out the full set of vertices
+//
 
 static void PutVertices_Doom(level_t &level)
 {
@@ -754,7 +818,7 @@ static void PutNodes_Xnod(level_t &level, Lump_c *lump, node_t *root)
 
   if (node_cur_index != level.nodes.size())
   {
-    PrintLine(LOG_ERROR, "ERROR: PutZNodes miscounted (%zu != %zu)", node_cur_index, level.nodes.size());
+    PrintLine(LOG_ERROR, "ERROR: PutNodes_XNOD miscounted (%zu != %zu)", node_cur_index, level.nodes.size());
   }
 }
 
@@ -915,9 +979,115 @@ static void PutNodes_Xgl3(level_t &level, Lump_c *lump, node_t *root)
 
   if (node_cur_index != level.nodes.size())
   {
-    PrintLine(LOG_ERROR, "ERROR: PutZNodes miscounted (%zu != %zu)", node_cur_index, level.nodes.size());
+    PrintLine(LOG_ERROR, "ERROR: PutNodes_XNOD miscounted (%zu != %zu)", node_cur_index, level.nodes.size());
   }
 }
+
+//
+// glBSP formats
+//
+
+constexpr auto GL_VERT_15 = BIT(15);
+constexpr auto GL_VERT_30 = BIT(30);
+constexpr auto GL_VERT_31 = BIT(31);
+
+template <typename IndexType, IndexType B>
+static inline IndexType VertexIndex_GL(const vertex_t *v)
+{
+  static_assert(std::is_same<IndexType, uint16_t>() || std::is_same<IndexType, uint32_t>(), "Invalid GL vertex index type");
+  static_assert(B == GL_VERT_15 || B == GL_VERT_30 || B == GL_VERT_31, "Invalid GL vertex index bit");
+  auto index = static_cast<IndexType>(v->index);
+  index |= (v->is_new) ? B : 0;
+  return index;
+}
+
+static uint32_t CalcChecksumGLBSP(level_t &level)
+{
+  uint32_t crc = 1;
+
+  Lump_c *lump = level.FindLevelLump("VERTEXES");
+  if (lump && lump->Length() > 0)
+  {
+    byte *data = new byte[lump->Length()];
+    if (!lump->Seek(0) || !lump->Read(data, lump->Length()))
+      PrintLine(LOG_ERROR, "ERROR: Trouble reading vertices (for checksum).");
+    Adler32_AddBlock(&crc, data, lump->Length());
+    delete[] data;
+  }
+
+  lump = level.FindLevelLump("LINEDEFS");
+  if (lump && lump->Length() > 0)
+  {
+    byte *data = new byte[lump->Length()];
+    if (!lump->Seek(0) || !lump->Read(data, lump->Length()))
+      PrintLine(LOG_ERROR, "ERROR: Trouble reading linedefs (for checksum).");
+    Adler32_AddBlock(&crc, data, lump->Length());
+    delete[] data;
+  }
+
+  return crc;
+}
+
+void UpdateGLMarker(level_t &level, Lump_c *marker)
+{
+  // this is very conservative, around 4 times the actual size
+  const int max_size = 512;
+  // we *must* compute the checksum BEFORE (re)creating the lump
+  // [ otherwise we write data into the wrong part of the file ]
+  uint32_t crc = CalcChecksumGLBSP(level);
+  cur_wad->RecreateLump(marker, max_size);
+  if (level.long_name) marker->PrintText("LEVEL=%s\n", level.GetLevelName());
+  marker->PrintText("BUILDER=%s\n", PROJECT_STRING);
+  marker->PrintText("CHECKSUM=0x%08x\n", crc);
+  marker->Finish();
+}
+
+// This family is... messy
+#define GLBSP_ASSERT(e, t, h, err) \
+  static_assert(format == e && std::is_same_v<RawType, t> && std::string_view(magic_header) == h, err)
+
+template <glbsp_format_t format, typename RawType, const char *magic_header>
+void PutVertices_GLBSP(level_t &level)
+{
+  GLBSP_ASSERT(BSP_GL_V1, raw_vertex_glv1_t, "", "[PutVertices_GLBSP]: V1 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V2, raw_vertex_glv2_t, "gNd2", "[PutVertices_GLBSP]: V2 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V3, raw_vertex_glv2_t, "gNd2", "[PutVertices_GLBSP]: V3 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V4, raw_vertex_glv2_t, "gNd4", "[PutVertices_GLBSP]: V4 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V5, raw_vertex_glv2_t, "gNd5", "[PutVertices_GLBSP]: V5 format is malformed!");
+
+}
+
+template <glbsp_format_t format, typename RawType, const char *magic_header>
+void PutNodes_GLBSP(level_t &level, node_t *root_node)
+{
+  GLBSP_ASSERT(BSP_GL_V1, raw_node_glv1_t, "", "[PutNodes_GLBSP]: V1 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V2, raw_node_glv1_t, "", "[PutNodes_GLBSP]: V2 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V3, raw_node_glv1_t, "", "[PutNodes_GLBSP]: V3 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V4, raw_node_glv4_t, "", "[PutNodes_GLBSP]: V4 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V5, raw_node_glv4_t, "", "[PutNodes_GLBSP]: V5 format is malformed!");
+}
+
+template <glbsp_format_t format, typename RawType, const char *magic_header>
+void PutSubsectors_GLBSP(level_t &level)
+{
+  GLBSP_ASSERT(BSP_GL_V1, raw_subsec_glv1_t, "", "[PutSubsectors_GLBSP]: V1 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V2, raw_subsec_glv1_t, "", "[PutSubsectors_GLBSP]: V2 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V3, raw_subsec_glv3_t, "gNd3", "[PutSubsectors_GLBSP]: V3 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V4, raw_subsec_glv4_t, "", "[PutSubsectors_GLBSP]: V4 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V5, raw_subsec_glv3_t, "", "[PutSubsectors_GLBSP]: V5 format is malformed!");
+}
+
+template <glbsp_format_t format, typename RawType, const char *magic_header>
+void PutSegs_GLBSP(level_t &level)
+{
+  GLBSP_ASSERT(BSP_GL_V1, raw_seg_glv1_t, "", "[PutSegs_GLBSP]: V1 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V2, raw_seg_glv1_t, "", "[PutSegs_GLBSP]: V2 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V3, raw_seg_glv3_t, "gNd3", "[PutSegs_GLBSP]: V3 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V4, raw_seg_glv4_t, "", "[PutSegs_GLBSP]: V4 format is malformed!");
+  GLBSP_ASSERT(BSP_GL_V5, raw_seg_glv3_t, "", "[PutSegs_GLBSP]: V5 format is malformed!");
+}
+
+#undef GLBSP_ASSERT
 
 //
 // Lump writing procedures
@@ -1094,6 +1264,26 @@ void SaveDoom64_DeePBSPV4(level_t &level, node_t *root_node)
   PutSegs_DeePBSPV4(level);
   PutSubsecs_DeePBSPV4(level);
   PutNodes_DeePBSPV4(level, root_node);
+}
+
+void SaveDoom_GLV1(level_t &level, node_t *root_node)
+{
+}
+
+void SaveDoom_GLV2(level_t &level, node_t *root_node)
+{
+}
+
+void SaveDoom_GLV3(level_t &level, node_t *root_node)
+{
+}
+
+void SaveDoom_GLV4(level_t &level, node_t *root_node)
+{
+}
+
+void SaveDoom_GLV5(level_t &level, node_t *root_node)
+{
 }
 
 //

@@ -101,7 +101,8 @@ CMakeUserPresets.json
 archive/
 build/
 docs/external/
-library/*
+library/
+library/zlib-ng
 
 imgui.ini
 

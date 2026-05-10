@@ -179,6 +179,8 @@ constexpr size_t NO_INDEX = static_cast<size_t>(-1);
 constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
 constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
 
+constexpr time_t NO_TIME = static_cast<time_t>(-1);
+
 constexpr size_t WAD_LUMP_NAME = 8;
 
 constexpr size_t MSG_BUFFER_LENGTH = 1024;
@@ -298,21 +300,32 @@ using debug_t = enum : uint32_t
 };
 
 // Safe, portable vsnprintf().
-inline int32_t PRINTF_ATTR(2, 0) M_vsnprintf(char *buf, const char *s, va_list args)
+inline int32_t PRINTF_ATTR(3, 0) M_vsnprintf(char *buf, size_t buf_len, const char *s, va_list args)
 {
   // Windows (and other OSes?) has a vsnprintf() that doesn't always
   // append a trailing \0. So we must do it, and write into a buffer
   // that is one byte shorter; otherwise this function is unsafe.
-  int32_t result = vsnprintf(buf, MSG_BUFFER_LENGTH, s, args);
+  int32_t result = vsnprintf(buf, buf_len, s, args);
 
   // If truncated, change the final char in the buffer to a \0.
   // A negative result indicates a truncated buffer on Windows.
-  if (result < 0 || result >= static_cast<int32_t>(MSG_BUFFER_LENGTH))
+  if (result < 0 || result >= static_cast<int32_t>(buf_len))
   {
-    buf[MSG_BUFFER_LENGTH - 1] = '\0';
-    result = static_cast<int32_t>(MSG_BUFFER_LENGTH) - 1;
+    buf[buf_len - 1] = '\0';
+    result = static_cast<int32_t>(buf_len) - 1;
   }
 
+  return result;
+}
+
+// Safe, portable snprintf().
+inline int32_t PRINTF_ATTR(3, 0) M_snprintf(char *buf, size_t buf_len, const char *s, ...)
+{
+  va_list args;
+  int result;
+  va_start(args, s);
+  result = M_vsnprintf(buf, buf_len, s, args);
+  va_end(args);
   return result;
 }
 
@@ -327,7 +340,7 @@ inline void PRINTF_ATTR(2, 3) PrintLine(const log_level_t level, const char *fmt
   va_list arg_ptr;
 
   va_start(arg_ptr, fmt);
-  M_vsnprintf(buffer, fmt, arg_ptr);
+  M_vsnprintf(buffer, sizeof(buffer), fmt, arg_ptr);
   va_end(arg_ptr);
 
   buffer[MSG_BUFFER_LENGTH - 1] = '\0';
@@ -843,6 +856,19 @@ using bsp_format_t = enum bsp_format_e : uint8_t
   BSP_MAX = BSP_XGL3,
 };
 
+using glbsp_format_t = enum glbsp_format_e : uint8_t
+{
+  BSP_GL_None,
+  BSP_GL_V1,
+  BSP_GL_V2,
+  BSP_GL_V3,
+  BSP_GL_V4,
+  BSP_GL_V5,
+
+  BSP_GL_MIN = BSP_GL_V1,
+  BSP_GL_MAX = BSP_GL_V5,
+};
+
 using bmap_format_t = enum bmap_format_e : uint8_t
 {
   BMAP_DoomBSP,
@@ -1040,6 +1066,12 @@ constexpr uint16_t GL_V1_VERT = BIT(15);
 constexpr uint32_t GL_V3_VERT = BIT(30);
 constexpr uint32_t GL_V5_VERT = BIT(31);
 
+using raw_vertex_glv1_t = struct raw_vertex_glv1_s
+{
+  int16_t x;
+  int16_t y;
+} PACKEDATTR;
+
 using raw_vertex_glv2_t = struct raw_vertex_glv2_s
 {
   fixed_t x;
@@ -1167,8 +1199,7 @@ using raw_patch_t = struct patch_s
 } PACKEDATTR;
 
 // Fail way earlier
-#define static_size(x, y) \
-  static_assert(sizeof(x) == y, "Size mismatch for '" #x "'. Should be " #y ".")
+#define static_size(x, y) static_assert(sizeof(x) == y, "Size mismatch for '" #x "'. Should be " #y ".")
 
 // WAD
 static_size(raw_wad_header_t, 12);
@@ -1227,6 +1258,8 @@ static_size(raw_strife_patchdef_t, 6);
 static_size(raw_texture_t, 32);
 static_size(raw_strife_texture_t, 24);
 static_size(raw_patch_t, 12);
+
+#undef static_size
 
 //
 // LineDef attributes.
@@ -1556,6 +1589,12 @@ struct Wad_file
   // (previous results of FindLumpNum or LevelHeader are invalidated).
   void RemoveLumps(size_t index, size_t count = 1);
 
+	// removes any GL-Nodes lumps that are associated with the given level.
+	void RemoveGLNodes(size_t lev_num);
+
+	// removes any compiled lumps from a UDMF level.
+	void RemoveUDMFLumps(size_t lev_num);
+
   // insert a new lump.
   // The second form is for a level marker.
   // The 'max_size' parameter (if >= 0) specifies the most data
@@ -1674,6 +1713,20 @@ struct Lump_c
     SYS_ASSERT(data && len > 0);
     l_length += len;
     return (fwrite(data, len, 1, parent->fp) == 1);
+  }
+
+  // Only valid in text-based lumps
+  void PrintText(const char *msg, ...)
+  {
+    char buffer[MSG_BUFFER_LENGTH];
+
+    va_list args;
+    va_start(args, msg);
+    M_vsnprintf(buffer, sizeof(buffer), msg, args);
+    va_end(args);
+    buffer[sizeof(buffer) - 1] = 0;
+
+    Write(buffer, strlen(buffer));
   }
 
   // mark the lump as finished (after writing data to it).

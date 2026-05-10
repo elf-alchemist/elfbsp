@@ -1586,6 +1586,7 @@ build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
 build_result_e SaveLevelTextMap(level_t &level, node_t *root_node)
 {
   cur_wad->BeginWrite();
+  cur_wad->RemoveUDMFLumps(level.level_num);
 
   Lump_c *lump = CreateLevelLump(level, "ZNODES");
   AddMissingLump(level, "REJECT", "ZNODES");

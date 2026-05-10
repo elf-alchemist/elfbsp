@@ -222,48 +222,23 @@ static size_t WhatLevelPart(const char *name)
 
 static bool IsLevelLump(const char *name)
 {
-  if (StringCaseCmp(name, "SEGS") == 0)
-  {
-    return true;
-  }
-  if (StringCaseCmp(name, "SSECTORS") == 0)
-  {
-    return true;
-  }
-  if (StringCaseCmp(name, "NODES") == 0)
-  {
-    return true;
-  }
-  if (StringCaseCmp(name, "REJECT") == 0)
-  {
-    return true;
-  }
-  if (StringCaseCmp(name, "BLOCKMAP") == 0)
-  {
-    return true;
-  }
-  if (StringCaseCmp(name, "BEHAVIOR") == 0)
-  {
-    return true;
-  }
-  if (StringCaseCmp(name, "SCRIPTS") == 0)
-  {
-    return true;
-  }
-  if (StringCaseCmp(name, "LEAFS") == 0)
-  {
-    return true;
-  }
-  if (StringCaseCmp(name, "LIGHTS") == 0)
-  {
-    return true;
-  }
-  if (StringCaseCmp(name, "MACROS") == 0)
-  {
-    return true;
-  }
+  if (StringCaseCmp(name, "SEGS") == 0) return true;
+  if (StringCaseCmp(name, "SSECTORS") == 0) return true;
+  if (StringCaseCmp(name, "NODES") == 0) return true;
+  if (StringCaseCmp(name, "REJECT") == 0) return true;
+  if (StringCaseCmp(name, "BLOCKMAP") == 0) return true;
+  if (StringCaseCmp(name, "BEHAVIOR") == 0) return true;
+  if (StringCaseCmp(name, "SCRIPTS") == 0) return true;
+  if (StringCaseCmp(name, "LEAFS") == 0) return true;
+  if (StringCaseCmp(name, "LIGHTS") == 0) return true;
+  if (StringCaseCmp(name, "MACROS") == 0) return true;
 
   return WhatLevelPart(name) != 0;
+}
+
+static bool IsGLNodeLump(const char *name)
+{
+  return (StringCaseCmpMax(name, "GL_", 3) == 0);
 }
 
 Lump_c *Wad_file::GetLump(size_t index)
@@ -311,9 +286,10 @@ size_t Wad_file::LevelLastLump(size_t lev_num)
       count++;
     }
   }
-  else // standard DOOM or HEXEN format
+  else // all binary formats
   {
-    while (count < MAX_LUMPS_IN_A_LEVEL && start + count < NumLumps() && IsLevelLump(directory[start + count]->Name()))
+    while (count < MAX_LUMPS_IN_A_LEVEL && start + count < NumLumps()
+           && (IsLevelLump(directory[start + count]->Name()) || IsGLNodeLump(directory[start + count]->Name())))
     {
       count++;
     }
@@ -719,6 +695,86 @@ void Wad_file::EndWrite(void)
 
   // reset the insertion point
   insert_point = NO_INDEX;
+}
+
+void Wad_file::RemoveLumps(size_t index, size_t count)
+{
+  SYS_ASSERT(begun_write);
+  SYS_ASSERT(0 <= index && index < NumLumps());
+  SYS_ASSERT(directory[index]);
+
+  for (size_t i = 0; i < count; i++)
+  {
+    delete directory[index + i];
+  }
+
+  for (size_t i = index; i + count < NumLumps(); i++)
+  {
+    directory[i] = directory[i + count];
+  }
+
+  directory.resize(directory.size() - static_cast<size_t>(count));
+
+  // fix various arrays containing lump indices
+  FixGroup(levels, index, 0, count);
+  FixGroup(patches, index, 0, count);
+  FixGroup(sprites, index, 0, count);
+  FixGroup(flats, index, 0, count);
+  FixGroup(tx_tex, index, 0, count);
+
+  // reset the insertion point
+  insert_point = NO_INDEX;
+}
+
+void Wad_file::RemoveGLNodes(size_t lev_num)
+{
+  SYS_ASSERT(begun_write);
+  SYS_ASSERT(0 <= lev_num && lev_num < LevelCount());
+
+  size_t start = LevelHeader(lev_num);
+  size_t finish = LevelLastLump(lev_num);
+
+  start++;
+
+  while (start <= finish && IsLevelLump(directory[start]->Name()))
+  {
+    start++;
+  }
+
+  size_t count = 0;
+
+  while (start + count <= finish && IsGLNodeLump(directory[start + count]->Name()))
+  {
+    count++;
+  }
+
+  if (count > 0) RemoveLumps(start, count);
+}
+
+void Wad_file::RemoveUDMFLumps(size_t lev_num)
+{
+  SYS_ASSERT(begun_write);
+  SYS_ASSERT(0 <= lev_num && lev_num < LevelCount());
+
+  size_t start = LevelHeader(lev_num);
+  size_t finish = LevelLastLump(lev_num);
+
+  while (start <= finish)
+  {
+    if (StringCaseCmp(directory[start]->Name(), "ENDMAP") == 0)
+    {
+      break;
+    }
+
+    if (StringCaseCmp(directory[start]->Name(), "ZNODES") == 0       // Is this
+        || StringCaseCmp(directory[start]->Name(), "REJECT") == 0    // enough StringCaseCmp()
+        || StringCaseCmp(directory[start]->Name(), "BLOCKMAP") == 0) // yet?
+    {
+      RemoveLumps(start, 1);
+    }
+
+    start++;
+  }
 }
 
 void Wad_file::FixGroup(std::vector<size_t> &group, size_t index, size_t num_added, size_t num_removed)
