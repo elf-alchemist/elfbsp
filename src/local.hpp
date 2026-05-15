@@ -24,21 +24,16 @@
 #pragma once
 
 #include "core.hpp"
+#include "wad.hpp"
 
 #include <vector>
-
-struct Lump_c;
-struct Wad_file;
-
-// current WAD file
-extern Wad_file *cur_wad;
 
 //------------------------------------------------------------------------
 // BLOCKMAP : Generate the blockmap
 //------------------------------------------------------------------------
 
 // utility routines...
-int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2);
+bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2);
 
 //------------------------------------------------------------------------
 // LEVEL : Level structures & read/write functions.
@@ -429,18 +424,11 @@ using level_t = struct level_t
   double block_compression;
   bmap_format_t bmap_format = bmap_format_t::BMAP_DoomBSP;
 
-  inline Lump_c *FindLevelLump(const char *name)
-  {
-    SYS_ASSERT(cur_wad != nullptr);
-    size_t idx = cur_wad->LevelLookupLump(level_num, name);
-    return (idx != NO_INDEX) ? cur_wad->GetLump(idx) : nullptr;
-  }
 
-  inline const char *GetLevelName(void)
+  inline const char *GetLevelName(WadIO &io)
   {
-    SYS_ASSERT(cur_wad != nullptr);
-    size_t lump_idx = cur_wad->LevelHeader(level_num);
-    return cur_wad->GetLump(lump_idx)->Name();
+    size_t lump_idx = io.LevelHeader(level_num);
+    return io.read_directory[lump_idx].name;
   }
 
   vertex_t *SafeLookupVertex(size_t num, size_t num_line)
@@ -505,7 +493,6 @@ void FreeNodes(level_t &level);
 void FreeWallTips(level_t &level);
 void FreeIntersections(level_t &level);
 
-Lump_c *CreateLevelLump(level_t &level, const char *name, size_t max_size = NO_INDEX);
 
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
@@ -569,45 +556,3 @@ void BuildNodes(level_t &level, seg_t *seg_list, int depth, bbox_t *bounds, node
 
 // compute the height of the bsp tree, starting at 'node'.
 size_t ComputeBspHeight(const node_t *node);
-
-// put all the segs in each subsector into clockwise order, and renumber
-// the seg indices.
-//
-// [ This cannot be done DURING BuildNodes() since splitting a seg with
-//   a partner will insert another seg into that partner's list, usually
-//   in the wrong place order-wise. ]
-void ClockwiseBspTree(level_t &level);
-
-// traverse the BSP tree and do whatever is necessary to convert the
-// node information from GL standard to normal standard (for example,
-// removing minisegs).
-void NormaliseBspTree(level_t &level);
-
-// Mark new vertices as old for writing into the VERTEXES lump
-// Needed for RoundOffBspTree and saving to Doom 64 map formats directly
-void RoundOffVertices(level_t &level);
-
-// traverse the BSP tree, doing whatever is necessary to round
-// vertices to integer coordinates (for example, removing segs whose
-// rounded coordinates degenerate to the same point).
-void RoundOffBspTree(level_t &level);
-
-// both BLOCKAMP and REJECT exist as single lumps on all supported map formats
-void InitBlockmap(level_t &level);
-void PutBlockmap(level_t &level);
-void PutReject(level_t &level);
-
-// the BSP tree lumps differ notably on each map format -- Doom/Hexen/Doom64
-// have NODES, SSECTORS & SEGS, but UDMF is generally only ZNODES, and there's
-// some format overlap between them
-void SaveDoom_DoomBSP(level_t &level, node_t *root_node);
-void SaveDoom_DeePBSPV4(level_t &level, node_t *root_node);
-void SaveDoom_XNOD(level_t &level, node_t *root_node);
-void SaveDoom_XGLN(level_t &level, node_t *root_node);
-void SaveDoom_XGL2(level_t &level, node_t *root_node);
-void SaveDoom_XGL3(level_t &level, node_t *root_node);
-
-void SaveDoom64_DoomBSP(level_t &level, node_t *root_node);
-void SaveDoom64_DeePBSPV4(level_t &level, node_t *root_node);
-
-void SaveTextmap_ZNODES(level_t &level, node_t *root_node);

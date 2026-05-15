@@ -23,6 +23,7 @@
 
 #include "core.hpp"
 #include "local.hpp"
+#include "wad.hpp"
 
 #include <cstring>
 #include <string>
@@ -95,7 +96,7 @@ static void BuildFile(const char *filename)
 {
   config.total_warnings = 0;
 
-  const size_t num_levels = LevelsInWad();
+  const size_t num_levels = io->LevelCount();
 
   if (num_levels == 0)
   {
@@ -115,8 +116,8 @@ static void BuildFile(const char *filename)
     // IMPORTANT: always ensure a valid map
     level_t level;
     level.level_num = n;
-    level.level_header_lump_index = cur_wad->LevelHeader(level.level_num);
-    level.map_format = cur_wad->LevelFormat(level.level_num);
+    level.level_header_lump_index = io->LevelHeader(level.level_num);
+    level.map_format = io->LevelFormat(level.level_num);
 
     if (!CheckMapInMapList(level.GetLevelName()))
     {
@@ -161,31 +162,6 @@ static void BuildFile(const char *filename)
   }
 
   PrintLine(LOG_NORMAL, "Serious warnings: %zu", config.total_warnings);
-}
-
-void ValidateInputFilename(const char *filename)
-{
-  // NOTE: these checks are case-insensitive
-
-  // files with ".bak" extension cannot be backed up, so refuse them
-  if (MatchExtension(filename, "bak"))
-  {
-    PrintLine(LOG_ERROR, "ERROR: cannot process a backup file: %s", filename);
-  }
-
-  // we do not support packages
-  if (MatchExtension(filename, "pak") || MatchExtension(filename, "pk2") || MatchExtension(filename, "pk3")
-      || MatchExtension(filename, "pk4") || MatchExtension(filename, "pk7") || MatchExtension(filename, "epk")
-      || MatchExtension(filename, "pack") || MatchExtension(filename, "zip") || MatchExtension(filename, "rar"))
-  {
-    PrintLine(LOG_ERROR, "ERROR: package files (like PK3) are not supported: %s", filename);
-  }
-
-  // reject anything that isn't a WAD, or a UDB temp file
-  if (!MatchExtension(filename, "wad") && !MatchExtension(filename, "tmp"))
-  {
-    PrintLine(LOG_ERROR, "ERROR: not a wad file: %s", filename);
-  }
 }
 
 void BackupFile(const char *filename)
@@ -238,11 +214,20 @@ void VisitFile(const char *filename)
   PrintLine(LOG_NORMAL, "Building %s", filename);
 
   // this will fatal error if it fails
-  OpenWad(filename);
+  io = new WadIO(filename);
+  if (io == nullptr)
+  {
+    PrintLine(LOG_ERROR, "ERROR: Cannot open file: %s", filename);
+  }
 
   BuildFile(filename);
 
-  CloseWad();
+  if (io != nullptr)
+  {
+    // this closes the file
+    delete io;
+    io = nullptr;
+  }
 }
 
 // ----- user information -----------------------------
@@ -760,11 +745,9 @@ int32_t main(const int32_t argc, const char *argv[])
   // validate all filenames before processing any of them
   for (const auto filename : wad_list)
   {
-    ValidateInputFilename(filename);
-
     if (!FileExists(filename))
     {
-      PrintLine(LOG_ERROR, "ERROR: no such file: %s", filename);
+      throw std::runtime_error("ERROR: no such file: " + std::string(filename));
     }
   }
 

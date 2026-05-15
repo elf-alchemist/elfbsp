@@ -21,16 +21,16 @@
 //
 //------------------------------------------------------------------------------
 
+#include "bsp.hpp"
 #include "core.hpp"
 #include "local.hpp"
+#include "parse.hpp"
 
 #include <algorithm>
 #include <cstring>
 #include <vector>
 
-Wad_file *cur_wad;
-
-int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2)
+bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2)
 {
   int count = 2;
   int tmp;
@@ -353,43 +353,18 @@ void ValidateLinedef(level_t &level, linedef_t *line)
 
 static void GetVertices_Doom(level_t &level)
 {
-  size_t count = 0;
-
-  Lump_c *lump = level.FindLevelLump("VERTEXES");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_vertex_t);
-  }
+  auto lump = io->ReadMapLump<raw_vertex_t>(level, "VERTEXES");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  if (lump == nullptr || count == 0)
+  for (size_t i = 0; i < lump.size(); i++)
   {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "ERROR: Failure seeking to vertices.");
-  }
-
-  for (size_t i = 0; i < count; i++)
-  {
-    raw_vertex_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "ERROR: Failure reading vertices.");
-    }
-
     vertex_t *vert = NewVertex(level);
-
-    vert->x = ShortToFloat(GetLittleEndian(raw.x));
-    vert->y = ShortToFloat(GetLittleEndian(raw.y));
+    vert->x = ShortToFloat(GetLittleEndian(lump[i].x));
+    vert->y = ShortToFloat(GetLittleEndian(lump[i].y));
   }
 
   level.num_old_vert = level.vertices.size();
@@ -397,182 +372,86 @@ static void GetVertices_Doom(level_t &level)
 
 static void GetSectors_Doom(level_t &level)
 {
-  size_t count = 0;
-
-  Lump_c *lump = level.FindLevelLump("SECTORS");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_sector_doom_t);
-  }
-
-  if (lump == nullptr || count == 0)
-  {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "ERROR: Failure seeking to sectors.");
-  }
+  auto lump = io->ReadMapLump<raw_sector_doom_t>(level, "SECTORS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < count; i++)
+  for (size_t i = 0; i < lump.size(); i++)
   {
-    raw_sector_doom_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "ERROR: Failure reading sectors.");
-    }
-
     sector_t *sector = NewSector(level);
-
     sector->effects = FX_Sector_None;
   }
 }
 
 static void GetThings_Doom(level_t &level)
 {
-  size_t count = 0;
-
-  Lump_c *lump = level.FindLevelLump("THINGS");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_thing_doom_t);
-  }
-
-  if (lump == nullptr || count == 0)
-  {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "ERROR: Failure seeking to things.");
-  }
+  auto lump = io->ReadMapLump<raw_thing_doom_t>(level, "THINGS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < count; i++)
+  for (size_t i = 0; i < lump.size(); i++)
   {
-    raw_thing_doom_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "ERROR: Failure reading things.");
-    }
-
     thing_t *thing = NewThing(level);
 
-    thing->x = GetLittleEndian(raw.x);
-    thing->y = GetLittleEndian(raw.y);
-    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
+    thing->x = GetLittleEndian(lump[i].x);
+    thing->y = GetLittleEndian(lump[i].y);
+    thing->type = static_cast<doomednum_t>(GetLittleEndian(lump[i].type));
   }
 }
 
 static void GetSidedefs_Doom(level_t &level)
 {
-  size_t count = 0;
-
-  Lump_c *lump = level.FindLevelLump("SIDEDEFS");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_sidedef_doom_t);
-  }
-
-  if (lump == nullptr || count == 0)
-  {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "ERROR: Failure seeking to sidedefs.");
-  }
+  auto lump = io->ReadMapLump<raw_sidedef_doom_t>(level, "SIDEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < count; i++)
+  for (size_t i = 0; i < lump.size(); i++)
   {
-    raw_sidedef_doom_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "ERROR: Failure reading sidedefs.");
-    }
-
     sidedef_t *side = NewSidedef(level);
 
-    side->offset_x = GetLittleEndian(raw.x_offset);
-    side->offset_y = GetLittleEndian(raw.y_offset);
-    memcpy(side->tex_upper, raw.upper_tex, 8);
-    memcpy(side->tex_lower, raw.lower_tex, 8);
-    memcpy(side->tex_middle, raw.mid_tex, 8);
-    side->sector = level.SafeLookupSector(GetLittleEndian(raw.sector), i);
+    side->offset_x = GetLittleEndian(lump[i].x_offset);
+    side->offset_y = GetLittleEndian(lump[i].y_offset);
+    memcpy(side->tex_upper, lump[i].upper_tex, 8);
+    memcpy(side->tex_lower, lump[i].lower_tex, 8);
+    memcpy(side->tex_middle, lump[i].mid_tex, 8);
+    side->sector = level.SafeLookupSector(GetLittleEndian(lump[i].sector), i);
   }
 }
 
 static void GetLinedefs_Doom(level_t &level)
 {
-  size_t count = 0;
-
-  Lump_c *lump = level.FindLevelLump("LINEDEFS");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_linedef_doom_t);
-  }
-
-  if (lump == nullptr || count == 0)
-  {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "ERROR: Failure seeking to linedefs.");
-  }
+  auto lump = io->ReadMapLump<raw_linedef_doom_t>(level, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < count; i++)
+  for (size_t i = 0; i < lump.size(); i++)
   {
-    raw_linedef_doom_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "ERROR: Failure reading linedefs.");
-    }
 
     linedef_t *line = NewLinedef(level);
 
-    line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), i);
-    line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), i);
-    line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
-    line->special = GetLittleEndian(raw.special);
-    line->tag = GetLittleEndian(raw.tag);
+    line->start = level.SafeLookupVertex(GetLittleEndian(lump[i].start), i);
+    line->end = level.SafeLookupVertex(GetLittleEndian(lump[i].end), i);
+    line->right = level.SafeLookupSidedef(GetLittleEndian(lump[i].right));
+    line->left = level.SafeLookupSidedef(GetLittleEndian(lump[i].left));
+    line->special = GetLittleEndian(lump[i].special);
+    line->tag = GetLittleEndian(lump[i].tag);
 
     line->start->is_used = true;
     line->end->is_used = true;
 
-    if (HAS_BIT(GetLittleEndian(raw.flags), MLF_TWOSIDED))
+    if (HAS_BIT(GetLittleEndian(lump[i].flags), MLF_TWOSIDED))
     {
       line->effects |= FX_TwoSided;
     }
@@ -632,94 +511,46 @@ static void GetLinedefs_Doom(level_t &level)
 
 static void GetThings_Hexen(level_t &level)
 {
-  size_t count = 0;
-
-  Lump_c *lump = level.FindLevelLump("THINGS");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_thing_hexen_t);
-  }
-
-  if (lump == nullptr || count == 0)
-  {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "ERROR: Failure seeking to things.");
-  }
+  auto lump = io->ReadMapLump<raw_thing_hexen_t>(level, "THINGS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < count; i++)
+  for (size_t i = 0; i < lump.size(); i++)
   {
-    raw_thing_hexen_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "ERROR: Failure reading things.");
-    }
-
     thing_t *thing = NewThing(level);
 
-    thing->x = GetLittleEndian(raw.x);
-    thing->y = GetLittleEndian(raw.y);
-    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
+    thing->x = GetLittleEndian(lump[i].x);
+    thing->y = GetLittleEndian(lump[i].y);
+    thing->type = static_cast<doomednum_t>(GetLittleEndian(lump[i].type));
   }
 }
 
 static void GetLinedefs_Hexen(level_t &level)
 {
-  size_t count = 0;
-
-  Lump_c *lump = level.FindLevelLump("LINEDEFS");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_linedef_hexen_t);
-  }
-
-  if (lump == nullptr || count == 0)
-  {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "ERROR: Failure seeking to linedefs.");
-  }
+  auto lump = io->ReadMapLump<raw_linedef_hexen_t>(level, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < count; i++)
+  for (size_t i = 0; i < lump.size(); i++)
   {
-    raw_linedef_hexen_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "ERROR: Failure reading linedefs.");
-    }
-
     linedef_t *line = NewLinedef(level);
 
-    line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), i);
-    line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), i);
-    line->special = raw.special;
-    line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
+    line->start = level.SafeLookupVertex(GetLittleEndian(lump[i].start), i);
+    line->end = level.SafeLookupVertex(GetLittleEndian(lump[i].end), i);
+    line->special = lump[i].special;
+    line->right = level.SafeLookupSidedef(GetLittleEndian(lump[i].right));
+    line->left = level.SafeLookupSidedef(GetLittleEndian(lump[i].left));
 
     line->start->is_used = true;
     line->end->is_used = true;
 
-    if (HAS_BIT(GetLittleEndian(raw.flags), MLF_HEXEN_TWOSIDED))
+    if (HAS_BIT(GetLittleEndian(lump[i].flags), MLF_HEXEN_TWOSIDED))
     {
       line->effects |= FX_TwoSided;
     }
@@ -731,11 +562,11 @@ static void GetLinedefs_Hexen(level_t &level)
     switch (line->special)
     {
     case BSP_SpecialEffects:
-      if (raw.args[0]) line->effects |= FX_NoBlockmap;
-      if (raw.args[1]) line->effects |= FX_DoNotSplitSeg;
-      if (raw.args[2]) line->effects |= FX_DoNotRenderBack;
-      if (raw.args[3]) line->effects |= FX_DoNotRenderFront;
-      if (raw.args[4]) line->effects |= FX_NoReject;
+      if (lump[i].args[0]) line->effects |= FX_NoBlockmap;
+      if (lump[i].args[1]) line->effects |= FX_DoNotSplitSeg;
+      if (lump[i].args[2]) line->effects |= FX_DoNotRenderBack;
+      if (lump[i].args[3]) line->effects |= FX_DoNotRenderFront;
+      if (lump[i].args[4]) line->effects |= FX_NoReject;
       break;
     default:
       break;
@@ -745,43 +576,19 @@ static void GetLinedefs_Hexen(level_t &level)
 
 static void GetVertices_Doom64(level_t &level)
 {
-  size_t count = 0;
-
-  Lump_c *lump = level.FindLevelLump("VERTEXES");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_vertex_doom64_t);
-  }
+  auto lump = io->ReadMapLump<raw_vertex_doom64_t>(level, "VERTEXES");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  if (lump == nullptr || count == 0)
+  for (size_t i = 0; i < lump.size(); i++)
   {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "Error seeking to 32bit vertices.");
-  }
-
-  for (size_t i = 0; i < count; i++)
-  {
-    raw_vertex_doom64_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "Error reading 32bit vertices.");
-    }
-
     vertex_t *vert = NewVertex(level);
 
-    vert->x = static_cast<double>(GetLittleEndian(raw.x) / FRACFACTOR);
-    vert->y = static_cast<double>(GetLittleEndian(raw.y) / FRACFACTOR);
+    vert->x = static_cast<double>(GetLittleEndian(lump[i].x) / FRACFACTOR);
+    vert->y = static_cast<double>(GetLittleEndian(lump[i].y) / FRACFACTOR);
   }
 
   level.num_old_vert = level.vertices.size();
@@ -789,44 +596,20 @@ static void GetVertices_Doom64(level_t &level)
 
 static void GetSectors_Doom64(level_t &level)
 {
-  size_t count = 0;
-
-  Lump_c *lump = level.FindLevelLump("SECTORS");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_sector_doom64_t);
-  }
-
-  if (lump == nullptr || count == 0)
-  {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "Error seeking to Doom64 sectors.");
-  }
+  auto lump = io->ReadMapLump<raw_sector_doom64_t>(level, "SECTORS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < count; i++)
+  for (size_t i = 0; i < lump.size(); i++)
   {
-    raw_sector_doom64_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "Error reading Doom64 sectors.");
-    }
-
     sector_t *sector = NewSector(level);
 
     if (!config.effects) continue;
 
-    if (GetLittleEndian(raw.special) == SS_Doom64_NoReject)
+    if (GetLittleEndian(lump[i].special) == SS_Doom64_NoReject)
     {
       sector->effects = FX_Sector_NoReject;
     }
@@ -835,96 +618,48 @@ static void GetSectors_Doom64(level_t &level)
 
 static void GetSidedefs_Doom64(level_t &level)
 {
-  size_t count = 0;
-
-  Lump_c *lump = level.FindLevelLump("SIDEDEFS");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_sidedef_doom64_t);
-  }
-
-  if (lump == nullptr || count == 0)
-  {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "Error seeking to Doom64 sidedefs.");
-  }
+  auto lump = io->ReadMapLump<raw_sidedef_doom64_t>(level, "SIDEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < count; i++)
+  for (size_t i = 0; i < lump.size(); i++)
   {
-    raw_sidedef_doom64_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "Error reading Doom64 sidedefs.");
-    }
-
     sidedef_t *side = NewSidedef(level);
 
-    side->offset_x = GetLittleEndian(raw.x_offset);
-    side->offset_y = GetLittleEndian(raw.y_offset);
+    side->offset_x = GetLittleEndian(lump[i].x_offset);
+    side->offset_y = GetLittleEndian(lump[i].y_offset);
     // We don't care about texture indexes here
-    side->sector = level.SafeLookupSector(GetLittleEndian(raw.sector), i);
+    side->sector = level.SafeLookupSector(GetLittleEndian(lump[i].sector), i);
   }
 }
 
 static void GetLinedefs_Doom64(level_t &level)
 {
-  size_t count = 0;
-
-  Lump_c *lump = level.FindLevelLump("LINEDEFS");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_linedef_doom64_t);
-  }
-
-  if (lump == nullptr || count == 0)
-  {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "Error seeking to Doom64 linedefs.");
-  }
+  auto lump = io->ReadMapLump<raw_linedef_doom64_t>(level, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < count; i++)
+  for (size_t i = 0; i < lump.size(); i++)
   {
-    raw_linedef_doom64_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "Error reading Doom64 linedefs.");
-    }
-
     linedef_t *line = NewLinedef(level);
 
-    line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), i);
-    line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), i);
-    line->special = GetLittleEndian(raw.special);
-    line->tag = GetLittleEndian(raw.tag);
-    line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
+    line->start = level.SafeLookupVertex(GetLittleEndian(lump[i].start), i);
+    line->end = level.SafeLookupVertex(GetLittleEndian(lump[i].end), i);
+    line->special = GetLittleEndian(lump[i].special);
+    line->tag = GetLittleEndian(lump[i].tag);
+    line->right = level.SafeLookupSidedef(GetLittleEndian(lump[i].right));
+    line->left = level.SafeLookupSidedef(GetLittleEndian(lump[i].left));
 
     line->start->is_used = true;
     line->end->is_used = true;
 
-    auto flags = GetLittleEndian(raw.flags);
+    auto flags = GetLittleEndian(lump[i].flags);
 
     if (HAS_BIT(flags, MLF_DOOM64_TWOSIDED))
     {
@@ -948,44 +683,20 @@ static void GetLinedefs_Doom64(level_t &level)
 
 static void GetThings_Doom64(level_t &level)
 {
-  size_t count = 0;
-
-  Lump_c *lump = level.FindLevelLump("THINGS");
-
-  if (lump)
-  {
-    count = lump->Length() / sizeof(raw_thing_doom64_t);
-  }
-
-  if (lump == nullptr || count == 0)
-  {
-    return;
-  }
-
-  if (!lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "Error seeking to Doom64 things.");
-  }
+  auto lump = io->ReadMapLump<raw_thing_doom64_t>(level, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, count);
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < count; i++)
+  for (size_t i = 0; i < lump.size(); i++)
   {
-    raw_thing_doom64_t raw;
-
-    if (!lump->Read(&raw, sizeof(raw)))
-    {
-      PrintLine(LOG_ERROR, "Error reading Doom64 things.");
-    }
-
     thing_t *thing = NewThing(level);
 
-    thing->x = GetLittleEndian(raw.x);
-    thing->y = GetLittleEndian(raw.y);
-    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
+    thing->x = GetLittleEndian(lump[i].x);
+    thing->y = GetLittleEndian(lump[i].y);
+    thing->type = static_cast<doomednum_t>(GetLittleEndian(lump[i].type));
   }
 }
 
@@ -1293,33 +1004,10 @@ static void ParseUDMF_Pass(level_t &level, const std::string &data, int pass)
 
 void ParseUDMF(level_t &level)
 {
-  Lump_c *lump = level.FindLevelLump("TEXTMAP");
-
-  if (lump == nullptr || !lump->Seek(0))
-  {
-    PrintLine(LOG_ERROR, "ERROR: Failure finding TEXTMAP lump.");
-  }
-
-  size_t remain = lump->Length();
+  auto lump = io->ReadMapLump<char>(level, "TEXTMAP");
 
   // load the lump into this string
-  std::string data;
-
-  while (remain > 0)
-  {
-    char buffer[4096];
-
-    size_t want = std::min(remain, sizeof(buffer));
-
-    if (!lump->Read(buffer, want))
-    {
-      PrintLine(LOG_ERROR, "ERROR: Failure reading TEXTMAP lump.");
-    }
-
-    data.append(buffer, want);
-
-    remain -= want;
-  }
+  auto data = std::string(lump.begin(), lump.end());
 
   // now parse it...
 
@@ -1397,11 +1085,11 @@ bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
 void LoadLevel(level_t &level)
 {
   auto mark = Benchmarker(__func__);
-  Lump_c *LEV = cur_wad->GetLump(level.level_header_lump_index);
+  auto LEV = io->LumpName(level.level_header_lump_index);
 
   level.overflows = false;
 
-  PrintLine(LOG_NORMAL, "[%s] Reading %s", __func__, LEV->Name());
+  PrintLine(LOG_NORMAL, "[%s] Reading %s", __func__, LEV);
 
   level.num_new_vert = 0;
   level.num_real_lines = 0;
@@ -1436,7 +1124,7 @@ void LoadLevel(level_t &level)
     ParseUDMF(level);
     break;
   case MapFormat_INVALID:
-    PrintLine(LOG_ERROR, "[%s] Unknown level format on level %s", __func__, LEV->Name());
+    PrintLine(LOG_ERROR, "[%s] Unknown level format on level %s", __func__, LEV);
     break;
   }
 
@@ -1463,220 +1151,13 @@ void LoadLevel(level_t &level)
   }
 }
 
-void FreeLevel(level_t &level)
-{
-  FreeVertices(level);
-  FreeSidedefs(level);
-  FreeLinedefs(level);
-  FreeSectors(level);
-  FreeThings(level);
-  FreeSegs(level);
-  FreeSubsecs(level);
-  FreeNodes(level);
-  FreeWallTips(level);
-  FreeIntersections(level);
-}
-
-static void AddMissingLump(level_t &level, const char *name, const char *after)
-{
-  if (cur_wad->LevelLookupLump(level.level_num, name) != NO_INDEX)
-  {
-    return;
-  }
-
-  size_t exist = cur_wad->LevelLookupLump(level.level_num, after);
-
-  // if this happens, the level structure is very broken
-  if (exist == NO_INDEX)
-  {
-    PrintLine(LOG_NORMAL, "WARNING: Missing %s lump -- level structure is broken", after);
-    config.total_warnings++;
-    exist = cur_wad->LevelLastLump(level.level_num);
-  }
-
-  cur_wad->InsertPoint(exist + 1);
-  cur_wad->AddLump(name)->Finish();
-}
-
-build_result_e SaveLevelBinaryFormat(level_t &level, node_t *root_node)
-{
-  // Note: root_node may be nullptr
-
-  cur_wad->BeginWrite();
-
-  // ensure all necessary level lumps are present
-  AddMissingLump(level, "SEGS", "VERTEXES");
-  AddMissingLump(level, "SSECTORS", "SEGS");
-  AddMissingLump(level, "NODES", "SSECTORS");
-  AddMissingLump(level, "SECTORS", "NODES");
-  AddMissingLump(level, "REJECT", "SECTORS");
-  AddMissingLump(level, "BLOCKMAP", "REJECT");
-
-  // No need to add BEHAVIOR, LIGHTS or MACROS
-  if (level.map_format == MapFormat_Doom64)
-  {
-    AddMissingLump(level, "LEAFS", "BLOCKMAP");
-  }
-
-  // check for overflows...
-  CheckBinaryFormatLimits(level);
-
-  // If using DoomBSP format, bump to DeePBSPV4 on overflow
-  RaiseValue(level.bsp_format, CheckFormatBSP(config, level));
-
-  // Using Zlib-compressed version of ZDBSP lump format
-  level.bsp_compress |= config.compress;
-
-  if (level.map_format == MapFormat_Doom64)
-  {
-    switch (level.bsp_format)
-    {
-    case BSP_DeePBSPV4:
-      SaveDoom64_DeePBSPV4(level, root_node);
-      break;
-    case BSP_DoomBSP:
-      SaveDoom64_DoomBSP(level, root_node);
-      break;
-    default:
-      PrintLine(LOG_ERROR, "ERROR: Tried to write unsupported BSP format #%d on Doom64 map format", level.bsp_format);
-      break;
-    }
-  }
-  else // MapFormat_Doom or MapFormat_Hexen
-  {
-    switch (level.bsp_format)
-    {
-    case BSP_XGL3:
-      SaveDoom_XGL3(level, root_node);
-      break;
-    case BSP_XGL2:
-      SaveDoom_XGL2(level, root_node);
-      break;
-    case BSP_XGLN:
-      SaveDoom_XGLN(level, root_node);
-      break;
-    case BSP_XNOD:
-      SaveDoom_XNOD(level, root_node);
-      break;
-    case BSP_DeePBSPV4:
-      SaveDoom_DeePBSPV4(level, root_node);
-      break;
-    case BSP_DoomBSP:
-      SaveDoom_DoomBSP(level, root_node);
-      break;
-    }
-  }
-
-  PutBlockmap(level);
-  PutReject(level);
-
-  cur_wad->EndWrite();
-
-  if (level.overflows)
-  {
-    // no message here
-    // [ in verbose mode, each overflow already printed a message ]
-    // [ in normal mode, we don't want any messages at all ]
-    return BUILD_LumpOverflow;
-  }
-
-  return BUILD_OK;
-}
-
-build_result_e SaveLevelTextMap(level_t &level, node_t *root_node)
-{
-  cur_wad->BeginWrite();
-
-  Lump_c *lump = CreateLevelLump(level, "ZNODES");
-  AddMissingLump(level, "REJECT", "ZNODES");
-  AddMissingLump(level, "BLOCKMAP", "REJECT");
-
-  if (level.num_real_lines == 0)
-  {
-    lump->Finish();
-  }
-  else
-  {
-    SaveTextmap_ZNODES(level, root_node);
-  }
-
-  PutBlockmap(level);
-  PutReject(level);
-
-  cur_wad->EndWrite();
-
-  return BUILD_OK;
-}
-
-/* ---------------------------------------------------------------- */
-
-Lump_c *CreateLevelLump(level_t &level, const char *name, size_t max_size)
-{
-  // look for existing one
-  Lump_c *lump = level.FindLevelLump(name);
-
-  if (lump)
-  {
-    cur_wad->RecreateLump(lump, max_size);
-  }
-  else
-  {
-    size_t last_idx = cur_wad->LevelLastLump(level.level_num);
-
-    // in UDMF maps, insert before the ENDMAP lump, otherwise insert
-    // after the last known lump of the level.
-    if (level.map_format != MapFormat_UDMF)
-    {
-      last_idx += 1;
-    }
-
-    cur_wad->InsertPoint(last_idx);
-
-    lump = cur_wad->AddLump(name, max_size);
-  }
-
-  return lump;
-}
+//
+// INSERT OUTPUT HERE
+//
 
 //------------------------------------------------------------------------
 // MAIN STUFF
 //------------------------------------------------------------------------
-
-void OpenWad(const char *filename)
-{
-  cur_wad = Wad_file::Open(filename, 'a');
-  if (cur_wad == nullptr)
-  {
-    PrintLine(LOG_ERROR, "ERROR: Cannot open file: %s", filename);
-  }
-
-  if (cur_wad->IsReadOnly())
-  {
-    delete cur_wad;
-    cur_wad = nullptr;
-    PrintLine(LOG_ERROR, "ERROR: file is read only: %s", filename);
-  }
-}
-
-void CloseWad(void)
-{
-  if (cur_wad != nullptr)
-  {
-    // this closes the file
-    delete cur_wad;
-    cur_wad = nullptr;
-  }
-}
-
-size_t LevelsInWad(void)
-{
-  if (cur_wad == nullptr)
-  {
-    return 0;
-  }
-
-  return cur_wad->LevelCount();
-}
 
 size_t ComputeBspHeight(const node_t *node)
 {
@@ -1747,7 +1228,16 @@ build_result_e BuildLevel(level_t &level, const char *filename)
     break;
   }
 
-  FreeLevel(level);
+  FreeVertices(level);
+  FreeSidedefs(level);
+  FreeLinedefs(level);
+  FreeSectors(level);
+  FreeThings(level);
+  FreeSegs(level);
+  FreeSubsecs(level);
+  FreeNodes(level);
+  FreeWallTips(level);
+  FreeIntersections(level);
 
   if (config.analysis)
   {

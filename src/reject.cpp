@@ -167,25 +167,19 @@ static void Reject_DebugGroups(level_t &level)
   }
 }
 
-static void Reject_WriteLump(level_t &level)
-{
-  Lump_c *lump = CreateLevelLump(level, "REJECT", level.reject_size);
-  lump->Write(level.reject_matrix, level.reject_size);
-  lump->Finish();
-}
-
 //
 // For now we only do very basic reject processing, limited to
 // determining all isolated groups of sectors (islands that are
 // surrounded by void space).
 //
-void PutReject(level_t &level)
+void PutReject(WadIO &io, level_t &level)
 {
   auto mark = Benchmarker(__func__);
+  io.StartWritingLump("REJECT");
+
+  // just leave an empty reject lump
   if (level.sectors.size() == 0)
   {
-    // just create an empty reject lump
-    CreateLevelLump(level, "REJECT")->Finish();
     return;
   }
 
@@ -193,8 +187,9 @@ void PutReject(level_t &level)
   Reject_GroupSectors(level);
   Reject_ProcessSectors(level);
   Reject_DebugGroups(level);
-  Reject_WriteLump(level);
+  io.AddToLump(level.reject_matrix, level.reject_size);
   Reject_Free(level);
+
   if (config.verbose)
   {
     PrintLine(LOG_NORMAL, "Reject size: %zu", level.reject_size);

@@ -1,0 +1,101 @@
+//------------------------------------------------------------------------------
+//
+//  ELFBSP -- WAD Reading / Writing
+//
+//------------------------------------------------------------------------------
+//
+//  Copyright 2025-2026 Guilherme Miranda
+//  Copyright 2001-2018 Andrew Apted
+//  Copyright 2002-2006 Marisa Heit
+//
+//  This program is free software; you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License
+//  as published by the Free Software Foundation; either version 2
+//  of the License, or (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//------------------------------------------------------------------------------
+
+#pragma once
+
+#include "core.hpp"
+
+//------------------------------------------------------------------------
+// WAD STRUCTURES
+//------------------------------------------------------------------------
+
+// wad header
+using WadHeader = struct WadHeader
+{
+  char ident[4];
+  uint32_t num_entries;
+  uint32_t dir_start;
+} PACKEDATTR;
+
+// directory entry
+using WadLump = struct WadLump
+{
+  uint32_t pos;
+  uint32_t size;
+  char name[8];
+} PACKEDATTR;
+
+static_size(WadHeader, 12);
+static_size(WadLump, 16);
+
+//
+// File handling
+//
+
+struct WadIO
+{
+  // Read data
+  FILE *read_file;
+  WadHeader read_header;
+  std::vector<WadLump> read_directory;
+  std::vector<size_t> read_levels; // these are lump indices (into 'directory' vector)
+
+  // Write data
+  FILE *write_file;
+  WadHeader write_header;
+  std::vector<WadLump> write_directory;
+
+  // Init/die
+  WadIO(const char *filename);
+  ~WadIO(void);
+
+  // Read operations
+  void SafeRead(void *buffer, size_t size);
+  size_t NumLumps(void) const;
+  size_t LevelCount(void) const;
+  const char *LumpName(size_t lump_index) const;
+  size_t LevelHeader(size_t lev_num);
+  size_t LevelLastLump(size_t lev_num);
+  size_t LevelLookupLump(size_t lev_num, const char *name);
+  map_format_t LevelFormat(size_t lev_num);
+  void DetectLevels(void);
+  template <typename T>
+  std::vector<T> ReadLump(size_t index);
+  template <typename T>
+  std::vector<T> ReadMapLump(level_t &level, const char *name);
+
+  // Write operations
+  void SafeWrite(const void *buffer, size_t size);
+  void CreateEmptyLump(const char *name);
+  void WriteLump(const char *name, const void *data, size_t size);
+  void CopyLump(size_t lump);
+
+  // Partial writing
+  void StartWritingLump(const char *name);
+  void AddToLump(const void *data, size_t len);
+  void AddToLumpZ(const void *data, size_t len);
+  WadIO &operator<<(uint8_t value);
+  WadIO &operator<<(uint16_t value);
+  WadIO &operator<<(uint32_t value);
+  WadIO &operator<<(int16_t value);
+  WadIO &operator<<(fixed_t value);
+};
