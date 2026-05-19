@@ -392,7 +392,6 @@ using level_t = struct level_t
   size_t num_old_vert = 0;
   size_t num_new_vert = 0;
   size_t num_real_lines = 0;
-  size_t level_num = NO_INDEX;
   size_t level_header_lump_index = NO_INDEX;
   bool overflows = false;
 
@@ -401,6 +400,9 @@ using level_t = struct level_t
   std::vector<sidedef_t *> sidedefs;
   std::vector<sector_t *> sectors;
   std::vector<thing_t *> things;
+
+  node_t *root_node = nullptr;
+  subsec_t *root_sub = nullptr;
 
   std::vector<seg_t *> segs;
   std::vector<subsec_t *> subsecs;
@@ -427,8 +429,7 @@ using level_t = struct level_t
 
   inline const char *GetLevelName(WadIO &io)
   {
-    size_t lump_idx = io.LevelHeader(level_num);
-    return io.read_directory[lump_idx].name;
+    return io.read_directory[level_header_lump_index].name;
   }
 
   vertex_t *SafeLookupVertex(size_t num, size_t num_line)

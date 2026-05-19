@@ -655,10 +655,16 @@ using lump_order_t = enum lump_order_e
 
 static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
 
-using raw_vertex_t = struct raw_vertex_s
+using raw_vertex_short_t = struct raw_vertex_short_s
 {
   int16_t x;
   int16_t y;
+} PACKEDATTR;
+
+using raw_vertex_fixed_t = struct raw_vertex_fixed_s
+{
+  fixed_t x;
+  fixed_t y;
 } PACKEDATTR;
 
 using raw_linedef_doom_t = struct raw_linedef_doom_s
@@ -730,12 +736,6 @@ using raw_thing_hexen_t = struct raw_thing_hexen_s
 // -Elf- Doom64 definitions
 // Some are shared with PSX Doom's and PSX Final Doom's formats
 // but we don't support those
-
-using raw_vertex_doom64_t = struct raw_vertex_doom64_s
-{
-  fixed_t x;
-  fixed_t y;
-} PACKEDATTR;
 
 using raw_thing_doom64_t = struct raw_thing_doom64_s
 {
@@ -857,14 +857,15 @@ using raw_blockmap_xbm1_header_t = struct raw_blockmap_xbm1_header_s
 #define static_size(x, y) \
   static_assert(sizeof(x) == y, "Size mismatch for '" #x "'. Should be " #y ".")
 
-static_assert(sizeof(raw_vertex_t) == 4, "Size mismatch for 'raw_vertex_t'. Should be 4.");
+static_size(raw_vertex_short_t, 4);
+static_size(raw_vertex_fixed_t, 8);
+
 static_assert(sizeof(raw_linedef_doom_t) == 14, "Size mismatch for 'raw_linedef_doom_t'. Should be 14.");
 static_assert(sizeof(raw_sidedef_doom_t) == 30, "Size mismatch for 'raw_sidedef_doom_t'. Should be 30.");
 static_assert(sizeof(raw_sector_doom_t) == 26, "Size mismatch for 'raw_sector_doom_t'. Should be 26.");
 static_assert(sizeof(raw_thing_doom_t) == 10, "Size mismatch for 'raw_thing_doom_t'. Should be 10.");
 static_assert(sizeof(raw_linedef_hexen_t) == 16, "Size mismatch for 'raw_linedef_hexen_t'. Should be 16.");
 static_assert(sizeof(raw_thing_hexen_t) == 20, "Size mismatch for 'raw_thing_hexen_t'. Should be 20.");
-static_assert(sizeof(raw_vertex_doom64_t) == 8, "Size mismatch for 'raw_vertex_doom64_t'. Should be 8.");
 static_assert(sizeof(raw_thing_doom64_t) == 12, "Size mismatch for 'raw_thing_doom64_t'. Should be 12.");
 static_assert(sizeof(raw_linedef_doom64_t) == 16, "Size mismatch for 'raw_linedef_doom64_t'. Should be 16.");
 static_assert(sizeof(raw_sidedef_doom64_t) == 12, "Size mismatch for 'raw_sidedef_doom64_t'. Should be 12.");

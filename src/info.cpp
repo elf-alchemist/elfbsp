@@ -110,10 +110,10 @@ static void ComputeTotalBspHeights(const node_t *node, size_t depth, double &lea
   }
 }
 
-void GenerateAnalysis(level_t &level, const char *filename)
+void GenerateAnalysis(WadIO &io, level_t &level, const char *filename)
 {
   auto mark = Benchmarker(__func__);
-  auto generate_analysis_data = [](level_t &level, bool is_fast, size_t split_cost) -> auto
+  auto generate_analysis_data = [](WadIO &io, level_t &level, bool is_fast, size_t split_cost) -> auto
   {
     AnalysisData data;
     node_t *analysis_node = nullptr;
@@ -174,7 +174,7 @@ void GenerateAnalysis(level_t &level, const char *filename)
     data.worst_case_ratio = min_epl / max_epl;
     data.tree_quality = ((min_epl / total_depth_sum) - data.worst_case_ratio) / (1 - data.worst_case_ratio);
 
-    std::string line = std::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}", level.GetLevelName(), is_fast,
+    std::string line = std::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}", level.GetLevelName(io), is_fast,
                                    split_cost, data.vertex, data.lines, data.sides, data.sectors, data.bsp_vertex, data.nodes,
                                    data.subsecs, data.segs, data.splits, data.left_depth, data.right_depth, data.average_depth,
                                    data.optimal_depth, data.tree_balance, data.worst_case_ratio, data.tree_quality);
@@ -193,8 +193,8 @@ void GenerateAnalysis(level_t &level, const char *filename)
     // across all split costs
     for (size_t split_cost = 1; split_cost <= 32; split_cost++)
     {
-      generate_analysis_data(level, is_fast != 0, split_cost);
-      PrintLine(LOG_NORMAL, "[%s] Analyzed %s, %s mode, split cost factor of %zu", __func__, level.GetLevelName(),
+      generate_analysis_data(io, level, is_fast != 0, split_cost);
+      PrintLine(LOG_NORMAL, "[%s] Analyzed %s, %s mode, split cost factor of %zu", __func__, level.GetLevelName(io),
                 is_fast ? "fast" : "normal", split_cost);
     }
   }

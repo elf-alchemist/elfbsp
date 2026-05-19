@@ -61,7 +61,7 @@ static bool IsLevelLump(const char *name)
 //  WAD Reading Interface
 //------------------------------------------------------------------------
 
-WadIO::WadIO(const char *filename) : read_file(nullptr), read_directory(), read_levels()
+WadIO::WadIO(const char *filename)
 {
   this->read_file = fopen(filename, "rb");
   if (this->read_file == NULL)
@@ -115,11 +115,6 @@ size_t WadIO::NumLumps(void) const
   return this->read_directory.size();
 }
 
-size_t WadIO::LevelCount(void) const
-{
-  return this->read_levels.size();
-}
-
 const char *WadIO::LumpName(size_t lump_index) const
 {
   static char name[9];
@@ -128,23 +123,16 @@ const char *WadIO::LumpName(size_t lump_index) const
   return name;
 }
 
-size_t WadIO::LevelHeader(size_t lev_num)
+size_t WadIO::LevelLastLump(size_t lump_index)
 {
-  SYS_ASSERT(lev_num < LevelCount());
-  return this->read_levels[lev_num];
-}
-
-size_t WadIO::LevelLastLump(size_t lev_num)
-{
-  size_t start = this->LevelHeader(lev_num);
   size_t count = 1;
 
   // UDMF level?
-  if (StringCaseCmp(read_directory[start + 1].name, "TEXTMAP"))
+  if (StringCaseCmp(read_directory[lump_index + 1].name, "TEXTMAP"))
   {
-    while (count < MAX_LUMPS_IN_A_LEVEL && start + count < this->NumLumps())
+    while (count < MAX_LUMPS_IN_A_LEVEL && lump_index + count < this->NumLumps())
     {
-      if (StringCaseCmp(read_directory[start + count].name, "ENDMAP"))
+      if (StringCaseCmp(read_directory[lump_index + count].name, "ENDMAP"))
       {
         count++;
         break;
@@ -155,22 +143,22 @@ size_t WadIO::LevelLastLump(size_t lev_num)
   }
   else // standard DOOM or HEXEN format
   {
-    while (count < MAX_LUMPS_IN_A_LEVEL && start + count < this->NumLumps() && IsLevelLump(read_directory[start + count].name))
+    while (count < MAX_LUMPS_IN_A_LEVEL && lump_index + count < this->NumLumps()
+           && IsLevelLump(read_directory[lump_index + count].name))
     {
       count++;
     }
   }
 
-  return start + count - 1;
+  return lump_index + count - 1;
 }
 
 // returns a lump index, NO_INDEX if not found
-size_t WadIO::LevelLookupLump(size_t lev_num, const char *name)
+size_t WadIO::LevelLookupLump(size_t lump_index, const char *name)
 {
-  size_t start = this->LevelHeader(lev_num);
-  size_t finish = this->LevelLastLump(lev_num);
+  size_t finish = this->LevelLastLump(lump_index);
 
-  for (size_t k = start + 1; k <= finish; k++)
+  for (size_t k = lump_index + 1; k <= finish; k++)
   {
     SYS_ASSERT(k < this->NumLumps());
 
@@ -183,93 +171,26 @@ size_t WadIO::LevelLookupLump(size_t lev_num, const char *name)
   return NO_INDEX; // not found
 }
 
-map_format_e WadIO::LevelFormat(size_t lev_num)
+map_format_e WadIO::LevelFormat(size_t lump_index)
 {
   // UDMF maps can contain BEHAVIOR or MACROS
   // check exclusively TEXTMAP
-  if (this->LevelLookupLump(lev_num, "TEXTMAP") != NO_INDEX)
+  if (this->LevelLookupLump(lump_index, "TEXTMAP") != NO_INDEX)
   {
     return MapFormat_UDMF;
   }
 
-  if (this->LevelLookupLump(lev_num, "BEHAVIOR") != NO_INDEX)
+  if (this->LevelLookupLump(lump_index, "BEHAVIOR") != NO_INDEX)
   {
     return MapFormat_Hexen;
   }
 
-  if (this->LevelLookupLump(lev_num, "LIGHTS") != NO_INDEX && this->LevelLookupLump(lev_num, "MACROS") != NO_INDEX)
+  if (this->LevelLookupLump(lump_index, "LIGHTS") != NO_INDEX && this->LevelLookupLump(lump_index, "MACROS") != NO_INDEX)
   {
     return MapFormat_Doom64;
   }
 
   return MapFormat_Doom;
-}
-
-void WadIO::DetectLevels(void)
-{
-  // Determine what lumps in the wad are level markers, based on the
-  // lumps which follow it.  Store the result in the 'levels' vector.
-  // The test here is rather lax, since wads exist with a non-standard
-  // ordering of level lumps.
-  for (size_t k = 0; k + 1 < NumLumps(); k++)
-  {
-    size_t part_mask = 0;
-    size_t part_count = 0;
-
-    // Ignore non-header map lumps
-    // Fixes sliding window bug on single-level WADs
-    if (WhatLevelPart(read_directory[k].name) != 0)
-    {
-      continue;
-    }
-
-    // check for UDMF levels
-    if (StringCaseCmp(read_directory[k + 1].name, "TEXTMAP"))
-    {
-      this->read_levels.push_back(k);
-      if (HAS_BIT(config.debug, DEBUG_WAD))
-      {
-        PrintLine(LOG_DEBUG, "[%s] Detected level : %s (UDMF)", __func__, read_directory[k].name);
-      }
-
-      continue;
-    }
-
-    // check whether the next four lumps are level lumps
-    for (size_t i = 1; i <= 4; i++)
-    {
-      if (k + i >= this->NumLumps())
-      {
-        break;
-      }
-
-      size_t part = WhatLevelPart(read_directory[k + i].name);
-
-      if (part == 0)
-      {
-        break;
-      }
-
-      // do not allow duplicates
-      if (part_mask & (1 << part))
-      {
-        break;
-      }
-
-      part_mask |= (1 << part);
-      part_count++;
-    }
-
-    if (part_count == 4)
-    {
-      read_levels.push_back(k);
-
-      if (HAS_BIT(config.debug, DEBUG_WAD))
-      {
-        PrintLine(LOG_DEBUG, "[%s] Detected level : %s", __func__, read_directory[k].name);
-      }
-    }
-  }
 }
 
 template <typename T>
@@ -293,13 +214,12 @@ std::vector<T> WadIO::ReadLump(size_t index)
 template <typename T>
 std::vector<T> WadIO::ReadMapLump(level_t &level, const char *name)
 {
-  return ReadLump<T>(this->LevelLookupLump(level.level_num, name));
+  return ReadLump<T>(this->LevelLookupLump(level.level_header_lump_index, name));
 }
 
-//------------------------------------------------------------------------
-//  WAD Writing Interface
-//------------------------------------------------------------------------
-
+//
+// Write operations
+//
 void WadIO::SafeWrite(const void *buffer, size_t size)
 {
   if (fwrite(buffer, 1, size, write_file) != size)
@@ -320,11 +240,6 @@ void WadIO::CreateEmptyLump(const char *name)
   this->write_directory.push_back(lump);
 }
 
-void WadIO::StartWritingLump(const char *name)
-{
-  CreateEmptyLump(name);
-}
-
 void WadIO::WriteLump(const char *name, const void *data, size_t size)
 {
   WadLump lump;
@@ -339,6 +254,15 @@ void WadIO::CopyLump(size_t index)
 {
   auto lump = this->ReadLump<byte>(index);
   WriteLump(this->LumpName(index), lump.data(), lump.size());
+}
+
+//
+// Partial writing
+//
+
+void WadIO::StartWritingLump(const char *name)
+{
+  CreateEmptyLump(name);
 }
 
 void WadIO::AddToLump(const void *data, size_t len)
@@ -380,4 +304,88 @@ WadIO &WadIO::operator<<(fixed_t value)
   value = GetLittleEndian(value);
   AddToLump(reinterpret_cast<byte *>(&value), sizeof(fixed_t));
   return *this;
+}
+
+//
+// Zlib compression support
+//
+
+void WadIO::Begin_Zlib(void)
+{
+  this->zlib_init = true;
+  this->zout_stream.zalloc = nullptr;
+  this->zout_stream.zfree = nullptr;
+  this->zout_stream.opaque = nullptr;
+  if (Z_OK != zng_deflateInit(&this->zout_stream, Z_DEFAULT_COMPRESSION))
+  {
+    PrintLine(LOG_ERROR, "ERROR: Trouble starting Zlib compression.");
+  }
+  this->zout_stream.next_out = this->zout_buffer;
+  this->zout_stream.avail_out = sizeof(this->zout_buffer);
+}
+
+void WadIO::AddToLumpZ(const void *data, size_t length)
+{
+  if (!this->zlib_init)
+  {
+    this->AddToLump(data, length);
+    return;
+  }
+
+  SYS_ASSERT(length > 0);
+
+  this->zout_stream.next_in = static_cast<const byte *>(data);
+  this->zout_stream.avail_in = IndexToInt(length);
+
+  while (this->zout_stream.avail_in > 0)
+  {
+    if (Z_OK != zng_deflate(&this->zout_stream, Z_NO_FLUSH))
+    {
+      PrintLine(LOG_ERROR, "ERROR: Trouble Zlib compressing %zu bytes.", length);
+    }
+
+    if (this->zout_stream.avail_out == 0)
+    {
+      this->AddToLump(this->zout_buffer, sizeof(this->zout_buffer));
+
+      this->zout_stream.next_out = this->zout_buffer;
+      this->zout_stream.avail_out = sizeof(this->zout_buffer);
+    }
+  }
+}
+
+void WadIO::Finish_Zlib(void)
+{
+  SYS_ASSERT(this->zout_stream.avail_out > 0)
+  size_t left_over;
+  this->zlib_init = false;
+
+  this->zout_stream.next_in = Z_NULL;
+  this->zout_stream.avail_in = 0;
+
+  while (true)
+  {
+    int32_t err = zng_deflate(&this->zout_stream, Z_FINISH);
+
+    if (err == Z_STREAM_END) break;
+
+    if (err != Z_OK)
+    {
+      PrintLine(LOG_ERROR, "ERROR: Trouble finishing Zlib compression.");
+    }
+
+    if (this->zout_stream.avail_out == 0)
+    {
+      this->AddToLump(&this->zout_buffer, sizeof(this->zout_buffer));
+
+      this->zout_stream.next_out = this->zout_buffer;
+      this->zout_stream.avail_out = sizeof(this->zout_buffer);
+    }
+  }
+
+  left_over = sizeof(zout_buffer) - zout_stream.avail_out;
+
+  if (left_over > 0) this->AddToLump(zout_buffer, left_over);
+
+  zng_deflateEnd(&zout_stream);
 }

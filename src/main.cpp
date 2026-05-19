@@ -92,78 +92,6 @@ bool CheckMapInMapList(const char *name)
   return false;
 }
 
-static void BuildFile(const char *filename)
-{
-  config.total_warnings = 0;
-
-  const size_t num_levels = io->LevelCount();
-
-  if (num_levels == 0)
-  {
-    PrintLine(LOG_NORMAL, "No levels in wad");
-    total_empty_files += 1;
-    return;
-  }
-
-  size_t visited = 0;
-  size_t failures = 0;
-
-  build_result_e res = BUILD_OK;
-
-  // loop over each level in the wad
-  for (size_t n = 0; n < num_levels; n++)
-  {
-    // IMPORTANT: always ensure a valid map
-    level_t level;
-    level.level_num = n;
-    level.level_header_lump_index = io->LevelHeader(level.level_num);
-    level.map_format = io->LevelFormat(level.level_num);
-
-    if (!CheckMapInMapList(level.GetLevelName()))
-    {
-      continue;
-    }
-
-    visited += 1;
-
-    res = BuildLevel(level, filename);
-
-    // handle a failed map (due to lump overflow)
-    if (res == BUILD_LumpOverflow)
-    {
-      res = BUILD_OK;
-      failures += 1;
-      continue;
-    }
-
-    if (res != BUILD_OK)
-    {
-      break;
-    }
-
-    total_built_maps += 1;
-  }
-
-  if (visited == 0)
-  {
-    PrintLine(LOG_NORMAL, "No matching levels");
-    total_empty_files += 1;
-    return;
-  }
-
-  total_failed_maps += failures;
-
-  if (failures > 0)
-  {
-    PrintLine(LOG_NORMAL, "Failed maps: %zu (out of %zu)", failures, visited);
-
-    // allow building other files
-    total_failed_files += 1;
-  }
-
-  PrintLine(LOG_NORMAL, "Serious warnings: %zu", config.total_warnings);
-}
-
 void BackupFile(const char *filename)
 {
   std::string dest_name = filename;
@@ -213,21 +141,6 @@ void VisitFile(const char *filename)
 
   PrintLine(LOG_NORMAL, "Building %s", filename);
 
-  // this will fatal error if it fails
-  io = new WadIO(filename);
-  if (io == nullptr)
-  {
-    PrintLine(LOG_ERROR, "ERROR: Cannot open file: %s", filename);
-  }
-
-  BuildFile(filename);
-
-  if (io != nullptr)
-  {
-    // this closes the file
-    delete io;
-    io = nullptr;
-  }
 }
 
 // ----- user information -----------------------------

@@ -1779,21 +1779,6 @@ void NormaliseBspTree(level_t &level)
   }
 }
 
-void RoundOffVertices(level_t &level)
-{
-  for (size_t i = 0; i < level.vertices.size(); i++)
-  {
-    vertex_t *vert = level.vertices[i];
-
-    if (vert->is_new)
-    {
-      vert->is_new = false;
-      vert->index = level.num_old_vert;
-      level.num_old_vert++;
-    }
-  }
-}
-
 void RoundOffSubsector(level_t &level, subsec_t *subsec)
 {
   // use head + tail to maintain same order of segs
@@ -1915,8 +1900,6 @@ void RoundOffSubsector(level_t &level, subsec_t *subsec)
 void RoundOffBspTree(level_t &level)
 {
   size_t cur_seg_index = 0;
-
-  RoundOffVertices(level);
 
   for (size_t i = 0; i < level.subsecs.size(); i++)
   {

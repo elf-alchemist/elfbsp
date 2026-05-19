@@ -57,12 +57,14 @@ struct WadIO
   FILE *read_file;
   WadHeader read_header;
   std::vector<WadLump> read_directory;
-  std::vector<size_t> read_levels; // these are lump indices (into 'directory' vector)
 
   // Write data
   FILE *write_file;
   WadHeader write_header;
   std::vector<WadLump> write_directory;
+  bool zlib_init = false;
+  zng_stream zout_stream;
+  byte zout_buffer[8192];
 
   // Init/die
   WadIO(const char *filename);
@@ -73,11 +75,9 @@ struct WadIO
   size_t NumLumps(void) const;
   size_t LevelCount(void) const;
   const char *LumpName(size_t lump_index) const;
-  size_t LevelHeader(size_t lev_num);
-  size_t LevelLastLump(size_t lev_num);
-  size_t LevelLookupLump(size_t lev_num, const char *name);
-  map_format_t LevelFormat(size_t lev_num);
-  void DetectLevels(void);
+  size_t LevelLastLump(size_t lump_index);
+  size_t LevelLookupLump(size_t lump_index, const char *name);
+  map_format_t LevelFormat(size_t lump_index);
   template <typename T>
   std::vector<T> ReadLump(size_t index);
   template <typename T>
@@ -92,10 +92,14 @@ struct WadIO
   // Partial writing
   void StartWritingLump(const char *name);
   void AddToLump(const void *data, size_t len);
-  void AddToLumpZ(const void *data, size_t len);
   WadIO &operator<<(uint8_t value);
   WadIO &operator<<(uint16_t value);
   WadIO &operator<<(uint32_t value);
   WadIO &operator<<(int16_t value);
   WadIO &operator<<(fixed_t value);
+
+  // Zlib compression support
+  void Begin_Zlib(void);
+  void AddToLumpZ(const void *data, size_t length);
+  void Finish_Zlib(void);
 };

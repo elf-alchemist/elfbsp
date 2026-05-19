@@ -27,9 +27,9 @@
 #include "local.hpp"
 
 //
-// Vanilla BSP
+// DoomBSP
 //
-using raw_node_vanilla_t = struct raw_node_vanilla_s
+using raw_node_doombsp_t = struct raw_node_doombsp_s
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
@@ -37,13 +37,13 @@ using raw_node_vanilla_t = struct raw_node_vanilla_s
   uint16_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-using raw_subsec_vanilla_t = struct raw_subsec_vanilla_s
+using raw_subsec_doombsp_t = struct raw_subsec_doombsp_s
 {
   uint16_t num;   // number of Segs in this Sub-Sector
   uint16_t first; // first Seg
 } PACKEDATTR;
 
-using raw_seg_vanilla_t = struct raw_seg_vanilla_s
+using raw_seg_doombsp_t = struct raw_seg_doombsp_s
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
@@ -53,14 +53,14 @@ using raw_seg_vanilla_t = struct raw_seg_vanilla_s
   int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
-using raw_leaf_vanilla_t = struct raw_leaf_vanilla_s
+using raw_leaf_doombsp_t = struct raw_leaf_doombsp_s
 {
   uint16_t vertex;
   uint16_t seg;
 } PACKEDATTR;
 
 //
-// DeepSea BSP
+// DeepSea DeePBSP
 // * compared to vanilla, some types were raise to 32bit
 //
 using raw_node_deepbspv4_t = struct raw_node_deepbspv4_s
@@ -100,8 +100,8 @@ using raw_leaf_deepbspv4_t = struct raw_leaf_deepbspv4_s
 //
 using raw_vertex_xnod_t = struct raw_vertex_xnod_s
 {
-  int32_t x;
-  int32_t y;
+  fixed_t x;
+  fixed_t y;
 } PACKEDATTR;
 
 using raw_node_xnod_t = struct raw_node_xnod_s
@@ -153,9 +153,9 @@ using raw_node_xgl3_t = struct raw_node_xgl3_s
   uint32_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-static_size(raw_node_vanilla_t, 28);
-static_size(raw_subsec_vanilla_t, 4);
-static_size(raw_seg_vanilla_t, 12);
+static_size(raw_node_doombsp_t, 28);
+static_size(raw_subsec_doombsp_t, 4);
+static_size(raw_seg_doombsp_t, 12);
 static_size(raw_node_deepbspv4_t, 32);
 static_size(raw_subsec_deepbspv4_t, 6);
 static_size(raw_seg_deepbspv4_t, 16);
@@ -197,14 +197,19 @@ void PutReject(level_t &level);
 // the BSP tree lumps differ notably on each map format -- Doom/Hexen/Doom64
 // have NODES, SSECTORS & SEGS, but UDMF is generally only ZNODES, and there's
 // some format overlap between them
-void SaveDoom_DoomBSP(level_t &level, node_t *root_node);
-void SaveDoom_DeePBSPV4(level_t &level, node_t *root_node);
-void SaveDoom_XNOD(level_t &level, node_t *root_node);
-void SaveDoom_XGLN(level_t &level, node_t *root_node);
-void SaveDoom_XGL2(level_t &level, node_t *root_node);
-void SaveDoom_XGL3(level_t &level, node_t *root_node);
+void SortSegs(level_t &level);
 
-void SaveDoom64_DoomBSP(level_t &level, node_t *root_node);
-void SaveDoom64_DeePBSPV4(level_t &level, node_t *root_node);
+void PutVertices_Integral(WadIO &io, level_t &level, bool only_old);
+void PutVertices_Fractional(WadIO &io, level_t &level, bool only_old);
 
-void SaveTextmap_ZNODES(level_t &level, node_t *root_node);
+void PutSegs_Vanilla(WadIO &io, level_t &level);
+void PutSubsecs_Vanilla(WadIO &io, level_t &level);
+void PutNodes_Vanilla(WadIO &io, level_t &level);
+void PutLeafs_Vanilla(WadIO &io, level_t &level);
+
+void PutSegs_DeePBSPV4(WadIO &io, level_t &level);
+void PutSubsecs_DeePBSPV4(WadIO &io, level_t &level);
+void PutNodes_DeePBSPV4(WadIO &io, level_t &level);
+void PutLeafs_DeePBSPV4(WadIO &io, level_t &level);
+
+void PutTree_ZDBSP(WadIO &io, level_t &level, std::string lumpname, bsp_format_t bsp_format, bool compress);

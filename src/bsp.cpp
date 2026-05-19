@@ -21,11 +21,12 @@
 //
 //------------------------------------------------------------------------------
 
+#include "bsp.hpp"
 #include "core.hpp"
 #include "local.hpp"
-#include "bsp.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <vector>
 
 // Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
@@ -101,66 +102,37 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
   return result;
 }
 
-static void PutVertices_Doom(WadIO &io, level_t &level)
+void PutVertices_Integral(WadIO &io, level_t &level, bool only_old)
 {
-  size_t count = 0;
+  const size_t vert_count = only_old ? level.num_old_vert : level.vertices.size();
   io.StartWritingLump("VERTEXES");
 
-  for (size_t i = 0; i < level.vertices.size(); i++)
+  for (size_t i = 0; i < vert_count; i++)
   {
-    raw_vertex_t raw;
-
     const vertex_t *vert = level.vertices[i];
 
-    // see: RoundOffVertices()
-    if (vert->is_new)
-    {
-      continue;
-    }
-
+    raw_vertex_short_t raw;
     raw.x = GetLittleEndian(FloatToShort(floor(vert->x)));
     raw.y = GetLittleEndian(FloatToShort(floor(vert->y)));
 
-    count++;
-    io.AddToLump(&raw, sizeof(raw_vertex_t));
-  }
-
-  // sanity count
-  // double check that bsp-vertices are written out in the correct formats
-  if (count != level.num_old_vert)
-  {
-    PrintLine(LOG_ERROR, "ERROR: PutVertices miscounted (%zu != %zu)", count, level.num_old_vert);
+    io.AddToLump(&raw, sizeof(raw));
   }
 }
 
-static void PutVertices_Doom64(WadIO &io, level_t &level)
+void PutVertices_Fractional(WadIO &io, level_t &level, bool only_old)
 {
-  size_t count = 0;
+  const size_t vert_count = only_old ? level.num_old_vert : level.vertices.size();
   io.StartWritingLump("VERTEXES");
 
-  for (size_t i = 0; i < level.vertices.size(); i++)
+  for (size_t i = 0; i < vert_count; i++)
   {
-    raw_vertex_doom64_t raw;
-
     const vertex_t *vert = level.vertices[i];
 
-    // see: RoundOffVertices()
-    if (vert->is_new)
-    {
-      continue;
-    }
-
+    raw_vertex_fixed_t raw;
     raw.x = GetLittleEndian(FloatToFixed(vert->x));
     raw.y = GetLittleEndian(FloatToFixed(vert->y));
 
-    io.AddToLump(&raw, sizeof(raw_vertex_doom64_t));
-  }
-
-  // sanity count
-  // double check that bsp-vertices are written out in the correct formats
-  if (count != level.num_old_vert)
-  {
-    PrintLine(LOG_ERROR, "ERROR: PutVertices miscounted (%zu != %zu)", count, level.num_old_vert);
+    io.AddToLump(&raw, sizeof(raw));
   }
 }
 
@@ -168,13 +140,13 @@ static void PutVertices_Doom64(WadIO &io, level_t &level)
 // Vanilla format
 //
 
-static void PutSegs_Vanilla(WadIO &io, level_t &level)
+void PutSegs_Vanilla(WadIO &io, level_t &level)
 {
   io.StartWritingLump("SEGS");
 
   for (size_t i = 0; i < level.segs.size(); i++)
   {
-    raw_seg_vanilla_t raw;
+    raw_seg_doombsp_t raw;
 
     const seg_t *seg = level.segs[i];
 
@@ -192,24 +164,24 @@ static void PutSegs_Vanilla(WadIO &io, level_t &level)
                 seg->side ? "L" : "R", GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
     }
 
-    io.AddToLump(&raw, sizeof(raw_seg_vanilla_t));
+    io.AddToLump(&raw, sizeof(raw));
   }
 }
 
-static void PutSubsecs_Vanilla(WadIO &io, level_t &level)
+void PutSubsecs_Vanilla(WadIO &io, level_t &level)
 {
   io.StartWritingLump("SSECTORS");
 
   for (size_t i = 0; i < level.subsecs.size(); i++)
   {
-    raw_subsec_vanilla_t raw;
+    raw_subsec_doombsp_t raw;
 
     const subsec_t *sub = level.subsecs[i];
 
     raw.first = GetLittleEndian(IndexToShort(sub->seg_list->index));
     raw.num = GetLittleEndian(IndexToShort(sub->seg_count));
 
-    io.AddToLump(&raw, sizeof(raw_subsec_vanilla_t));
+    io.AddToLump(&raw, sizeof(raw));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -219,21 +191,21 @@ static void PutSubsecs_Vanilla(WadIO &io, level_t &level)
   }
 }
 
-static void PutOneNode_Vanilla(node_t *node, size_t &node_cur_index)
+static void PutOneNode_Vanilla(WadIO &io, node_t *node, size_t &node_cur_index)
 {
   if (node->r.node)
   {
-    PutOneNode_Vanilla(lump, node->r.node, node_cur_index);
+    PutOneNode_Vanilla(io, node->r.node, node_cur_index);
   }
 
   if (node->l.node)
   {
-    PutOneNode_Vanilla(lump, node->l.node, node_cur_index);
+    PutOneNode_Vanilla(io, node->l.node, node_cur_index);
   }
 
   node->index = node_cur_index++;
 
-  raw_node_vanilla_t raw;
+  raw_node_doombsp_t raw;
 
   raw.x = GetLittleEndian(FloatToShort(node->x));
   raw.y = GetLittleEndian(FloatToShort(node->y));
@@ -276,6 +248,7 @@ static void PutOneNode_Vanilla(node_t *node, size_t &node_cur_index)
     PrintLine(LOG_ERROR, "ERROR: Bad left child in node %zu", node->index);
   }
 
+  io.AddToLump(&raw, sizeof(raw));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
@@ -284,17 +257,15 @@ static void PutOneNode_Vanilla(node_t *node, size_t &node_cur_index)
   }
 }
 
-static void PutNodes_Vanilla(WadIO &io, level_t &level, node_t *root_node)
+void PutNodes_Vanilla(WadIO &io, level_t &level)
 {
-  // this can be bigger than the actual size, but never smaller
-  size_t max_size = (level.nodes.size() + 1) * sizeof(raw_node_vanilla_t);
   size_t node_cur_index = 0;
+  io.StartWritingLump("NODES");
 
-  if (root_node != nullptr)
+  if (level.root_node != nullptr)
   {
-    PutOneNode_Vanilla(lump, root_node, node_cur_index);
+    PutOneNode_Vanilla(io, level.root_node, node_cur_index);
   }
-
 
   if (node_cur_index != level.nodes.size())
   {
@@ -302,8 +273,9 @@ static void PutNodes_Vanilla(WadIO &io, level_t &level, node_t *root_node)
   }
 }
 
-static void PutLeafs_Vanilla(WadIO &io, level_t &level)
+void PutLeafs_Vanilla(WadIO &io, level_t &level)
 {
+  io.StartWritingLump("LEAFS");
   uint16_t actual_seg_index = 0;
 
   for (size_t i = 0; i < level.subsecs.size(); i++)
@@ -312,28 +284,20 @@ static void PutLeafs_Vanilla(WadIO &io, level_t &level)
     seg_t *seg = subsec->seg_list;
     size_t seg_count = subsec->seg_count;
 
-
-
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
       PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] leaf references: %zu", __func__, i, seg_count);
-    }
-
-    if (seg_count < 3)
-    {
-      PrintLine(LOG_ERROR, "[%s] Subsector[%zu] has fewer than 3 leaf references", __func__, i);
     }
 
     for (size_t j = 0; j < seg_count; j++)
     {
       // Do not remove minisegs from tree before
       // we are able to write all this
-      raw_leaf_vanilla_t raw;
+      raw_leaf_doombsp_t raw;
       vertex_t *vert = seg->start;
 
       raw.vertex = GetLittleEndian(IndexToShort(vert->index));
       if (seg->linedef)
-      // if (seg->linedef && !vert->is_new)
       {
         raw.seg = GetLittleEndian(actual_seg_index);
         actual_seg_index++;
@@ -343,7 +307,8 @@ static void PutLeafs_Vanilla(WadIO &io, level_t &level)
         raw.seg = NO_INDEX_INT16;
       }
 
-  
+      io.AddToLump(&raw, sizeof(raw));
+
       seg = seg->next;
 
       if (HAS_BIT(config.debug, DEBUG_BSP))
@@ -358,10 +323,9 @@ static void PutLeafs_Vanilla(WadIO &io, level_t &level)
 // DeePBSPV4 format
 //
 
-static void PutSegs_DeePBSPV4(WadIO &io, level_t &level)
+void PutSegs_DeePBSPV4(WadIO &io, level_t &level)
 {
-  // this size is worst-case scenario
-  size_t size = level.segs.size() * sizeof(raw_seg_deepbspv4_t);
+  io.StartWritingLump("SEGS");
 
   for (size_t i = 0; i < level.segs.size(); i++)
   {
@@ -376,7 +340,7 @@ static void PutSegs_DeePBSPV4(WadIO &io, level_t &level)
     raw.flip = GetLittleEndian(seg->side);
     raw.dist = GetLittleEndian(VanillaSegDist(seg));
 
-
+    io.AddToLump(&raw, sizeof(raw));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -385,13 +349,11 @@ static void PutSegs_DeePBSPV4(WadIO &io, level_t &level)
                 seg->side ? "L" : "R", GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
     }
   }
-
 }
 
-static void PutSubsecs_DeePBSPV4(WadIO &io, level_t &level)
+void PutSubsecs_DeePBSPV4(WadIO &io, level_t &level)
 {
-  size_t size = level.subsecs.size() * sizeof(raw_subsec_deepbspv4_t);
-
+  io.StartWritingLump("SSECTORS");
 
   for (size_t i = 0; i < level.subsecs.size(); i++)
   {
@@ -402,7 +364,7 @@ static void PutSubsecs_DeePBSPV4(WadIO &io, level_t &level)
     raw.first = GetLittleEndian(IndexToInt(sub->seg_list->index));
     raw.num = GetLittleEndian(IndexToShort(sub->seg_count));
 
-
+    io.AddToLump(&raw, sizeof(raw));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -410,19 +372,18 @@ static void PutSubsecs_DeePBSPV4(WadIO &io, level_t &level)
                 GetLittleEndian(raw.num));
     }
   }
-
 }
 
-static void PutOneNode_DeePBSPV4(node_t *node, size_t &node_cur_index)
+static void PutOneNode_DeePBSPV4(WadIO &io, node_t *node, size_t &node_cur_index)
 {
   if (node->r.node)
   {
-    PutOneNode_DeePBSPV4(lump, node->r.node, node_cur_index);
+    PutOneNode_DeePBSPV4(io, node->r.node, node_cur_index);
   }
 
   if (node->l.node)
   {
-    PutOneNode_DeePBSPV4(lump, node->l.node, node_cur_index);
+    PutOneNode_DeePBSPV4(io, node->l.node, node_cur_index);
   }
 
   node->index = node_cur_index++;
@@ -470,6 +431,7 @@ static void PutOneNode_DeePBSPV4(node_t *node, size_t &node_cur_index)
     PrintLine(LOG_ERROR, "ERROR: Bad left child in node %zu", node->index);
   }
 
+  io.AddToLumpZ(&raw, sizeof(raw));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
@@ -478,19 +440,15 @@ static void PutOneNode_DeePBSPV4(node_t *node, size_t &node_cur_index)
   }
 }
 
-static void PutNodes_DeePBSPV4(WadIO &io, level_t &level, node_t *root_node)
+void PutNodes_DeePBSPV4(WadIO &io, level_t &level)
 {
-  // this can be bigger than the actual size, but never smaller
-  // 8 bytes for BSP_MAGIC_DEEPBSPV4 header
-  // size_t max_size = 8 + (level.nodes.size() + 1) * sizeof(raw_node_deepbspv4_t);
+  io.StartWritingLump("NODES");
   size_t node_cur_index = 0;
 
-
-  if (root_node != nullptr)
+  if (level.root_node != nullptr)
   {
-    PutOneNode_DeePBSPV4(lump, root_node, node_cur_index);
+    PutOneNode_DeePBSPV4(io, level.root_node, node_cur_index);
   }
-
 
   if (node_cur_index != level.nodes.size())
   {
@@ -498,8 +456,9 @@ static void PutNodes_DeePBSPV4(WadIO &io, level_t &level, node_t *root_node)
   }
 }
 
-static void PutLeafs_DeePBSPV4(WadIO &io, level_t &level)
+void PutLeafs_DeePBSPV4(WadIO &io, level_t &level)
 {
+  io.StartWritingLump("LEAFS");
   uint32_t actual_seg_index = 0;
 
   for (size_t i = 0; i < level.subsecs.size(); i++)
@@ -508,16 +467,9 @@ static void PutLeafs_DeePBSPV4(WadIO &io, level_t &level)
     seg_t *seg = subsec->seg_list;
     size_t seg_count = subsec->seg_count;
 
-
-
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
       PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] leaf references: %zu", __func__, i, seg_count);
-    }
-
-    if (seg_count < 3)
-    {
-      PrintLine(LOG_ERROR, "[%s] Subsector[%zu] has fewer than 3 leaf references", __func__, i);
     }
 
     for (size_t j = 0; j < seg_count; j++)
@@ -527,9 +479,8 @@ static void PutLeafs_DeePBSPV4(WadIO &io, level_t &level)
       raw_leaf_deepbspv4_t raw;
       vertex_t *vert = seg->start;
 
-      raw.vertex = GetLittleEndian(IndexToShort(vert->index));
+      raw.vertex = GetLittleEndian(IndexToInt(vert->index));
       if (seg->linedef)
-      // if (seg->linedef && !vert->is_new)
       {
         raw.seg = GetLittleEndian(actual_seg_index);
         actual_seg_index++;
@@ -539,7 +490,8 @@ static void PutLeafs_DeePBSPV4(WadIO &io, level_t &level)
         raw.seg = NO_INDEX_INT32;
       }
 
-  
+      io.AddToLump(&raw, sizeof(raw));
+
       seg = seg->next;
 
       if (HAS_BIT(config.debug, DEBUG_BSP))
@@ -554,21 +506,13 @@ static void PutLeafs_DeePBSPV4(WadIO &io, level_t &level)
 // ZDoom format -- XNOD
 //
 
-static inline uint32_t VertexIndex_XNOD(level_t &level, const vertex_t *v)
-{
-  if (v->is_new)
-  {
-    return IndexToInt(level.num_old_vert + v->index);
-  }
-
-  return IndexToInt(v->index);
-}
-
 static void PutVertices_Xnod(WadIO &io, level_t &level)
 {
-  size_t orgverts = GetLittleEndian(level.num_old_vert);
-  size_t newverts = GetLittleEndian(level.num_new_vert);
+  uint32_t orgverts = GetLittleEndian(IndexToInt(level.num_old_vert));
+  uint32_t newverts = GetLittleEndian(IndexToInt(level.num_new_vert));
 
+  io.AddToLumpZ(&orgverts, sizeof(orgverts));
+  io.AddToLumpZ(&newverts, sizeof(newverts));
 
   size_t count = 0;
   for (size_t i = 0; i < level.vertices.size(); i++)
@@ -585,7 +529,7 @@ static void PutVertices_Xnod(WadIO &io, level_t &level)
     raw.x = GetLittleEndian(FloatToFixed(vert->x));
     raw.y = GetLittleEndian(FloatToFixed(vert->y));
 
-
+    io.AddToLumpZ(&raw, sizeof(raw));
 
     count++;
   }
@@ -598,15 +542,17 @@ static void PutVertices_Xnod(WadIO &io, level_t &level)
 
 static void PutSubsecs_Xnod(WadIO &io, level_t &level)
 {
-  size_t raw_num = GetLittleEndian(level.subsecs.size());
+  uint32_t raw_num = GetLittleEndian(IndexToInt(level.subsecs.size()));
+  io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   size_t cur_seg_index = 0;
   for (size_t i = 0; i < level.subsecs.size(); i++)
   {
     const subsec_t *sub = level.subsecs[i];
 
-    raw_num = GetLittleEndian(sub->seg_count);
-
+    raw_subsec_xnod_t raw;
+    raw.segnum = GetLittleEndian(IndexToInt(sub->seg_count));
+    io.AddToLumpZ(&raw, sizeof(raw));
 
     // sanity check the seg index values
     size_t count = 0;
@@ -634,7 +580,8 @@ static void PutSubsecs_Xnod(WadIO &io, level_t &level)
 
 static void PutSegs_Xnod(WadIO &io, level_t &level)
 {
-  size_t raw_num = GetLittleEndian(level.segs.size());
+  uint32_t raw_num = GetLittleEndian(IndexToInt(level.segs.size()));
+  io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   for (size_t i = 0; i < level.segs.size(); i++)
   {
@@ -647,29 +594,30 @@ static void PutSegs_Xnod(WadIO &io, level_t &level)
 
     raw_seg_xnod_t raw = {};
 
-    raw.start = GetLittleEndian(VertexIndex_XNOD(level, seg->start));
-    raw.end = GetLittleEndian(VertexIndex_XNOD(level, seg->end));
+    raw.start = GetLittleEndian(IndexToInt(seg->start->index));
+    raw.end = GetLittleEndian(IndexToInt(seg->end->index));
     raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
     raw.side = seg->side;
 
+    io.AddToLumpZ(&raw, sizeof(raw));
   }
 }
 
-static void PutOneNode_Xnod(node_t *node, size_t &node_cur_index)
+static void PutOneNode_Xnod(WadIO &io, node_t *node, size_t &node_cur_index)
 {
-  raw_node_xnod_t raw;
-
   if (node->r.node)
   {
-    PutOneNode_Xnod(lump, node->r.node, node_cur_index);
+    PutOneNode_Xnod(io, node->r.node, node_cur_index);
   }
 
   if (node->l.node)
   {
-    PutOneNode_Xnod(lump, node->l.node, node_cur_index);
+    PutOneNode_Xnod(io, node->l.node, node_cur_index);
   }
 
   node->index = node_cur_index++;
+
+  raw_node_xnod_t raw;
 
   raw.x = GetLittleEndian(FloatToShort(node->x));
   raw.y = GetLittleEndian(FloatToShort(node->y));
@@ -712,6 +660,7 @@ static void PutOneNode_Xnod(node_t *node, size_t &node_cur_index)
     PrintLine(LOG_ERROR, "ERROR: Bad left child in ZDoom node %zu", node->index);
   }
 
+  io.AddToLumpZ(&raw, sizeof(raw));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
@@ -720,14 +669,15 @@ static void PutOneNode_Xnod(node_t *node, size_t &node_cur_index)
   }
 }
 
-static void PutNodes_Xnod(WadIO &io, level_t &level, node_t *root)
+static void PutNodes_Xnod(WadIO &io, level_t &level)
 {
   size_t node_cur_index = 0;
-  size_t raw_num = GetLittleEndian(level.nodes.size());
+  uint32_t raw_num = GetLittleEndian(IndexToInt(level.nodes.size()));
+  io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
-  if (root)
+  if (level.root_node)
   {
-    PutOneNode_Xnod(lump, root, node_cur_index);
+    PutOneNode_Xnod(io, level.root_node, node_cur_index);
   }
 
   if (node_cur_index != level.nodes.size())
@@ -736,29 +686,14 @@ static void PutNodes_Xnod(WadIO &io, level_t &level, node_t *root)
   }
 }
 
-static size_t CalcXnodNodesSize(WadIO &io, level_t &level)
-{
-  // compute size of the ZDoom format nodes.
-  // it does not need to be exact, but it *does* need to be bigger
-  // (or equal) to the actual size of the lump.
-
-  size_t size = 32; // header + a bit extra
-
-  size += 8 + level.vertices.size() * sizeof(raw_vertex_xnod_t);
-  size += 4 + level.subsecs.size() * sizeof(raw_subsec_xnod_t);
-  size += 4 + level.segs.size() * sizeof(raw_seg_xgl2_t);
-  size += 4 + level.nodes.size() * sizeof(raw_node_xgl3_t);
-
-  return size;
-}
-
 //
 // ZDoom format -- XGLN, XGL2, XGL3
 //
 
 static void PutSegs_Xgln(WadIO &io, level_t &level)
 {
-  size_t raw_num = GetLittleEndian(level.segs.size());
+  uint32_t raw_num = GetLittleEndian(IndexToInt(level.segs.size()));
+  io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   for (size_t i = 0; i < level.segs.size(); i++)
   {
@@ -771,12 +706,12 @@ static void PutSegs_Xgln(WadIO &io, level_t &level)
 
     raw_seg_xgln_t raw = {};
 
-    raw.vertex = GetLittleEndian(VertexIndex_XNOD(level, seg->start));
+    raw.vertex = GetLittleEndian(IndexToInt(seg->start->index));
     raw.partner = GetLittleEndian(IndexToInt(seg->partner ? seg->partner->index : NO_INDEX));
     raw.linedef = GetLittleEndian(IndexToShort(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
-
+    io.AddToLumpZ(&raw, sizeof(raw));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -788,7 +723,8 @@ static void PutSegs_Xgln(WadIO &io, level_t &level)
 
 static void PutSegs_Xgl2(WadIO &io, level_t &level)
 {
-  size_t raw_num = GetLittleEndian(level.segs.size());
+  uint32_t raw_num = GetLittleEndian(IndexToInt(level.segs.size()));
+  io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   for (size_t i = 0; i < level.segs.size(); i++)
   {
@@ -801,12 +737,12 @@ static void PutSegs_Xgl2(WadIO &io, level_t &level)
 
     raw_seg_xgl2_t raw = {};
 
-    raw.vertex = GetLittleEndian(VertexIndex_XNOD(level, seg->start));
+    raw.vertex = GetLittleEndian(IndexToInt(seg->start->index));
     raw.partner = GetLittleEndian(IndexToInt(seg->partner ? seg->partner->index : NO_INDEX));
     raw.linedef = GetLittleEndian(IndexToInt(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
-
+    io.AddToLumpZ(&raw, sizeof(raw));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -816,21 +752,21 @@ static void PutSegs_Xgl2(WadIO &io, level_t &level)
   }
 }
 
-static void PutOneNode_Xgl3(node_t *node, size_t &node_cur_index)
+static void PutOneNode_Xgl3(WadIO &io, node_t *node, size_t &node_cur_index)
 {
-  raw_node_xgl3_t raw;
-
   if (node->r.node)
   {
-    PutOneNode_Xgl3(lump, node->r.node, node_cur_index);
+    PutOneNode_Xgl3(io, node->r.node, node_cur_index);
   }
 
   if (node->l.node)
   {
-    PutOneNode_Xgl3(lump, node->l.node, node_cur_index);
+    PutOneNode_Xgl3(io, node->l.node, node_cur_index);
   }
 
   node->index = node_cur_index++;
+
+  raw_node_xgl3_t raw;
 
   raw.x = GetLittleEndian(FloatToFixed(node->x));
   raw.y = GetLittleEndian(FloatToFixed(node->y));
@@ -873,6 +809,7 @@ static void PutOneNode_Xgl3(node_t *node, size_t &node_cur_index)
     PrintLine(LOG_ERROR, "ERROR: Bad left child in ZDoom node %zu", node->index);
   }
 
+  io.AddToLumpZ(&raw, sizeof(raw));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
@@ -881,14 +818,15 @@ static void PutOneNode_Xgl3(node_t *node, size_t &node_cur_index)
   }
 }
 
-static void PutNodes_Xgl3(WadIO &io, level_t &level, node_t *root)
+static void PutNodes_Xgl3(WadIO &io, level_t &level)
 {
   size_t node_cur_index = 0;
-  size_t raw_num = GetLittleEndian(level.nodes.size());
+  uint32_t raw_num = GetLittleEndian(IndexToInt(level.nodes.size()));
+  io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
-  if (root)
+  if (level.root_node)
   {
-    PutOneNode_Xgl3(lump, root, node_cur_index);
+    PutOneNode_Xgl3(io, level.root_node, node_cur_index);
   }
 
   if (node_cur_index != level.nodes.size())
@@ -898,184 +836,34 @@ static void PutNodes_Xgl3(WadIO &io, level_t &level, node_t *root)
 }
 
 //
-// Lump writing procedures
+// The family of ZDBSP BSP tree formats use a single lump no matter what
 //
-
-void SaveDoom_DoomBSP(WadIO &io, level_t &level, node_t *root_node)
+void PutTree_ZDBSP(WadIO &io, level_t &level, std::string lumpname, bsp_format_t bsp_format, bool compress)
 {
   auto mark = Benchmarker(__func__);
-  // remove all the minisegs from subsectors
-  NormaliseBspTree(level);
-  // reduce vertex precision for classic DOOM nodes.
-  // some segs can become "degenerate" after this, and these
-  // are removed from subsectors.
-  RoundOffBspTree(level);
-  SortSegs(level);
-  PutVertices_Doom(level);
-  PutSegs_Vanilla(level);
-  PutSubsecs_Vanilla(level);
-  PutNodes_Vanilla(level, root_node);
-}
 
-void SaveDoom_DeePBSPV4(WadIO &io, level_t &level, node_t *root_node)
-{
-  auto mark = Benchmarker(__func__);
-  // remove all the minisegs from subsectors
-  NormaliseBspTree(level);
-  // reduce vertex precision for classic DOOM nodes.
-  // some segs can become "degenerate" after this, and these
-  // are removed from subsectors.
-  RoundOffBspTree(level);
-  SortSegs(level);
-  PutVertices_Doom(level);
-  PutSegs_DeePBSPV4(level);
-  PutSubsecs_DeePBSPV4(level);
-  PutNodes_DeePBSPV4(level, root_node);
-}
-
-void SaveDoom_XNOD(WadIO &io, level_t &level, node_t *root_node)
-{
-  auto mark = Benchmarker(__func__);
-  CreateLevelLump(level, "SEGS")->Finish();
-  CreateLevelLump(level, "SSECTORS")->Finish();
-  // remove all the minisegs from subsectors
-  NormaliseBspTree(level);
-  SortSegs(level);
-
-
-  if (level.bsp_compress
-
-  PutVertices_Xnod(level, lump);
-  PutSubsecs_Xnod(level, lump);
-  PutSegs_Xnod(level, lump);
-  PutNodes_Xnod(level, lump, root_node);
-
-  if (level.bsp_compress
-
-  lump = nullptr;
-}
-
-void SaveDoom_XGLN(WadIO &io, level_t &level, node_t *root_node)
-{
-  auto mark = Benchmarker(__func__);
-  // leave SEGS empty
-  CreateLevelLump(level, "SEGS")->Finish();
+  if (bsp_format == BSP_XNOD) NormaliseBspTree(level);
 
   SortSegs(level);
 
+  io.StartWritingLump(lumpname.c_str());
 
-  if (level.bsp_compress
+  if (bsp_format == BSP_XNOD) io.AddToLump(compress ? "ZNOD" : "XNOD", 4);
+  if (bsp_format == BSP_XGLN) io.AddToLump(compress ? "ZGLN" : "XGLN", 4);
+  if (bsp_format == BSP_XGL2) io.AddToLump(compress ? "ZGL2" : "XGL2", 4);
+  if (bsp_format == BSP_XGL3) io.AddToLump(compress ? "ZGL3" : "XGL3", 4);
 
-  PutVertices_Xnod(level, lump);
-  PutSubsecs_Xnod(level, lump);
-  PutSegs_Xgln(level, lump);
-  PutNodes_Xnod(level, lump, root_node);
+  if (compress) io.Begin_Zlib();
 
-  if (level.bsp_compress
+  PutVertices_Xnod(io, level);
+  PutSubsecs_Xnod(io, level);
 
-  lump = nullptr;
+  if (bsp_format == BSP_XNOD) PutSegs_Xnod(io, level);
+  if (bsp_format == BSP_XGLN) PutSegs_Xgln(io, level);
+  if (bsp_format == BSP_XGL2 || bsp_format == BSP_XGL3) PutSegs_Xgl2(io, level);
 
-  // leave NODES empty
-  CreateLevelLump(level, "NODES")->Finish();
-}
+  if (bsp_format == BSP_XNOD || bsp_format == BSP_XGLN || bsp_format == BSP_XGL2) PutNodes_Xnod(io, level);
+  if (bsp_format == BSP_XGL3) PutNodes_Xgl3(io, level);
 
-void SaveDoom_XGL2(WadIO &io, level_t &level, node_t *root_node)
-{
-  auto mark = Benchmarker(__func__);
-  // leave SEGS empty
-  CreateLevelLump(level, "SEGS")->Finish();
-
-  SortSegs(level);
-
-
-  if (level.bsp_compress
-
-  PutVertices_Xnod(level, lump);
-  PutSubsecs_Xnod(level, lump);
-  PutSegs_Xgl2(level, lump);
-  PutNodes_Xnod(level, lump, root_node);
-
-  if (level.bsp_compress
-
-  lump = nullptr;
-
-  // leave NODES empty
-  CreateLevelLump(level, "NODES")->Finish();
-}
-
-void SaveDoom_XGL3(WadIO &io, level_t &level, node_t *root_node)
-{
-  auto mark = Benchmarker(__func__);
-  // leave SEGS empty
-  CreateLevelLump(level, "SEGS")->Finish();
-
-  SortSegs(level);
-
-
-  if (level.bsp_compress
-
-  PutVertices_Xnod(level, lump);
-  PutSubsecs_Xnod(level, lump);
-  PutSegs_Xgl2(level, lump);
-  PutNodes_Xgl3(level, lump, root_node);
-
-  if (level.bsp_compress
-
-  lump = nullptr;
-
-  // leave NODES empty
-  CreateLevelLump(level, "NODES")->Finish();
-}
-
-//
-// Doom64 has some differences from Doom-format or Hexen-format
-// This could also be shared with PSX Doom and PSX Final Doom, but we don't support those
-//
-
-void SaveDoom64_DoomBSP(WadIO &io, level_t &level, node_t *root_node)
-{
-  // Needed for LEAFS
-  RoundOffVertices(level);
-  PutVertices_Doom64(level);
-  // We need minisegs just for leafs
-  PutLeafs_Vanilla(level);
-  // remove all the minisegs from subsectors
-  NormaliseBspTree(level);
-  SortSegs(level);
-  PutSegs_Vanilla(level);
-  PutSubsecs_Vanilla(level);
-  PutNodes_Vanilla(level, root_node);
-}
-
-void SaveDoom64_DeePBSPV4(WadIO &io, level_t &level, node_t *root_node)
-{
-  // Needed for LEAFS
-  RoundOffVertices(level);
-  PutVertices_Doom64(level);
-  // We need minisegs just for leafs
-  PutLeafs_DeePBSPV4(level);
-  // remove all the minisegs from subsectors
-  NormaliseBspTree(level);
-  SortSegs(level);
-  PutSegs_DeePBSPV4(level);
-  PutSubsecs_DeePBSPV4(level);
-  PutNodes_DeePBSPV4(level, root_node);
-}
-
-//
-// Unlike the the Doom and Hexen map formats, UDMF has a tight requirement for fractional coordinates.
-// Always use the latest high-precision BSP format we support.
-//
-void SaveTextmap_ZNODES(WadIO &io, level_t &level, node_t *root_node)
-{
-  auto mark = Benchmarker(__func__);
-  SortSegs(level);
-
-
-  PutVertices_Xnod(level, lump);
-  PutSubsecs_Xnod(level, lump);
-  PutSegs_Xgl2(level, lump);
-  PutNodes_Xgl3(level, lump, root_node);
-
-  lump = nullptr;
+  if (compress) io.Finish_Zlib();
 }
