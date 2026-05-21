@@ -21,7 +21,6 @@
 
 #include "wad.hpp"
 #include "core.hpp"
-#include "local.hpp"
 
 #include <cstdio>
 #include <stdexcept>
@@ -82,18 +81,18 @@ WadIO::WadIO(std::string in_file, std::string out_file)
     throw std::runtime_error("ERROR: Input file is not a wad");
   }
 
-  this->read_header.num_entries = GetLittleEndian(this->read_header.num_entries);
-  this->read_header.dir_start = GetLittleEndian(this->read_header.dir_start);
+  auto num_entries = GetLittleEndian(this->read_header.num_entries);
+  auto dir_start = GetLittleEndian(this->read_header.dir_start);
 
-  if (fseek(this->read_file, this->read_header.dir_start, SEEK_SET))
+  if (fseek(this->read_file, dir_start, SEEK_SET))
   {
     throw std::runtime_error("ERROR: Could not read wad directory");
   }
 
-  this->read_directory.resize(this->read_header.num_entries);
-  this->SafeRead(this->read_directory.data(), this->read_header.num_entries * sizeof(WadLump));
+  this->read_directory.resize(num_entries);
+  this->SafeRead(this->read_directory.data(), this->read_directory.size() * sizeof(WadLump));
 
-  for (size_t i = 0; i < this->read_header.num_entries; ++i)
+  for (size_t i = 0; i < this->read_directory.size(); ++i)
   {
     this->read_directory[i].pos = GetLittleEndian(this->read_directory[i].pos);
     this->read_directory[i].size = GetLittleEndian(this->read_directory[i].size);
@@ -123,22 +122,17 @@ WadIO::~WadIO(void)
   this->read_directory.clear();
 
   // Output stuff
-  if (this->write_file)
-  {
-    // Send entire directory, right after
-    this->SafeWrite(this->write_directory.data(), sizeof(WadLump) * this->write_directory.size());
+  this->SafeWrite(this->write_directory.data(), sizeof(WadLump) * this->write_directory.size());
 
-    // Skip file magic header and write directory data
-    uint32_t num_entries = GetLittleEndian(IndexToInt(this->write_directory.size()));
-    uint32_t dir_start = GetLittleEndian(static_cast<uint32_t>(ftell(this->write_file)));
+  uint32_t num_entries = GetLittleEndian(IndexToInt(this->write_directory.size()));
+  uint32_t dir_start = GetLittleEndian(static_cast<uint32_t>(ftell(this->write_file)));
 
-    fseek(this->write_file, sizeof(char[4]), SEEK_SET);
-    this->SafeWrite(&num_entries, sizeof(num_entries));
-    this->SafeWrite(&dir_start, sizeof(dir_start));
-    fclose(this->write_file);
+  fseek(this->write_file, sizeof(char[4]), SEEK_SET);
+  this->SafeWrite(&num_entries, sizeof(num_entries));
+  this->SafeWrite(&dir_start, sizeof(dir_start));
+  fclose(this->write_file);
 
-    this->write_file = NULL;
-  }
+  this->write_file = NULL;
 }
 
 // call only after seeking

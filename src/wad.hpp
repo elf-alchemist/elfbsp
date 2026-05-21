@@ -112,7 +112,7 @@ template <typename T>
 std::vector<T> WadIO::ReadLump(size_t lump_index)
 {
   std::vector<T> lump;
-  if (lump_index >= this->read_header.num_entries)
+  if (lump_index >= this->read_directory.size())
   {
     return lump;
   }
