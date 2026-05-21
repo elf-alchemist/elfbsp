@@ -477,9 +477,9 @@ inline bool HasExtension(const char *filename)
 //
 // Return offset of the '.', or NO_INDEX when no extension was found.
 //
-inline size_t FindExtension(const char *filename)
+inline size_t FindExtension(std::string_view filename)
 {
-  const size_t len = strlen(filename);
+  const size_t len = strlen(filename.data());
   if (len == 0)
   {
     return NO_INDEX;
@@ -539,12 +539,13 @@ inline short_angle_t ComputeAngle_BAM(double dx, double dy)
 using map_format_t = enum map_format_e
 {
   MapFormat_INVALID = 0,
-
   MapFormat_Doom,
   MapFormat_Hexen,
   MapFormat_Doom64,
   MapFormat_UDMF,
 };
+
+static std::string_view format_name[] = {"ERROR", "Doom Format", "Hexen Format", "Doom64 Format", "UDMF"};
 
 // Lump order in a map WAD: each map needs a couple of lumps
 // to provide a complete scene geometry description.
@@ -788,8 +789,7 @@ using raw_blockmap_xbm1_header_t = struct raw_blockmap_xbm1_header_s
 } PACKEDATTR;
 
 // Fail way earlier
-#define static_size(x, y) \
-  static_assert(sizeof(x) == y, "Size mismatch for '" #x "'. Should be " #y ".")
+#define static_size(x, y) static_assert(sizeof(x) == y, "Size mismatch for '" #x "'. Should be " #y ".")
 
 static_size(raw_vertex_short_t, 4);
 static_size(raw_vertex_fixed_t, 8);
@@ -1118,30 +1118,6 @@ constexpr const char PRINT_HELP[] = "\n"
                                     "Map names should be full, like E1M3 or MAP24, but a list\n"
                                     "and/or ranges can be specified: MAP01,MAP04-MAP07,MAP12\n";
 
-using build_result_t = enum build_result_e
-{
-  // everything went peachy keen
-  BUILD_OK = 0,
-
-  // when saving the map, one or more lumps overflowed
-  BUILD_LumpOverflow
-};
-
-// attempt to open a wad.  on failure, the FatalError method in the
-// buildinfo_t interface is called.
-void OpenWad(const char *filename);
-
-// close a previously opened wad.
-void CloseWad(void);
-
-// give the number of levels detected in the wad.
-size_t LevelsInWad(void);
-
-// build the nodes of a particular level. otherwise the wad
-// is updated to store the new lumps and returns either BUILD_OK or
-// BUILD_LumpOverflow if some limits were exceeded.
-build_result_e BuildLevel(struct level_t &level, const char *filename);
-
 //
 // Benchmark
 //
@@ -1150,10 +1126,10 @@ struct Benchmarker
 {
   using clock = std::chrono::steady_clock;
   clock::time_point start;
-  const char *name;
+  std::string_view name;
   bool enabled;
 
-  Benchmarker(const char *_name, bool _enabled = true)
+  Benchmarker(std::string_view _name, bool _enabled = true)
   {
     if (!_enabled) return;
     enabled = _enabled;
@@ -1166,6 +1142,6 @@ struct Benchmarker
     if (!enabled) return;
     auto end = clock::now();
     auto time = std::chrono::duration<double, std::milli>(end - start);
-    PrintLine(LOG_NORMAL, "[Benchmarker] '%s' runtime: %.2f ms", name, time.count());
+    PrintLine(LOG_NORMAL, "[Benchmarker] '%s' runtime: %.2f ms", name.data(), time.count());
   };
 };

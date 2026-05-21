@@ -23,18 +23,20 @@
 
 #include "core.hpp"
 #include "info.hpp"
+#include "local.hpp"
 #include "wad.hpp"
 
 #include <cstring>
 #include <string>
+#include <string_view>
 #include <vector>
 
 static bool opt_help = false;
 static bool opt_version = false;
 
-static std::string opt_output;
+static std::string_view opt_output;
 
-static std::vector<const char *> wad_list;
+static std::vector<std::string> wad_list;
 
 static size_t total_failed_files = 0;
 static size_t total_empty_files = 0;
@@ -57,10 +59,10 @@ buildinfo_t config;
 // FILE MANAGEMENT
 //------------------------------------------------------------------------
 
-static bool FileExists(const char *filename)
+static bool FileExists(std::string filename)
 {
 
-  if (FILE *fp = fopen(filename, "rb"))
+  if (FILE *fp = fopen(filename.c_str(), "rb"))
   {
     fclose(fp);
     return true;
@@ -69,19 +71,19 @@ static bool FileExists(const char *filename)
   return false;
 }
 
-static bool CheckMapInRange(const map_range_t *range, const char *name)
+static bool CheckMapInRange(const map_range_t *range, std::string name)
 {
-  if (strlen(name) != range->low.size())
+  if (name.size() != range->low.size())
   {
     return false;
   }
 
-  if (strcmp(name, range->low.c_str()) < 0)
+  if (name < range->low)
   {
     return false;
   }
 
-  if (strcmp(name, range->high.c_str()) > 0)
+  if (name > range->high)
   {
     return false;
   }
@@ -89,7 +91,7 @@ static bool CheckMapInRange(const map_range_t *range, const char *name)
   return true;
 }
 
-static bool CheckMapInMapList(const char *name)
+static bool CheckMapInMapList(std::string name)
 {
   // when --map is not used, allow everything
   if (map_list.empty())
@@ -108,7 +110,7 @@ static bool CheckMapInMapList(const char *name)
   return false;
 }
 
-static void VisitFile(const char *filename)
+static void VisitFile(std::string_view filename)
 {
   auto mark = Benchmarker(__func__);
   auto in_file = std::string(filename);
@@ -130,25 +132,67 @@ static void VisitFile(const char *filename)
 
   if (config.analysis)
   {
-    SetupAnalysisFile(filename);
+    SetupAnalysisFile(in_file);
   }
 
-  PrintLine(LOG_NORMAL, "Building %s", filename);
+  PrintLine(LOG_NORMAL, "Building %s", in_file.c_str());
   {
+    config.total_warnings = 0;
     auto wad = WadIO(in_file, out_file);
     size_t current = 0;
     size_t max = wad.NumLumps();
 
+    size_t levels_visited = 0;
+    size_t levels_failed = 0;
+
     while (current < max)
     {
-      if (wad.IsLevel(current))
+      if (wad.IsLevel(current) && CheckMapInMapList(wad.LumpName(current)))
       {
-        PrintLine(LOG_NORMAL, "Processing level %zu:%s", current, wad.LumpName(current));
+        level_t level;
+        level.lump = current;
+        level.map_format = wad.LevelFormat(current);
+
+        levels_visited += 1;
+        auto result = BuildLevel(wad, level, in_file);
+
+        // handle a failed map (due to lump overflow)
+        if (result == BUILD_LumpOverflow)
+        {
+          levels_failed += 1;
+        }
+        else
+        {
+          total_built_maps += 1;
+        }
+
+        current = wad.LevelLastLump(current) + 1;
       }
       // TODO: process glbsp
-      wad.CopyLump(current);
-      current++;
+      else
+      {
+        wad.CopyLump(current);
+        current++;
+      }
     }
+
+    if (levels_visited == 0)
+    {
+      PrintLine(LOG_NORMAL, "No matching levels found");
+      total_empty_files += 1;
+    }
+
+    total_failed_maps += levels_failed;
+
+    if (levels_failed > 0)
+    {
+      PrintLine(LOG_NORMAL, "Failed maps: %zu (out of %zu)", levels_failed, levels_visited);
+
+      // allow building other files
+      total_failed_files += 1;
+    }
+
+    PrintLine(LOG_NORMAL, "Serious warnings: %zu", config.total_warnings);
   }
 
   if (is_same_file)
@@ -350,61 +394,61 @@ static void ParseShortArgument(const char *arg)
   }
 }
 
-static bool ProcessDebugParam(const char *param, uint32_t &debug)
+static bool ProcessDebugParam(std::string param, uint32_t &debug)
 {
-  if (strcmp(param, "--debug-blockmap") == 0)
+  if (param == "--debug-blockmap")
   {
     debug |= DEBUG_BLOCKMAP;
   }
-  else if (strcmp(param, "--debug-reject") == 0)
+  else if (param == "--debug-reject")
   {
     debug |= DEBUG_REJECT;
   }
-  else if (strcmp(param, "--debug-load") == 0)
+  else if (param == "--debug-load")
   {
     debug |= DEBUG_LOAD;
   }
-  else if (strcmp(param, "--debug-bsp") == 0)
+  else if (param == "--debug-bsp")
   {
     debug |= DEBUG_BSP;
   }
-  else if (strcmp(param, "--debug-walltips") == 0)
+  else if (param == "--debug-walltips")
   {
     debug |= DEBUG_WALLTIPS;
   }
-  else if (strcmp(param, "--debug-polyobj") == 0)
+  else if (param == "--debug-polyobj")
   {
     debug |= DEBUG_POLYOBJ;
   }
-  else if (strcmp(param, "--debug-overlaps") == 0)
+  else if (param == "--debug-overlaps")
   {
     debug |= DEBUG_OVERLAPS;
   }
-  else if (strcmp(param, "--debug-picknode") == 0)
+  else if (param == "--debug-picknode")
   {
     debug |= DEBUG_PICKNODE;
   }
-  else if (strcmp(param, "--debug-split") == 0)
+  else if (param == "--debug-split")
   {
     debug |= DEBUG_SPLIT;
   }
-  else if (strcmp(param, "--debug-cutlist") == 0)
+  else if (param == "--debug-cutlist")
   {
     debug |= DEBUG_CUTLIST;
   }
-  else if (strcmp(param, "--debug-builder") == 0)
+  else if (param == "--debug-builder")
   {
     debug |= DEBUG_BUILDER;
   }
-  else if (strcmp(param, "--debug-sorter") == 0)
+  else if (param == "--debug-sorter")
   {
     debug |= DEBUG_SORTER;
   }
-  else if (strcmp(param, "--debug-subsec") == 0)
+  else if (param == "--debug-subsec")
   {
     debug |= DEBUG_SUBSEC;
   }
-  else if (strcmp(param, "--debug-wad") == 0)
+  else if (param == "--debug-wad")
   {
     debug |= DEBUG_WAD;
   }
@@ -412,39 +456,39 @@ static bool ProcessDebugParam(const char *param, uint32_t &debug)
   return debug != 0;
 }
 
-static int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv[])
+static int32_t ParseLongArgument(std::string name, const int32_t argc, const char *argv[])
 {
   int32_t used = 0;
 
-  if (strcmp(name, "--help") == 0)
+  if (name == "--help")
   {
     opt_help = true;
   }
-  else if (strcmp(name, "--version") == 0)
+  else if (name == "--version")
   {
     opt_version = true;
   }
-  else if (strcmp(name, "--analysis") == 0)
+  else if (name == "--analysis")
   {
     config.analysis = true;
   }
-  else if (strcmp(name, "--verbose") == 0)
+  else if (name == "--verbose")
   {
     config.verbose = true;
   }
-  else if (strcmp(name, "--fast") == 0)
+  else if (name == "--fast")
   {
     config.fast = true;
   }
-  else if (strcmp(name, "--no-effects") == 0)
+  else if (name == "--no-effects")
   {
     config.effects = false;
   }
-  else if (strcmp(name, "--compress") == 0)
+  else if (name == "--compress")
   {
     config.compress = true;
   }
-  else if (strcmp(name, "--map") == 0 || strcmp(name, "--maps") == 0)
+  else if (name == "--map" || name == "--maps")
   {
     if (argc < 1 || argv[0][0] == '-')
     {
@@ -455,7 +499,7 @@ static int32_t ParseLongArgument(const char *name, const int32_t argc, const cha
 
     used = 1;
   }
-  else if (strcmp(name, "--type") == 0)
+  else if (name == "--type")
   {
     if (argc < 1 || !isdigit(argv[0][0]))
     {
@@ -472,7 +516,7 @@ static int32_t ParseLongArgument(const char *name, const int32_t argc, const cha
     config.bsp_format = static_cast<bsp_format_t>(val);
     used = 1;
   }
-  else if (strcmp(name, "--bmap") == 0)
+  else if (name == "--bmap")
   {
     if (argc < 1 || !isdigit(argv[0][0]))
     {
@@ -489,7 +533,7 @@ static int32_t ParseLongArgument(const char *name, const int32_t argc, const cha
     config.bmap_format = static_cast<bmap_format_t>(val);
     used = 1;
   }
-  else if (strcmp(name, "--cost") == 0)
+  else if (name == "--cost")
   {
     if (argc < 1 || !isdigit(argv[0][0]))
     {
@@ -506,14 +550,14 @@ static int32_t ParseLongArgument(const char *name, const int32_t argc, const cha
     config.split_cost = val;
     used = 1;
   }
-  else if (strcmp(name, "--polyobj") == 0)
+  else if (name == "--polyobj")
   {
     config.polyobj.anchor = Hexen_PolyObj_Anchor;
     config.polyobj.spawn = Hexen_PolyObj_Spawn;
     config.polyobj.spawn_crush = Hexen_PolyObj_SpawnCrush;
     config.polyobj.spawn_hurt = Hexen_PolyObj_SpawnHurt;
   }
-  else if (strcmp(name, "--output") == 0)
+  else if (name == "--output")
   {
     // this option is *only* for compatibility
 
@@ -530,16 +574,16 @@ static int32_t ParseLongArgument(const char *name, const int32_t argc, const cha
     opt_output = argv[0];
     used = 1;
   }
-  else if (strncmp(name, "--debug-", 8) == 0)
+  else if (name.starts_with("--debug-"))
   {
-    if (!ProcessDebugParam(name, config.debug))
+    if (!ProcessDebugParam(name.c_str(), config.debug))
     {
-      PrintLine(LOG_ERROR, "ERROR: unknown debug parameter '%s'", name);
+      PrintLine(LOG_ERROR, "ERROR: unknown debug parameter '%s'", name.c_str());
     }
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: unknown long option: '%s'", name);
+    PrintLine(LOG_ERROR, "ERROR: unknown long option: '%s'", name.c_str());
   }
 
   return used;
@@ -555,19 +599,19 @@ void ParseCommandLine(int32_t argc, const char *argv[])
 
   while (argc > 0)
   {
-    const char *arg = *argv++;
+    std::string arg = *argv++;
     argc--;
 
     if constexpr (MACOS)
     {
       // ignore Mac OS X garbage
-      if (strncmp(arg, "-psn_", 5) == 0)
+      if (strncmp(arg.data(), "-psn_", 5) == 0)
       {
         continue;
       }
     }
 
-    if (strlen(arg) == 0)
+    if (arg.empty())
     {
       continue;
     }
@@ -579,38 +623,38 @@ void ParseCommandLine(int32_t argc, const char *argv[])
       continue;
     }
 
-    if (strcmp(arg, "-") == 0)
+    if (arg == "-")
     {
       PrintLine(LOG_ERROR, "ERROR: illegal option '-'");
     }
 
-    if (strcmp(arg, "--") == 0)
+    if (arg == "--")
     {
       rest_are_files = true;
       continue;
     }
 
     // handle short args which are isolate and require a value
-    if (strcmp(arg, "-t") == 0)
+    if (arg == "-t")
     {
       arg = "--type";
     }
-    if (strcmp(arg, "-c") == 0)
+    if (arg == "-c")
     {
       arg = "--cost";
     }
-    if (strcmp(arg, "-m") == 0)
+    if (arg == "-m")
     {
       arg = "--map";
     }
-    if (strcmp(arg, "-o") == 0)
+    if (arg == "-o")
     {
       arg = "--output";
     }
 
     if (arg[1] != '-')
     {
-      ParseShortArgument(arg);
+      ParseShortArgument(arg.c_str());
       continue;
     }
 
@@ -655,18 +699,18 @@ int32_t main(const int32_t argc, const char *argv[])
       PrintLine(LOG_ERROR, "ERROR: cannot use multiple input files with --output");
     }
 
-    if (StringCaseCmp(wad_list[0], opt_output.c_str()) == 0)
+    if (wad_list[0] == opt_output)
     {
       PrintLine(LOG_ERROR, "ERROR: input and output files are the same");
     }
   }
 
   // validate all filenames before processing any of them
-  for (const auto filename : wad_list)
+  for (const auto &filename : wad_list)
   {
     if (!FileExists(filename))
     {
-      throw std::runtime_error("ERROR: no such file: " + std::string(filename));
+      throw std::runtime_error("ERROR: no such file: " + filename);
     }
   }
 

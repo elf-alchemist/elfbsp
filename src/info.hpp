@@ -20,8 +20,9 @@
 
 #pragma once
 
+#include "local.hpp"
 #include "wad.hpp"
 
-void SetupAnalysisFile(const char *filepath);
-void GenerateAnalysis(WadIO &io, level_t &level, const char *filename);
-void WriteAnalysis(const char *filename);
+void SetupAnalysisFile(std::string_view filepath);
+void GenerateAnalysis(WadIO &io, level_t &level, std::string_view filename);
+void WriteAnalysis(std::string_view filename);

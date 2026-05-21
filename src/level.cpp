@@ -1172,7 +1172,7 @@ size_t ComputeBspHeight(const node_t *node)
 
 /* ----- build nodes for a single level ----- */
 
-build_result_e BuildLevel(WadIO &io, level_t &level, const char *filename)
+build_result_e BuildLevel(WadIO &io, level_t &level, std::string_view filename)
 {
   LoadLevel(io, level);
 
@@ -1182,7 +1182,7 @@ build_result_e BuildLevel(WadIO &io, level_t &level, const char *filename)
   {
     if (config.analysis)
     {
-      PrintLine(LOG_NORMAL, "[%s] Starting analysis loop for %s", __func__, level.GetLevelName(io));
+      PrintLine(LOG_NORMAL, "[%s] Starting analysis loop for %s", __func__, io.LumpName(level.lump));
       GenerateAnalysis(io, level, filename);
     }
 

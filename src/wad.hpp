@@ -74,24 +74,26 @@ struct WadIO
   // Read operations
   void SafeRead(void *buffer, size_t size);
   size_t NumLumps(void) const;
-  bool IsLevel(size_t k);
-  map_format_t LevelFormat(size_t lump_index);
   const char *LumpName(size_t lump_index) const;
-  size_t LevelLastLump(size_t lump_index);
-  size_t LevelLookupLump(size_t lump_index, const char *name);
+  bool IsLevelLump(size_t lump_index) const;
+  bool IsLevelTextmapFormat(size_t lump_index) const;
+  bool IsLevel(size_t lump_index) const;
+  map_format_t LevelFormat(size_t lump_index) const;
+  size_t LevelLastLump(size_t lump_index) const;
+  size_t LevelLookupLump(size_t lump_index, std::string_view name) const;
   template <typename T>
   std::vector<T> ReadLump(size_t lump_index);
   template <typename T>
-  std::vector<T> ReadMapLump(size_t lump_index, const char *name);
+  std::vector<T> ReadMapLump(size_t lump_index, std::string_view name);
 
   // Write operations
   void SafeWrite(const void *buffer, size_t size);
-  void CreateEmptyLump(const char *name);
-  void WriteLump(const char *name, const void *data, size_t size);
+  void CreateEmptyLump(std::string_view name);
+  void WriteLump(std::string_view name, const void *data, size_t size);
   void CopyLump(size_t lump);
 
   // Partial writing
-  void StartWritingLump(const char *name);
+  void StartWritingLump(std::string_view name);
   void AddToLump(const void *data, size_t len);
   WadIO &operator<<(uint8_t value);
   WadIO &operator<<(uint16_t value);
@@ -127,10 +129,11 @@ std::vector<T> WadIO::ReadLump(size_t lump_index)
 }
 
 template <typename T>
-std::vector<T> WadIO::ReadMapLump(size_t lump_index, const char *name)
+std::vector<T> WadIO::ReadMapLump(size_t lump_index, std::string_view name)
 {
   return ReadLump<T>(this->LevelLookupLump(lump_index, name));
 }
+
 //
 // fuck C++ end
 //

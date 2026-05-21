@@ -39,6 +39,7 @@ bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y
 // LEVEL : Level structures & read/write functions.
 //------------------------------------------------------------------------
 
+struct level_t;
 struct node_t;
 struct sector_t;
 struct quadtree_c;
@@ -426,12 +427,6 @@ using level_t = struct level_t
   double block_compression;
   bmap_format_t bmap_format = bmap_format_t::BMAP_DoomBSP;
 
-
-  inline const char *GetLevelName(WadIO &io)
-  {
-    return io.read_directory[lump].name;
-  }
-
   vertex_t *SafeLookupVertex(size_t num, size_t num_line)
   {
     if (num >= vertices.size())
@@ -493,7 +488,6 @@ void FreeSubsecs(level_t &level);
 void FreeNodes(level_t &level);
 void FreeWallTips(level_t &level);
 void FreeIntersections(level_t &level);
-
 
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
@@ -557,3 +551,17 @@ void BuildNodes(level_t &level, seg_t *seg_list, int depth, bbox_t *bounds, node
 
 // compute the height of the bsp tree, starting at 'node'.
 size_t ComputeBspHeight(const node_t *node);
+
+using build_result_t = enum build_result_e
+{
+  // everything went peachy keen
+  BUILD_OK = 0,
+
+  // when saving the map, one or more lumps overflowed
+  BUILD_LumpOverflow
+};
+
+// build the nodes of a particular level. otherwise the wad
+// is updated to store the new lumps and returns either BUILD_OK or
+// BUILD_LumpOverflow if some limits were exceeded.
+build_result_e BuildLevel(WadIO &io, level_t &level, std::string_view filename);
