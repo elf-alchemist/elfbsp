@@ -22,7 +22,7 @@
 //------------------------------------------------------------------------------
 
 #include "core.hpp"
-#include "local.hpp"
+#include "info.hpp"
 #include "wad.hpp"
 
 #include <cstring>
@@ -53,7 +53,23 @@ buildinfo_t config;
 
 //------------------------------------------------------------------------
 
-bool CheckMapInRange(const map_range_t *range, const char *name)
+//------------------------------------------------------------------------
+// FILE MANAGEMENT
+//------------------------------------------------------------------------
+
+static bool FileExists(const char *filename)
+{
+
+  if (FILE *fp = fopen(filename, "rb"))
+  {
+    fclose(fp);
+    return true;
+  }
+
+  return false;
+}
+
+static bool CheckMapInRange(const map_range_t *range, const char *name)
 {
   if (strlen(name) != range->low.size())
   {
@@ -73,7 +89,7 @@ bool CheckMapInRange(const map_range_t *range, const char *name)
   return true;
 }
 
-bool CheckMapInMapList(const char *name)
+static bool CheckMapInMapList(const char *name)
 {
   // when --map is not used, allow everything
   if (map_list.empty())
@@ -92,46 +108,24 @@ bool CheckMapInMapList(const char *name)
   return false;
 }
 
-void BackupFile(const char *filename)
+static void VisitFile(const char *filename)
 {
-  std::string dest_name = filename;
+  auto mark = Benchmarker(__func__);
+  auto in_file = std::string(filename);
+  auto out_file = std::string();
 
-  // replace file extension (if any) with .bak
-
-  size_t ext_pos = FindExtension(filename);
-  if (ext_pos > 0)
-  {
-    dest_name.resize(ext_pos);
-  }
-
-  dest_name += ".bak";
-
-  if (!FileCopy(filename, dest_name.c_str()))
-  {
-    PrintLine(LOG_ERROR, "ERROR: failed to create backup: %s", dest_name.c_str());
-  }
-
-  PrintLine(LOG_NORMAL, "Created backup: %s", dest_name.c_str());
-}
-
-void VisitFile(const char *filename)
-{
   // handle the -o option
-  if (!opt_output.empty())
+  // by this point, we are guaranteed to have an opt_output that is different than wad_list[0]
+  bool is_same_file = false;
+  if (opt_output.empty())
   {
-    if (!FileCopy(filename, opt_output.c_str()))
-    {
-      PrintLine(LOG_ERROR, "ERROR: failed to create output file: %s", opt_output.c_str());
-    }
-
-    PrintLine(LOG_NORMAL, "Copied input file: %s", filename);
-
-    filename = opt_output.c_str();
+    is_same_file = true;
+    out_file = in_file + ".x";
   }
-
-  if (config.backup)
+  else
   {
-    BackupFile(filename);
+    is_same_file = false;
+    out_file = opt_output;
   }
 
   if (config.analysis)
@@ -140,12 +134,36 @@ void VisitFile(const char *filename)
   }
 
   PrintLine(LOG_NORMAL, "Building %s", filename);
+  {
+    auto wad = WadIO(in_file, out_file);
+    size_t current = 0;
+    size_t max = wad.NumLumps();
 
+    while (current < max)
+    {
+      if (wad.IsLevel(current))
+      {
+        PrintLine(LOG_NORMAL, "Processing level %zu:%s", current, wad.LumpName(current));
+      }
+      // TODO: process glbsp
+      wad.CopyLump(current);
+      current++;
+    }
+  }
+
+  if (is_same_file)
+  {
+    remove(in_file.c_str());
+    if (rename(out_file.c_str(), in_file.c_str()))
+    {
+      throw std::runtime_error("ERROR: Failed to rename output file (" + out_file + ") to input file (" + in_file + ")");
+    }
+  }
 }
 
 // ----- user information -----------------------------
 
-bool ValidateMapName(char *name)
+static bool ValidateMapName(char *name)
 {
   if (strlen(name) < 2 || strlen(name) > 8)
   {
@@ -174,7 +192,7 @@ bool ValidateMapName(char *name)
   return true;
 }
 
-void ParseMapRange(char *tok)
+static void ParseMapRange(char *tok)
 {
   char *low = tok;
   char *high = tok;
@@ -229,7 +247,7 @@ void ParseMapRange(char *tok)
   map_list.push_back(range);
 }
 
-void ParseMapList(const char *arg)
+static void ParseMapList(const char *arg)
 {
   while (*arg != 0)
   {
@@ -263,7 +281,7 @@ void ParseMapList(const char *arg)
   }
 }
 
-void ParseShortArgument(const char *arg)
+static void ParseShortArgument(const char *arg)
 {
   // skip the leading '-'
   arg++;
@@ -283,9 +301,6 @@ void ParseShortArgument(const char *arg)
       continue;
     case 'v':
       config.verbose = true;
-      continue;
-    case 'b':
-      config.backup = true;
       continue;
     case 'f':
       config.fast = true;
@@ -335,7 +350,7 @@ void ParseShortArgument(const char *arg)
   }
 }
 
-bool ProcessDebugParam(const char *param, uint32_t &debug)
+static bool ProcessDebugParam(const char *param, uint32_t &debug)
 {
   if (strcmp(param, "--debug-blockmap") == 0)
   {
@@ -397,7 +412,7 @@ bool ProcessDebugParam(const char *param, uint32_t &debug)
   return debug != 0;
 }
 
-int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv[])
+static int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv[])
 {
   int32_t used = 0;
 
@@ -416,10 +431,6 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
   else if (strcmp(name, "--verbose") == 0)
   {
     config.verbose = true;
-  }
-  else if (strcmp(name, "--backup") == 0 || strcmp(name, "--backups") == 0)
-  {
-    config.backup = true;
   }
   else if (strcmp(name, "--fast") == 0)
   {
@@ -639,11 +650,6 @@ int32_t main(const int32_t argc, const char *argv[])
 
   if (!opt_output.empty())
   {
-    if (config.backup)
-    {
-      PrintLine(LOG_ERROR, "ERROR: cannot use --backup with --output");
-    }
-
     if (total_files > 1)
     {
       PrintLine(LOG_ERROR, "ERROR: cannot use multiple input files with --output");

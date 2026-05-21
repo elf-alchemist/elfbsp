@@ -39,8 +39,6 @@
 
 #include <bit>
 #include <chrono>
-#include <string>
-#include <vector>
 
 #include "zlib-ng.h"
 
@@ -406,70 +404,6 @@ constexpr void UtilFree(T *data)
   }
 
   free(data);
-}
-
-//------------------------------------------------------------------------
-// FILE MANAGEMENT
-//------------------------------------------------------------------------
-
-inline void FileClear(const char *filename)
-{
-  if (FILE *fp = fopen(filename, "w"))
-  {
-    fclose(fp);
-  }
-}
-
-inline bool FileExists(const char *filename)
-{
-
-  if (FILE *fp = fopen(filename, "rb"))
-  {
-    fclose(fp);
-    return true;
-  }
-
-  return false;
-}
-
-inline bool FileCopy(const char *src_name, const char *dest_name)
-{
-  char buffer[MSG_BUFFER_LENGTH];
-
-  FILE *src = fopen(src_name, "rb");
-  if (!src)
-  {
-    return false;
-  }
-
-  FILE *dest = fopen(dest_name, "wb");
-  if (!dest)
-  {
-    fclose(src);
-    return false;
-  }
-
-  while (true)
-  {
-    size_t rlen = fread(buffer, 1, sizeof(buffer), src);
-    if (rlen == 0)
-    {
-      break;
-    }
-
-    size_t wlen = fwrite(buffer, 1, rlen, dest);
-    if (wlen != rlen)
-    {
-      break;
-    }
-  }
-
-  bool was_OK = !ferror(src) && !ferror(dest);
-
-  fclose(dest);
-  fclose(src);
-
-  return was_OK;
 }
 
 //------------------------------------------------------------------------
@@ -1140,7 +1074,6 @@ struct buildinfo_s
   bsp_format_t bsp_format = bsp_format_t::BSP_XNOD;
   bmap_format_t bmap_format = bmap_format_t::BMAP_DoomBSP;
   bool fast = false;     // use a faster method to pick nodes
-  bool backup = false;   // keep a copy of the WAD
   bool analysis = false; // write out CSV for data analysis and visualization
   bool verbose = false;  // this affects how some messages are shown
   bool effects = true;   // disable special effects
@@ -1175,7 +1108,6 @@ constexpr const char PRINT_HELP[] = "\n"
                                     "\n"
                                     "Available options are:\n"
                                     "    -v --verbose       Verbose output, show all warnings\n"
-                                    "    -b --backup        Backup input files (.bak extension)\n"
                                     "    -f --fast          Faster partition selection\n"
                                     "    -m --map   XXXX    Control which map(s) are built\n"
                                     "    -c --cost  ##      Cost assigned to seg splits (1-32)\n"
@@ -1209,10 +1141,6 @@ size_t LevelsInWad(void);
 // is updated to store the new lumps and returns either BUILD_OK or
 // BUILD_LumpOverflow if some limits were exceeded.
 build_result_e BuildLevel(struct level_t &level, const char *filename);
-
-void SetupAnalysisFile(const char *filepath);
-void GenerateAnalysis(level_t &level, const char *filename);
-void WriteAnalysis(const char *filename);
 
 //
 // Benchmark

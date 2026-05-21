@@ -61,26 +61,31 @@ static bool IsLevelLump(const char *name)
 //  WAD Reading Interface
 //------------------------------------------------------------------------
 
-WadIO::WadIO(const char *filename)
+WadIO::WadIO(std::string in_file, std::string out_file)
 {
-  this->read_file = fopen(filename, "rb");
+  // Input stuff
+  this->read_file = fopen(in_file.c_str(), "rb");
   if (this->read_file == NULL)
   {
     throw std::runtime_error("ERROR: Could not open input file");
   }
 
   this->SafeRead(&this->read_header, sizeof(this->read_header));
-  if (StringCaseCmpMax(this->read_header.ident, "PWAD", 4) != 0 || StringCaseCmpMax(this->read_header.ident, "IWAD", 4) != 0)
+  if (this->read_header.ident[0] != 'I'    // check for IWADs (base game resources)
+      && this->read_header.ident[0] != 'P' // or PWADs (additional/modded resources)
+      && this->read_header.ident[1] != 'W' //
+      && this->read_header.ident[2] != 'A' //
+      && this->read_header.ident[3] != 'D')
   {
-    fclose(read_file);
-    read_file = NULL;
+    fclose(this->read_file);
+    this->read_file = NULL;
     throw std::runtime_error("ERROR: Input file is not a wad");
   }
 
   this->read_header.num_entries = GetLittleEndian(this->read_header.num_entries);
   this->read_header.dir_start = GetLittleEndian(this->read_header.dir_start);
 
-  if (fseek(read_file, this->read_header.dir_start, SEEK_SET))
+  if (fseek(this->read_file, this->read_header.dir_start, SEEK_SET))
   {
     throw std::runtime_error("ERROR: Could not read wad directory");
   }
@@ -93,12 +98,47 @@ WadIO::WadIO(const char *filename)
     this->read_directory[i].pos = GetLittleEndian(this->read_directory[i].pos);
     this->read_directory[i].size = GetLittleEndian(this->read_directory[i].size);
   }
+
+  // Output stuff
+  this->write_file = fopen(out_file.c_str(), "wb");
+  if (this->write_file == NULL)
+  {
+    throw std::runtime_error("ERROR: Could not open output file");
+  }
+
+  this->write_header.ident[0] = this->read_header.ident[0];
+  this->write_header.ident[1] = this->read_header.ident[1];
+  this->write_header.ident[2] = this->read_header.ident[2];
+  this->write_header.ident[3] = this->read_header.ident[3];
+  this->write_header.num_entries = 0;
+  this->write_header.dir_start = 0;
+
+  this->SafeWrite(&this->write_header, sizeof(this->write_header));
 }
 
 WadIO::~WadIO(void)
 {
-  fclose(read_file);
+  // Input stuff
+  fclose(this->read_file);
   this->read_directory.clear();
+
+  // Output stuff
+  if (this->write_file)
+  {
+    // Send entire directory, right after
+    this->SafeWrite(this->write_directory.data(), sizeof(WadLump) * this->write_directory.size());
+
+    // Skip file magic header and write directory data
+    uint32_t num_entries = GetLittleEndian(IndexToInt(this->write_directory.size()));
+    uint32_t dir_start = GetLittleEndian(static_cast<uint32_t>(ftell(this->write_file)));
+
+    fseek(this->write_file, sizeof(char[4]), SEEK_SET);
+    this->SafeWrite(&num_entries, sizeof(num_entries));
+    this->SafeWrite(&dir_start, sizeof(dir_start));
+    fclose(this->write_file);
+
+    this->write_file = NULL;
+  }
 }
 
 // call only after seeking
@@ -123,12 +163,97 @@ const char *WadIO::LumpName(size_t lump_index) const
   return name;
 }
 
+bool WadIO::IsLevel(size_t k)
+{
+  // Determine what lumps in the wad are level markers, based on the
+  // lumps which follow it.  Store the result in the 'levels' vector.
+  // The test here is rather lax, since wads exist with a non-standard
+  // ordering of level lumps.
+  size_t part_mask = 0;
+  size_t part_count = 0;
+
+  // Ignore non-header map lumps
+  // Fixes sliding window bug on single-level WADs
+  if (WhatLevelPart(read_directory[k].name) != 0)
+  {
+    return false;
+  }
+
+  // check for UDMF levels
+  if (StringCaseCmp(read_directory[k + 1].name, "TEXTMAP"))
+  {
+    if (HAS_BIT(config.debug, DEBUG_WAD))
+    {
+      PrintLine(LOG_DEBUG, "[%s] Detected level : %s (UDMF)", __func__, read_directory[k].name);
+    }
+    return true;
+  }
+
+  // check whether the next four lumps are level lumps
+  for (size_t i = 1; i <= 4; i++)
+  {
+    if (k + i >= NumLumps())
+    {
+      break;
+    }
+
+    size_t part = WhatLevelPart(read_directory[k + i].name);
+
+    if (part == 0)
+    {
+      break;
+    }
+
+    // do not allow duplicates
+    if (part_mask & (1 << part))
+    {
+      break;
+    }
+
+    part_mask |= (1 << part);
+    part_count++;
+  }
+
+  if (part_count == 4)
+  {
+    if (HAS_BIT(config.debug, DEBUG_WAD))
+    {
+      PrintLine(LOG_DEBUG, "[%s] Detected level : %s", __func__, read_directory[k].name);
+    }
+    return true;
+  }
+
+  return false;
+}
+
+map_format_e WadIO::LevelFormat(size_t lump_index)
+{
+  // UDMF maps can contain BEHAVIOR or MACROS
+  // check exclusively TEXTMAP
+  if (this->LevelLookupLump(lump_index, "TEXTMAP") != NO_INDEX)
+  {
+    return MapFormat_UDMF;
+  }
+
+  if (this->LevelLookupLump(lump_index, "BEHAVIOR") != NO_INDEX)
+  {
+    return MapFormat_Hexen;
+  }
+
+  if (this->LevelLookupLump(lump_index, "LIGHTS") != NO_INDEX && this->LevelLookupLump(lump_index, "MACROS") != NO_INDEX)
+  {
+    return MapFormat_Doom64;
+  }
+
+  return MapFormat_Doom;
+}
+
 size_t WadIO::LevelLastLump(size_t lump_index)
 {
   size_t count = 1;
 
   // UDMF level?
-  if (StringCaseCmp(read_directory[lump_index + 1].name, "TEXTMAP"))
+  if (lump_index + 1 < this->NumLumps() && StringCaseCmp(read_directory[lump_index + 1].name, "TEXTMAP"))
   {
     while (count < MAX_LUMPS_IN_A_LEVEL && lump_index + count < this->NumLumps())
     {
@@ -169,52 +294,6 @@ size_t WadIO::LevelLookupLump(size_t lump_index, const char *name)
   }
 
   return NO_INDEX; // not found
-}
-
-map_format_e WadIO::LevelFormat(size_t lump_index)
-{
-  // UDMF maps can contain BEHAVIOR or MACROS
-  // check exclusively TEXTMAP
-  if (this->LevelLookupLump(lump_index, "TEXTMAP") != NO_INDEX)
-  {
-    return MapFormat_UDMF;
-  }
-
-  if (this->LevelLookupLump(lump_index, "BEHAVIOR") != NO_INDEX)
-  {
-    return MapFormat_Hexen;
-  }
-
-  if (this->LevelLookupLump(lump_index, "LIGHTS") != NO_INDEX && this->LevelLookupLump(lump_index, "MACROS") != NO_INDEX)
-  {
-    return MapFormat_Doom64;
-  }
-
-  return MapFormat_Doom;
-}
-
-template <typename T>
-std::vector<T> WadIO::ReadLump(size_t index)
-{
-  std::vector<T> lump;
-  if (index >= this->read_header.num_entries)
-  {
-    return lump;
-  }
-  if (fseek(this->read_file, this->read_directory[index].pos, SEEK_SET))
-  {
-    throw std::runtime_error("ERROR: Failed to seek");
-  }
-  size_t size = this->read_directory[index].size / sizeof(T);
-  lump.resize(size);
-  this->SafeRead(lump.data(), size * sizeof(T));
-  return lump;
-}
-
-template <typename T>
-std::vector<T> WadIO::ReadMapLump(level_t &level, const char *name)
-{
-  return ReadLump<T>(this->LevelLookupLump(level.level_header_lump_index, name));
 }
 
 //
@@ -274,35 +353,35 @@ void WadIO::AddToLump(const void *data, size_t len)
 
 WadIO &WadIO::operator<<(uint8_t value)
 {
-  AddToLump(&value, sizeof(uint8_t));
+  AddToLumpZ(&value, sizeof(uint8_t));
   return *this;
 }
 
 WadIO &WadIO::operator<<(uint16_t value)
 {
   value = GetLittleEndian(value);
-  AddToLump(reinterpret_cast<byte *>(&value), sizeof(uint16_t));
+  AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(uint16_t));
   return *this;
 }
 
 WadIO &WadIO::operator<<(uint32_t value)
 {
   value = GetLittleEndian(value);
-  AddToLump(reinterpret_cast<byte *>(&value), sizeof(uint32_t));
+  AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(uint32_t));
   return *this;
 }
 
 WadIO &WadIO::operator<<(int16_t value)
 {
   value = GetLittleEndian(value);
-  AddToLump(reinterpret_cast<byte *>(&value), sizeof(int16_t));
+  AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(int16_t));
   return *this;
 }
 
 WadIO &WadIO::operator<<(fixed_t value)
 {
   value = GetLittleEndian(value);
-  AddToLump(reinterpret_cast<byte *>(&value), sizeof(fixed_t));
+  AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(fixed_t));
   return *this;
 }
 

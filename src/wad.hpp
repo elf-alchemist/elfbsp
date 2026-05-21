@@ -23,6 +23,7 @@
 #pragma once
 
 #include "core.hpp"
+#include <vector>
 
 //------------------------------------------------------------------------
 // WAD STRUCTURES
@@ -67,21 +68,21 @@ struct WadIO
   byte zout_buffer[8192];
 
   // Init/die
-  WadIO(const char *filename);
+  WadIO(std::string in_file, std::string out_file);
   ~WadIO(void);
 
   // Read operations
   void SafeRead(void *buffer, size_t size);
   size_t NumLumps(void) const;
-  size_t LevelCount(void) const;
+  bool IsLevel(size_t k);
+  map_format_t LevelFormat(size_t lump_index);
   const char *LumpName(size_t lump_index) const;
   size_t LevelLastLump(size_t lump_index);
   size_t LevelLookupLump(size_t lump_index, const char *name);
-  map_format_t LevelFormat(size_t lump_index);
   template <typename T>
-  std::vector<T> ReadLump(size_t index);
+  std::vector<T> ReadLump(size_t lump_index);
   template <typename T>
-  std::vector<T> ReadMapLump(level_t &level, const char *name);
+  std::vector<T> ReadMapLump(size_t lump_index, const char *name);
 
   // Write operations
   void SafeWrite(const void *buffer, size_t size);
@@ -103,3 +104,33 @@ struct WadIO
   void AddToLumpZ(const void *data, size_t length);
   void Finish_Zlib(void);
 };
+
+//
+// fuck C++ start
+//
+template <typename T>
+std::vector<T> WadIO::ReadLump(size_t lump_index)
+{
+  std::vector<T> lump;
+  if (lump_index >= this->read_header.num_entries)
+  {
+    return lump;
+  }
+  if (fseek(this->read_file, this->read_directory[lump_index].pos, SEEK_SET))
+  {
+    throw std::runtime_error("ERROR: Failed to seek");
+  }
+  size_t size = this->read_directory[lump_index].size / sizeof(T);
+  lump.resize(size);
+  this->SafeRead(lump.data(), size * sizeof(T));
+  return lump;
+}
+
+template <typename T>
+std::vector<T> WadIO::ReadMapLump(size_t lump_index, const char *name)
+{
+  return ReadLump<T>(this->LevelLookupLump(lump_index, name));
+}
+//
+// fuck C++ end
+//

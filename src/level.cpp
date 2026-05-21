@@ -23,6 +23,7 @@
 
 #include "bsp.hpp"
 #include "core.hpp"
+#include "info.hpp"
 #include "local.hpp"
 #include "parse.hpp"
 
@@ -302,7 +303,7 @@ void FreeIntersections(level_t &level)
 
 /* ----- reading routines ------------------------------ */
 
-void ValidateLinedef(level_t &level, linedef_t *line)
+static void ValidateLinedef(level_t &level, linedef_t *line)
 {
   if (line->right || line->left)
   {
@@ -351,20 +352,40 @@ void ValidateLinedef(level_t &level, linedef_t *line)
   }
 }
 
-static void GetVertices_Doom(WadIO &io, level_t &level)
+static void GetVertices_Integral(WadIO &io, level_t &level)
 {
-  auto lump = io.ReadMapLump<raw_vertex_short_t>(level, "VERTEXES");
+  auto lump = io.ReadMapLump<raw_vertex_short_t>(level.lump, "VERTEXES");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < lump.size(); i++)
+  for (auto &raw : lump)
   {
     vertex_t *vert = NewVertex(level);
-    vert->x = ShortToFloat(GetLittleEndian(lump[i].x));
-    vert->y = ShortToFloat(GetLittleEndian(lump[i].y));
+    vert->x = ShortToFloat(GetLittleEndian(raw.x));
+    vert->y = ShortToFloat(GetLittleEndian(raw.y));
+  }
+
+  level.num_old_vert = level.vertices.size();
+}
+
+static void GetVertices_Fractional(WadIO &io, level_t &level)
+{
+  auto lump = io.ReadMapLump<raw_vertex_fixed_t>(level.lump, "VERTEXES");
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
+  {
+    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
+  }
+
+  for (auto &raw : lump)
+  {
+    vertex_t *vert = NewVertex(level);
+
+    vert->x = static_cast<double>(GetLittleEndian(raw.x) / FRACFACTOR);
+    vert->y = static_cast<double>(GetLittleEndian(raw.y) / FRACFACTOR);
   }
 
   level.num_old_vert = level.vertices.size();
@@ -372,14 +393,14 @@ static void GetVertices_Doom(WadIO &io, level_t &level)
 
 static void GetSectors_Doom(WadIO &io, level_t &level)
 {
-  auto lump = io.ReadMapLump<raw_sector_doom_t>(level, "SECTORS");
+  auto lump = io.ReadMapLump<raw_sector_doom_t>(level.lump, "SECTORS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < lump.size(); i++)
+  for (auto &_ : lump)
   {
     sector_t *sector = NewSector(level);
     sector->effects = FX_Sector_None;
@@ -388,70 +409,69 @@ static void GetSectors_Doom(WadIO &io, level_t &level)
 
 static void GetThings_Doom(WadIO &io, level_t &level)
 {
-  auto lump = io.ReadMapLump<raw_thing_doom_t>(level, "THINGS");
+  auto lump = io.ReadMapLump<raw_thing_doom_t>(level.lump, "THINGS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < lump.size(); i++)
+  for (auto &raw : lump)
   {
     thing_t *thing = NewThing(level);
 
-    thing->x = GetLittleEndian(lump[i].x);
-    thing->y = GetLittleEndian(lump[i].y);
-    thing->type = static_cast<doomednum_t>(GetLittleEndian(lump[i].type));
+    thing->x = GetLittleEndian(raw.x);
+    thing->y = GetLittleEndian(raw.y);
+    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
   }
 }
 
 static void GetSidedefs_Doom(WadIO &io, level_t &level)
 {
-  auto lump = io.ReadMapLump<raw_sidedef_doom_t>(level, "SIDEDEFS");
+  auto lump = io.ReadMapLump<raw_sidedef_doom_t>(level.lump, "SIDEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < lump.size(); i++)
+  for (auto &raw : lump)
   {
     sidedef_t *side = NewSidedef(level);
 
-    side->offset_x = GetLittleEndian(lump[i].x_offset);
-    side->offset_y = GetLittleEndian(lump[i].y_offset);
-    memcpy(side->tex_upper, lump[i].upper_tex, 8);
-    memcpy(side->tex_lower, lump[i].lower_tex, 8);
-    memcpy(side->tex_middle, lump[i].mid_tex, 8);
-    side->sector = level.SafeLookupSector(GetLittleEndian(lump[i].sector), i);
+    side->offset_x = GetLittleEndian(raw.x_offset);
+    side->offset_y = GetLittleEndian(raw.y_offset);
+    memcpy(side->tex_upper, raw.upper_tex, 8);
+    memcpy(side->tex_lower, raw.lower_tex, 8);
+    memcpy(side->tex_middle, raw.mid_tex, 8);
+    side->sector = level.SafeLookupSector(GetLittleEndian(raw.sector), side->index);
   }
 }
 
 static void GetLinedefs_Doom(WadIO &io, level_t &level)
 {
-  auto lump = io.ReadMapLump<raw_linedef_doom_t>(level, "LINEDEFS");
+  auto lump = io.ReadMapLump<raw_linedef_doom_t>(level.lump, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < lump.size(); i++)
+  for (auto &raw : lump)
   {
-
     linedef_t *line = NewLinedef(level);
 
-    line->start = level.SafeLookupVertex(GetLittleEndian(lump[i].start), i);
-    line->end = level.SafeLookupVertex(GetLittleEndian(lump[i].end), i);
-    line->right = level.SafeLookupSidedef(GetLittleEndian(lump[i].right));
-    line->left = level.SafeLookupSidedef(GetLittleEndian(lump[i].left));
-    line->special = GetLittleEndian(lump[i].special);
-    line->tag = GetLittleEndian(lump[i].tag);
+    line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), line->index);
+    line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), line->index);
+    line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
+    line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
+    line->special = GetLittleEndian(raw.special);
+    line->tag = GetLittleEndian(raw.tag);
 
     line->start->is_used = true;
     line->end->is_used = true;
 
-    if (HAS_BIT(GetLittleEndian(lump[i].flags), MLF_TWOSIDED))
+    if (HAS_BIT(GetLittleEndian(raw.flags), MLF_TWOSIDED))
     {
       line->effects |= FX_TwoSided;
     }
@@ -511,46 +531,46 @@ static void GetLinedefs_Doom(WadIO &io, level_t &level)
 
 static void GetThings_Hexen(WadIO &io, level_t &level)
 {
-  auto lump = io.ReadMapLump<raw_thing_hexen_t>(level, "THINGS");
+  auto lump = io.ReadMapLump<raw_thing_hexen_t>(level.lump, "THINGS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < lump.size(); i++)
+  for (auto &raw : lump)
   {
     thing_t *thing = NewThing(level);
 
-    thing->x = GetLittleEndian(lump[i].x);
-    thing->y = GetLittleEndian(lump[i].y);
-    thing->type = static_cast<doomednum_t>(GetLittleEndian(lump[i].type));
+    thing->x = GetLittleEndian(raw.x);
+    thing->y = GetLittleEndian(raw.y);
+    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
   }
 }
 
 static void GetLinedefs_Hexen(WadIO &io, level_t &level)
 {
-  auto lump = io.ReadMapLump<raw_linedef_hexen_t>(level, "LINEDEFS");
+  auto lump = io.ReadMapLump<raw_linedef_hexen_t>(level.lump, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < lump.size(); i++)
+  for (auto &raw : lump)
   {
     linedef_t *line = NewLinedef(level);
 
-    line->start = level.SafeLookupVertex(GetLittleEndian(lump[i].start), i);
-    line->end = level.SafeLookupVertex(GetLittleEndian(lump[i].end), i);
-    line->special = lump[i].special;
-    line->right = level.SafeLookupSidedef(GetLittleEndian(lump[i].right));
-    line->left = level.SafeLookupSidedef(GetLittleEndian(lump[i].left));
+    line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), line->index);
+    line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), line->index);
+    line->special = raw.special;
+    line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
+    line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
 
     line->start->is_used = true;
     line->end->is_used = true;
 
-    if (HAS_BIT(GetLittleEndian(lump[i].flags), MLF_HEXEN_TWOSIDED))
+    if (HAS_BIT(GetLittleEndian(raw.flags), MLF_HEXEN_TWOSIDED))
     {
       line->effects |= FX_TwoSided;
     }
@@ -562,11 +582,11 @@ static void GetLinedefs_Hexen(WadIO &io, level_t &level)
     switch (line->special)
     {
     case BSP_SpecialEffects:
-      if (lump[i].args[0]) line->effects |= FX_NoBlockmap;
-      if (lump[i].args[1]) line->effects |= FX_DoNotSplitSeg;
-      if (lump[i].args[2]) line->effects |= FX_DoNotRenderBack;
-      if (lump[i].args[3]) line->effects |= FX_DoNotRenderFront;
-      if (lump[i].args[4]) line->effects |= FX_NoReject;
+      if (raw.args[0]) line->effects |= FX_NoBlockmap;
+      if (raw.args[1]) line->effects |= FX_DoNotSplitSeg;
+      if (raw.args[2]) line->effects |= FX_DoNotRenderBack;
+      if (raw.args[3]) line->effects |= FX_DoNotRenderFront;
+      if (raw.args[4]) line->effects |= FX_NoReject;
       break;
     default:
       break;
@@ -574,42 +594,22 @@ static void GetLinedefs_Hexen(WadIO &io, level_t &level)
   }
 }
 
-static void GetVertices_Doom64(WadIO &io, level_t &level)
-{
-  auto lump = io.ReadMapLump<raw_vertex_fixed_t>(level, "VERTEXES");
-
-  if (HAS_BIT(config.debug, DEBUG_LOAD))
-  {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
-  }
-
-  for (size_t i = 0; i < lump.size(); i++)
-  {
-    vertex_t *vert = NewVertex(level);
-
-    vert->x = static_cast<double>(GetLittleEndian(lump[i].x) / FRACFACTOR);
-    vert->y = static_cast<double>(GetLittleEndian(lump[i].y) / FRACFACTOR);
-  }
-
-  level.num_old_vert = level.vertices.size();
-}
-
 static void GetSectors_Doom64(WadIO &io, level_t &level)
 {
-  auto lump = io.ReadMapLump<raw_sector_doom64_t>(level, "SECTORS");
+  auto lump = io.ReadMapLump<raw_sector_doom64_t>(level.lump, "SECTORS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < lump.size(); i++)
+  for (auto &raw : lump)
   {
     sector_t *sector = NewSector(level);
 
     if (!config.effects) continue;
 
-    if (GetLittleEndian(lump[i].special) == SS_Doom64_NoReject)
+    if (GetLittleEndian(raw.special) == SS_Doom64_NoReject)
     {
       sector->effects = FX_Sector_NoReject;
     }
@@ -618,48 +618,48 @@ static void GetSectors_Doom64(WadIO &io, level_t &level)
 
 static void GetSidedefs_Doom64(WadIO &io, level_t &level)
 {
-  auto lump = io.ReadMapLump<raw_sidedef_doom64_t>(level, "SIDEDEFS");
+  auto lump = io.ReadMapLump<raw_sidedef_doom64_t>(level.lump, "SIDEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < lump.size(); i++)
+  for (auto &raw : lump)
   {
     sidedef_t *side = NewSidedef(level);
 
-    side->offset_x = GetLittleEndian(lump[i].x_offset);
-    side->offset_y = GetLittleEndian(lump[i].y_offset);
+    side->offset_x = GetLittleEndian(raw.x_offset);
+    side->offset_y = GetLittleEndian(raw.y_offset);
     // We don't care about texture indexes here
-    side->sector = level.SafeLookupSector(GetLittleEndian(lump[i].sector), i);
+    side->sector = level.SafeLookupSector(GetLittleEndian(raw.sector), side->index);
   }
 }
 
 static void GetLinedefs_Doom64(WadIO &io, level_t &level)
 {
-  auto lump = io.ReadMapLump<raw_linedef_doom64_t>(level, "LINEDEFS");
+  auto lump = io.ReadMapLump<raw_linedef_doom64_t>(level.lump, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < lump.size(); i++)
+  for (auto &raw : lump)
   {
     linedef_t *line = NewLinedef(level);
 
-    line->start = level.SafeLookupVertex(GetLittleEndian(lump[i].start), i);
-    line->end = level.SafeLookupVertex(GetLittleEndian(lump[i].end), i);
-    line->special = GetLittleEndian(lump[i].special);
-    line->tag = GetLittleEndian(lump[i].tag);
-    line->right = level.SafeLookupSidedef(GetLittleEndian(lump[i].right));
-    line->left = level.SafeLookupSidedef(GetLittleEndian(lump[i].left));
+    line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), line->index);
+    line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), line->index);
+    line->special = GetLittleEndian(raw.special);
+    line->tag = GetLittleEndian(raw.tag);
+    line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
+    line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
 
     line->start->is_used = true;
     line->end->is_used = true;
 
-    auto flags = GetLittleEndian(lump[i].flags);
+    auto flags = GetLittleEndian(raw.flags);
 
     if (HAS_BIT(flags, MLF_DOOM64_TWOSIDED))
     {
@@ -683,20 +683,20 @@ static void GetLinedefs_Doom64(WadIO &io, level_t &level)
 
 static void GetThings_Doom64(WadIO &io, level_t &level)
 {
-  auto lump = io.ReadMapLump<raw_thing_doom64_t>(level, "LINEDEFS");
+  auto lump = io.ReadMapLump<raw_thing_doom64_t>(level.lump, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
   }
 
-  for (size_t i = 0; i < lump.size(); i++)
+  for (auto &raw : lump)
   {
     thing_t *thing = NewThing(level);
 
-    thing->x = GetLittleEndian(lump[i].x);
-    thing->y = GetLittleEndian(lump[i].y);
-    thing->type = static_cast<doomednum_t>(GetLittleEndian(lump[i].type));
+    thing->x = GetLittleEndian(raw.x);
+    thing->y = GetLittleEndian(raw.y);
+    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
   }
 }
 
@@ -1004,7 +1004,7 @@ static void ParseUDMF_Pass(level_t &level, const std::string &data, int pass)
 
 void ParseUDMF(WadIO &io, level_t &level)
 {
-  auto lump = io.ReadMapLump<char>(level, "TEXTMAP");
+  auto lump = io.ReadMapLump<char>(level.lump, "TEXTMAP");
 
   // load the lump into this string
   auto data = std::string(lump.begin(), lump.end());
@@ -1054,7 +1054,7 @@ static void CheckBinaryFormatLimits(WadIO &io, level_t &level)
   }
 }
 
-bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
+static bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
 {
   bsp_format_t level_type = ctx.bsp_format;
 
@@ -1085,7 +1085,7 @@ bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
 void LoadLevel(WadIO &io, level_t &level)
 {
   auto mark = Benchmarker(__func__);
-  auto LEV = io.LumpName(level.level_header_lump_index);
+  auto LEV = io.LumpName(level.lump);
 
   level.overflows = false;
 
@@ -1097,7 +1097,7 @@ void LoadLevel(WadIO &io, level_t &level)
   switch (level.map_format)
   {
   case MapFormat_Doom:
-    GetVertices_Doom(io, level);
+    GetVertices_Integral(io, level);
     GetSectors_Doom(io, level);
     GetSidedefs_Doom(io, level);
     GetLinedefs_Doom(io, level);
@@ -1105,7 +1105,7 @@ void LoadLevel(WadIO &io, level_t &level)
     PruneVerticesAtEnd(level);
     break;
   case MapFormat_Hexen:
-    GetVertices_Doom(io, level);
+    GetVertices_Integral(io, level);
     GetSectors_Doom(io, level);
     GetSidedefs_Doom(io, level);
     GetLinedefs_Hexen(io, level);
@@ -1113,7 +1113,7 @@ void LoadLevel(WadIO &io, level_t &level)
     PruneVerticesAtEnd(level);
     break;
   case MapFormat_Doom64:
-    GetVertices_Doom64(io, level);
+    GetVertices_Fractional(io, level);
     GetSectors_Doom64(io, level);
     GetSidedefs_Doom64(io, level);
     GetLinedefs_Doom64(io, level);
@@ -1151,9 +1151,7 @@ void LoadLevel(WadIO &io, level_t &level)
   }
 }
 
-//
-// INSERT OUTPUT HERE
-//
+// TODO: map output goes here
 
 //------------------------------------------------------------------------
 // MAIN STUFF
@@ -1185,7 +1183,7 @@ build_result_e BuildLevel(WadIO &io, level_t &level, const char *filename)
     if (config.analysis)
     {
       PrintLine(LOG_NORMAL, "[%s] Starting analysis loop for %s", __func__, level.GetLevelName(io));
-      GenerateAnalysis(level, filename);
+      GenerateAnalysis(io, level, filename);
     }
 
     bbox_t dummy;
@@ -1216,10 +1214,10 @@ build_result_e BuildLevel(WadIO &io, level_t &level, const char *filename)
   case MapFormat_Doom:
   case MapFormat_Hexen:
   case MapFormat_Doom64:
-    ret = SaveLevelBinaryFormat(io, level);
+    // ret = SaveLevelBinaryFormat(io, level);
     break;
   case MapFormat_UDMF:
-    ret = SaveLevelTextMap(io, level);
+    // ret = SaveLevelTextMap(io, level);
     break;
   default:
     break;

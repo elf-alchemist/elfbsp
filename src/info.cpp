@@ -28,6 +28,14 @@ static std::vector<std::string> analysis_csv;
 
 //------------------------------------------------------------------------
 
+static void FileClear(const char *filename)
+{
+  if (FILE *fp = fopen(filename, "w"))
+  {
+    fclose(fp);
+  }
+}
+
 void SetupAnalysisFile(const char *filepath)
 {
   auto csv_path = std::string(filepath);
@@ -138,7 +146,6 @@ void GenerateAnalysis(WadIO &io, level_t &level, const char *filename)
     analysis_seg = CreateSegs(level);
     BuildNodes(level, analysis_seg, 0, &dummy, &analysis_node, &analysis_sub, static_cast<double>(split_cost), is_fast, true);
 
-    // TODO: pass level data by context instead of globally :v
     data.vertex = level.num_old_vert;
     data.lines = level.linedefs.size();
     data.sides = level.sidedefs.size();

@@ -140,7 +140,7 @@ void PutVertices_Fractional(WadIO &io, level_t &level, bool only_old)
 // Vanilla format
 //
 
-void PutSegs_Vanilla(WadIO &io, level_t &level)
+void PutSegs_DoomBSP(WadIO &io, level_t &level)
 {
   io.StartWritingLump("SEGS");
 
@@ -157,18 +157,18 @@ void PutSegs_Vanilla(WadIO &io, level_t &level)
     raw.flip = GetLittleEndian(seg->side);
     raw.dist = GetLittleEndian(VanillaSegDist(seg));
 
+    io.AddToLump(&raw, sizeof(raw));
+
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
       PrintLine(LOG_DEBUG, "[%s] %zu  Vert %04X->%04X  Line %04X %s  Angle %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__,
                 seg->index, GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef),
                 seg->side ? "L" : "R", GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
     }
-
-    io.AddToLump(&raw, sizeof(raw));
   }
 }
 
-void PutSubsecs_Vanilla(WadIO &io, level_t &level)
+void PutSubsecs_DoomBSP(WadIO &io, level_t &level)
 {
   io.StartWritingLump("SSECTORS");
 
@@ -257,7 +257,7 @@ static void PutOneNode_Vanilla(WadIO &io, node_t *node, size_t &node_cur_index)
   }
 }
 
-void PutNodes_Vanilla(WadIO &io, level_t &level)
+void PutNodes_DoomBSP(WadIO &io, level_t &level)
 {
   size_t node_cur_index = 0;
   io.StartWritingLump("NODES");
@@ -273,7 +273,7 @@ void PutNodes_Vanilla(WadIO &io, level_t &level)
   }
 }
 
-void PutLeafs_Vanilla(WadIO &io, level_t &level)
+void PutLeafs_DoomBSP(WadIO &io, level_t &level)
 {
   io.StartWritingLump("LEAFS");
   uint16_t actual_seg_index = 0;
@@ -282,11 +282,13 @@ void PutLeafs_Vanilla(WadIO &io, level_t &level)
   {
     subsec_t *subsec = level.subsecs[i];
     seg_t *seg = subsec->seg_list;
-    size_t seg_count = subsec->seg_count;
+    uint16_t seg_count = IndexToShort(subsec->seg_count);
+
+    io.AddToLump(&seg_count, sizeof(seg_count));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] leaf references: %zu", __func__, i, seg_count);
+      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] leaf references: %hu", __func__, i, seg_count);
     }
 
     for (size_t j = 0; j < seg_count; j++)
@@ -465,11 +467,13 @@ void PutLeafs_DeePBSPV4(WadIO &io, level_t &level)
   {
     subsec_t *subsec = level.subsecs[i];
     seg_t *seg = subsec->seg_list;
-    size_t seg_count = subsec->seg_count;
+    uint32_t seg_count = IndexToInt(subsec->seg_count);
+
+    io.AddToLump(&seg_count, sizeof(seg_count));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] leaf references: %zu", __func__, i, seg_count);
+      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] leaf references: %u", __func__, i, seg_count);
     }
 
     for (size_t j = 0; j < seg_count; j++)

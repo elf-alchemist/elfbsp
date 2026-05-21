@@ -202,10 +202,10 @@ void SortSegs(level_t &level);
 void PutVertices_Integral(WadIO &io, level_t &level, bool only_old);
 void PutVertices_Fractional(WadIO &io, level_t &level, bool only_old);
 
-void PutSegs_Vanilla(WadIO &io, level_t &level);
-void PutSubsecs_Vanilla(WadIO &io, level_t &level);
-void PutNodes_Vanilla(WadIO &io, level_t &level);
-void PutLeafs_Vanilla(WadIO &io, level_t &level);
+void PutSegs_DoomBSP(WadIO &io, level_t &level);
+void PutSubsecs_DoomBSP(WadIO &io, level_t &level);
+void PutNodes_DoomBSP(WadIO &io, level_t &level);
+void PutLeafs_DoomBSP(WadIO &io, level_t &level);
 
 void PutSegs_DeePBSPV4(WadIO &io, level_t &level);
 void PutSubsecs_DeePBSPV4(WadIO &io, level_t &level);

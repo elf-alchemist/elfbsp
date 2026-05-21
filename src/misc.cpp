@@ -323,6 +323,7 @@ vertex_t *NewVertexFromSplitSeg(level_t &level, seg_t *seg, double x, double y)
 
   vert->is_new = true;
   vert->is_used = true;
+  level.num_new_vert++;
 
   // compute wall-tip info
   if (seg->linedef == nullptr)

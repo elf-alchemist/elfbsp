@@ -392,7 +392,7 @@ using level_t = struct level_t
   size_t num_old_vert = 0;
   size_t num_new_vert = 0;
   size_t num_real_lines = 0;
-  size_t level_header_lump_index = NO_INDEX;
+  size_t lump = NO_INDEX;
   bool overflows = false;
 
   std::vector<vertex_t *> vertices;
@@ -429,7 +429,7 @@ using level_t = struct level_t
 
   inline const char *GetLevelName(WadIO &io)
   {
-    return io.read_directory[level_header_lump_index].name;
+    return io.read_directory[lump].name;
   }
 
   vertex_t *SafeLookupVertex(size_t num, size_t num_line)
