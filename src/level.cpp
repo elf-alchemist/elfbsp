@@ -1268,6 +1268,9 @@ build_result_t SaveLevelTextMap(WadIO &io, level_t &level)
   size_t lump = level.lump;
   io.CopyLump(lump);
 
+  // duh.
+  io.LevelCopyLump(lump, "TEXTMAP");
+
   // Always use ZGL3 for UDMF maps
   PutTree_ZDBSP(io, level, "ZNODES", BSP_XGL3, true);
   PutReject(io, level);
