@@ -1190,7 +1190,7 @@ build_result_t SaveLevelBinary(WadIO &io, level_t &level)
   if (bsp_format == BSP_DoomBSP)
   {
     NormaliseBspTree(level);
-    RoundOffBspTree(level);
+    if (!do_fractional) RoundOffBspTree(level);
     SortSegs(level);
 
     PutVertices(io, level, do_fractional, do_new_vert);
@@ -1201,7 +1201,7 @@ build_result_t SaveLevelBinary(WadIO &io, level_t &level)
   else if (bsp_format == BSP_DeePBSPV4)
   {
     NormaliseBspTree(level);
-    RoundOffBspTree(level);
+    if (!do_fractional) RoundOffBspTree(level);
     SortSegs(level);
 
     PutVertices(io, level, do_fractional, do_new_vert);
