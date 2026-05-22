@@ -85,13 +85,14 @@ struct WadIO
   template <typename T>
   std::vector<T> ReadLump(size_t lump_index);
   template <typename T>
-  std::vector<T> ReadMapLump(size_t lump_index, std::string_view name);
+  std::vector<T> ReadLevelLump(size_t lump_index, std::string_view name);
 
   // Write operations
   void SafeWrite(const void *buffer, size_t size);
   void CreateEmptyLump(std::string_view name);
   void WriteLump(std::string_view name, const void *data, size_t size);
   void CopyLump(size_t lump);
+  void LevelCopyLump(size_t lump, std::string_view name);
 
   // Partial writing
   void StartWritingLump(std::string_view name);
@@ -130,7 +131,7 @@ std::vector<T> WadIO::ReadLump(size_t lump_index)
 }
 
 template <typename T>
-std::vector<T> WadIO::ReadMapLump(size_t lump_index, std::string_view name)
+std::vector<T> WadIO::ReadLevelLump(size_t lump_index, std::string_view name)
 {
   return ReadLump<T>(this->LevelLookupLump(lump_index, name));
 }

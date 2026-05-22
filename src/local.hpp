@@ -236,11 +236,6 @@ struct seg_t
   }
 };
 
-// compute the seg private info (psx/y, pex/y, pdx/y, etc).
-void Recompute(seg_t *seg);
-
-int PointOnLineSide(seg_t *seg, double x, double y);
-
 // a seg with this index is removed by SortSegs().
 // it must be a very high value.
 static constexpr uint32_t SEG_IS_GARBAGE = (1 << 29);
@@ -261,18 +256,6 @@ struct subsec_t
   double mid_x;
   double mid_y;
 };
-
-void AddToTail(subsec_t *subsec);
-
-void DetermineMiddle(subsec_t *subsec);
-void ClockwiseOrder(subsec_t *subsec);
-void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index);
-
-void RoundOffSubsector(level_t &level, subsec_t *subsec);
-void Normalise(subsec_t *subsec);
-
-void SanityCheckClosed(subsec_t *subsec);
-void SanityCheckHasRealSeg(subsec_t *subsec);
 
 struct bbox_t
 {
@@ -307,8 +290,6 @@ struct node_t
   size_t index;
 };
 
-void SetPartition(node_t *node, const seg_t *part);
-
 struct quadtree_c
 {
   // NOTE: not a real quadtree, division is always binary.
@@ -340,11 +321,6 @@ struct quadtree_c
     return (real_num + mini_num) == 0;
   }
 };
-
-void AddSeg(quadtree_c *quadtree, seg_t *seg);
-void AddList(quadtree_c *quadtree, seg_t *list);
-
-void ConvertToList(quadtree_c *quadtree, seg_t **__list);
 
 // check relationship between this box and the partition line.
 // returns -1 or +1 if box is definitively on a particular side,
@@ -491,6 +467,10 @@ void FreeIntersections(level_t &level);
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
 //------------------------------------------------------------------------
+
+//
+// TODO: some of these are defined in misc, but only used elsewhere. static?
+//
 
 // detection routines
 void DetectOverlappingVertices(level_t &level);

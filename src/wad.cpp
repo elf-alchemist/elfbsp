@@ -338,8 +338,13 @@ void WadIO::CopyLump(size_t index)
   auto lump = this->ReadLump<byte>(index);
   if (index < this->NumLumps())
   {
-    WriteLump(this->LumpName(index), lump.data(), lump.size());
+    this->WriteLump(this->LumpName(index), lump.data(), lump.size());
   }
+}
+
+void WadIO::LevelCopyLump(size_t lump, std::string_view name)
+{
+  this->CopyLump(this->LevelLookupLump(lump, name));
 }
 
 //
@@ -348,7 +353,7 @@ void WadIO::CopyLump(size_t index)
 
 void WadIO::StartWritingLump(std::string_view name)
 {
-  CreateEmptyLump(name);
+  this->CreateEmptyLump(name);
 }
 
 void WadIO::AddToLump(const void *data, size_t len)
@@ -360,35 +365,35 @@ void WadIO::AddToLump(const void *data, size_t len)
 
 WadIO &WadIO::operator<<(uint8_t value)
 {
-  AddToLumpZ(&value, sizeof(uint8_t));
+  this->AddToLumpZ(&value, sizeof(uint8_t));
   return *this;
 }
 
 WadIO &WadIO::operator<<(uint16_t value)
 {
   value = GetLittleEndian(value);
-  AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(uint16_t));
+  this->AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(uint16_t));
   return *this;
 }
 
 WadIO &WadIO::operator<<(uint32_t value)
 {
   value = GetLittleEndian(value);
-  AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(uint32_t));
+  this->AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(uint32_t));
   return *this;
 }
 
 WadIO &WadIO::operator<<(int16_t value)
 {
   value = GetLittleEndian(value);
-  AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(int16_t));
+  this->AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(int16_t));
   return *this;
 }
 
 WadIO &WadIO::operator<<(fixed_t value)
 {
   value = GetLittleEndian(value);
-  AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(fixed_t));
+  this->AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(fixed_t));
   return *this;
 }
 
