@@ -1,7 +1,6 @@
 # Command Line Interface
 
 ELFBSP is a command-line tool.
-It can handle multiple wad files, and while it modifies each file in-place, there is an option to backup each file first.
 The output to the terminal is fairly terse, but greater verbosity can be enabled.
 Generally all the maps in a wad will processed, but this can be limited to a specific set.
 
@@ -39,11 +38,6 @@ elfbsp example.wad --map MAP04,MAP22-MAP25 # or you may combine both
 #### `-v --verbose`
 Produces more verbose output to the terminal.
 Some warnings which are normally hidden (except for a final tally) will be shown when enabled.
-
-#### `-b --backup`
-Backs up each input file before processing it.
-The backup files will have the ".bak" extension (replacing the ".wad" extension).
-If the backup file already exists, it will be silently overwritten.
 
 #### `-f --fast`
 Enables a faster method for selecting partition lines.
@@ -103,7 +97,7 @@ Generates CSV files containing multiple builds of the input maps, used for data 
 #### `-o --output  FILE`
 This option is provided *only* for compatibility with existing node builders.
 It causes the input file to be copied to the specified file, and that file is the one processed.
-This option *cannot* be used with multiple input files, or with the --backup option.
+This option *cannot* be used with multiple input files.
 
 #### `-h --help`
 Displays a brief help screen, then exits.

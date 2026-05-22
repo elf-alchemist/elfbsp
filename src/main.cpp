@@ -22,18 +22,21 @@
 //------------------------------------------------------------------------------
 
 #include "core.hpp"
+#include "info.hpp"
 #include "local.hpp"
+#include "wad.hpp"
 
 #include <cstring>
 #include <string>
+#include <string_view>
 #include <vector>
 
 static bool opt_help = false;
 static bool opt_version = false;
 
-static std::string opt_output;
+static std::string_view opt_output;
 
-static std::vector<const char *> wad_list;
+static std::vector<std::string> wad_list;
 
 static size_t total_failed_files = 0;
 static size_t total_empty_files = 0;
@@ -52,19 +55,35 @@ buildinfo_t config;
 
 //------------------------------------------------------------------------
 
-bool CheckMapInRange(const map_range_t *range, const char *name)
+//------------------------------------------------------------------------
+// FILE MANAGEMENT
+//------------------------------------------------------------------------
+
+static bool FileExists(std::string filename)
 {
-  if (strlen(name) != range->low.size())
+
+  if (FILE *fp = fopen(filename.c_str(), "rb"))
+  {
+    fclose(fp);
+    return true;
+  }
+
+  return false;
+}
+
+static bool CheckMapInRange(const map_range_t *range, std::string name)
+{
+  if (name.size() != range->low.size())
   {
     return false;
   }
 
-  if (strcmp(name, range->low.c_str()) < 0)
+  if (name < range->low)
   {
     return false;
   }
 
-  if (strcmp(name, range->high.c_str()) > 0)
+  if (name > range->high)
   {
     return false;
   }
@@ -72,7 +91,7 @@ bool CheckMapInRange(const map_range_t *range, const char *name)
   return true;
 }
 
-bool CheckMapInMapList(const char *name)
+static bool CheckMapInMapList(std::string name)
 {
   // when --map is not used, allow everything
   if (map_list.empty())
@@ -91,163 +110,104 @@ bool CheckMapInMapList(const char *name)
   return false;
 }
 
-static void BuildFile(const char *filename)
+static void VisitFile(std::string_view filename)
 {
-  config.total_warnings = 0;
+  auto mark = Benchmarker(__func__);
+  auto in_file = std::string(filename);
+  auto out_file = std::string();
 
-  const size_t num_levels = LevelsInWad();
-
-  if (num_levels == 0)
-  {
-    PrintLine(LOG_NORMAL, "No levels in wad");
-    total_empty_files += 1;
-    return;
-  }
-
-  size_t visited = 0;
-  size_t failures = 0;
-
-  build_result_e res = BUILD_OK;
-
-  // loop over each level in the wad
-  for (size_t n = 0; n < num_levels; n++)
-  {
-    // IMPORTANT: always ensure a valid map
-    level_t level;
-    level.level_num = n;
-    level.level_header_lump_index = cur_wad->LevelHeader(level.level_num);
-    level.map_format = cur_wad->LevelFormat(level.level_num);
-
-    if (!CheckMapInMapList(level.GetLevelName()))
-    {
-      continue;
-    }
-
-    visited += 1;
-
-    res = BuildLevel(level, filename);
-
-    // handle a failed map (due to lump overflow)
-    if (res == BUILD_LumpOverflow)
-    {
-      res = BUILD_OK;
-      failures += 1;
-      continue;
-    }
-
-    if (res != BUILD_OK)
-    {
-      break;
-    }
-
-    total_built_maps += 1;
-  }
-
-  if (visited == 0)
-  {
-    PrintLine(LOG_NORMAL, "No matching levels");
-    total_empty_files += 1;
-    return;
-  }
-
-  total_failed_maps += failures;
-
-  if (failures > 0)
-  {
-    PrintLine(LOG_NORMAL, "Failed maps: %zu (out of %zu)", failures, visited);
-
-    // allow building other files
-    total_failed_files += 1;
-  }
-
-  PrintLine(LOG_NORMAL, "Serious warnings: %zu", config.total_warnings);
-}
-
-void ValidateInputFilename(const char *filename)
-{
-  // NOTE: these checks are case-insensitive
-
-  // files with ".bak" extension cannot be backed up, so refuse them
-  if (MatchExtension(filename, "bak"))
-  {
-    PrintLine(LOG_ERROR, "ERROR: cannot process a backup file: %s", filename);
-  }
-
-  // we do not support packages
-  if (MatchExtension(filename, "pak") || MatchExtension(filename, "pk2") || MatchExtension(filename, "pk3")
-      || MatchExtension(filename, "pk4") || MatchExtension(filename, "pk7") || MatchExtension(filename, "epk")
-      || MatchExtension(filename, "pack") || MatchExtension(filename, "zip") || MatchExtension(filename, "rar"))
-  {
-    PrintLine(LOG_ERROR, "ERROR: package files (like PK3) are not supported: %s", filename);
-  }
-
-  // reject anything that isn't a WAD, or a UDB temp file
-  if (!MatchExtension(filename, "wad") && !MatchExtension(filename, "tmp"))
-  {
-    PrintLine(LOG_ERROR, "ERROR: not a wad file: %s", filename);
-  }
-}
-
-void BackupFile(const char *filename)
-{
-  std::string dest_name = filename;
-
-  // replace file extension (if any) with .bak
-
-  size_t ext_pos = FindExtension(filename);
-  if (ext_pos > 0)
-  {
-    dest_name.resize(ext_pos);
-  }
-
-  dest_name += ".bak";
-
-  if (!FileCopy(filename, dest_name.c_str()))
-  {
-    PrintLine(LOG_ERROR, "ERROR: failed to create backup: %s", dest_name.c_str());
-  }
-
-  PrintLine(LOG_NORMAL, "Created backup: %s", dest_name.c_str());
-}
-
-void VisitFile(const char *filename)
-{
   // handle the -o option
-  if (!opt_output.empty())
+  // by this point, we are guaranteed to have an opt_output that is different than wad_list[0]
+  bool is_same_file = false;
+  if (opt_output.empty())
   {
-    if (!FileCopy(filename, opt_output.c_str()))
-    {
-      PrintLine(LOG_ERROR, "ERROR: failed to create output file: %s", opt_output.c_str());
-    }
-
-    PrintLine(LOG_NORMAL, "Copied input file: %s", filename);
-
-    filename = opt_output.c_str();
+    is_same_file = true;
+    out_file = in_file + ".x";
   }
-
-  if (config.backup)
+  else
   {
-    BackupFile(filename);
+    is_same_file = false;
+    out_file = opt_output;
   }
 
   if (config.analysis)
   {
-    SetupAnalysisFile(filename);
+    SetupAnalysisFile(in_file);
   }
 
-  PrintLine(LOG_NORMAL, "Building %s", filename);
+  PrintLine(LOG_NORMAL, "Building %s", in_file.c_str());
+  {
+    config.total_warnings = 0;
+    auto wad = WadIO(in_file, out_file);
+    size_t current = 0;
+    size_t max = wad.NumLumps();
 
-  // this will fatal error if it fails
-  OpenWad(filename);
+    size_t levels_visited = 0;
+    size_t levels_failed = 0;
 
-  BuildFile(filename);
+    while (current < max)
+    {
+      if (wad.IsLevel(current) && CheckMapInMapList(wad.LumpName(current)))
+      {
+        level_t level;
+        level.lump = current;
+        level.map_format = wad.LevelFormat(current);
 
-  CloseWad();
+        levels_visited += 1;
+        auto result = BuildLevel(wad, level, in_file);
+
+        // handle a failed map (due to lump overflow)
+        if (result == BUILD_LumpOverflow)
+        {
+          levels_failed += 1;
+        }
+        else
+        {
+          total_built_maps += 1;
+        }
+
+        current = wad.LevelLastLump(current) + 1;
+      }
+      // TODO: process glbsp
+      else
+      {
+        wad.CopyLump(current);
+        current++;
+      }
+    }
+
+    if (levels_visited == 0)
+    {
+      PrintLine(LOG_NORMAL, "No matching levels found");
+      total_empty_files += 1;
+    }
+
+    total_failed_maps += levels_failed;
+
+    if (levels_failed > 0)
+    {
+      PrintLine(LOG_NORMAL, "Failed maps: %zu (out of %zu)", levels_failed, levels_visited);
+
+      // allow building other files
+      total_failed_files += 1;
+    }
+
+    PrintLine(LOG_NORMAL, "Serious warnings: %zu", config.total_warnings);
+  }
+
+  if (is_same_file)
+  {
+    remove(in_file.c_str());
+    if (rename(out_file.c_str(), in_file.c_str()))
+    {
+      throw std::runtime_error("ERROR: Failed to rename output file (" + out_file + ") to input file (" + in_file + ")");
+    }
+  }
 }
 
 // ----- user information -----------------------------
 
-bool ValidateMapName(char *name)
+static bool ValidateMapName(char *name)
 {
   if (strlen(name) < 2 || strlen(name) > 8)
   {
@@ -276,7 +236,7 @@ bool ValidateMapName(char *name)
   return true;
 }
 
-void ParseMapRange(char *tok)
+static void ParseMapRange(char *tok)
 {
   char *low = tok;
   char *high = tok;
@@ -331,7 +291,7 @@ void ParseMapRange(char *tok)
   map_list.push_back(range);
 }
 
-void ParseMapList(const char *arg)
+static void ParseMapList(const char *arg)
 {
   while (*arg != 0)
   {
@@ -365,7 +325,7 @@ void ParseMapList(const char *arg)
   }
 }
 
-void ParseShortArgument(const char *arg)
+static void ParseShortArgument(const char *arg)
 {
   // skip the leading '-'
   arg++;
@@ -385,9 +345,6 @@ void ParseShortArgument(const char *arg)
       continue;
     case 'v':
       config.verbose = true;
-      continue;
-    case 'b':
-      config.backup = true;
       continue;
     case 'f':
       config.fast = true;
@@ -437,61 +394,61 @@ void ParseShortArgument(const char *arg)
   }
 }
 
-bool ProcessDebugParam(const char *param, uint32_t &debug)
+static bool ProcessDebugParam(std::string param, uint32_t &debug)
 {
-  if (strcmp(param, "--debug-blockmap") == 0)
+  if (param == "--debug-blockmap")
   {
     debug |= DEBUG_BLOCKMAP;
   }
-  else if (strcmp(param, "--debug-reject") == 0)
+  else if (param == "--debug-reject")
   {
     debug |= DEBUG_REJECT;
   }
-  else if (strcmp(param, "--debug-load") == 0)
+  else if (param == "--debug-load")
   {
     debug |= DEBUG_LOAD;
   }
-  else if (strcmp(param, "--debug-bsp") == 0)
+  else if (param == "--debug-bsp")
   {
     debug |= DEBUG_BSP;
   }
-  else if (strcmp(param, "--debug-walltips") == 0)
+  else if (param == "--debug-walltips")
   {
     debug |= DEBUG_WALLTIPS;
   }
-  else if (strcmp(param, "--debug-polyobj") == 0)
+  else if (param == "--debug-polyobj")
   {
     debug |= DEBUG_POLYOBJ;
   }
-  else if (strcmp(param, "--debug-overlaps") == 0)
+  else if (param == "--debug-overlaps")
   {
     debug |= DEBUG_OVERLAPS;
   }
-  else if (strcmp(param, "--debug-picknode") == 0)
+  else if (param == "--debug-picknode")
   {
     debug |= DEBUG_PICKNODE;
   }
-  else if (strcmp(param, "--debug-split") == 0)
+  else if (param == "--debug-split")
   {
     debug |= DEBUG_SPLIT;
   }
-  else if (strcmp(param, "--debug-cutlist") == 0)
+  else if (param == "--debug-cutlist")
   {
     debug |= DEBUG_CUTLIST;
   }
-  else if (strcmp(param, "--debug-builder") == 0)
+  else if (param == "--debug-builder")
   {
     debug |= DEBUG_BUILDER;
   }
-  else if (strcmp(param, "--debug-sorter") == 0)
+  else if (param == "--debug-sorter")
   {
     debug |= DEBUG_SORTER;
   }
-  else if (strcmp(param, "--debug-subsec") == 0)
+  else if (param == "--debug-subsec")
   {
     debug |= DEBUG_SUBSEC;
   }
-  else if (strcmp(param, "--debug-wad") == 0)
+  else if (param == "--debug-wad")
   {
     debug |= DEBUG_WAD;
   }
@@ -499,43 +456,39 @@ bool ProcessDebugParam(const char *param, uint32_t &debug)
   return debug != 0;
 }
 
-int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv[])
+static int32_t ParseLongArgument(std::string name, const int32_t argc, const char *argv[])
 {
   int32_t used = 0;
 
-  if (strcmp(name, "--help") == 0)
+  if (name == "--help")
   {
     opt_help = true;
   }
-  else if (strcmp(name, "--version") == 0)
+  else if (name == "--version")
   {
     opt_version = true;
   }
-  else if (strcmp(name, "--analysis") == 0)
+  else if (name == "--analysis")
   {
     config.analysis = true;
   }
-  else if (strcmp(name, "--verbose") == 0)
+  else if (name == "--verbose")
   {
     config.verbose = true;
   }
-  else if (strcmp(name, "--backup") == 0 || strcmp(name, "--backups") == 0)
-  {
-    config.backup = true;
-  }
-  else if (strcmp(name, "--fast") == 0)
+  else if (name == "--fast")
   {
     config.fast = true;
   }
-  else if (strcmp(name, "--no-effects") == 0)
+  else if (name == "--no-effects")
   {
     config.effects = false;
   }
-  else if (strcmp(name, "--compress") == 0)
+  else if (name == "--compress")
   {
     config.compress = true;
   }
-  else if (strcmp(name, "--map") == 0 || strcmp(name, "--maps") == 0)
+  else if (name == "--map" || name == "--maps")
   {
     if (argc < 1 || argv[0][0] == '-')
     {
@@ -546,7 +499,7 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
 
     used = 1;
   }
-  else if (strcmp(name, "--type") == 0)
+  else if (name == "--type")
   {
     if (argc < 1 || !isdigit(argv[0][0]))
     {
@@ -563,7 +516,7 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
     config.bsp_format = static_cast<bsp_format_t>(val);
     used = 1;
   }
-  else if (strcmp(name, "--bmap") == 0)
+  else if (name == "--bmap")
   {
     if (argc < 1 || !isdigit(argv[0][0]))
     {
@@ -580,7 +533,7 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
     config.bmap_format = static_cast<bmap_format_t>(val);
     used = 1;
   }
-  else if (strcmp(name, "--cost") == 0)
+  else if (name == "--cost")
   {
     if (argc < 1 || !isdigit(argv[0][0]))
     {
@@ -597,14 +550,14 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
     config.split_cost = val;
     used = 1;
   }
-  else if (strcmp(name, "--polyobj") == 0)
+  else if (name == "--polyobj")
   {
     config.polyobj.anchor = Hexen_PolyObj_Anchor;
     config.polyobj.spawn = Hexen_PolyObj_Spawn;
     config.polyobj.spawn_crush = Hexen_PolyObj_SpawnCrush;
     config.polyobj.spawn_hurt = Hexen_PolyObj_SpawnHurt;
   }
-  else if (strcmp(name, "--output") == 0)
+  else if (name == "--output")
   {
     // this option is *only* for compatibility
 
@@ -621,16 +574,16 @@ int32_t ParseLongArgument(const char *name, const int32_t argc, const char *argv
     opt_output = argv[0];
     used = 1;
   }
-  else if (strncmp(name, "--debug-", 8) == 0)
+  else if (name.starts_with("--debug-"))
   {
-    if (!ProcessDebugParam(name, config.debug))
+    if (!ProcessDebugParam(name.c_str(), config.debug))
     {
-      PrintLine(LOG_ERROR, "ERROR: unknown debug parameter '%s'", name);
+      PrintLine(LOG_ERROR, "ERROR: unknown debug parameter '%s'", name.c_str());
     }
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: unknown long option: '%s'", name);
+    PrintLine(LOG_ERROR, "ERROR: unknown long option: '%s'", name.c_str());
   }
 
   return used;
@@ -646,19 +599,19 @@ void ParseCommandLine(int32_t argc, const char *argv[])
 
   while (argc > 0)
   {
-    const char *arg = *argv++;
+    std::string arg = *argv++;
     argc--;
 
     if constexpr (MACOS)
     {
       // ignore Mac OS X garbage
-      if (strncmp(arg, "-psn_", 5) == 0)
+      if (strncmp(arg.data(), "-psn_", 5) == 0)
       {
         continue;
       }
     }
 
-    if (strlen(arg) == 0)
+    if (arg.empty())
     {
       continue;
     }
@@ -670,38 +623,38 @@ void ParseCommandLine(int32_t argc, const char *argv[])
       continue;
     }
 
-    if (strcmp(arg, "-") == 0)
+    if (arg == "-")
     {
       PrintLine(LOG_ERROR, "ERROR: illegal option '-'");
     }
 
-    if (strcmp(arg, "--") == 0)
+    if (arg == "--")
     {
       rest_are_files = true;
       continue;
     }
 
     // handle short args which are isolate and require a value
-    if (strcmp(arg, "-t") == 0)
+    if (arg == "-t")
     {
       arg = "--type";
     }
-    if (strcmp(arg, "-c") == 0)
+    if (arg == "-c")
     {
       arg = "--cost";
     }
-    if (strcmp(arg, "-m") == 0)
+    if (arg == "-m")
     {
       arg = "--map";
     }
-    if (strcmp(arg, "-o") == 0)
+    if (arg == "-o")
     {
       arg = "--output";
     }
 
     if (arg[1] != '-')
     {
-      ParseShortArgument(arg);
+      ParseShortArgument(arg.c_str());
       continue;
     }
 
@@ -741,30 +694,23 @@ int32_t main(const int32_t argc, const char *argv[])
 
   if (!opt_output.empty())
   {
-    if (config.backup)
-    {
-      PrintLine(LOG_ERROR, "ERROR: cannot use --backup with --output");
-    }
-
     if (total_files > 1)
     {
       PrintLine(LOG_ERROR, "ERROR: cannot use multiple input files with --output");
     }
 
-    if (StringCaseCmp(wad_list[0], opt_output.c_str()) == 0)
+    if (wad_list[0] == opt_output)
     {
       PrintLine(LOG_ERROR, "ERROR: input and output files are the same");
     }
   }
 
   // validate all filenames before processing any of them
-  for (const auto filename : wad_list)
+  for (const auto &filename : wad_list)
   {
-    ValidateInputFilename(filename);
-
     if (!FileExists(filename))
     {
-      PrintLine(LOG_ERROR, "ERROR: no such file: %s", filename);
+      throw std::runtime_error("ERROR: no such file: " + filename);
     }
   }
 

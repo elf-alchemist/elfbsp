@@ -85,7 +85,7 @@ struct eval_info_t
 //
 // Fill in the fields 'angle', 'len', 'pdx', 'pdy', etc...
 //
-void Recompute(seg_t *seg)
+static void Recompute(seg_t *seg)
 {
   seg->psx = seg->start->x;
   seg->psy = seg->start->y;
@@ -1031,7 +1031,7 @@ void AddMinisegs(level_t &level, intersection_t *cut_list, seg_t *part, seg_t **
 // Rewritten by Andrew Apted (-AJA-), 1999-2000.
 //
 
-void SetPartition(node_t *node, const seg_t *part)
+static void SetPartition(node_t *node, const seg_t *part)
 {
   SYS_ASSERT(part->linedef);
 
@@ -1064,7 +1064,7 @@ void SetPartition(node_t *node, const seg_t *part)
 //
 // Returns -1 for left, +1 for right, or 0 for intersect.
 //
-int PointOnLineSide(const seg_t *seg, double x, double y)
+static int PointOnLineSide(const seg_t *seg, double x, double y)
 {
   double perp = seg->PerpDist(x, y);
 
@@ -1114,7 +1114,7 @@ quadtree_c::~quadtree_c(void)
   }
 }
 
-void AddSeg(quadtree_c *quadtree, seg_t *seg)
+static void AddSeg(quadtree_c *quadtree, seg_t *seg)
 {
   // update seg counts
   if (seg->linedef != nullptr)
@@ -1169,7 +1169,7 @@ void AddSeg(quadtree_c *quadtree, seg_t *seg)
   seg->quad = quadtree;
 }
 
-void AddList(quadtree_c *quadtree, seg_t *new_list)
+static void AddList(quadtree_c *quadtree, seg_t *new_list)
 {
   while (new_list != nullptr)
   {
@@ -1180,7 +1180,7 @@ void AddList(quadtree_c *quadtree, seg_t *new_list)
   }
 }
 
-void ConvertToList(quadtree_c *quadtree, seg_t **_list)
+static void ConvertToList(quadtree_c *quadtree, seg_t **_list)
 {
   while (quadtree->list != nullptr)
   {
@@ -1358,7 +1358,7 @@ quadtree_c *TreeFromSegList(seg_t *list, const bbox_t *bounds)
   return tree;
 }
 
-void DetermineMiddle(subsec_t *subsec)
+static void DetermineMiddle(subsec_t *subsec)
 {
   subsec->mid_x = 0;
   subsec->mid_y = 0;
@@ -1381,7 +1381,7 @@ void DetermineMiddle(subsec_t *subsec)
   }
 }
 
-void AddToTail(subsec_t *subsec, seg_t *seg)
+static void AddToTail(subsec_t *subsec, seg_t *seg)
 {
   seg->next = nullptr;
 
@@ -1400,7 +1400,7 @@ void AddToTail(subsec_t *subsec, seg_t *seg)
   tail->next = seg;
 }
 
-void ClockwiseOrder(subsec_t *subsec)
+static void ClockwiseOrder(subsec_t *subsec)
 {
   seg_t *seg;
 
@@ -1495,7 +1495,7 @@ void ClockwiseOrder(subsec_t *subsec)
   }
 }
 
-void SanityCheckClosed(subsec_t *subsec)
+static void SanityCheckClosed(subsec_t *subsec)
 {
   int gaps = 0;
   int total = 0;
@@ -1536,7 +1536,7 @@ void SanityCheckClosed(subsec_t *subsec)
   }
 }
 
-void SanityCheckHasRealSeg(subsec_t *subsec)
+static void SanityCheckHasRealSeg(subsec_t *subsec)
 {
   for (seg_t *seg = subsec->seg_list; seg; seg = seg->next)
   {
@@ -1550,7 +1550,7 @@ void SanityCheckHasRealSeg(subsec_t *subsec)
             subsec->mid_y);
 }
 
-void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index)
+static void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index)
 {
   if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
@@ -1710,7 +1710,7 @@ void ClockwiseBspTree(level_t &level)
   }
 }
 
-void Normalise(subsec_t *subsec)
+static void Normalise(subsec_t *subsec)
 {
   // use head + tail to maintain same order of segs
   seg_t *new_head = nullptr;
@@ -1779,22 +1779,7 @@ void NormaliseBspTree(level_t &level)
   }
 }
 
-void RoundOffVertices(level_t &level)
-{
-  for (size_t i = 0; i < level.vertices.size(); i++)
-  {
-    vertex_t *vert = level.vertices[i];
-
-    if (vert->is_new)
-    {
-      vert->is_new = false;
-      vert->index = level.num_old_vert;
-      level.num_old_vert++;
-    }
-  }
-}
-
-void RoundOffSubsector(level_t &level, subsec_t *subsec)
+static void RoundOffSubsector(level_t &level, subsec_t *subsec)
 {
   // use head + tail to maintain same order of segs
   seg_t *new_head = nullptr;
@@ -1915,8 +1900,6 @@ void RoundOffSubsector(level_t &level, subsec_t *subsec)
 void RoundOffBspTree(level_t &level)
 {
   size_t cur_seg_index = 0;
-
-  RoundOffVertices(level);
 
   for (size_t i = 0; i < level.subsecs.size(); i++)
   {

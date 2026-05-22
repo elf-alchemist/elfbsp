@@ -24,26 +24,22 @@
 #pragma once
 
 #include "core.hpp"
+#include "wad.hpp"
 
 #include <vector>
-
-struct Lump_c;
-struct Wad_file;
-
-// current WAD file
-extern Wad_file *cur_wad;
 
 //------------------------------------------------------------------------
 // BLOCKMAP : Generate the blockmap
 //------------------------------------------------------------------------
 
 // utility routines...
-int CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2);
+bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2);
 
 //------------------------------------------------------------------------
 // LEVEL : Level structures & read/write functions.
 //------------------------------------------------------------------------
 
+struct level_t;
 struct node_t;
 struct sector_t;
 struct quadtree_c;
@@ -240,11 +236,6 @@ struct seg_t
   }
 };
 
-// compute the seg private info (psx/y, pex/y, pdx/y, etc).
-void Recompute(seg_t *seg);
-
-int PointOnLineSide(seg_t *seg, double x, double y);
-
 // a seg with this index is removed by SortSegs().
 // it must be a very high value.
 static constexpr uint32_t SEG_IS_GARBAGE = (1 << 29);
@@ -265,18 +256,6 @@ struct subsec_t
   double mid_x;
   double mid_y;
 };
-
-void AddToTail(subsec_t *subsec);
-
-void DetermineMiddle(subsec_t *subsec);
-void ClockwiseOrder(subsec_t *subsec);
-void RenumberSegs(subsec_t *subsec, size_t &cur_seg_index);
-
-void RoundOffSubsector(level_t &level, subsec_t *subsec);
-void Normalise(subsec_t *subsec);
-
-void SanityCheckClosed(subsec_t *subsec);
-void SanityCheckHasRealSeg(subsec_t *subsec);
 
 struct bbox_t
 {
@@ -311,8 +290,6 @@ struct node_t
   size_t index;
 };
 
-void SetPartition(node_t *node, const seg_t *part);
-
 struct quadtree_c
 {
   // NOTE: not a real quadtree, division is always binary.
@@ -344,11 +321,6 @@ struct quadtree_c
     return (real_num + mini_num) == 0;
   }
 };
-
-void AddSeg(quadtree_c *quadtree, seg_t *seg);
-void AddList(quadtree_c *quadtree, seg_t *list);
-
-void ConvertToList(quadtree_c *quadtree, seg_t **__list);
 
 // check relationship between this box and the partition line.
 // returns -1 or +1 if box is definitively on a particular side,
@@ -397,8 +369,7 @@ using level_t = struct level_t
   size_t num_old_vert = 0;
   size_t num_new_vert = 0;
   size_t num_real_lines = 0;
-  size_t level_num = NO_INDEX;
-  size_t level_header_lump_index = NO_INDEX;
+  size_t lump = NO_INDEX;
   bool overflows = false;
 
   std::vector<vertex_t *> vertices;
@@ -407,13 +378,15 @@ using level_t = struct level_t
   std::vector<sector_t *> sectors;
   std::vector<thing_t *> things;
 
+  node_t *root_node = nullptr;
+  subsec_t *root_sub = nullptr;
+
   std::vector<seg_t *> segs;
   std::vector<subsec_t *> subsecs;
   std::vector<node_t *> nodes;
   std::vector<walltip_t *> walltips;
   std::vector<intersection_t *> intercuts;
   bsp_format_t bsp_format = bsp_format_t::BSP_XNOD;
-  bool bsp_compress = false;
 
   uint8_t *reject_matrix;
   size_t reject_size;
@@ -428,20 +401,6 @@ using level_t = struct level_t
 
   double block_compression;
   bmap_format_t bmap_format = bmap_format_t::BMAP_DoomBSP;
-
-  inline Lump_c *FindLevelLump(const char *name)
-  {
-    SYS_ASSERT(cur_wad != nullptr);
-    size_t idx = cur_wad->LevelLookupLump(level_num, name);
-    return (idx != NO_INDEX) ? cur_wad->GetLump(idx) : nullptr;
-  }
-
-  inline const char *GetLevelName(void)
-  {
-    SYS_ASSERT(cur_wad != nullptr);
-    size_t lump_idx = cur_wad->LevelHeader(level_num);
-    return cur_wad->GetLump(lump_idx)->Name();
-  }
 
   vertex_t *SafeLookupVertex(size_t num, size_t num_line)
   {
@@ -505,11 +464,13 @@ void FreeNodes(level_t &level);
 void FreeWallTips(level_t &level);
 void FreeIntersections(level_t &level);
 
-Lump_c *CreateLevelLump(level_t &level, const char *name, size_t max_size = NO_INDEX);
-
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
 //------------------------------------------------------------------------
+
+//
+// TODO: some of these are defined in misc, but only used elsewhere. static?
+//
 
 // detection routines
 void DetectOverlappingVertices(level_t &level);
@@ -570,44 +531,16 @@ void BuildNodes(level_t &level, seg_t *seg_list, int depth, bbox_t *bounds, node
 // compute the height of the bsp tree, starting at 'node'.
 size_t ComputeBspHeight(const node_t *node);
 
-// put all the segs in each subsector into clockwise order, and renumber
-// the seg indices.
-//
-// [ This cannot be done DURING BuildNodes() since splitting a seg with
-//   a partner will insert another seg into that partner's list, usually
-//   in the wrong place order-wise. ]
-void ClockwiseBspTree(level_t &level);
+using build_result_t = enum build_result_e
+{
+  // everything went peachy keen
+  BUILD_OK = 0,
 
-// traverse the BSP tree and do whatever is necessary to convert the
-// node information from GL standard to normal standard (for example,
-// removing minisegs).
-void NormaliseBspTree(level_t &level);
+  // when saving the map, one or more lumps overflowed
+  BUILD_LumpOverflow
+};
 
-// Mark new vertices as old for writing into the VERTEXES lump
-// Needed for RoundOffBspTree and saving to Doom 64 map formats directly
-void RoundOffVertices(level_t &level);
-
-// traverse the BSP tree, doing whatever is necessary to round
-// vertices to integer coordinates (for example, removing segs whose
-// rounded coordinates degenerate to the same point).
-void RoundOffBspTree(level_t &level);
-
-// both BLOCKAMP and REJECT exist as single lumps on all supported map formats
-void InitBlockmap(level_t &level);
-void PutBlockmap(level_t &level);
-void PutReject(level_t &level);
-
-// the BSP tree lumps differ notably on each map format -- Doom/Hexen/Doom64
-// have NODES, SSECTORS & SEGS, but UDMF is generally only ZNODES, and there's
-// some format overlap between them
-void SaveDoom_DoomBSP(level_t &level, node_t *root_node);
-void SaveDoom_DeePBSPV4(level_t &level, node_t *root_node);
-void SaveDoom_XNOD(level_t &level, node_t *root_node);
-void SaveDoom_XGLN(level_t &level, node_t *root_node);
-void SaveDoom_XGL2(level_t &level, node_t *root_node);
-void SaveDoom_XGL3(level_t &level, node_t *root_node);
-
-void SaveDoom64_DoomBSP(level_t &level, node_t *root_node);
-void SaveDoom64_DeePBSPV4(level_t &level, node_t *root_node);
-
-void SaveTextmap_ZNODES(level_t &level, node_t *root_node);
+// build the nodes of a particular level. otherwise the wad
+// is updated to store the new lumps and returns either BUILD_OK or
+// BUILD_LumpOverflow if some limits were exceeded.
+build_result_e BuildLevel(WadIO &io, level_t &level, std::string_view filename);
