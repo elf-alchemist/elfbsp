@@ -435,8 +435,9 @@ static void PutOneNode_DeePBSPV4(WadIO &io, node_t *node, size_t &node_cur_index
 
 void PutNodes_DeePBSPV4(WadIO &io, level_t &level)
 {
-  io.StartWritingLump("NODES");
   size_t node_cur_index = 0;
+  io.StartWritingLump("NODES");
+  io.AddToLump("xNd4\0\0\0\0", 8);
 
   if (level.root_node != nullptr)
   {

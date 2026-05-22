@@ -411,7 +411,6 @@ using level_t = struct level_t
   std::vector<walltip_t *> walltips;
   std::vector<intersection_t *> intercuts;
   bsp_format_t bsp_format = bsp_format_t::BSP_XNOD;
-  bool bsp_compress = false;
 
   uint8_t *reject_matrix;
   size_t reject_size;

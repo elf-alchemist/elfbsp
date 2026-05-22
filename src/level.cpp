@@ -1027,7 +1027,7 @@ void ParseUDMF(WadIO &io, level_t &level)
 // Check Limits
 //
 
-static void CheckBinaryFormatLimits(WadIO &io, level_t &level)
+static void CheckBinaryFormatLimits(level_t &level)
 {
   if (level.num_old_vert > LIMIT_VERT)
   {
@@ -1077,7 +1077,7 @@ static bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
     level_type = BSP_DeePBSPV4;
   }
 
-  return level_type;
+  return level.bsp_format = level_type;
 }
 
 /* ----- whole-level routines --------------------------- */
@@ -1151,7 +1151,75 @@ void LoadLevel(WadIO &io, level_t &level)
   }
 }
 
-// TODO: map output goes here
+//------------------------------------------------------------------------
+// Writing stuff
+//------------------------------------------------------------------------
+
+build_result_t SaveLevelDoom(WadIO &io, level_t &level)
+{
+  // Normal binary format limits
+  CheckBinaryFormatLimits(level);
+
+  // On BSP overflow, bump to DeePBSPV4 from DoomBSP
+  bsp_format_t bsp_format = CheckFormatBSP(config, level);
+
+  // Use Zlib-compressed version of ZDBSP lump formats
+  bool bsp_compress = config.compress;
+
+  // Copy marker wholesale
+  size_t lump = level.lump;
+  io.CopyLump(lump);
+
+  // Correct order is paramount
+  io.CopyLump(io.LevelLookupLump(lump, "THINGS"));
+  io.CopyLump(io.LevelLookupLump(lump, "LINEDEFS"));
+  io.CopyLump(io.LevelLookupLump(lump, "SIDEDEFS"));
+
+  if (bsp_format == BSP_DoomBSP)
+  {
+    NormaliseBspTree(level);
+    RoundOffBspTree(level);
+    SortSegs(level);
+
+    PutVertices_Integral(io, level, true);
+    PutSegs_DoomBSP(io, level);
+    PutSubsecs_DoomBSP(io, level);
+    PutNodes_DoomBSP(io, level);
+  }
+  else if (bsp_format == BSP_DeePBSPV4)
+  {
+    NormaliseBspTree(level);
+    RoundOffBspTree(level);
+    SortSegs(level);
+
+    PutVertices_Integral(io, level, true);
+    PutSegs_DeePBSPV4(io, level);
+    PutSubsecs_DeePBSPV4(io, level);
+    PutNodes_DeePBSPV4(io, level);
+  }
+  else if (bsp_format == BSP_XNOD)
+  {
+    // ZDBSP formats do not write to VERTEXES
+    PutVertices_Integral(io, level, false);
+    io.CreateEmptyLump("SEGS");
+    io.CreateEmptyLump("SSECTORS");
+    PutTree_ZDBSP(io, level, "NODES", bsp_format, bsp_compress);
+  }
+  else if (bsp_format >= BSP_XGLN && bsp_format <= BSP_XGL3)
+  {
+    // ZDBSP formats do not write to VERTEXES
+    PutVertices_Integral(io, level, false);
+    io.CreateEmptyLump("SEGS");
+    PutTree_ZDBSP(io, level, "SSECTORS", bsp_format, bsp_compress);
+    io.CreateEmptyLump("NODES");
+  }
+
+  io.CopyLump(io.LevelLookupLump(lump, "SECTORS"));
+  PutReject(io, level);
+  PutBlockmap(io, level);
+
+  return level.overflows ? BUILD_LumpOverflow : BUILD_OK;
+}
 
 //------------------------------------------------------------------------
 // MAIN STUFF
@@ -1212,6 +1280,8 @@ build_result_e BuildLevel(WadIO &io, level_t &level, std::string_view filename)
   switch (level.map_format)
   {
   case MapFormat_Doom:
+    ret = SaveLevelDoom(io, level);
+    break;
   case MapFormat_Hexen:
   case MapFormat_Doom64:
     // ret = SaveLevelBinaryFormat(io, level);
