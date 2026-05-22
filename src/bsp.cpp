@@ -102,7 +102,7 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
   return result;
 }
 
-void PutVertices_Integral(WadIO &io, level_t &level, bool include_new_verts)
+void PutVertices(WadIO &io, level_t &level, bool fractional, bool include_new_verts)
 {
   const size_t vert_count = include_new_verts ? level.vertices.size() : level.num_old_vert;
   io.StartWritingLump("VERTEXES");
@@ -110,29 +110,20 @@ void PutVertices_Integral(WadIO &io, level_t &level, bool include_new_verts)
   for (size_t i = 0; i < vert_count; i++)
   {
     const vertex_t *vert = level.vertices[i];
-
-    raw_vertex_short_t raw;
-    raw.x = GetLittleEndian(FloatToShort(floor(vert->x)));
-    raw.y = GetLittleEndian(FloatToShort(floor(vert->y)));
-
-    io.AddToLump(&raw, sizeof(raw));
-  }
-}
-
-void PutVertices_Fractional(WadIO &io, level_t &level, bool include_new_verts)
-{
-  const size_t vert_count = include_new_verts ? level.vertices.size() : level.num_old_vert;
-  io.StartWritingLump("VERTEXES");
-
-  for (size_t i = 0; i < vert_count; i++)
-  {
-    const vertex_t *vert = level.vertices[i];
-
-    raw_vertex_fixed_t raw;
-    raw.x = GetLittleEndian(FloatToFixed(vert->x));
-    raw.y = GetLittleEndian(FloatToFixed(vert->y));
-
-    io.AddToLump(&raw, sizeof(raw));
+    if (fractional)
+    {
+      raw_vertex_fixed_t raw;
+      raw.x = GetLittleEndian(FloatToFixed(vert->x));
+      raw.y = GetLittleEndian(FloatToFixed(vert->y));
+      io.AddToLump(&raw, sizeof(raw));
+    }
+    else
+    {
+      raw_vertex_short_t raw;
+      raw.x = GetLittleEndian(FloatToShort(floor(vert->x)));
+      raw.y = GetLittleEndian(FloatToShort(floor(vert->y)));
+      io.AddToLump(&raw, sizeof(raw));
+    }
   }
 }
 

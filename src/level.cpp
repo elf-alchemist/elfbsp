@@ -1155,13 +1155,24 @@ void LoadLevel(WadIO &io, level_t &level)
 // Writing stuff
 //------------------------------------------------------------------------
 
-build_result_t SaveLevelDoom(WadIO &io, level_t &level)
+build_result_t SaveLevelBinary(WadIO &io, level_t &level)
 {
+  auto mark = Benchmarker(__func__);
+
   // Normal binary format limits
   CheckBinaryFormatLimits(level);
 
+  // Use fractional VERTEXES lump in some map formats
+  bool fractional = level.map_format == MapFormat_Doom64;
+
+  // Generate LEAFS lump
+  bool do_leafs = level.map_format == MapFormat_Doom64;
+
   // On BSP overflow, bump to DeePBSPV4 from DoomBSP
   bsp_format_t bsp_format = CheckFormatBSP(config, level);
+
+  // Only include BSP-generated vertices in non-ZDBSP lump format
+  bool include_new = bsp_format >= BSP_DoomBSP || bsp_format <= BSP_DeePBSPV4;
 
   // Use Zlib-compressed version of ZDBSP lump formats
   bool bsp_compress = config.compress;
@@ -1175,13 +1186,14 @@ build_result_t SaveLevelDoom(WadIO &io, level_t &level)
   io.CopyLump(io.LevelLookupLump(lump, "LINEDEFS"));
   io.CopyLump(io.LevelLookupLump(lump, "SIDEDEFS"));
 
+  // Do the four BSP lumps, before promptly doing the other normal lumps
   if (bsp_format == BSP_DoomBSP)
   {
     NormaliseBspTree(level);
     RoundOffBspTree(level);
     SortSegs(level);
 
-    PutVertices_Integral(io, level, true);
+    PutVertices(io, level, fractional, include_new);
     PutSegs_DoomBSP(io, level);
     PutSubsecs_DoomBSP(io, level);
     PutNodes_DoomBSP(io, level);
@@ -1192,7 +1204,7 @@ build_result_t SaveLevelDoom(WadIO &io, level_t &level)
     RoundOffBspTree(level);
     SortSegs(level);
 
-    PutVertices_Integral(io, level, true);
+    PutVertices(io, level, fractional, include_new);
     PutSegs_DeePBSPV4(io, level);
     PutSubsecs_DeePBSPV4(io, level);
     PutNodes_DeePBSPV4(io, level);
@@ -1200,7 +1212,7 @@ build_result_t SaveLevelDoom(WadIO &io, level_t &level)
   else if (bsp_format == BSP_XNOD)
   {
     // ZDBSP formats do not write to VERTEXES
-    PutVertices_Integral(io, level, false);
+    PutVertices(io, level, fractional, include_new);
     io.CreateEmptyLump("SEGS");
     io.CreateEmptyLump("SSECTORS");
     PutTree_ZDBSP(io, level, "NODES", bsp_format, bsp_compress);
@@ -1208,17 +1220,70 @@ build_result_t SaveLevelDoom(WadIO &io, level_t &level)
   else if (bsp_format >= BSP_XGLN && bsp_format <= BSP_XGL3)
   {
     // ZDBSP formats do not write to VERTEXES
-    PutVertices_Integral(io, level, false);
+    PutVertices(io, level, fractional, include_new);
     io.CreateEmptyLump("SEGS");
     PutTree_ZDBSP(io, level, "SSECTORS", bsp_format, bsp_compress);
     io.CreateEmptyLump("NODES");
   }
 
+  // Why is SECTORS right here? T_T
   io.CopyLump(io.LevelLookupLump(lump, "SECTORS"));
+
+  // Bruh
   PutReject(io, level);
   PutBlockmap(io, level);
 
+  // The better? convex subsector option
+  if (do_leafs && bsp_format == BSP_DoomBSP)
+  {
+    PutLeafs_DoomBSP(io, level);
+  }
+  else if (do_leafs && bsp_format == BSP_DeePBSPV4)
+  {
+    PutLeafs_DeePBSPV4(io, level);
+  }
+
+  // Level scripts and stuff
+  if (level.map_format == MapFormat_Hexen)
+  {
+    io.CopyLump(io.LevelLookupLump(lump, "BEHAVIOR"));
+    io.CopyLump(io.LevelLookupLump(lump, "SCRIPTS"));
+  }
+  else if (level.map_format == MapFormat_Doom64)
+  {
+    io.CopyLump(io.LevelLookupLump(lump, "LIGHTS"));
+    io.CopyLump(io.LevelLookupLump(lump, "MACROS"));
+    io.CopyLump(io.LevelLookupLump(lump, "SCRIPTS"));
+  }
+
   return level.overflows ? BUILD_LumpOverflow : BUILD_OK;
+}
+
+
+build_result_t SaveLevelTextMap(WadIO &io, level_t &level)
+{
+  auto mark = Benchmarker(__func__);
+
+  // Copy marker wholesale
+  size_t lump = level.lump;
+  io.CopyLump(lump);
+
+  // Always use ZGL3 for UDMF maps
+  PutTree_ZDBSP(io, level, "ZNODES", BSP_XGL3, true);
+  PutReject(io, level);
+  PutBlockmap(io, level);
+
+  // Copy everything else we don't touch
+  io.CopyLump(io.LevelLookupLump(lump, "BEHAVIOR"));
+  io.CopyLump(io.LevelLookupLump(lump, "MACROS"));
+  io.CopyLump(io.LevelLookupLump(lump, "SCRIPTS"));
+  io.CopyLump(io.LevelLookupLump(lump, "DIALOGUE"));
+  io.CopyLump(io.LevelLookupLump(lump, "LIGHTMAP"));
+
+  // Finish
+  io.CreateEmptyLump("ENDMAP");
+
+  return BUILD_OK;
 }
 
 //------------------------------------------------------------------------
@@ -1280,14 +1345,13 @@ build_result_e BuildLevel(WadIO &io, level_t &level, std::string_view filename)
   switch (level.map_format)
   {
   case MapFormat_Doom:
-    ret = SaveLevelDoom(io, level);
-    break;
   case MapFormat_Hexen:
   case MapFormat_Doom64:
-    // ret = SaveLevelBinaryFormat(io, level);
+    ret = SaveLevelBinary(io, level);
+    break;
     break;
   case MapFormat_UDMF:
-    // ret = SaveLevelTextMap(io, level);
+    ret = SaveLevelTextMap(io, level);
     break;
   default:
     break;

@@ -81,6 +81,7 @@ struct WadIO
   map_format_t LevelFormat(size_t lump_index) const;
   size_t LevelLastLump(size_t lump_index) const;
   size_t LevelLookupLump(size_t lump_index, std::string_view name) const;
+  bool LevelHasLump(size_t lump_index, std::string_view name) const;
   template <typename T>
   std::vector<T> ReadLump(size_t lump_index);
   template <typename T>

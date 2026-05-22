@@ -199,8 +199,7 @@ void PutReject(WadIO &io, level_t &level);
 // some format overlap between them
 void SortSegs(level_t &level);
 
-void PutVertices_Integral(WadIO &io, level_t &level, bool include_new_verts);
-void PutVertices_Fractional(WadIO &io, level_t &level, bool include_new_verts);
+void PutVertices(WadIO &io, level_t &level, bool fractional, bool include_new_verts);
 
 void PutSegs_DoomBSP(WadIO &io, level_t &level);
 void PutSubsecs_DoomBSP(WadIO &io, level_t &level);

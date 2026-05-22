@@ -232,12 +232,12 @@ map_format_e WadIO::LevelFormat(size_t lump_index) const
     return MapFormat_UDMF;
   }
 
-  if (this->LevelLookupLump(lump_index, "BEHAVIOR") != NO_INDEX)
+  if (this->LevelHasLump(lump_index, "BEHAVIOR"))
   {
     return MapFormat_Hexen;
   }
 
-  if (this->LevelLookupLump(lump_index, "LIGHTS") != NO_INDEX && this->LevelLookupLump(lump_index, "MACROS") != NO_INDEX)
+  if (this->LevelHasLump(lump_index, "LIGHTS") && this->LevelHasLump(lump_index, "MACROS"))
   {
     return MapFormat_Doom64;
   }
@@ -295,6 +295,11 @@ size_t WadIO::LevelLookupLump(size_t lump_index, std::string_view name) const
   return NO_INDEX; // not found
 }
 
+bool WadIO::LevelHasLump(size_t lump_index, std::string_view name) const
+{
+  return this->LevelLookupLump(lump_index, name) != NO_INDEX;
+}
+
 //
 // Write operations
 //
@@ -331,7 +336,10 @@ void WadIO::WriteLump(std::string_view name, const void *data, size_t size)
 void WadIO::CopyLump(size_t index)
 {
   auto lump = this->ReadLump<byte>(index);
-  WriteLump(this->LumpName(index), lump.data(), lump.size());
+  if (index < this->NumLumps())
+  {
+    WriteLump(this->LumpName(index), lump.data(), lump.size());
+  }
 }
 
 //
