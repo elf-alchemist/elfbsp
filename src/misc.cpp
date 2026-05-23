@@ -32,22 +32,14 @@
 
 /* ----- analysis routines ----------------------------- */
 
-bool Overlaps(const vertex_t *vertex, const vertex_t *other)
+bool Overlaps(const Vertex *vertex, const Vertex *other)
 {
   double dx = fabs(other->x - vertex->x);
   double dy = fabs(other->y - vertex->y);
   return (dx < DIST_EPSILON) && (dy < DIST_EPSILON);
 }
 
-struct Compare_vertex_X_pred
-{
-  inline bool operator()(const vertex_t *A, const vertex_t *B) const
-  {
-    return A->x < B->x;
-  }
-};
-
-void DetectOverlappingVertices(level_t &level)
+void DetectOverlappingVertices(Level &level)
 {
   if (level.vertices.size() < 2)
   {
@@ -55,20 +47,23 @@ void DetectOverlappingVertices(level_t &level)
   }
 
   // copy the vertex pointers
-  std::vector<vertex_t *> array(level.vertices);
+  auto array = std::vector<Vertex *>(level.vertices);
 
   // sort the vertices by increasing X coordinate.
   // hence any overlapping vertices will be near each other.
-  std::sort(array.begin(), array.end(), Compare_vertex_X_pred());
+  auto PredicateCompare_VertexCoordinateX = [](const Vertex *Vertex1, const Vertex *Vertex2) -> auto
+  { return Vertex1->x < Vertex2->x; };
+
+  std::sort(array.begin(), array.end(), PredicateCompare_VertexCoordinateX);
 
   // now mark them off
   for (size_t i = 0; i < level.vertices.size() - 1; i++)
   {
-    vertex_t *A = array[i];
+    Vertex *A = array[i];
 
     for (size_t k = i + 1; k < level.vertices.size(); k++)
     {
-      vertex_t *B = array[k];
+      Vertex *B = array[k];
 
       if (B->x > A->x + DIST_EPSILON)
       {
@@ -82,7 +77,7 @@ void DetectOverlappingVertices(level_t &level)
 
         if (HAS_BIT(config.debug, DEBUG_OVERLAPS))
         {
-          PrintLine(LOG_DEBUG, "[%s] Overlap: #%zu + #%zu", __func__, array[i]->index, array[i + 1]->index);
+          PrintLine(Log::DEBUG, "[{}] Overlap: #{} + #{}", __func__, array[i]->index, array[i + 1]->index);
         }
       }
     }
@@ -91,10 +86,8 @@ void DetectOverlappingVertices(level_t &level)
   // update the in-memory linedefs.
   // DOES NOT affect the on-disk linedefs.
   // this is mainly to help the miniseg creation code.
-  for (size_t i = 0; i < level.linedefs.size(); i++)
+  for (auto L : level.linedefs)
   {
-    linedef_t *L = level.linedefs[i];
-
     while (L->start->overlap)
     {
       L->start = L->start->overlap;
@@ -107,11 +100,11 @@ void DetectOverlappingVertices(level_t &level)
   }
 }
 
-void ClearNewVertices(level_t &level)
+void ClearNewVertices(Level &level)
 {
   for (size_t i = level.vertices.size() - 1; i != NO_INDEX; i--)
   {
-    vertex_t *V = level.vertices[i];
+    Vertex *V = level.vertices[i];
 
     if (!V->is_new)
     {
@@ -126,7 +119,7 @@ void ClearNewVertices(level_t &level)
   level.num_old_vert = level.vertices.size();
 }
 
-void PruneVerticesAtEnd(level_t &level)
+void PruneVerticesAtEnd(Level &level)
 {
   // always prune vertices at end of lump, otherwise all the
   // unused vertices from seg splits would keep accumulating.
@@ -136,7 +129,7 @@ void PruneVerticesAtEnd(level_t &level)
   // only remove from the end, so stop when hit a used one.
   for (size_t i = level.vertices.size() - 1; i != NO_INDEX; i--)
   {
-    vertex_t *V = level.vertices[i];
+    Vertex *V = level.vertices[i];
 
     if (V->is_used)
     {
@@ -152,40 +145,35 @@ void PruneVerticesAtEnd(level_t &level)
 
   if (unused > 0 && config.verbose)
   {
-    PrintLine(LOG_NORMAL, "Pruned %zu unused vertices at end", unused);
+    PrintLine(Log::NORMAL, "[{}] Pruned {} unused vertices at end", __func__, unused);
   }
 
   level.num_old_vert = level.vertices.size();
 }
 
-struct Compare_line_MinX_pred
+void DetectOverlappingLines(Level &level)
 {
-  inline bool operator()(const linedef_t *A, const linedef_t *B) const
-  {
-    return A->MinX() < B->MinX();
-  }
-};
+  // copy
+  auto array = std::vector<Linedef *>(level.linedefs);
 
-void DetectOverlappingLines(level_t &level)
-{
   // Algorithm:
   //   Sort all lines by minimum X coordinate.
   //   Overlapping lines will then be near each other in this set.
   //   NOTE: does not detect partially overlapping lines.
+  auto PredicateCompare_LinedefMinX = [](const Linedef *Linedef1, const Linedef *Linedef2) -> auto
+  { return Linedef1->MinX() < Linedef2->MinX(); };
 
-  std::vector<linedef_t *> array(level.linedefs);
-
-  std::sort(array.begin(), array.end(), Compare_line_MinX_pred());
+  std::sort(array.begin(), array.end(), PredicateCompare_LinedefMinX);
 
   size_t count = 0;
 
   for (size_t i = 0; i < level.linedefs.size() - 1; i++)
   {
-    linedef_t *A = array[i];
+    Linedef *A = array[i];
 
     for (size_t k = i + 1; k < level.linedefs.size(); k++)
     {
-      linedef_t *B = array[k];
+      Linedef *B = array[k];
 
       if (B->MinX() > A->MinX() + DIST_EPSILON)
       {
@@ -216,23 +204,20 @@ void DetectOverlappingLines(level_t &level)
     }
   }
 
-  if (count > 0)
+  if (config.verbose && count > 0)
   {
-    if (config.verbose)
-    {
-      PrintLine(LOG_NORMAL, "Detected %zu overlapped linedefs", count);
-    }
+    PrintLine(Log::NORMAL, "[{}] Detected {} overlapped linedefs", __func__, count);
   }
 }
 
 /* ----- vertex routines ------------------------------- */
 
-void AddWallTip(level_t &level, vertex_t *vertex, double dx, double dy, bool open_left, bool open_right)
+void AddWallTip(Level &level, Vertex *vertex, double dx, double dy, bool open_left, bool open_right)
 {
   SYS_ASSERT(vertex->overlap == nullptr);
 
-  walltip_t *tip = NewWallTip(level);
-  walltip_t *after;
+  WallTip *tip = level.NewWallTip();
+  WallTip *after;
 
   tip->angle = ComputeAngle(dx, dy);
   tip->open_left = open_left;
@@ -272,12 +257,10 @@ void AddWallTip(level_t &level, vertex_t *vertex, double dx, double dy, bool ope
   }
 }
 
-void CalculateWallTips(level_t &level)
+void CalculateWallTips(Level &level)
 {
-  for (size_t i = 0; i < level.linedefs.size(); i++)
+  for (auto L : level.linedefs)
   {
-    const linedef_t *L = level.linedefs[i];
-
     if (L->overlap || HAS_BIT(L->effects, FX_ZeroLength))
     {
       continue;
@@ -300,23 +283,22 @@ void CalculateWallTips(level_t &level)
 
   if (HAS_BIT(config.debug, DEBUG_WALLTIPS))
   {
-    for (size_t k = 0; k < level.vertices.size(); k++)
+    for (auto V : level.vertices)
     {
-      vertex_t *V = level.vertices[k];
+      PrintLine(Log::DEBUG, "[{}] WallTips for vertex {}:", __func__, V->index);
 
-      PrintLine(LOG_DEBUG, "[%s] WallTips for vertex %zu:", __func__, k);
-
-      for (walltip_t *tip = V->tip_set; tip; tip = tip->next)
+      for (WallTip *tip = V->tip_set; tip; tip = tip->next)
       {
-        PrintLine(LOG_DEBUG, "Angle=%1.1f left=%d right=%d", tip->angle, tip->open_left ? 1 : 0, tip->open_right ? 1 : 0);
+        PrintLine(Log::DEBUG, "[{}] Angle={:1.1f} left={} right={}", __func__, tip->angle, tip->open_left ? 1 : 0,
+                  tip->open_right ? 1 : 0);
       }
     }
   }
 }
 
-vertex_t *NewVertexFromSplitSeg(level_t &level, seg_t *seg, double x, double y)
+Vertex *NewVertexFromSplitSeg(Level &level, Segment *seg, double x, double y)
 {
-  vertex_t *vert = NewVertex(level);
+  Vertex *vert = level.NewVertex();
 
   vert->x = x;
   vert->y = y;
@@ -333,8 +315,8 @@ vertex_t *NewVertexFromSplitSeg(level_t &level, seg_t *seg, double x, double y)
   }
   else
   {
-    const sidedef_t *front = seg->side ? seg->linedef->left : seg->linedef->right;
-    const sidedef_t *back = seg->side ? seg->linedef->right : seg->linedef->left;
+    const Sidedef *front = seg->side ? seg->linedef->left : seg->linedef->right;
+    const Sidedef *back = seg->side ? seg->linedef->right : seg->linedef->left;
 
     bool left = (back != nullptr) && (back->sector != nullptr);
     bool right = (front != nullptr) && (front->sector != nullptr);
@@ -346,7 +328,7 @@ vertex_t *NewVertexFromSplitSeg(level_t &level, seg_t *seg, double x, double y)
   return vert;
 }
 
-vertex_t *NewVertexDegenerate(level_t &level, vertex_t *start, vertex_t *end)
+Vertex *NewVertexDegenerate(Level &level, Vertex *start, Vertex *end)
 {
   // this is only called when rounding off the BSP tree and
   // all the segs are degenerate (zero length), hence we need
@@ -356,7 +338,7 @@ vertex_t *NewVertexDegenerate(level_t &level, vertex_t *start, vertex_t *end)
 
   double dlen = hypot(dx, dy);
 
-  vertex_t *vert = NewVertex(level);
+  Vertex *vert = level.NewVertex();
 
   vert->is_new = false;
   vert->is_used = true;
@@ -370,7 +352,7 @@ vertex_t *NewVertexDegenerate(level_t &level, vertex_t *start, vertex_t *end)
 
   if (dlen == 0)
   {
-    PrintLine(LOG_ERROR, "ERROR: NewVertexDegenerate: bad delta!");
+    throw RuntimeException("NewVertexDegenerate: bad delta!");
   }
 
   dx /= dlen;
@@ -385,9 +367,9 @@ vertex_t *NewVertexDegenerate(level_t &level, vertex_t *start, vertex_t *end)
   return vert;
 }
 
-bool CheckOpen(const vertex_t *vertex, double dx, double dy)
+bool CheckOpen(const Vertex *vertex, double dx, double dy)
 {
-  const walltip_t *tip;
+  const WallTip *tip;
 
   double angle = ComputeAngle(dx, dy);
 

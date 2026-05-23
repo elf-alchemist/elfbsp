@@ -24,5 +24,5 @@
 #include "wad.hpp"
 
 void SetupAnalysisFile(std::string_view filepath);
-void GenerateAnalysis(WadIO &io, level_t &level, std::string_view filename);
+void GenerateAnalysis(WadIO &io, Level &level, std::string_view filename);
 void WriteAnalysis(std::string_view filename);

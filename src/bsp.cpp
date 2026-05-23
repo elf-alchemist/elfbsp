@@ -37,18 +37,13 @@ constexpr uint32_t NF_SUBSECTOR = BIT(31);
 // Utility
 //
 
-struct Compare_seg_pred
-{
-  inline bool operator()(const seg_t *A, const seg_t *B) const
-  {
-    return A->index < B->index;
-  }
-};
-
-void SortSegs(level_t &level)
+void SortSegs(Level &level)
 {
   // sort segs into ascending index
-  std::sort(level.segs.begin(), level.segs.end(), Compare_seg_pred());
+  auto PredicateCompare_SegmentIndex = [](const Segment *Segment1, const Segment *Segment2) -> auto
+  { return Segment1->index < Segment2->index; };
+
+  std::sort(level.segs.begin(), level.segs.end(), PredicateCompare_SegmentIndex);
 
   // remove unwanted segs
   while (level.segs.size() > 0 && level.segs.back()->index == SEG_IS_GARBAGE)
@@ -58,7 +53,7 @@ void SortSegs(level_t &level)
   }
 }
 
-static inline int16_t VanillaSegDist(const seg_t *seg)
+static inline int16_t VanillaSegDist(const Segment *seg)
 {
   double lx = seg->side ? seg->linedef->end->x : seg->linedef->start->x;
   double ly = seg->side ? seg->linedef->end->y : seg->linedef->start->y;
@@ -70,7 +65,7 @@ static inline int16_t VanillaSegDist(const seg_t *seg)
   return FloatToShort(floor(hypot(sx - lx, sy - ly) + 0.5));
 }
 
-static inline short_angle_t VanillaSegAngle(const seg_t *seg)
+static inline short_angle_t VanillaSegAngle(const Segment *seg)
 {
   // compute the "true" delta
   double dx = round(seg->end->x) - round(seg->start->x);
@@ -102,24 +97,24 @@ static inline short_angle_t VanillaSegAngle(const seg_t *seg)
   return result;
 }
 
-void PutVertices(WadIO &io, level_t &level, bool fractional, bool include_new_verts)
+void PutVertices(WadIO &io, Level &level, bool fractional, bool include_new_verts)
 {
   const size_t vert_count = include_new_verts ? level.vertices.size() : level.num_old_vert;
   io.StartWritingLump("VERTEXES");
 
   for (size_t i = 0; i < vert_count; i++)
   {
-    const vertex_t *vert = level.vertices[i];
+    const Vertex *vert = level.vertices[i];
     if (fractional)
     {
-      raw_vertex_fixed_t raw;
+      MapVertexFractional raw;
       raw.x = GetLittleEndian(FloatToFixed(vert->x));
       raw.y = GetLittleEndian(FloatToFixed(vert->y));
       io.AddToLump(&raw, sizeof(raw));
     }
     else
     {
-      raw_vertex_short_t raw;
+      MapVertexIntegral raw;
       raw.x = GetLittleEndian(FloatToShort(floor(vert->x)));
       raw.y = GetLittleEndian(FloatToShort(floor(vert->y)));
       io.AddToLump(&raw, sizeof(raw));
@@ -131,13 +126,13 @@ void PutVertices(WadIO &io, level_t &level, bool fractional, bool include_new_ve
 // Vanilla format
 //
 
-void PutSegs_DoomBSP(WadIO &io, level_t &level)
+void PutSegs_DoomBSP(WadIO &io, Level &level)
 {
   io.StartWritingLump("SEGS");
 
   for (auto seg : level.segs)
   {
-    raw_seg_doombsp_t raw;
+    MapSegmentDoomBSP raw;
 
     raw.start = GetLittleEndian(IndexToShort(seg->start->index));
     raw.end = GetLittleEndian(IndexToShort(seg->end->index));
@@ -150,20 +145,21 @@ void PutSegs_DoomBSP(WadIO &io, level_t &level)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] %zu  Vert %04X->%04X  Line %04X %s  Angle %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__,
+      PrintLine(Log::DEBUG,
+                "[{}] {}  Vert {:04X}->{:04X}  Line {:04X} {}  Angle {:04X}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})", __func__,
                 seg->index, GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef),
                 seg->side ? "L" : "R", GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
     }
   }
 }
 
-void PutSubsecs_DoomBSP(WadIO &io, level_t &level)
+void PutSubsecs_DoomBSP(WadIO &io, Level &level)
 {
   io.StartWritingLump("SSECTORS");
 
   for (auto sub : level.subsecs)
   {
-    raw_subsec_doombsp_t raw;
+    MapSubsectorDoomBSP raw;
 
     raw.first = GetLittleEndian(IndexToShort(sub->seg_list->index));
     raw.num = GetLittleEndian(IndexToShort(sub->seg_count));
@@ -172,13 +168,13 @@ void PutSubsecs_DoomBSP(WadIO &io, level_t &level)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] %zu  First %04X  Num %04X Mid (%1.1f,%1.1f)", __func__, sub->index, GetLittleEndian(raw.first),
-                GetLittleEndian(raw.num), sub->mid_x, sub->mid_y);
+      PrintLine(Log::DEBUG, "[{}] {}  First {:04X}  Num {:04X} Mid ({:1.1f},{:1.1f})", __func__, sub->index,
+                GetLittleEndian(raw.first), GetLittleEndian(raw.num), sub->mid_x, sub->mid_y);
     }
   }
 }
 
-static void PutOneNode_Vanilla(WadIO &io, node_t *node, size_t &node_cur_index)
+static void PutOneNode_Vanilla(WadIO &io, Node *node, size_t &node_cur_index)
 {
   if (node->r.node)
   {
@@ -192,7 +188,7 @@ static void PutOneNode_Vanilla(WadIO &io, node_t *node, size_t &node_cur_index)
 
   node->index = node_cur_index++;
 
-  raw_node_doombsp_t raw;
+  MapNodeDoomBSP raw;
 
   raw.x = GetLittleEndian(FloatToShort(node->x));
   raw.y = GetLittleEndian(FloatToShort(node->y));
@@ -219,7 +215,7 @@ static void PutOneNode_Vanilla(WadIO &io, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: Bad right child in node %zu", node->index);
+    throw RuntimeException("Bad right child in node {}", node->index);
   }
 
   if (node->l.node)
@@ -232,19 +228,19 @@ static void PutOneNode_Vanilla(WadIO &io, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: Bad left child in node %zu", node->index);
+    throw RuntimeException("Bad left child in node {}", node->index);
   }
 
   io.AddToLump(&raw, sizeof(raw));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
-    PrintLine(LOG_DEBUG, "[%s] %zu  Left %04X  Right %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, node->index,
+    PrintLine(Log::DEBUG, "[{}] {}  Left {:04X}  Right {:04X}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})", __func__, node->index,
               GetLittleEndian(raw.left), GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
   }
 }
 
-void PutNodes_DoomBSP(WadIO &io, level_t &level)
+void PutNodes_DoomBSP(WadIO &io, Level &level)
 {
   size_t node_cur_index = 0;
   io.StartWritingLump("NODES");
@@ -256,25 +252,25 @@ void PutNodes_DoomBSP(WadIO &io, level_t &level)
 
   if (node_cur_index != level.nodes.size())
   {
-    PrintLine(LOG_ERROR, "ERROR: PutNodes miscounted (%zu != %zu)", node_cur_index, level.nodes.size());
+    throw RuntimeException("[{}] miscounted ({} != {})", __func__, node_cur_index, level.nodes.size());
   }
 }
 
-void PutLeafs_DoomBSP(WadIO &io, level_t &level)
+void PutLeafs_DoomBSP(WadIO &io, Level &level)
 {
   io.StartWritingLump("LEAFS");
   uint16_t actual_seg_index = 0;
 
   for (auto subsec : level.subsecs)
   {
-    seg_t *seg = subsec->seg_list;
+    Segment *seg = subsec->seg_list;
     uint16_t seg_count = IndexToShort(subsec->seg_count);
 
     io.AddToLump(&seg_count, sizeof(seg_count));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] leaf references: %hu", __func__, subsec->index, seg_count);
+      PrintLine(Log::DEBUG, "[{}] Subsector[{}] leaf references: {}", __func__, subsec->index, seg_count);
     }
 
     for (size_t j = 0; j < seg_count; j++)
@@ -282,7 +278,7 @@ void PutLeafs_DoomBSP(WadIO &io, level_t &level)
       // Do not remove minisegs from tree before
       // we are able to write all this
       raw_leaf_doombsp_t raw;
-      vertex_t *vert = seg->start;
+      Vertex *vert = seg->start;
 
       raw.vertex = GetLittleEndian(IndexToShort(vert->index));
       if (seg->linedef)
@@ -301,7 +297,7 @@ void PutLeafs_DoomBSP(WadIO &io, level_t &level)
 
       if (HAS_BIT(config.debug, DEBUG_BSP))
       {
-        PrintLine(LOG_DEBUG, "[%s] Segment = %hu Vertex = %hu", __func__, raw.seg, raw.vertex);
+        PrintLine(Log::DEBUG, "[{}] Segment = {} Vertex = {}", __func__, raw.seg, raw.vertex);
       }
     }
   }
@@ -311,13 +307,13 @@ void PutLeafs_DoomBSP(WadIO &io, level_t &level)
 // DeePBSPV4 format
 //
 
-void PutSegs_DeePBSPV4(WadIO &io, level_t &level)
+void PutSegs_DeePBSPV4(WadIO &io, Level &level)
 {
   io.StartWritingLump("SEGS");
 
   for (auto seg : level.segs)
   {
-    raw_seg_deepbspv4_t raw;
+    MapSegmentDeePBSPV4 raw;
 
     raw.start = GetLittleEndian(IndexToInt(seg->start->index));
     raw.end = GetLittleEndian(IndexToInt(seg->end->index));
@@ -330,20 +326,21 @@ void PutSegs_DeePBSPV4(WadIO &io, level_t &level)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] %zu  Vert %08X->%08X  Line %04X %s  Angle %04X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__,
+      PrintLine(Log::DEBUG,
+                "[{}] {}  Vert {:08X}->{:08X}  Line {:04X} {}  Angle {:04X}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})", __func__,
                 seg->index, GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef),
                 seg->side ? "L" : "R", GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
     }
   }
 }
 
-void PutSubsecs_DeePBSPV4(WadIO &io, level_t &level)
+void PutSubsecs_DeePBSPV4(WadIO &io, Level &level)
 {
   io.StartWritingLump("SSECTORS");
 
   for (auto sub : level.subsecs)
   {
-    raw_subsec_deepbspv4_t raw;
+    MapSubsectorDeePBSPV4 raw;
 
     raw.first = GetLittleEndian(IndexToInt(sub->seg_list->index));
     raw.num = GetLittleEndian(IndexToShort(sub->seg_count));
@@ -352,13 +349,13 @@ void PutSubsecs_DeePBSPV4(WadIO &io, level_t &level)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] %zu  First %08X  Num %04X Mid (%1.1f,%1.1f)", __func__, sub->index, GetLittleEndian(raw.first),
-                GetLittleEndian(raw.num), sub->mid_x, sub->mid_y);
+      PrintLine(Log::DEBUG, "[{}] {}  First {:08X}  Num {:04X} Mid ({:1.1f},{:1.1f})", __func__, sub->index,
+                GetLittleEndian(raw.first), GetLittleEndian(raw.num), sub->mid_x, sub->mid_y);
     }
   }
 }
 
-static void PutOneNode_DeePBSPV4(WadIO &io, node_t *node, size_t &node_cur_index)
+static void PutOneNode_DeePBSPV4(WadIO &io, Node *node, size_t &node_cur_index)
 {
   if (node->r.node)
   {
@@ -372,7 +369,7 @@ static void PutOneNode_DeePBSPV4(WadIO &io, node_t *node, size_t &node_cur_index
 
   node->index = node_cur_index++;
 
-  raw_node_deepbspv4_t raw;
+  MapNodeDeePBSPV4 raw;
 
   raw.x = GetLittleEndian(FloatToShort(node->x));
   raw.y = GetLittleEndian(FloatToShort(node->y));
@@ -399,7 +396,7 @@ static void PutOneNode_DeePBSPV4(WadIO &io, node_t *node, size_t &node_cur_index
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: Bad right child in node %zu", node->index);
+    throw RuntimeException("[{}] Bad right child in node {}", __func__, node->index);
   }
 
   if (node->l.node)
@@ -412,19 +409,19 @@ static void PutOneNode_DeePBSPV4(WadIO &io, node_t *node, size_t &node_cur_index
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: Bad left child in node %zu", node->index);
+    throw RuntimeException("[{}] Bad left child in node {}", __func__, node->index);
   }
 
   io.AddToLumpZ(&raw, sizeof(raw));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
-    PrintLine(LOG_DEBUG, "[%s] %zu  Left %08X  Right %08X  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, node->index,
+    PrintLine(Log::DEBUG, "[{}] {}  Left {:08X}  Right {:08X}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})", __func__, node->index,
               GetLittleEndian(raw.left), GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
   }
 }
 
-void PutNodes_DeePBSPV4(WadIO &io, level_t &level)
+void PutNodes_DeePBSPV4(WadIO &io, Level &level)
 {
   size_t node_cur_index = 0;
   io.StartWritingLump("NODES");
@@ -437,25 +434,25 @@ void PutNodes_DeePBSPV4(WadIO &io, level_t &level)
 
   if (node_cur_index != level.nodes.size())
   {
-    PrintLine(LOG_ERROR, "ERROR: PutNodes miscounted (%zu != %zu)", node_cur_index, level.nodes.size());
+    throw RuntimeException("[{}] miscounted ({} != {})", __func__, node_cur_index, level.nodes.size());
   }
 }
 
-void PutLeafs_DeePBSPV4(WadIO &io, level_t &level)
+void PutLeafs_DeePBSPV4(WadIO &io, Level &level)
 {
   io.StartWritingLump("LEAFS");
   uint32_t actual_seg_index = 0;
 
   for (auto subsec : level.subsecs)
   {
-    seg_t *seg = subsec->seg_list;
+    Segment *seg = subsec->seg_list;
     uint32_t seg_count = IndexToInt(subsec->seg_count);
 
     io.AddToLump(&seg_count, sizeof(seg_count));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] Subsector[%zu] leaf references: %u", __func__, subsec->index, seg_count);
+      PrintLine(Log::DEBUG, "[{}] Subsector[{}] leaf references: {}", __func__, subsec->index, seg_count);
     }
 
     for (size_t j = 0; j < seg_count; j++)
@@ -463,7 +460,7 @@ void PutLeafs_DeePBSPV4(WadIO &io, level_t &level)
       // Do not remove minisegs from tree before
       // we are able to write all this
       raw_leaf_deepbspv4_t raw;
-      vertex_t *vert = seg->start;
+      Vertex *vert = seg->start;
 
       raw.vertex = GetLittleEndian(IndexToInt(vert->index));
       if (seg->linedef)
@@ -482,17 +479,17 @@ void PutLeafs_DeePBSPV4(WadIO &io, level_t &level)
 
       if (HAS_BIT(config.debug, DEBUG_BSP))
       {
-        PrintLine(LOG_DEBUG, "[%s] Segment = %u Vertex = %u", __func__, raw.seg, raw.vertex);
+        PrintLine(Log::DEBUG, "[{}] Segment = {} Vertex = {}", __func__, raw.seg, raw.vertex);
       }
     }
   }
 }
 
 //
-// ZDoom format -- XNOD
+// ZDBSP formats
 //
 
-static void PutVertices_XNOD(WadIO &io, level_t &level)
+static void PutVertices_XNOD(WadIO &io, Level &level)
 {
   uint32_t orgverts = GetLittleEndian(IndexToInt(level.num_old_vert));
   uint32_t newverts = GetLittleEndian(IndexToInt(level.num_new_vert));
@@ -503,7 +500,7 @@ static void PutVertices_XNOD(WadIO &io, level_t &level)
   size_t count = 0;
   for (auto vert : level.vertices)
   {
-    raw_vertex_xnod_t raw;
+    MapVertexXNOD raw;
 
     if (!vert->is_new)
     {
@@ -520,11 +517,11 @@ static void PutVertices_XNOD(WadIO &io, level_t &level)
 
   if (count != level.num_new_vert)
   {
-    PrintLine(LOG_ERROR, "ERROR: PutZVertices miscounted (%zu != %zu)", count, level.num_new_vert);
+    throw RuntimeException("[{}] miscounted ({} != {})", __func__, count, level.num_new_vert);
   }
 }
 
-static void PutSubsecs_XNOD(WadIO &io, level_t &level)
+static void PutSubsecs_XNOD(WadIO &io, Level &level)
 {
   uint32_t raw_num = GetLittleEndian(IndexToInt(level.subsecs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
@@ -532,18 +529,17 @@ static void PutSubsecs_XNOD(WadIO &io, level_t &level)
   size_t cur_seg_index = 0;
   for (auto sub : level.subsecs)
   {
-    raw_subsec_xnod_t raw;
+    MapSubsectorXNOD raw;
     raw.segnum = GetLittleEndian(IndexToInt(sub->seg_count));
     io.AddToLumpZ(&raw, sizeof(raw));
 
     // sanity check the seg index values
     size_t count = 0;
-    for (const seg_t *seg = sub->seg_list; seg; seg = seg->next, cur_seg_index++)
+    for (const Segment *seg = sub->seg_list; seg; seg = seg->next, cur_seg_index++)
     {
       if (cur_seg_index != seg->index)
       {
-        PrintLine(LOG_ERROR, "ERROR: PutZSubsecs: seg index mismatch in sub %zu (%zu != %zu)", sub->index, cur_seg_index,
-                  seg->index);
+        throw RuntimeException("[{}] seg index mismatch in sub {} ({} != {})", __func__, sub->index, cur_seg_index, seg->index);
       }
 
       count++;
@@ -551,24 +547,24 @@ static void PutSubsecs_XNOD(WadIO &io, level_t &level)
 
     if (count != sub->seg_count)
     {
-      PrintLine(LOG_ERROR, "ERROR: PutZSubsecs: miscounted segs in sub %zu (%zu != %zu)", sub->index, count, sub->seg_count);
+      throw RuntimeException("[{}] miscounted segs in sub {} ({} != {})", __func__, sub->index, count, sub->seg_count);
     }
   }
 
   if (cur_seg_index != level.segs.size())
   {
-    PrintLine(LOG_ERROR, "ERROR: PutZSubsecs miscounted segs (%zu != %zu)", cur_seg_index, level.segs.size());
+    throw RuntimeException("[{}] miscounted segs ({} != {})", __func__, cur_seg_index, level.segs.size());
   }
 }
 
-static void PutSegs_XNOD(WadIO &io, level_t &level)
+static void PutSegs_XNOD(WadIO &io, Level &level)
 {
   uint32_t raw_num = GetLittleEndian(IndexToInt(level.segs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   for (auto seg : level.segs)
   {
-    raw_seg_xnod_t raw;
+    MapSegmentXNOD raw;
 
     raw.start = GetLittleEndian(IndexToInt(seg->start->index));
     raw.end = GetLittleEndian(IndexToInt(seg->end->index));
@@ -579,14 +575,14 @@ static void PutSegs_XNOD(WadIO &io, level_t &level)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] %zu  Vert %04X->%04X  Line %04X %s  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, seg->index,
-                GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef), raw.side ? "L" : "R",
-                seg->start->x, seg->start->y, seg->end->x, seg->end->y);
+      PrintLine(Log::DEBUG, "[{}] {}  Vert {:04X}->{:04X}  Line {:04X} {}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})", __func__,
+                seg->index, GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef),
+                raw.side ? "L" : "R", seg->start->x, seg->start->y, seg->end->x, seg->end->y);
     }
   }
 }
 
-static void PutOneNode_XNOD(WadIO &io, node_t *node, size_t &node_cur_index)
+static void PutOneNode_XNOD(WadIO &io, Node *node, size_t &node_cur_index)
 {
   if (node->r.node)
   {
@@ -600,7 +596,7 @@ static void PutOneNode_XNOD(WadIO &io, node_t *node, size_t &node_cur_index)
 
   node->index = node_cur_index++;
 
-  raw_node_xnod_t raw;
+  MapNodeXNOD raw;
 
   raw.x = GetLittleEndian(FloatToShort(node->x));
   raw.y = GetLittleEndian(FloatToShort(node->y));
@@ -627,7 +623,7 @@ static void PutOneNode_XNOD(WadIO &io, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: Bad right child in ZDoom node %zu", node->index);
+    throw RuntimeException("[{}] Bad right child in ZDBSP node {}", __func__, node->index);
   }
 
   if (node->l.node)
@@ -640,19 +636,19 @@ static void PutOneNode_XNOD(WadIO &io, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: Bad left child in ZDoom node %zu", node->index);
+    throw RuntimeException("[{}] Bad left child in ZDBSP node {}", __func__, node->index);
   }
 
   io.AddToLumpZ(&raw, sizeof(raw));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
-    PrintLine(LOG_DEBUG, "[%s] %zu  Left %08X  Right %08X  (%f,%f) -> (%f,%f)", __func__, node->index,
+    PrintLine(Log::DEBUG, "[{}] {}  Left {:08X}  Right {:08X}  ({},{}) -> ({},{})", __func__, node->index,
               GetLittleEndian(raw.left), GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
   }
 }
 
-static void PutNodes_XNOD(WadIO &io, level_t &level)
+static void PutNodes_XNOD(WadIO &io, Level &level)
 {
   size_t node_cur_index = 0;
   uint32_t raw_num = GetLittleEndian(IndexToInt(level.nodes.size()));
@@ -665,22 +661,18 @@ static void PutNodes_XNOD(WadIO &io, level_t &level)
 
   if (node_cur_index != level.nodes.size())
   {
-    PrintLine(LOG_ERROR, "ERROR: PutZNodes miscounted (%zu != %zu)", node_cur_index, level.nodes.size());
+    throw RuntimeException("[{}] miscounted ({} != {})", __func__, node_cur_index, level.nodes.size());
   }
 }
 
-//
-// ZDoom format -- XGLN, XGL2, XGL3
-//
-
-static void PutSegs_XGLN(WadIO &io, level_t &level)
+static void PutSegs_XGLN(WadIO &io, Level &level)
 {
   uint32_t raw_num = GetLittleEndian(IndexToInt(level.segs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   for (auto seg : level.segs)
   {
-    raw_seg_xgln_t raw;
+    MapSegmentXGLN raw;
 
     raw.vertex = GetLittleEndian(IndexToInt(seg->start->index));
     raw.partner = GetLittleEndian(IndexToInt(seg->partner ? seg->partner->index : NO_INDEX));
@@ -691,21 +683,21 @@ static void PutSegs_XGLN(WadIO &io, level_t &level)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] %zu  Vert %04X  Line %04X %s  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, seg->index,
-                GetLittleEndian(raw.vertex), GetLittleEndian(raw.linedef), raw.side ? "L" : "R", seg->start->x, seg->start->y,
-                seg->end->x, seg->end->y);
+      PrintLine(Log::DEBUG, "[{}] {}  Vert {:04X}  Line {:04X} {}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})", __func__,
+                seg->index, GetLittleEndian(raw.vertex), GetLittleEndian(raw.linedef), raw.side ? "L" : "R", seg->start->x,
+                seg->start->y, seg->end->x, seg->end->y);
     }
   }
 }
 
-static void PutSegs_XGL2(WadIO &io, level_t &level)
+static void PutSegs_XGL2(WadIO &io, Level &level)
 {
   uint32_t raw_num = GetLittleEndian(IndexToInt(level.segs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   for (auto seg : level.segs)
   {
-    raw_seg_xgl2_t raw;
+    MapSegmentXGL2 raw;
 
     raw.vertex = GetLittleEndian(IndexToInt(seg->start->index));
     raw.partner = GetLittleEndian(IndexToInt(seg->partner ? seg->partner->index : NO_INDEX));
@@ -716,14 +708,14 @@ static void PutSegs_XGL2(WadIO &io, level_t &level)
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(LOG_DEBUG, "[%s] %zu  Vert %04X  Line %04X %s  (%1.1f,%1.1f) -> (%1.1f,%1.1f)", __func__, seg->index,
-                GetLittleEndian(raw.vertex), GetLittleEndian(raw.linedef), raw.side ? "L" : "R", seg->start->x, seg->start->y,
-                seg->end->x, seg->end->y);
+      PrintLine(Log::DEBUG, "[{}] {}  Vert {:04X}  Line {:04X} {}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})", __func__,
+                seg->index, GetLittleEndian(raw.vertex), GetLittleEndian(raw.linedef), raw.side ? "L" : "R", seg->start->x,
+                seg->start->y, seg->end->x, seg->end->y);
     }
   }
 }
 
-static void PutOneNode_XGL3(WadIO &io, node_t *node, size_t &node_cur_index)
+static void PutOneNode_XGL3(WadIO &io, Node *node, size_t &node_cur_index)
 {
   if (node->r.node)
   {
@@ -737,7 +729,7 @@ static void PutOneNode_XGL3(WadIO &io, node_t *node, size_t &node_cur_index)
 
   node->index = node_cur_index++;
 
-  raw_node_xgl3_t raw;
+  MapNodeXGL3 raw;
 
   raw.x = GetLittleEndian(FloatToFixed(node->x));
   raw.y = GetLittleEndian(FloatToFixed(node->y));
@@ -764,7 +756,7 @@ static void PutOneNode_XGL3(WadIO &io, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: Bad right child in ZDoom node %zu", node->index);
+    throw RuntimeException("[{}] Bad right child in ZDBSP node {}", __func__, node->index);
   }
 
   if (node->l.node)
@@ -777,19 +769,19 @@ static void PutOneNode_XGL3(WadIO &io, node_t *node, size_t &node_cur_index)
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: Bad left child in ZDoom node %zu", node->index);
+    throw RuntimeException("[{}] Bad left child in ZDBSP node {}", __func__, node->index);
   }
 
   io.AddToLumpZ(&raw, sizeof(raw));
 
   if (HAS_BIT(config.debug, DEBUG_BSP))
   {
-    PrintLine(LOG_DEBUG, "[%s] %zu  Left %08X  Right %08X  (%f,%f) -> (%f,%f)", __func__, node->index,
+    PrintLine(Log::DEBUG, "[{}] {}  Left {:08X}  Right {:08X}  ({},{}) -> ({},{})", __func__, node->index,
               GetLittleEndian(raw.left), GetLittleEndian(raw.right), node->x, node->y, node->x + node->dx, node->y + node->dy);
   }
 }
 
-static void PutNodes_XGL3(WadIO &io, level_t &level)
+static void PutNodes_XGL3(WadIO &io, Level &level)
 {
   size_t node_cur_index = 0;
   uint32_t raw_num = GetLittleEndian(IndexToInt(level.nodes.size()));
@@ -802,37 +794,37 @@ static void PutNodes_XGL3(WadIO &io, level_t &level)
 
   if (node_cur_index != level.nodes.size())
   {
-    PrintLine(LOG_ERROR, "ERROR: PutZNodes miscounted (%zu != %zu)", node_cur_index, level.nodes.size());
+    throw RuntimeException("[{}] miscounted ({} != {})", __func__, node_cur_index, level.nodes.size());
   }
 }
 
 //
 // The family of ZDBSP BSP tree formats use a single lump no matter what
 //
-void PutTree_ZDBSP(WadIO &io, level_t &level, std::string lumpname, bsp_format_t bsp_format, bool compress)
+void PutTree_ZDBSP(WadIO &io, Level &level, std::string lumpname, BspFormat bsp_format, bool compress)
 {
-  if (bsp_format == BSP_XNOD) NormaliseBspTree(level);
+  if (bsp_format == BspFormat::XNOD) NormaliseBspTree(level);
 
   SortSegs(level);
 
   io.StartWritingLump(lumpname.c_str());
 
-  if (bsp_format == BSP_XNOD) io.AddToLump(compress ? "ZNOD" : "XNOD", 4);
-  if (bsp_format == BSP_XGLN) io.AddToLump(compress ? "ZGLN" : "XGLN", 4);
-  if (bsp_format == BSP_XGL2) io.AddToLump(compress ? "ZGL2" : "XGL2", 4);
-  if (bsp_format == BSP_XGL3) io.AddToLump(compress ? "ZGL3" : "XGL3", 4);
+  if (bsp_format == BspFormat::XNOD) io.AddToLump(compress ? "ZNOD" : "XNOD", 4);
+  if (bsp_format == BspFormat::XGLN) io.AddToLump(compress ? "ZGLN" : "XGLN", 4);
+  if (bsp_format == BspFormat::XGL2) io.AddToLump(compress ? "ZGL2" : "XGL2", 4);
+  if (bsp_format == BspFormat::XGL3) io.AddToLump(compress ? "ZGL3" : "XGL3", 4);
 
   if (compress) io.Begin_Zlib();
 
   PutVertices_XNOD(io, level);
   PutSubsecs_XNOD(io, level);
 
-  if (bsp_format == BSP_XNOD) PutSegs_XNOD(io, level);
-  if (bsp_format == BSP_XGLN) PutSegs_XGLN(io, level);
-  if (bsp_format == BSP_XGL2 || bsp_format == BSP_XGL3) PutSegs_XGL2(io, level);
+  if (bsp_format == BspFormat::XNOD) PutSegs_XNOD(io, level);
+  if (bsp_format == BspFormat::XGLN) PutSegs_XGLN(io, level);
+  if (bsp_format == BspFormat::XGL2 || bsp_format == BspFormat::XGL3) PutSegs_XGL2(io, level);
 
-  if (bsp_format == BSP_XNOD || bsp_format == BSP_XGLN || bsp_format == BSP_XGL2) PutNodes_XNOD(io, level);
-  if (bsp_format == BSP_XGL3) PutNodes_XGL3(io, level);
+  if (bsp_format == BspFormat::XNOD || bsp_format == BspFormat::XGLN || bsp_format == BspFormat::XGL2) PutNodes_XNOD(io, level);
+  if (bsp_format == BspFormat::XGL3) PutNodes_XGL3(io, level);
 
   if (compress) io.Finish_Zlib();
 }

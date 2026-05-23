@@ -268,15 +268,14 @@ constexpr short_angle_t DegreesToShortBAM(const double x)
 // STRING STUFF
 //------------------------------------------------------------------------
 
-using log_level_t = enum
+enum class Log
 {
-  LOG_NORMAL,
-  LOG_DEBUG,
-  LOG_WARN,
-  LOG_ERROR,
+  NORMAL,
+  DEBUG,
+  WARN,
 };
 
-using debug_t = enum : uint32_t
+enum Debug : uint32_t
 {
   DEBUG_NONE = 0,
   DEBUG_BLOCKMAP = BIT(0),
@@ -317,33 +316,31 @@ inline int32_t PRINTF_ATTR(2, 0) M_vsnprintf(char *buf, const char *s, va_list a
 //
 //  show a message
 //
-inline void PRINTF_ATTR(2, 3) PrintLine(const log_level_t level, const char *fmt, ...)
+template <typename... Args>
+void PrintLine(const Log level, std::format_string<Args...> fmt, Args &&...args)
 {
-  FILE *const stream = (level == LOG_NORMAL) ? stdout : stderr;
-  char buffer[MSG_BUFFER_LENGTH];
+  FILE *const stream = (level == Log::NORMAL) ? stdout : stderr;
+  std::string str = std::format(fmt, std::forward<Args>(args)...);
 
-  va_list arg_ptr;
-
-  va_start(arg_ptr, fmt);
-  M_vsnprintf(buffer, fmt, arg_ptr);
-  va_end(arg_ptr);
-
-  buffer[MSG_BUFFER_LENGTH - 1] = '\0';
-
-  fprintf(stream, "%s\n", buffer);
+  fprintf(stream, "%s\n", str.c_str());
   fflush(stream);
+}
 
-  if (level == LOG_ERROR)
-  {
-    exit(3);
-  }
+//
+// Awh, dangit.
+//
+template <typename... Args>
+std::runtime_error RuntimeException(std::format_string<Args...> fmt, Args &&...args)
+{
+  std::string str = "ERROR: " + std::format(fmt, std::forward<Args>(args)...);
+  return std::runtime_error(str);
 }
 
 //
 // Assertion macros
 //
 #define SYS_ASSERT(cond) \
-  (cond) ? (void)0 : PrintLine(LOG_ERROR, "ERROR: Assertion failed! In function %s (%s:%d)", __func__, __FILE__, __LINE__);
+  (cond) ? (void)0 : throw RuntimeException("Assertion failed! In function {} ({})", __func__, __FILE__, __LINE__);
 
 //
 // Version info
@@ -368,10 +365,7 @@ constexpr T *UtilCalloc(const size_t size)
 {
   T *ret = static_cast<T *>(calloc(1, size));
 
-  if (!ret)
-  {
-    PrintLine(LOG_ERROR, "ERROR: Out of memory (cannot allocate %zu bytes)", size);
-  }
+  if (!ret) throw std::bad_alloc();
 
   return ret;
 }
@@ -384,10 +378,7 @@ constexpr T *UtilRealloc(T *old, const size_t size)
 {
   T *ret = static_cast<T *>(realloc(old, size));
 
-  if (!ret)
-  {
-    PrintLine(LOG_ERROR, "ERROR: Out of memory (cannot reallocate %zu bytes)", size);
-  }
+  if (!ret) throw std::bad_alloc();
 
   return ret;
 }
@@ -398,10 +389,7 @@ constexpr T *UtilRealloc(T *old, const size_t size)
 template <typename T>
 constexpr void UtilFree(T *data)
 {
-  if (data == nullptr)
-  {
-    PrintLine(LOG_ERROR, "ERROR: Trying to free a nullptr");
-  }
+  if (data == nullptr) throw RuntimeException("Trying to free a nullptr");
 
   free(data);
 }
@@ -536,20 +524,20 @@ inline short_angle_t ComputeAngle_BAM(double dx, double dy)
 // LEVEL STRUCTURES
 //------------------------------------------------------------------------
 
-using map_format_t = enum map_format_e
+enum class MapFormat
 {
-  MapFormat_INVALID = 0,
-  MapFormat_Doom,
-  MapFormat_Hexen,
-  MapFormat_Doom64,
-  MapFormat_UDMF,
+  Invalid = 0,
+  Doom,
+  Hexen,
+  Doom64,
+  UDMF,
 };
 
 static std::string_view format_name[] = {"ERROR", "Doom Format", "Hexen Format", "Doom64 Format", "UDMF"};
 
 // Lump order in a map WAD: each map needs a couple of lumps
 // to provide a complete scene geometry description.
-using lump_order_t = enum lump_order_e
+enum lump_order_t
 {
   LL_LABEL = 0, // A separator name, ExMx or MAPxx
   LL_THINGS,    // Monsters, items..
@@ -590,19 +578,19 @@ using lump_order_t = enum lump_order_e
 
 static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
 
-using raw_vertex_short_t = struct raw_vertex_short_s
+struct MapVertexIntegral
 {
   int16_t x;
   int16_t y;
 } PACKEDATTR;
 
-using raw_vertex_fixed_t = struct raw_vertex_fixed_s
+struct MapVertexFractional
 {
   fixed_t x;
   fixed_t y;
 } PACKEDATTR;
 
-using raw_linedef_doom_t = struct raw_linedef_doom_s
+struct MapLinedefDoom
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
@@ -613,7 +601,7 @@ using raw_linedef_doom_t = struct raw_linedef_doom_s
   uint16_t left;    // left sidedef (only if this line adjoins 2 sectors)
 } PACKEDATTR;
 
-using raw_sidedef_doom_t = struct raw_sidedef_doom_s
+struct MapSidedefDoom
 {
   int16_t x_offset;  // X offset for texture
   int16_t y_offset;  // Y offset for texture
@@ -623,7 +611,7 @@ using raw_sidedef_doom_t = struct raw_sidedef_doom_s
   uint16_t sector;   // adjacent sector
 } PACKEDATTR;
 
-using raw_sector_doom_t = struct raw_sector_doom_s
+struct MapSectorDoom
 {
   int16_t floorh;    // floor height
   int16_t ceilh;     // ceiling height
@@ -634,7 +622,7 @@ using raw_sector_doom_t = struct raw_sector_doom_s
   uint16_t tag;      // sector activated by a linedef with same tag
 } PACKEDATTR;
 
-using raw_thing_doom_t = struct raw_thing_doom_s
+struct MapThingDoom
 {
   int16_t x;        // x position of thing
   int16_t y;        // y position of thing
@@ -644,7 +632,7 @@ using raw_thing_doom_t = struct raw_thing_doom_s
 } PACKEDATTR;
 
 // -JL- Hexen definition
-using raw_linedef_hexen_t = struct raw_linedef_hexen_s
+struct MapLinedefHexen
 {
   uint16_t start;  // from this vertex...
   uint16_t end;    // ... to this vertex
@@ -655,7 +643,7 @@ using raw_linedef_hexen_t = struct raw_linedef_hexen_s
   uint16_t left;   // left sidedef
 } PACKEDATTR;
 
-using raw_thing_hexen_t = struct raw_thing_hexen_s
+struct MapThingHexen
 {
   int16_t tid;      // tag id (for scripts/specials)
   int16_t x;        // x position
@@ -672,7 +660,7 @@ using raw_thing_hexen_t = struct raw_thing_hexen_s
 // Some are shared with PSX Doom's and PSX Final Doom's formats
 // but we don't support those
 
-using raw_thing_doom64_t = struct raw_thing_doom64_s
+struct MapThingDoom64
 {
   int16_t x;        // x position of thing
   int16_t y;        // y position of thing
@@ -682,7 +670,7 @@ using raw_thing_doom64_t = struct raw_thing_doom64_s
   uint16_t options; // when appears, deaf, etc..
 } PACKEDATTR;
 
-using raw_linedef_doom64_t = struct raw_linedef_doom64_s
+struct LinedefDoom64
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
@@ -693,7 +681,7 @@ using raw_linedef_doom64_t = struct raw_linedef_doom64_s
   uint16_t left;    // left sidedef (only if this line adjoins 2 sectors)
 } PACKEDATTR;
 
-using raw_sidedef_doom64_t = struct raw_sidedef_doom64_s
+struct SidedefDoom64
 {
   int16_t x_offset;   // X offset for texture
   int16_t y_offset;   // Y offset for texture
@@ -703,7 +691,7 @@ using raw_sidedef_doom64_t = struct raw_sidedef_doom64_s
   uint16_t sector;    // adjacent sector
 } PACKEDATTR;
 
-using raw_sector_doom64_t = struct raw_sector_doom64_s
+struct SectorDoom64
 {
   int16_t floorh;     // floor height
   int16_t ceilh;      // ceiling height
@@ -719,26 +707,26 @@ using raw_sector_doom64_t = struct raw_sector_doom64_s
 // BSP TREE STRUCTURES
 //------------------------------------------------------------------------
 
-using bsp_format_t = enum bsp_format_e : uint8_t
+enum class BspFormat : uint8_t
 {
-  BSP_DoomBSP,
-  BSP_DeePBSPV4,
-  BSP_XNOD,
-  BSP_XGLN,
-  BSP_XGL2,
-  BSP_XGL3,
+  DoomBSP,
+  DeePBSPV4,
+  XNOD,
+  XGLN,
+  XGL2,
+  XGL3,
 
-  BSP_MIN = BSP_DoomBSP,
-  BSP_MAX = BSP_XGL3,
+  MIN = DoomBSP,
+  MAX = XGL3,
 };
 
-using bmap_format_t = enum bmap_format_e : uint8_t
+enum class BlockmapFormat : uint8_t
 {
-  BMAP_DoomBSP,
-  BMAP_XBM1,
+  DoomBSP,
+  XBM1,
 
-  BMAP_MIN = BMAP_DoomBSP,
-  BMAP_MAX = BMAP_XBM1,
+  MIN = DoomBSP,
+  MAX = XBM1,
 };
 
 //
@@ -768,7 +756,7 @@ constexpr size_t LIMIT_BMAP_INDEX = UINT16_MAX;
 //
 // Vanilla blockmap
 //
-using raw_bbox_t = struct raw_bbox_s
+struct MapBoundBox
 {
   int16_t maxy;
   int16_t miny;
@@ -776,13 +764,13 @@ using raw_bbox_t = struct raw_bbox_s
   int16_t maxx;
 } PACKEDATTR;
 
-using raw_blockmap_header_t = struct raw_blockmap_header_s
+struct MapBlockmapHeader
 {
   int16_t x_origin, y_origin;
   uint16_t x_blocks, y_blocks;
 } PACKEDATTR;
 
-using raw_blockmap_xbm1_header_t = struct raw_blockmap_xbm1_header_s
+struct MapBlockmapHeaderXBM1
 {
   fixed_t x_origin, y_origin;
   uint32_t x_blocks, y_blocks;
@@ -791,28 +779,28 @@ using raw_blockmap_xbm1_header_t = struct raw_blockmap_xbm1_header_s
 // Fail way earlier
 #define static_size(x, y) static_assert(sizeof(x) == y, "Size mismatch for '" #x "'. Should be " #y ".")
 
-static_size(raw_vertex_short_t, 4);
-static_size(raw_vertex_fixed_t, 8);
+static_size(MapVertexIntegral, 4);
+static_size(MapVertexFractional, 8);
 
-static_assert(sizeof(raw_linedef_doom_t) == 14, "Size mismatch for 'raw_linedef_doom_t'. Should be 14.");
-static_assert(sizeof(raw_sidedef_doom_t) == 30, "Size mismatch for 'raw_sidedef_doom_t'. Should be 30.");
-static_assert(sizeof(raw_sector_doom_t) == 26, "Size mismatch for 'raw_sector_doom_t'. Should be 26.");
-static_assert(sizeof(raw_thing_doom_t) == 10, "Size mismatch for 'raw_thing_doom_t'. Should be 10.");
-static_assert(sizeof(raw_linedef_hexen_t) == 16, "Size mismatch for 'raw_linedef_hexen_t'. Should be 16.");
-static_assert(sizeof(raw_thing_hexen_t) == 20, "Size mismatch for 'raw_thing_hexen_t'. Should be 20.");
-static_assert(sizeof(raw_thing_doom64_t) == 12, "Size mismatch for 'raw_thing_doom64_t'. Should be 12.");
-static_assert(sizeof(raw_linedef_doom64_t) == 16, "Size mismatch for 'raw_linedef_doom64_t'. Should be 16.");
-static_assert(sizeof(raw_sidedef_doom64_t) == 12, "Size mismatch for 'raw_sidedef_doom64_t'. Should be 12.");
-static_assert(sizeof(raw_sector_doom64_t) == 24, "Size mismatch for 'raw_sector_doom64_t'. Should be 24.");
-static_assert(sizeof(raw_bbox_t) == 8, "Size mismatch for 'raw_bbox_t'. Should be 8.");
-static_assert(sizeof(raw_blockmap_header_t) == 8, "Size mismatch for 'raw_blockmap_header_t'. Should be 8.");
-static_assert(sizeof(raw_blockmap_xbm1_header_t) == 16, "Size mismatch for 'raw_blockmap_xbm1_header_t'. Should be 16.");
+static_size(MapLinedefDoom, 14);
+static_size(MapSidedefDoom, 30);
+static_size(MapSectorDoom, 26);
+static_size(MapThingDoom, 10);
+static_size(MapLinedefHexen, 16);
+static_size(MapThingHexen, 20);
+static_size(MapThingDoom64, 12);
+static_size(LinedefDoom64, 16);
+static_size(SidedefDoom64, 12);
+static_size(SectorDoom64, 24);
+static_size(MapBoundBox, 8);
+static_size(MapBlockmapHeader, 8);
+static_size(MapBlockmapHeaderXBM1, 16);
 
 //
 // LineDef attributes.
 //
 
-using lineflag_doom_t = enum lineflag_doom_e : uint16_t
+enum LineflagDoom : uint16_t
 {
   MLF_BLOCKING = BIT(0),      // Solid, is an obstacle
   MLF_BLOCKMONSTERS = BIT(1), // Blocks monsters only
@@ -832,7 +820,7 @@ using lineflag_doom_t = enum lineflag_doom_e : uint16_t
   MLF_BOOM_BLOCKPLAYERS = BIT(13), // Block Players Only
 };
 
-using lineflag_hexen_t = enum lineflag_hexen_e : uint16_t
+enum LineflagHexen : uint16_t
 {
   // Inherited from vanilla Doom
   MLF_HEXEN_BLOCKING = MLF_BLOCKING,
@@ -856,7 +844,7 @@ using lineflag_hexen_t = enum lineflag_hexen_e : uint16_t
 };
 
 // See https://www.doom64.com/maps/linedefs.html
-using lineflag_doom64_t = enum lineflag_doom64_e : uint32_t
+enum LineflagDoom64 : uint32_t
 {
   MLF_DOOM64_BLOCKING = MLF_BLOCKING,
   MLF_DOOM64_BLOCKMONSTERS = MLF_BLOCKMONSTERS,
@@ -892,7 +880,7 @@ using lineflag_doom64_t = enum lineflag_doom64_e : uint32_t
   MLF_DOOM64_MIRROR_VERT = BIT(31),
 };
 
-using line_spac_hexen_t = enum line_spac_hexen_e
+enum LineSpacHexen
 {
   SPAC_Cross = 0,   // when line is crossed (W1 / WR)
   SPAC_Use = 1,     // when line is used    (S1 / SR)
@@ -902,7 +890,7 @@ using line_spac_hexen_t = enum line_spac_hexen_e
   SPAC_PCross = 5,  // when projectile crosses the line
 };
 
-using line_special_doom_t = enum line_special_doom_e : int32_t
+enum LineSpecialDoom : int32_t
 {
   Special_ScrollLeft = 48,
   Special_ScrollRight = 85,
@@ -926,14 +914,14 @@ using line_special_doom_t = enum line_special_doom_e : int32_t
   Special_ChangeSegLine,
 };
 
-using line_tags_doom_t = enum line_tags_doom_e : uint16_t
+enum LineTagDoom : uint16_t
 {
   Tag_NoReject = 997,
   Tag_DoNotRender = 998,
   Tag_NoBlockmap = 999,
 };
 
-using line_special_hexen_t = enum line_special_hexen_e : int32_t
+enum LineSpecialHexen : int32_t
 {
   // We need to be aware of parameterized actions 1 and 5
   Polyobj_StartLine = 1,
@@ -987,7 +975,7 @@ using line_special_hexen_t = enum line_special_hexen_e : int32_t
 };
 
 // The power of node building manipulation!
-using line_effects_t = enum line_effects_e : uint32_t
+enum LineEffects : uint32_t
 {
   FX_Nothing = 0,
   FX_TwoSided = BIT(0),
@@ -1002,7 +990,7 @@ using line_effects_t = enum line_effects_e : uint32_t
 };
 
 // Segment rotation
-using seg_rotation_t = enum seg_rotation_e : uint8_t
+enum SegmentRotation : uint8_t
 {
   FX_DoNotRotate = 0,
   FX_RotateRelativeDegrees,
@@ -1015,12 +1003,12 @@ using seg_rotation_t = enum seg_rotation_e : uint8_t
 // Sector attributes.
 //
 
-using sector_special_doom64_t = enum sector_special_doom64_e : uint16_t
+enum SectorSpecialDoom64 : uint16_t
 {
   SS_Doom64_NoReject = 666,
 };
 
-using sector_effects_t = enum sector_effects_e : uint8_t
+enum SectorEffects : uint8_t
 {
   FX_Sector_None = 0,
   FX_Sector_NoReject = BIT(0),
@@ -1030,7 +1018,7 @@ using sector_effects_t = enum sector_effects_e : uint8_t
 // Thing attributes.
 //
 
-using doomednum_t = enum doomednum_e : int16_t
+enum DoomEdNum : int16_t
 {
   // -JL- ZDoom polyobj thing types
   ZDoom_PolyObj_Anchor = 9300,
@@ -1053,32 +1041,30 @@ constexpr double SPLIT_COST_MIN = 1.0;
 constexpr double SPLIT_COST_DEFAULT = 11.0;
 constexpr double SPLIT_COST_MAX = 32.0;
 
-using buildinfo_t = struct buildinfo_s;
-
-extern buildinfo_t config;
-
-struct buildinfo_s
+struct BuildInfo
 {
   struct
   {
-    doomednum_t anchor = ZDoom_PolyObj_Anchor;
-    doomednum_t spawn = ZDoom_PolyObj_Spawn;
-    doomednum_t spawn_crush = ZDoom_PolyObj_SpawnCrush;
-    doomednum_t spawn_hurt = ZDoom_PolyObj_SpawnHurt;
+    DoomEdNum anchor = ZDoom_PolyObj_Anchor;
+    DoomEdNum spawn = ZDoom_PolyObj_Spawn;
+    DoomEdNum spawn_crush = ZDoom_PolyObj_SpawnCrush;
+    DoomEdNum spawn_hurt = ZDoom_PolyObj_SpawnHurt;
   } polyobj;
 
   double split_cost = SPLIT_COST_DEFAULT;
   size_t total_warnings = 0;
   uint32_t debug = DEBUG_NONE;
 
-  bsp_format_t bsp_format = bsp_format_t::BSP_XNOD;
-  bmap_format_t bmap_format = bmap_format_t::BMAP_DoomBSP;
+  BspFormat bsp_format = BspFormat::XNOD;
+  BlockmapFormat bmap_format = BlockmapFormat::DoomBSP;
   bool fast = false;     // use a faster method to pick nodes
   bool analysis = false; // write out CSV for data analysis and visualization
   bool verbose = false;  // this affects how some messages are shown
   bool effects = true;   // disable special effects
   bool compress = false; // compress lumps using zlib
 };
+
+extern BuildInfo config;
 
 struct AnalysisData
 {
@@ -1142,6 +1128,6 @@ struct Benchmarker
     if (!enabled) return;
     auto end = clock::now();
     auto time = std::chrono::duration<double, std::milli>(end - start);
-    PrintLine(LOG_NORMAL, "[Benchmarker] '%s' runtime: %.2f ms", name.data(), time.count());
+    PrintLine(Log::NORMAL, "[Benchmarker] '{}' runtime: {:.2f} ms", name.data(), time.count());
   };
 };

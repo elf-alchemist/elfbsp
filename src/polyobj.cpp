@@ -28,7 +28,7 @@ static constexpr uint32_t POLY_BOX_SZ = 10;
 
 /* ----- polyobj handling ----------------------------- */
 
-void MarkPolyobjSector(level_t &level, sector_t *sector)
+void MarkPolyobjSector(Level &level, Sector *sector)
 {
   if (sector == nullptr)
   {
@@ -37,7 +37,7 @@ void MarkPolyobjSector(level_t &level, sector_t *sector)
 
   if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
-    PrintLine(LOG_DEBUG, "[%s] Marking Polyobj SECTOR %zu", __func__, sector->index);
+    PrintLine(Log::DEBUG, "[{}] Marking Polyobj SECTOR {}", __func__, sector->index);
   }
 
   /* already marked ? */
@@ -50,10 +50,8 @@ void MarkPolyobjSector(level_t &level, sector_t *sector)
   // the sector from being split.
   sector->has_polyobj = true;
 
-  for (size_t i = 0; i < level.linedefs.size(); i++)
+  for (auto L : level.linedefs)
   {
-    linedef_t *L = level.linedefs[i];
-
     if ((L->right && L->right->sector == sector) || (L->left && L->left->sector == sector))
     {
       L->effects |= FX_DoNotSplitSeg;
@@ -61,13 +59,13 @@ void MarkPolyobjSector(level_t &level, sector_t *sector)
   }
 }
 
-void MarkPolyobjPoint(level_t &level, double x, double y)
+void MarkPolyobjPoint(Level &level, double x, double y)
 {
   size_t inside_count = 0;
 
   double best_dist = 999999;
-  const linedef_t *best_match = nullptr;
-  sector_t *sector = nullptr;
+  const Linedef *best_match = nullptr;
+  Sector *sector = nullptr;
 
   // -AJA- First we handle the "awkward" cases where the polyobj sits
   //       directly on a linedef or even a vertex.  We check all lines
@@ -78,16 +76,14 @@ void MarkPolyobjPoint(level_t &level, double x, double y)
   auto bmaxx = FloatToShort(x + POLY_BOX_SZ);
   auto bmaxy = FloatToShort(y + POLY_BOX_SZ);
 
-  for (size_t i = 0; i < level.linedefs.size(); i++)
+  for (auto L : level.linedefs)
   {
-    const linedef_t *L = level.linedefs[i];
-
     if (CheckLinedefInsideBox(bminx, bminy, bmaxx, bmaxy, FloatToShort(L->start->x), FloatToShort(L->start->y),
                               FloatToShort(L->end->x), FloatToShort(L->end->y)))
     {
       if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
       {
-        PrintLine(LOG_DEBUG, "[%s] Touching line was %zu", __func__, L->index);
+        PrintLine(Log::DEBUG, "[{}] Touching line was {}", __func__, L->index);
       }
 
       if (L->left)
@@ -115,10 +111,8 @@ void MarkPolyobjPoint(level_t &level, double x, double y)
   //       If the point is sitting directly on a (two-sided) line,
   //       then we mark the sectors on both sides.
 
-  for (size_t i = 0; i < level.linedefs.size(); i++)
+  for (auto L : level.linedefs)
   {
-    const linedef_t *L = level.linedefs[i];
-
     double x1 = L->start->x;
     double y1 = L->start->y;
     double x2 = L->end->x;
@@ -148,7 +142,7 @@ void MarkPolyobjPoint(level_t &level, double x, double y)
 
   if (best_match == nullptr)
   {
-    PrintLine(LOG_NORMAL, "WARNING: Bad polyobj thing at (%1.0f,%1.0f).", x, y);
+    PrintLine(Log::WARN, "[{}] Bad polyobj thing at ({:1.0f},{:1.0f}).", __func__, x, y);
     config.total_warnings++;
     return;
   }
@@ -158,7 +152,7 @@ void MarkPolyobjPoint(level_t &level, double x, double y)
 
   if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
-    PrintLine(LOG_DEBUG, "[%s] Closest line was %zu Y=%1.0f..%1.0f (dist=%1.1f)", __func__, best_match->index, y1, y2,
+    PrintLine(Log::DEBUG, "[{}] Closest line was {} Y={:1.0f}..{:1.0f} (dist={:1.1f})", __func__, best_match->index, y1, y2,
               best_dist);
   }
 
@@ -167,7 +161,7 @@ void MarkPolyobjPoint(level_t &level, double x, double y)
   {
     if (fabs(best_dist) < DIST_EPSILON)
     {
-      PrintLine(LOG_DEBUG, "[%s] Polyobj directly on the line (%zu)", __func__, best_match->index);
+      PrintLine(Log::DEBUG, "[{}] Polyobj directly on the line ({})", __func__, best_match->index);
     }
   }
 
@@ -185,12 +179,12 @@ void MarkPolyobjPoint(level_t &level, double x, double y)
 
   if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
-    PrintLine(LOG_DEBUG, "[%s] Sector %zu contains the polyobj.", __func__, sector ? sector->index : NO_INDEX);
+    PrintLine(Log::DEBUG, "[{}] Sector {} contains the polyobj.", __func__, sector ? sector->index : NO_INDEX);
   }
 
   if (sector == nullptr)
   {
-    PrintLine(LOG_NORMAL, "WARNING: Invalid Polyobj thing at (%1.0f,%1.0f).", x, y);
+    PrintLine(Log::WARN, "[{}] Invalid Polyobj thing at ({:1.0f},{:1.0f}).", __func__, x, y);
     config.total_warnings++;
     return;
   }
@@ -201,22 +195,21 @@ void MarkPolyobjPoint(level_t &level, double x, double y)
 //
 // Based on code courtesy of Janis Legzdinsh.
 //
-void DetectPolyobjSectors(buildinfo_t &ctx, level_t &level)
+void DetectPolyobjSectors(BuildInfo &ctx, Level &level)
 {
   auto mark = Benchmarker(__func__);
   // -JL- First go through all lines to see if level contains any polyobjs
-  size_t i;
-  for (i = 0; i < level.linedefs.size(); i++)
+  bool has_polyobj = false;
+  for (auto L : level.linedefs)
   {
-    linedef_t *L = level.linedefs[i];
-
     if (L->special == Polyobj_StartLine || L->special == Polyobj_ExplicitLine)
     {
+      has_polyobj = true;
       break;
     }
   }
 
-  if (i == level.linedefs.size())
+  if (!has_polyobj)
   {
     // -JL- No polyobjs in this level
     return;
@@ -224,17 +217,15 @@ void DetectPolyobjSectors(buildinfo_t &ctx, level_t &level)
 
   if (HAS_BIT(ctx.debug, DEBUG_POLYOBJ))
   {
-    PrintLine(LOG_DEBUG, "[%s] Detected %s style polyobj things", __func__,
+    PrintLine(Log::DEBUG, "[{}] Detected {} style polyobj things", __func__,
               (ctx.polyobj.anchor == ZDoom_PolyObj_Anchor) ? "ZDOOM" : "HEXEN");
   }
 
-  for (size_t j = 0; j < level.things.size(); j++)
+  for (auto T : level.things)
   {
-    thing_t *T = level.things[j];
-
     double x = T->x;
     double y = T->y;
-    doomednum_t t = T->type;
+    DoomEdNum t = T->type;
 
     // ignore everything except polyobj start spots
     if (t != ctx.polyobj.anchor && t != ctx.polyobj.spawn && t != ctx.polyobj.spawn_crush && t != ctx.polyobj.spawn_hurt)
@@ -244,7 +235,7 @@ void DetectPolyobjSectors(buildinfo_t &ctx, level_t &level)
 
     if (HAS_BIT(ctx.debug, DEBUG_POLYOBJ))
     {
-      PrintLine(LOG_DEBUG, "[%s] Thing %zu at (%1.0f,%1.0f) is a polyobj spawner.", __func__, i, x, y);
+      PrintLine(Log::DEBUG, "[{}] Thing {} at ({:1.0f},{:1.0f}) is a polyobj spawner.", __func__, T->index, x, y);
     }
 
     MarkPolyobjPoint(level, x, y);

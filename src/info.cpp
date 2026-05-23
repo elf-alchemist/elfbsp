@@ -73,7 +73,7 @@ void WriteAnalysis(std::string_view filename)
 
   if (!csv_file.is_open())
   {
-    PrintLine(LOG_WARN, "[%s] Couldn't open file %s for writing.", __func__, csv_path.c_str());
+    PrintLine(Log::WARN, "[{}] Couldn't open file {} for writing.", __func__, csv_path.c_str());
     return;
   }
 
@@ -87,10 +87,10 @@ void WriteAnalysis(std::string_view filename)
   // Flush out from memory
   analysis_csv.clear();
 
-  PrintLine(LOG_NORMAL, "[%s] Successfully wrote data to CSV file %s.", __func__, csv_path.c_str());
+  PrintLine(Log::NORMAL, "[{}] Successfully wrote data to CSV file {}.", __func__, csv_path.c_str());
 }
 
-static void ComputeTotalBspHeights(const node_t *node, size_t depth, double &leaf_depth_sum)
+static void ComputeTotalBspHeights(const Node *node, size_t depth, double &leaf_depth_sum)
 {
   if (!node)
   {
@@ -118,15 +118,15 @@ static void ComputeTotalBspHeights(const node_t *node, size_t depth, double &lea
   }
 }
 
-void GenerateAnalysis(WadIO &io, level_t &level, std::string_view filename)
+void GenerateAnalysis(WadIO &io, Level &level, std::string_view filename)
 {
   auto mark = Benchmarker(__func__);
-  auto generate_analysis_data = [](WadIO &io, level_t &level, bool is_fast, size_t split_cost) -> auto
+  auto generate_analysis_data = [](WadIO &io, Level &level, bool is_fast, size_t split_cost) -> auto
   {
     AnalysisData data;
-    node_t *analysis_node = nullptr;
-    subsec_t *analysis_sub = nullptr;
-    seg_t *analysis_seg = nullptr;
+    Node *analysis_node = nullptr;
+    Subsector *analysis_sub = nullptr;
+    Segment *analysis_seg = nullptr;
 
     // Using 'double's to get around strict type casting
     // and implicit conversion warnings
@@ -142,7 +142,7 @@ void GenerateAnalysis(WadIO &io, level_t &level, std::string_view filename)
     double min_epl = 0.0;
     double max_epl = 0.0;
 
-    bbox_t dummy = {0, 0, 0, 0};
+    MapBoundBox dummy = {0, 0, 0, 0};
     analysis_seg = CreateSegs(level);
     BuildNodes(level, analysis_seg, 0, &dummy, &analysis_node, &analysis_sub, static_cast<double>(split_cost), is_fast, true);
 
@@ -187,9 +187,9 @@ void GenerateAnalysis(WadIO &io, level_t &level, std::string_view filename)
                                    data.optimal_depth, data.tree_balance, data.worst_case_ratio, data.tree_quality);
     analysis_csv.push_back(line);
 
-    FreeNodes(level);
-    FreeSubsecs(level);
-    FreeSegs(level);
+    level.FreeNodes();
+    level.FreeSubsecs();
+    level.FreeSegs();
     ClearNewVertices(level);
     level.num_new_vert = 0;
   };
@@ -201,7 +201,7 @@ void GenerateAnalysis(WadIO &io, level_t &level, std::string_view filename)
     for (size_t split_cost = 1; split_cost <= 32; split_cost++)
     {
       generate_analysis_data(io, level, is_fast != 0, split_cost);
-      PrintLine(LOG_NORMAL, "[%s] Analyzed %s, %s mode, split cost factor of %zu", __func__, io.LumpName(level.lump),
+      PrintLine(Log::NORMAL, "[{}] Analyzed {}, {} mode, split cost factor of {}", __func__, io.LumpName(level.lump),
                 is_fast ? "fast" : "normal", split_cost);
     }
   }

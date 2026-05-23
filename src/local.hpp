@@ -39,17 +39,15 @@ bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y
 // LEVEL : Level structures & read/write functions.
 //------------------------------------------------------------------------
 
-struct level_t;
-struct node_t;
-struct sector_t;
-struct quadtree_c;
+struct Node;
+struct Quadtree;
 
 // a wall-tip is where a wall meets a vertex
-struct walltip_t
+struct WallTip
 {
   // link in list.  List is kept in ANTI-clockwise order.
-  walltip_t *next;
-  walltip_t *prev;
+  WallTip *next;
+  WallTip *prev;
 
   // angle that line makes at vertex (degrees).
   double angle;
@@ -61,7 +59,7 @@ struct walltip_t
   bool open_right;
 };
 
-struct vertex_t
+struct Vertex
 {
   // coordinates
   double x, y;
@@ -78,20 +76,20 @@ struct vertex_t
 
   // usually nullptr, unless this vertex occupies the same location as a
   // previous vertex.
-  vertex_t *overlap;
+  Vertex *overlap;
 
   // list of wall-tips
-  walltip_t *tip_set;
+  WallTip *tip_set;
 };
 
 // check whether a line with the given delta coordinates from this
 // vertex is open or closed.  If there exists a walltip at same
 // angle, it is closed, likewise if line is in void space.
-bool CheckOpen(const vertex_t *vertex, double dx, double dy);
+bool CheckOpen(const Vertex *vertex, double dx, double dy);
 
-bool Overlaps(const vertex_t *vertex, const vertex_t *other);
+bool Overlaps(const Vertex *vertex, const Vertex *other);
 
-struct sector_t
+struct Sector
 {
   // sector index.  Always valid after loading & pruning.
   size_t index = NO_INDEX;
@@ -99,7 +97,7 @@ struct sector_t
   // most info (floor_h, floor_tex, etc) omitted.  We don't need to
   // write the SECTORS lump, only read it.
 
-  sector_effects_t effects = FX_Sector_None;
+  SectorEffects effects = FX_Sector_None;
 
   // -JL- non-zero if this sector contains a polyobj.
   bool has_polyobj = false;
@@ -111,14 +109,14 @@ struct sector_t
   // RING, containing all sectors of the same group.
   size_t rej_group = NO_INDEX;
 
-  sector_t *rej_next = nullptr;
-  sector_t *rej_prev = nullptr;
+  Sector *rej_next = nullptr;
+  Sector *rej_prev = nullptr;
 };
 
-struct sidedef_t
+struct Sidedef
 {
   // adjacent sector.  Can be nullptr (invalid sidedef)
-  sector_t *sector;
+  Sector *sector;
 
   double offset_x = 0.0;
   double offset_y = 0.0;
@@ -130,27 +128,27 @@ struct sidedef_t
   size_t index;
 };
 
-struct linedef_t
+struct Linedef
 {
   // link for list
-  linedef_t *Next;
+  Linedef *Next;
 
-  vertex_t *start; // from this vertex...
-  vertex_t *end;   // ... to this vertex
+  Vertex *start; // from this vertex...
+  Vertex *end;   // ... to this vertex
 
-  sidedef_t *right; // right sidedef
-  sidedef_t *left;  // left sidedef, or nullptr if none
+  Sidedef *right; // right sidedef
+  Sidedef *left;  // left sidedef, or nullptr if none
 
   int32_t special; //
   uint16_t tag;    //
 
   uint32_t effects = FX_Nothing;
-  seg_rotation_t angle = FX_DoNotRotate;
+  SegmentRotation angle = FX_DoNotRotate;
 
   // normally nullptr, except when this linedef directly overlaps an earlier
   // one (a rarely-used trick to create higher mid-masked textures).
   // No segs should be created for these overlapping linedefs.
-  linedef_t *overlap;
+  Linedef *overlap;
 
   // linedef index.  Always valid after loading & pruning of zero
   // length lines has occurred.
@@ -162,10 +160,10 @@ struct linedef_t
   }
 };
 
-struct thing_t
+struct Mobj
 {
   double x, y;
-  doomednum_t type;
+  DoomEdNum type;
 
   // other info (angle, and hexen stuff) omitted.  We don't need to
   // write the THINGS lump, only read it.
@@ -174,16 +172,16 @@ struct thing_t
   size_t index;
 };
 
-struct seg_t
+struct Segment
 {
   // link for list
-  seg_t *next;
+  Segment *next;
 
-  vertex_t *start; // from this vertex...
-  vertex_t *end;   // ... to this vertex
+  Vertex *start; // from this vertex...
+  Vertex *end;   // ... to this vertex
 
   // linedef that this seg goes along, or nullptr if miniseg
-  linedef_t *linedef;
+  Linedef *linedef;
 
   // 0 for right, 1 for left
   bool side = false;
@@ -191,7 +189,7 @@ struct seg_t
   // seg on other side, or nullptr if one-sided.  This relationship is
   // always one-to-one -- if one of the segs is split, the partner seg
   // must also be split.
-  seg_t *partner;
+  Segment *partner;
 
   // seg index.  Only valid once the seg has been added to a
   // subsector.  A negative value means it is invalid -- there
@@ -204,7 +202,7 @@ struct seg_t
 
   // the quad-tree node that contains this seg, or nullptr if the seg
   // is now in a subsector.
-  quadtree_c *quad;
+  Quadtree *quad;
 
   // precomputed data for faster calculations
   double psx, psy;
@@ -218,7 +216,7 @@ struct seg_t
   // linedef that this seg initially comes from.  For "real" segs,
   // this is just the same as the 'linedef' field above.  For
   // "minisegs", this is the linedef of the partition line.
-  linedef_t *source_line;
+  Linedef *source_line;
 
   // this only used by ClockwiseOrder()
   double cmp_angle;
@@ -240,10 +238,10 @@ struct seg_t
 // it must be a very high value.
 static constexpr uint32_t SEG_IS_GARBAGE = (1 << 29);
 
-struct subsec_t
+struct Subsector
 {
   // list of segs
-  seg_t *seg_list;
+  Segment *seg_list;
 
   // count of segs -- only valid after RenumberSegs() is called
   size_t seg_count;
@@ -257,23 +255,17 @@ struct subsec_t
   double mid_y;
 };
 
-struct bbox_t
-{
-  int16_t minx, miny;
-  int16_t maxx, maxy;
-};
-
-struct child_t
+struct NodeChild
 {
   // child node or subsector (one must be nullptr)
-  node_t *node;
-  subsec_t *subsec;
+  Node *node;
+  Subsector *subsec;
 
   // child bounding box
-  bbox_t bounds;
+  MapBoundBox bounds;
 };
 
-struct node_t
+struct Node
 {
   // these coordinates are high precision to support UDMF.
   // in non-UDMF maps, they will actually be integral since a
@@ -283,14 +275,14 @@ struct node_t
   double dx, dy; // offset to ending point
 
   // right & left children
-  child_t r;
-  child_t l;
+  NodeChild r;
+  NodeChild l;
 
   // node index.  Only valid once the NODES lump has been created.
   size_t index;
 };
 
-struct quadtree_c
+struct Quadtree
 {
   // NOTE: not a real quadtree, division is always binary.
 
@@ -304,17 +296,17 @@ struct quadtree_c
   // [0] has the lower coordinates, and [1] has the higher coordinates.
   // Division of a square always occurs horizontally (e.g. 512x512 ->
   // 256x512).
-  quadtree_c *subs[2];
+  Quadtree *subs[2];
 
   // count of real/minisegs contained in this node AND ALL CHILDREN.
   size_t real_num;
   size_t mini_num;
 
   // list of segs completely contained in this node.
-  seg_t *list;
+  Segment *list;
 
-  quadtree_c(int _x1, int _y1, int _x2, int _y2);
-  ~quadtree_c(void);
+  Quadtree(int _x1, int _y1, int _x2, int _y2);
+  ~Quadtree(void);
 
   inline bool Empty(void) const
   {
@@ -325,20 +317,20 @@ struct quadtree_c
 // check relationship between this box and the partition line.
 // returns -1 or +1 if box is definitively on a particular side,
 // or 0 if the line intersects or touches the box.
-int OnLineSide(quadtree_c *quadtree, const seg_t *part);
+int OnLineSide(Quadtree *quadtree, const Segment *part);
 
 // an "intersection" remembers the vertex that touches a BSP divider
 // line (especially a new vertex that is created at a seg split).
 
-struct intersection_t
+struct Intersection
 {
   // link in list.  The intersection list is kept sorted by
   // along_dist, in ascending order.
-  intersection_t *next;
-  intersection_t *prev;
+  Intersection *next;
+  Intersection *prev;
 
   // vertex in question
-  vertex_t *vertex;
+  Vertex *vertex;
 
   // how far along the partition line the vertex is.  Zero is at the
   // partition seg's start point, positive values move in the same
@@ -355,7 +347,7 @@ struct intersection_t
   bool open_after;
 };
 
-using blocklist_t = struct blocklist_t
+struct BlockList
 {
   size_t hash;
   std::vector<size_t> lines;
@@ -363,30 +355,30 @@ using blocklist_t = struct blocklist_t
 
 // Note: ZDoom format support based on code (C) 2002,2003 Marisa "Randi" Heit
 
-using level_t = struct level_t
+struct Level
 {
-  map_format_t map_format = map_format_t::MapFormat_INVALID;
+  MapFormat map_format = MapFormat::Invalid;
   size_t num_old_vert = 0;
   size_t num_new_vert = 0;
   size_t num_real_lines = 0;
   size_t lump = NO_INDEX;
   bool overflows = false;
 
-  std::vector<vertex_t *> vertices;
-  std::vector<linedef_t *> linedefs;
-  std::vector<sidedef_t *> sidedefs;
-  std::vector<sector_t *> sectors;
-  std::vector<thing_t *> things;
+  std::vector<Vertex *> vertices;
+  std::vector<Linedef *> linedefs;
+  std::vector<Sidedef *> sidedefs;
+  std::vector<Sector *> sectors;
+  std::vector<Mobj *> things;
 
-  node_t *root_node = nullptr;
-  subsec_t *root_sub = nullptr;
+  Node *root_node = nullptr;
+  Subsector *root_sub = nullptr;
 
-  std::vector<seg_t *> segs;
-  std::vector<subsec_t *> subsecs;
-  std::vector<node_t *> nodes;
-  std::vector<walltip_t *> walltips;
-  std::vector<intersection_t *> intercuts;
-  bsp_format_t bsp_format = bsp_format_t::BSP_XNOD;
+  std::vector<Segment *> segs;
+  std::vector<Subsector *> subsecs;
+  std::vector<Node *> nodes;
+  std::vector<WallTip *> walltips;
+  std::vector<Intersection *> intercuts;
+  BspFormat bsp_format = BspFormat::XNOD;
 
   uint8_t *reject_matrix;
   size_t reject_size;
@@ -395,74 +387,41 @@ using level_t = struct level_t
   size_t block_w, block_h;
   size_t block_count;
 
-  std::vector<blocklist_t> block_lines;
+  std::vector<BlockList> block_lines;
   std::vector<size_t> block_indexes;
   std::vector<size_t> block_duplicates;
 
   double block_compression;
-  bmap_format_t bmap_format = bmap_format_t::BMAP_DoomBSP;
+  BlockmapFormat bmap_format = BlockmapFormat::DoomBSP;
 
-  vertex_t *SafeLookupVertex(size_t num, size_t num_line)
-  {
-    if (num >= vertices.size())
-    {
-      PrintLine(LOG_ERROR, "ERROR: Illegal map-vertex number #%zu, on line #%zu, maximum is #%zu", num, num_line,
-                vertices.size());
-    }
-    return vertices[num];
-  }
+  Vertex *SafeLookupVertex(size_t num, size_t num_line) const;
+  Sector *SafeLookupSector(size_t num, size_t num_side) const;
+  Sidedef *SafeLookupSidedef(uint16_t num) const;
 
-  sector_t *SafeLookupSector(size_t num, size_t num_side)
-  {
-    if (num >= NO_INDEX_INT16)
-    {
-      return nullptr;
-    }
+  Vertex *NewVertex(void);
+  Linedef *NewLinedef(void);
+  Sidedef *NewSidedef(void);
+  Sector *NewSector(void);
+  Mobj *NewThing(void);
 
-    if (num >= sectors.size())
-    {
-      PrintLine(LOG_ERROR, "ERROR: Illegal sector number #%zu, on side #%zu, maximum is #%zu", num, num_side,
-                sectors.size() - 1);
-    }
+  Segment *NewSeg(void);
+  Subsector *NewSubsec(void);
+  Node *NewNode(void);
+  WallTip *NewWallTip(void);
+  Intersection *NewIntersection(void);
 
-    return sectors[num];
-  }
+  void FreeVertices(void);
+  void FreeSidedefs(void);
+  void FreeLinedefs(void);
+  void FreeSectors(void);
+  void FreeThings(void);
 
-  inline sidedef_t *SafeLookupSidedef(uint16_t num)
-  {
-    // silently ignore illegal sidedef numbers
-    if (num >= NO_INDEX_INT16 || num >= sidedefs.size())
-    {
-      return nullptr;
-    }
-
-    return sidedefs[num];
-  }
+  void FreeSegs(void);
+  void FreeSubsecs(void);
+  void FreeNodes(void);
+  void FreeWallTips(void);
+  void FreeIntersections(void);
 };
-
-vertex_t *NewVertex(level_t &level);
-linedef_t *NewLinedef(level_t &level);
-sidedef_t *NewSidedef(level_t &level);
-sector_t *NewSector(level_t &level);
-thing_t *NewThing(level_t &level);
-
-seg_t *NewSeg(level_t &level);
-subsec_t *NewSubsec(level_t &level);
-node_t *NewNode(level_t &level);
-walltip_t *NewWallTip(level_t &level);
-intersection_t *NewIntersection(level_t &level);
-
-void FreeVertices(level_t &level);
-void FreeSidedefs(level_t &level);
-void FreeLinedefs(level_t &level);
-void FreeSectors(level_t &level);
-void FreeThings(level_t &level);
-
-void FreeSegs(level_t &level);
-void FreeSubsecs(level_t &level);
-void FreeNodes(level_t &level);
-void FreeWallTips(level_t &level);
-void FreeIntersections(level_t &level);
 
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
@@ -473,25 +432,25 @@ void FreeIntersections(level_t &level);
 //
 
 // detection routines
-void DetectOverlappingVertices(level_t &level);
-void DetectOverlappingLines(level_t &level);
-void DetectPolyobjSectors(buildinfo_t &config, level_t &level);
+void DetectOverlappingVertices(Level &level);
+void DetectOverlappingLines(Level &level);
+void DetectPolyobjSectors(BuildInfo &config, Level &level);
 
 // pruning routines
-void ClearNewVertices(level_t &level);
-void PruneVerticesAtEnd(level_t &level);
+void ClearNewVertices(Level &level);
+void PruneVerticesAtEnd(Level &level);
 
 // computes the wall tips for all of the vertices
-void CalculateWallTips(level_t &level);
+void CalculateWallTips(Level &level);
 
 // return a new vertex (with correct wall-tip info) for the split that
 // happens along the given seg at the given location.
-vertex_t *NewVertexFromSplitSeg(level_t &level, seg_t *seg, double x, double y);
+Vertex *NewVertexFromSplitSeg(Level &level, Segment *seg, double x, double y);
 
 // return a new end vertex to compensate for a seg that would end up
 // being zero-length (after integer rounding).  Doesn't compute the wall-tip
 // info (thus this routine should only be used *after* node building).
-vertex_t *NewVertexDegenerate(level_t &level, vertex_t *start, vertex_t *end);
+Vertex *NewVertexDegenerate(Level &level, Vertex *start, Vertex *end);
 
 //------------------------------------------------------------------------
 // SEG : Choose the best Seg to use for a node line.
@@ -514,9 +473,9 @@ static constexpr double ANG_EPSILON = (1.0 / 1024.0);
 
 // scan all the linedef of the level and convert each sidedef into a
 // seg (or seg pair).  Returns the list of segs.
-seg_t *CreateSegs(level_t &level);
+Segment *CreateSegs(Level &level);
 
-quadtree_c *TreeFromSegList(seg_t *list);
+Quadtree *TreeFromSegList(Segment *list);
 
 // takes the seg list and determines if it is convex.  When it is, the
 // segs are converted to a subsector, and '*S' is the new subsector
@@ -525,22 +484,22 @@ quadtree_c *TreeFromSegList(seg_t *list);
 // and '*N' is the new node (and '*S' is set to nullptr).  Normally
 // returns BUILD_OK.
 
-void BuildNodes(level_t &level, seg_t *seg_list, int depth, bbox_t *bounds, node_t **N, subsec_t **S, double split_cost,
+void BuildNodes(Level &level, Segment *seg_list, int depth, MapBoundBox *bounds, Node **N, Subsector **S, double split_cost,
                 bool fast, bool analysis);
 
 // compute the height of the bsp tree, starting at 'node'.
-size_t ComputeBspHeight(const node_t *node);
+size_t ComputeBspHeight(const Node *node);
 
-using build_result_t = enum build_result_e
+enum class BuildResult
 {
   // everything went peachy keen
-  BUILD_OK = 0,
+  Ok = 0,
 
   // when saving the map, one or more lumps overflowed
-  BUILD_LumpOverflow
+  Overflow
 };
 
 // build the nodes of a particular level. otherwise the wad
 // is updated to store the new lumps and returns either BUILD_OK or
 // BUILD_LumpOverflow if some limits were exceeded.
-build_result_e BuildLevel(WadIO &io, level_t &level, std::string_view filename);
+BuildResult BuildLevel(WadIO &io, Level &level, std::string_view filename);

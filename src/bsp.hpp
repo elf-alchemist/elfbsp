@@ -29,21 +29,21 @@
 //
 // DoomBSP
 //
-using raw_node_doombsp_t = struct raw_node_doombsp_s
+struct MapNodeDoomBSP
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
-  raw_bbox_t b1, b2;    // bounding rectangles
+  MapBoundBox b1, b2;   // bounding rectangles
   uint16_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-using raw_subsec_doombsp_t = struct raw_subsec_doombsp_s
+struct MapSubsectorDoomBSP
 {
   uint16_t num;   // number of Segs in this Sub-Sector
   uint16_t first; // first Seg
 } PACKEDATTR;
 
-using raw_seg_doombsp_t = struct raw_seg_doombsp_s
+struct MapSegmentDoomBSP
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
@@ -53,7 +53,7 @@ using raw_seg_doombsp_t = struct raw_seg_doombsp_s
   int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
-using raw_leaf_doombsp_t = struct raw_leaf_doombsp_s
+struct raw_leaf_doombsp_t
 {
   uint16_t vertex;
   uint16_t seg;
@@ -63,21 +63,21 @@ using raw_leaf_doombsp_t = struct raw_leaf_doombsp_s
 // DeepSea DeePBSP
 // * compared to vanilla, some types were raise to 32bit
 //
-using raw_node_deepbspv4_t = struct raw_node_deepbspv4_s
+struct MapNodeDeePBSPV4
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
-  raw_bbox_t b1, b2;    // bounding rectangles
+  MapBoundBox b1, b2;   // bounding rectangles
   uint32_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-using raw_subsec_deepbspv4_t = struct raw_subsec_deepbspv4_s
+struct MapSubsectorDeePBSPV4
 {
   uint16_t num;   // number of Segs in this Sub-Sector
   uint32_t first; // first Seg
 } PACKEDATTR;
 
-using raw_seg_deepbspv4_t = struct raw_seg_deepbspv4_s
+struct MapSegmentDeePBSPV4
 {
   uint32_t start;   // from this vertex...
   uint32_t end;     // ... to this vertex
@@ -87,7 +87,7 @@ using raw_seg_deepbspv4_t = struct raw_seg_deepbspv4_s
   int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
-using raw_leaf_deepbspv4_t = struct raw_leaf_deepbspv4_s
+struct raw_leaf_deepbspv4_t
 {
   uint32_t vertex;
   uint32_t seg;
@@ -98,21 +98,21 @@ using raw_leaf_deepbspv4_t = struct raw_leaf_deepbspv4_s
 // * compared to vanilla, some types were raise to 32bit
 // * each version (XNOD->XGLN->XGL2->XGL3) builds on top of the previous
 //
-using raw_vertex_xnod_t = struct raw_vertex_xnod_s
+struct MapVertexXNOD
 {
   fixed_t x;
   fixed_t y;
 } PACKEDATTR;
 
-using raw_node_xnod_t = struct raw_node_xnod_s
+struct MapNodeXNOD
 {
   int16_t x, y;         // starting point
   int16_t dx, dy;       // offset to ending point
-  raw_bbox_t b1, b2;    // bounding rectangles
+  MapBoundBox b1, b2;   // bounding rectangles
   uint32_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-using raw_subsec_xnod_t = struct raw_subsec_xnod_s
+struct MapSubsectorXNOD
 {
   uint32_t segnum;
   // NOTE : no "first" value, segs must be contiguous and appear
@@ -121,7 +121,7 @@ using raw_subsec_xnod_t = struct raw_subsec_xnod_s
   //        all segs of the first subsector.
 } PACKEDATTR;
 
-using raw_seg_xnod_t = struct raw_seg_xnod_s
+struct MapSegmentXNOD
 {
   uint32_t start;   // from this vertex...
   uint32_t end;     // ... to this vertex
@@ -129,7 +129,7 @@ using raw_seg_xnod_t = struct raw_seg_xnod_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-using raw_seg_xgln_t = struct raw_seg_xgln_s
+struct MapSegmentXGLN
 {
   uint32_t vertex;  // from this vertex ... to the next
   uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
@@ -137,7 +137,7 @@ using raw_seg_xgln_t = struct raw_seg_xgln_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-using raw_seg_xgl2_t = struct raw_seg_xgl2_s
+struct MapSegmentXGL2
 {
   uint32_t vertex;  // from this vertex ... to the next
   uint32_t partner; // partner seg, unused by most ports outside of U/G/ZDoom
@@ -145,27 +145,27 @@ using raw_seg_xgl2_t = struct raw_seg_xgl2_s
   uint8_t side;     // 0 if on right of linedef, 1 if on left
 } PACKEDATTR;
 
-using raw_node_xgl3_t = struct raw_node_xgl3_s
+struct MapNodeXGL3
 {
   int32_t x, y;         // starting point
   int32_t dx, dy;       // offset to ending point
-  raw_bbox_t b1, b2;    // bounding rectangles
+  MapBoundBox b1, b2;   // bounding rectangles
   uint32_t right, left; // children: Node or SSector (if high bit is set)
 } PACKEDATTR;
 
-static_size(raw_node_doombsp_t, 28);
-static_size(raw_subsec_doombsp_t, 4);
-static_size(raw_seg_doombsp_t, 12);
-static_size(raw_node_deepbspv4_t, 32);
-static_size(raw_subsec_deepbspv4_t, 6);
-static_size(raw_seg_deepbspv4_t, 16);
-static_size(raw_vertex_xnod_t, 8);
-static_size(raw_node_xnod_t, 32);
-static_size(raw_subsec_xnod_t, 4);
-static_size(raw_seg_xnod_t, 11);
-static_size(raw_seg_xgln_t, 11);
-static_size(raw_seg_xgl2_t, 13);
-static_size(raw_node_xgl3_t, 40);
+static_size(MapNodeDoomBSP, 28);
+static_size(MapSubsectorDoomBSP, 4);
+static_size(MapSegmentDoomBSP, 12);
+static_size(MapNodeDeePBSPV4, 32);
+static_size(MapSubsectorDeePBSPV4, 6);
+static_size(MapSegmentDeePBSPV4, 16);
+static_size(MapVertexXNOD, 8);
+static_size(MapNodeXNOD, 32);
+static_size(MapSubsectorXNOD, 4);
+static_size(MapSegmentXNOD, 11);
+static_size(MapSegmentXGLN, 11);
+static_size(MapSegmentXGL2, 13);
+static_size(MapNodeXGL3, 40);
 
 // put all the segs in each subsector into clockwise order, and renumber
 // the seg indices.
@@ -173,38 +173,38 @@ static_size(raw_node_xgl3_t, 40);
 // [ This cannot be done DURING BuildNodes() since splitting a seg with
 //   a partner will insert another seg into that partner's list, usually
 //   in the wrong place order-wise. ]
-void ClockwiseBspTree(level_t &level);
+void ClockwiseBspTree(Level &level);
 
 // traverse the BSP tree and do whatever is necessary to convert the
 // node information from GL standard to normal standard (for example,
 // removing minisegs).
-void NormaliseBspTree(level_t &level);
+void NormaliseBspTree(Level &level);
 
 // traverse the BSP tree, doing whatever is necessary to round
 // vertices to integer coordinates (for example, removing segs whose
 // rounded coordinates degenerate to the same point).
-void RoundOffBspTree(level_t &level);
+void RoundOffBspTree(Level &level);
 
 // both BLOCKAMP and REJECT exist as single lumps on all supported map formats
-void InitBlockmap(level_t &level);
-void PutBlockmap(WadIO &io, level_t &level);
-void PutReject(WadIO &io, level_t &level);
+void InitBlockmap(Level &level);
+void PutBlockmap(WadIO &io, Level &level);
+void PutReject(WadIO &io, Level &level);
 
 // the BSP tree lumps differ notably on each map format -- Doom/Hexen/Doom64
 // have NODES, SSECTORS & SEGS, but UDMF is generally only ZNODES, and there's
 // some format overlap between them
-void SortSegs(level_t &level);
+void SortSegs(Level &level);
 
-void PutVertices(WadIO &io, level_t &level, bool fractional, bool include_new_verts);
+void PutVertices(WadIO &io, Level &level, bool fractional, bool include_new_verts);
 
-void PutSegs_DoomBSP(WadIO &io, level_t &level);
-void PutSubsecs_DoomBSP(WadIO &io, level_t &level);
-void PutNodes_DoomBSP(WadIO &io, level_t &level);
-void PutLeafs_DoomBSP(WadIO &io, level_t &level);
+void PutSegs_DoomBSP(WadIO &io, Level &level);
+void PutSubsecs_DoomBSP(WadIO &io, Level &level);
+void PutNodes_DoomBSP(WadIO &io, Level &level);
+void PutLeafs_DoomBSP(WadIO &io, Level &level);
 
-void PutSegs_DeePBSPV4(WadIO &io, level_t &level);
-void PutSubsecs_DeePBSPV4(WadIO &io, level_t &level);
-void PutNodes_DeePBSPV4(WadIO &io, level_t &level);
-void PutLeafs_DeePBSPV4(WadIO &io, level_t &level);
+void PutSegs_DeePBSPV4(WadIO &io, Level &level);
+void PutSubsecs_DeePBSPV4(WadIO &io, Level &level);
+void PutNodes_DeePBSPV4(WadIO &io, Level &level);
+void PutLeafs_DeePBSPV4(WadIO &io, Level &level);
 
-void PutTree_ZDBSP(WadIO &io, level_t &level, std::string lumpname, bsp_format_t bsp_format, bool compress);
+void PutTree_ZDBSP(WadIO &io, Level &level, std::string lumpname, BspFormat bsp_format, bool compress);

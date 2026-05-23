@@ -30,7 +30,7 @@
 //------------------------------------------------------------------------
 
 // wad header
-using WadHeader = struct WadHeader
+struct WadHeader
 {
   char ident[4];
   uint32_t num_entries;
@@ -38,7 +38,7 @@ using WadHeader = struct WadHeader
 } PACKEDATTR;
 
 // directory entry
-using WadLump = struct WadLump
+struct WadLump
 {
   uint32_t pos;
   uint32_t size;
@@ -78,7 +78,7 @@ struct WadIO
   bool IsLevelLump(size_t lump_index) const;
   bool IsLevelTextmapFormat(size_t lump_index) const;
   bool IsLevel(size_t lump_index) const;
-  map_format_t LevelFormat(size_t lump_index) const;
+  MapFormat LevelFormat(size_t lump_index) const;
   size_t LevelLastLump(size_t lump_index) const;
   size_t LevelLookupLump(size_t lump_index, std::string_view name) const;
   bool LevelHasLump(size_t lump_index, std::string_view name) const;
@@ -122,7 +122,7 @@ std::vector<T> WadIO::ReadLump(size_t lump_index)
   }
   if (fseek(this->read_file, this->read_directory[lump_index].pos, SEEK_SET))
   {
-    throw std::runtime_error("ERROR: Failed to seek");
+    throw RuntimeException("Failed to seek");
   }
   size_t size = this->read_directory[lump_index].size / sizeof(T);
   lump.resize(size);

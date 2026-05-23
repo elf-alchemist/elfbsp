@@ -122,188 +122,9 @@ bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y
 // LEVEL : Level structure read/write functions.
 //------------------------------------------------------------------------
 
-/* ----- allocation routines ---------------------------- */
-
-vertex_t *NewVertex(level_t &level)
-{
-  vertex_t *V = UtilCalloc<vertex_t>(sizeof(vertex_t));
-  V->index = level.vertices.size();
-  level.vertices.push_back(V);
-  return V;
-}
-
-linedef_t *NewLinedef(level_t &level)
-{
-  linedef_t *L = UtilCalloc<linedef_t>(sizeof(linedef_t));
-  L->index = level.linedefs.size();
-  level.linedefs.push_back(L);
-  return L;
-}
-
-sidedef_t *NewSidedef(level_t &level)
-{
-  sidedef_t *S = UtilCalloc<sidedef_t>(sizeof(sidedef_t));
-  S->index = level.sidedefs.size();
-  level.sidedefs.push_back(S);
-  return S;
-}
-
-sector_t *NewSector(level_t &level)
-{
-  sector_t *S = UtilCalloc<sector_t>(sizeof(sector_t));
-  S->index = level.sectors.size();
-  level.sectors.push_back(S);
-  return S;
-}
-
-thing_t *NewThing(level_t &level)
-{
-  thing_t *T = UtilCalloc<thing_t>(sizeof(thing_t));
-  T->index = level.things.size();
-  level.things.push_back(T);
-  return T;
-}
-
-seg_t *NewSeg(level_t &level)
-{
-  seg_t *S = UtilCalloc<seg_t>(sizeof(seg_t));
-  level.segs.push_back(S);
-  return S;
-}
-
-subsec_t *NewSubsec(level_t &level)
-{
-  subsec_t *S = UtilCalloc<subsec_t>(sizeof(subsec_t));
-  level.subsecs.push_back(S);
-  return S;
-}
-
-node_t *NewNode(level_t &level)
-{
-  node_t *N = UtilCalloc<node_t>(sizeof(node_t));
-  level.nodes.push_back(N);
-  return N;
-}
-
-walltip_t *NewWallTip(level_t &level)
-{
-  walltip_t *WT = UtilCalloc<walltip_t>(sizeof(walltip_t));
-  level.walltips.push_back(WT);
-  return WT;
-}
-
-intersection_t *NewIntersection(level_t &level)
-{
-  intersection_t *cut = new intersection_t;
-  level.intercuts.push_back(cut);
-  return cut;
-}
-
-/* ----- free routines ---------------------------- */
-
-void FreeVertices(level_t &level)
-{
-  for (size_t i = 0; i < level.vertices.size(); i++)
-  {
-    UtilFree(level.vertices[i]);
-  }
-
-  level.vertices.clear();
-}
-
-void FreeLinedefs(level_t &level)
-{
-  for (size_t i = 0; i < level.linedefs.size(); i++)
-  {
-    UtilFree(level.linedefs[i]);
-  }
-
-  level.linedefs.clear();
-}
-
-void FreeSidedefs(level_t &level)
-{
-  for (size_t i = 0; i < level.sidedefs.size(); i++)
-  {
-    UtilFree(level.sidedefs[i]);
-  }
-
-  level.sidedefs.clear();
-}
-
-void FreeSectors(level_t &level)
-{
-  for (size_t i = 0; i < level.sectors.size(); i++)
-  {
-    UtilFree(level.sectors[i]);
-  }
-
-  level.sectors.clear();
-}
-
-void FreeThings(level_t &level)
-{
-  for (size_t i = 0; i < level.things.size(); i++)
-  {
-    UtilFree(level.things[i]);
-  }
-
-  level.things.clear();
-}
-
-void FreeSegs(level_t &level)
-{
-  for (size_t i = 0; i < level.segs.size(); i++)
-  {
-    UtilFree(level.segs[i]);
-  }
-
-  level.segs.clear();
-}
-
-void FreeSubsecs(level_t &level)
-{
-  for (size_t i = 0; i < level.subsecs.size(); i++)
-  {
-    UtilFree(level.subsecs[i]);
-  }
-
-  level.subsecs.clear();
-}
-
-void FreeNodes(level_t &level)
-{
-  for (size_t i = 0; i < level.nodes.size(); i++)
-  {
-    UtilFree(level.nodes[i]);
-  }
-
-  level.nodes.clear();
-}
-
-void FreeWallTips(level_t &level)
-{
-  for (size_t i = 0; i < level.walltips.size(); i++)
-  {
-    UtilFree(level.walltips[i]);
-  }
-
-  level.walltips.clear();
-}
-
-void FreeIntersections(level_t &level)
-{
-  for (size_t i = 0; i < level.intercuts.size(); i++)
-  {
-    delete level.intercuts[i];
-  }
-
-  level.intercuts.clear();
-}
-
 /* ----- reading routines ------------------------------ */
 
-static void ValidateLinedef(level_t &level, linedef_t *line)
+static void ValidateLinedef(Level &level, Linedef *line)
 {
   if (line->right || line->left)
   {
@@ -315,7 +136,7 @@ static void ValidateLinedef(level_t &level, linedef_t *line)
     line->effects |= FX_SelfReferential;
     if (config.verbose)
     {
-      PrintLine(LOG_NORMAL, "Linedef #%zu is self-referencing", line->index);
+      PrintLine(Log::NORMAL, "[{}] Linedef #{} is self-referencing", __func__, line->index);
     }
   }
 
@@ -347,23 +168,23 @@ static void ValidateLinedef(level_t &level, linedef_t *line)
   // check for extremely long lines
   if (hypot(deltax, deltay) >= 32000)
   {
-    PrintLine(LOG_NORMAL, "WARNING: Linedef #%zu is VERY long, it may cause problems", line->index);
+    PrintLine(Log::WARN, "[{}] Linedef #{} is VERY long, it may cause problems", __func__, line->index);
     config.total_warnings++;
   }
 }
 
-static void GetVertices_Integral(WadIO &io, level_t &level)
+static void GetVertices_Integral(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<raw_vertex_short_t>(level.lump, "VERTEXES");
+  auto lump = io.ReadLevelLump<MapVertexIntegral>(level.lump, "VERTEXES");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
   for (auto &raw : lump)
   {
-    vertex_t *vert = NewVertex(level);
+    Vertex *vert = level.NewVertex();
     vert->x = ShortToFloat(GetLittleEndian(raw.x));
     vert->y = ShortToFloat(GetLittleEndian(raw.y));
   }
@@ -371,18 +192,18 @@ static void GetVertices_Integral(WadIO &io, level_t &level)
   level.num_old_vert = level.vertices.size();
 }
 
-static void GetVertices_Fractional(WadIO &io, level_t &level)
+static void GetVertices_Fractional(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<raw_vertex_fixed_t>(level.lump, "VERTEXES");
+  auto lump = io.ReadLevelLump<MapVertexFractional>(level.lump, "VERTEXES");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
   for (auto &raw : lump)
   {
-    vertex_t *vert = NewVertex(level);
+    Vertex *vert = level.NewVertex();
 
     vert->x = static_cast<double>(GetLittleEndian(raw.x) / FRACFACTOR);
     vert->y = static_cast<double>(GetLittleEndian(raw.y) / FRACFACTOR);
@@ -391,53 +212,53 @@ static void GetVertices_Fractional(WadIO &io, level_t &level)
   level.num_old_vert = level.vertices.size();
 }
 
-static void GetSectors_Doom(WadIO &io, level_t &level)
+static void GetSectors_Doom(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<raw_sector_doom_t>(level.lump, "SECTORS");
+  auto lump = io.ReadLevelLump<MapSectorDoom>(level.lump, "SECTORS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
   for (auto &_ : lump)
   {
-    sector_t *sector = NewSector(level);
+    Sector *sector = level.NewSector();
     sector->effects = FX_Sector_None;
   }
 }
 
-static void GetThings_Doom(WadIO &io, level_t &level)
+static void GetThings_Doom(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<raw_thing_doom_t>(level.lump, "THINGS");
+  auto lump = io.ReadLevelLump<MapThingDoom>(level.lump, "THINGS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
   for (auto &raw : lump)
   {
-    thing_t *thing = NewThing(level);
+    Mobj *thing = level.NewThing();
 
     thing->x = GetLittleEndian(raw.x);
     thing->y = GetLittleEndian(raw.y);
-    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
+    thing->type = static_cast<DoomEdNum>(GetLittleEndian(raw.type));
   }
 }
 
-static void GetSidedefs_Doom(WadIO &io, level_t &level)
+static void GetSidedefs_Doom(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<raw_sidedef_doom_t>(level.lump, "SIDEDEFS");
+  auto lump = io.ReadLevelLump<MapSidedefDoom>(level.lump, "SIDEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
   for (auto &raw : lump)
   {
-    sidedef_t *side = NewSidedef(level);
+    Sidedef *side = level.NewSidedef();
 
     side->offset_x = GetLittleEndian(raw.x_offset);
     side->offset_y = GetLittleEndian(raw.y_offset);
@@ -448,18 +269,18 @@ static void GetSidedefs_Doom(WadIO &io, level_t &level)
   }
 }
 
-static void GetLinedefs_Doom(WadIO &io, level_t &level)
+static void GetLinedefs_Doom(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<raw_linedef_doom_t>(level.lump, "LINEDEFS");
+  auto lump = io.ReadLevelLump<MapLinedefDoom>(level.lump, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
   for (auto &raw : lump)
   {
-    linedef_t *line = NewLinedef(level);
+    Linedef *line = level.NewLinedef();
 
     line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), line->index);
     line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), line->index);
@@ -529,37 +350,37 @@ static void GetLinedefs_Doom(WadIO &io, level_t &level)
   }
 }
 
-static void GetThings_Hexen(WadIO &io, level_t &level)
+static void GetThings_Hexen(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<raw_thing_hexen_t>(level.lump, "THINGS");
+  auto lump = io.ReadLevelLump<MapThingHexen>(level.lump, "THINGS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
   for (auto &raw : lump)
   {
-    thing_t *thing = NewThing(level);
+    Mobj *thing = level.NewThing();
 
     thing->x = GetLittleEndian(raw.x);
     thing->y = GetLittleEndian(raw.y);
-    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
+    thing->type = static_cast<DoomEdNum>(GetLittleEndian(raw.type));
   }
 }
 
-static void GetLinedefs_Hexen(WadIO &io, level_t &level)
+static void GetLinedefs_Hexen(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<raw_linedef_hexen_t>(level.lump, "LINEDEFS");
+  auto lump = io.ReadLevelLump<MapLinedefHexen>(level.lump, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
   for (auto &raw : lump)
   {
-    linedef_t *line = NewLinedef(level);
+    Linedef *line = level.NewLinedef();
 
     line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), line->index);
     line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), line->index);
@@ -594,18 +415,18 @@ static void GetLinedefs_Hexen(WadIO &io, level_t &level)
   }
 }
 
-static void GetSectors_Doom64(WadIO &io, level_t &level)
+static void GetSectors_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<raw_sector_doom64_t>(level.lump, "SECTORS");
+  auto lump = io.ReadLevelLump<SectorDoom64>(level.lump, "SECTORS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
   for (auto &raw : lump)
   {
-    sector_t *sector = NewSector(level);
+    Sector *sector = level.NewSector();
 
     if (!config.effects) continue;
 
@@ -616,18 +437,18 @@ static void GetSectors_Doom64(WadIO &io, level_t &level)
   }
 }
 
-static void GetSidedefs_Doom64(WadIO &io, level_t &level)
+static void GetSidedefs_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<raw_sidedef_doom64_t>(level.lump, "SIDEDEFS");
+  auto lump = io.ReadLevelLump<SidedefDoom64>(level.lump, "SIDEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
   for (auto &raw : lump)
   {
-    sidedef_t *side = NewSidedef(level);
+    Sidedef *side = level.NewSidedef();
 
     side->offset_x = GetLittleEndian(raw.x_offset);
     side->offset_y = GetLittleEndian(raw.y_offset);
@@ -636,18 +457,18 @@ static void GetSidedefs_Doom64(WadIO &io, level_t &level)
   }
 }
 
-static void GetLinedefs_Doom64(WadIO &io, level_t &level)
+static void GetLinedefs_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<raw_linedef_doom64_t>(level.lump, "LINEDEFS");
+  auto lump = io.ReadLevelLump<LinedefDoom64>(level.lump, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
   for (auto &raw : lump)
   {
-    linedef_t *line = NewLinedef(level);
+    Linedef *line = level.NewLinedef();
 
     line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), line->index);
     line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), line->index);
@@ -681,22 +502,22 @@ static void GetLinedefs_Doom64(WadIO &io, level_t &level)
   }
 }
 
-static void GetThings_Doom64(WadIO &io, level_t &level)
+static void GetThings_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<raw_thing_doom64_t>(level.lump, "LINEDEFS");
+  auto lump = io.ReadLevelLump<MapThingDoom64>(level.lump, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    PrintLine(LOG_DEBUG, "[%s] num = %zu", __func__, lump.size());
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
   for (auto &raw : lump)
   {
-    thing_t *thing = NewThing(level);
+    Mobj *thing = level.NewThing();
 
     thing->x = GetLittleEndian(raw.x);
     thing->y = GetLittleEndian(raw.y);
-    thing->type = static_cast<doomednum_t>(GetLittleEndian(raw.type));
+    thing->type = static_cast<DoomEdNum>(GetLittleEndian(raw.type));
   }
 }
 
@@ -708,7 +529,7 @@ static constexpr uint32_t UDMF_SECTOR = 3;
 static constexpr uint32_t UDMF_SIDEDEF = 4;
 static constexpr uint32_t UDMF_LINEDEF = 5;
 
-static void ParseThingField(thing_t *thing, const std::string &key, token_kind_e kind, const std::string &value)
+static void ParseThingField(Mobj *thing, const std::string &key, token_kind_e kind, const std::string &value)
 {
   if (key == "x")
   {
@@ -722,11 +543,11 @@ static void ParseThingField(thing_t *thing, const std::string &key, token_kind_e
 
   if (key == "type")
   {
-    thing->type = static_cast<doomednum_t>(LEX_Int16(value));
+    thing->type = static_cast<DoomEdNum>(LEX_Int16(value));
   }
 }
 
-static void ParseVertexField(vertex_t *vertex, const std::string &key, token_kind_e kind, const std::string &value)
+static void ParseVertexField(Vertex *vertex, const std::string &key, token_kind_e kind, const std::string &value)
 {
   if (key == "x")
   {
@@ -739,12 +560,12 @@ static void ParseVertexField(vertex_t *vertex, const std::string &key, token_kin
   }
 }
 
-static void ParseSectorField(sector_t *sector, const std::string &key, token_kind_e kind, const std::string &value)
+static void ParseSectorField(Sector *sector, const std::string &key, token_kind_e kind, const std::string &value)
 {
   // nothing actually needed
 }
 
-static void ParseSidedefField(level_t &level, sidedef_t *side, const std::string &key, token_kind_e kind,
+static void ParseSidedefField(Level &level, Sidedef *side, const std::string &key, token_kind_e kind,
                               const std::string &value)
 {
   if (key == "sector")
@@ -753,14 +574,14 @@ static void ParseSidedefField(level_t &level, sidedef_t *side, const std::string
 
     if (num >= level.sectors.size())
     {
-      PrintLine(LOG_ERROR, "ERROR: illegal sector number #%zu", static_cast<size_t>(num));
+      throw RuntimeException("illegal sector number #{}", static_cast<size_t>(num));
     }
 
     side->sector = level.sectors[num];
   }
 }
 
-static void ParseLinedefField(level_t &level, linedef_t *line, const std::string &key, token_kind_e kind,
+static void ParseLinedefField(Level &level, Linedef *line, const std::string &key, token_kind_e kind,
                               const std::string &value)
 {
   if (key == "v1")
@@ -815,30 +636,30 @@ static void ParseLinedefField(level_t &level, linedef_t *line, const std::string
   }
 }
 
-static void ParseUDMF_Block(level_t &level, lexer_c &lex, int cur_type)
+static void ParseUDMF_Block(Level &level, lexer_c &lex, int cur_type)
 {
-  vertex_t *vertex = nullptr;
-  thing_t *thing = nullptr;
-  sector_t *sector = nullptr;
-  sidedef_t *side = nullptr;
-  linedef_t *line = nullptr;
+  Vertex *vertex = nullptr;
+  Mobj *thing = nullptr;
+  Sector *sector = nullptr;
+  Sidedef *side = nullptr;
+  Linedef *line = nullptr;
 
   switch (cur_type)
   {
   case UDMF_VERTEX:
-    vertex = NewVertex(level);
+    vertex = level.NewVertex();
     break;
   case UDMF_THING:
-    thing = NewThing(level);
+    thing = level.NewThing();
     break;
   case UDMF_SECTOR:
-    sector = NewSector(level);
+    sector = level.NewSector();
     break;
   case UDMF_SIDEDEF:
-    side = NewSidedef(level);
+    side = level.NewSidedef();
     break;
   case UDMF_LINEDEF:
-    line = NewLinedef(level);
+    line = level.NewLinedef();
     break;
   default:
     break;
@@ -858,29 +679,29 @@ static void ParseUDMF_Block(level_t &level, lexer_c &lex, int cur_type)
 
     if (tok == TOK_EOF)
     {
-      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: unclosed block");
+      throw RuntimeException("Malformed TEXTMAP lump: unclosed block");
     }
 
     if (tok != TOK_Ident)
     {
-      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing key");
+      throw RuntimeException("Malformed TEXTMAP lump: missing key");
     }
 
     if (!lex.Match("="))
     {
-      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing '='");
+      throw RuntimeException("Malformed TEXTMAP lump: missing '='");
     }
 
     tok = lex.Next(value);
 
     if (tok == TOK_EOF || tok == TOK_ERROR || value == "}")
     {
-      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing value");
+      throw RuntimeException("Malformed TEXTMAP lump: missing value");
     }
 
     if (!lex.Match(";"))
     {
-      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing ';'");
+      throw RuntimeException("Malformed TEXTMAP lump: missing ';'");
     }
 
     switch (cur_type)
@@ -912,14 +733,14 @@ static void ParseUDMF_Block(level_t &level, lexer_c &lex, int cur_type)
   {
     if (line->start == nullptr || line->end == nullptr)
     {
-      PrintLine(LOG_ERROR, "ERROR: Linedef #%zu is missing a vertex!", line->index);
+      throw RuntimeException("Linedef {} is missing a vertex!", line->index);
     }
 
     ValidateLinedef(level, line);
   }
 }
 
-static void ParseUDMF_Pass(level_t &level, const std::string &data, int pass)
+static void ParseUDMF_Pass(Level &level, const std::string &data, int pass)
 {
   // pass = 1 : vertices, sectors, things
   // pass = 2 : sidedefs
@@ -939,7 +760,7 @@ static void ParseUDMF_Pass(level_t &level, const std::string &data, int pass)
 
     if (tok != TOK_Ident)
     {
-      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump.");
+      throw RuntimeException("Malformed TEXTMAP lump.");
       return;
     }
 
@@ -949,14 +770,14 @@ static void ParseUDMF_Pass(level_t &level, const std::string &data, int pass)
       lex.Next(section);
       if (!lex.Match(";"))
       {
-        PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing ';'");
+        throw RuntimeException("Malformed TEXTMAP lump: missing ';'");
       }
       continue;
     }
 
     if (!lex.Match("{"))
     {
-      PrintLine(LOG_ERROR, "ERROR: Malformed TEXTMAP lump: missing '{'");
+      throw RuntimeException("Malformed TEXTMAP lump: missing '{{'"); // std::format doesn't use \ for escaping
     }
 
     int cur_type = 0;
@@ -1002,7 +823,7 @@ static void ParseUDMF_Pass(level_t &level, const std::string &data, int pass)
   }
 }
 
-void ParseUDMF(WadIO &io, level_t &level)
+void ParseUDMF(WadIO &io, Level &level)
 {
   auto lump = io.ReadLevelLump<char>(level.lump, "TEXTMAP");
 
@@ -1027,76 +848,76 @@ void ParseUDMF(WadIO &io, level_t &level)
 // Check Limits
 //
 
-static void CheckBinaryFormatLimits(level_t &level)
+static void CheckBinaryFormatLimits(Level &level)
 {
   if (level.num_old_vert > LIMIT_VERT)
   {
-    PrintLine(LOG_NORMAL, "FAILURE: Map has too many vertices.");
+    PrintLine(Log::WARN, "[{}] Map overflow. Has too many vertices.", __func__);
     level.overflows = true;
   }
 
   if (level.sectors.size() > LIMIT_SECTOR)
   {
-    PrintLine(LOG_NORMAL, "FAILURE: Map has too many sectors.");
+    PrintLine(Log::WARN, "[{}] Map overflow. Has too many sectors.", __func__);
     level.overflows = true;
   }
 
   if (level.sidedefs.size() > LIMIT_SIDE)
   {
-    PrintLine(LOG_NORMAL, "FAILURE: Map has too many sidedefs.");
+    PrintLine(Log::WARN, "[{}] Map overflow. Has too many sidedefs.", __func__);
     level.overflows = true;
   }
 
   if (level.linedefs.size() > LIMIT_LINE)
   {
-    PrintLine(LOG_NORMAL, "FAILURE: Map has too many linedefs.");
+    PrintLine(Log::WARN, "[{}] Map overflow. Has too many linedefs.", __func__);
     level.overflows = true;
   }
 }
 
-static bsp_format_t CheckFormatBSP(buildinfo_t &ctx, level_t &level)
+static BspFormat CheckFormatBSP(BuildInfo &ctx, Level &level)
 {
-  bsp_format_t level_type = ctx.bsp_format;
+  BspFormat Levelype = ctx.bsp_format;
 
-  if (level.map_format == MapFormat_Doom64)
+  if (level.map_format == MapFormat::Doom64)
   {
     // Clamp Doom64 maps to only vanilla and DeePBSPV4 formats.
     // With support for fractional coordinates, it doesn't
     // make sense for it to need to support XNOD, etc.
-    level_type = BSP_DoomBSP;
+    Levelype = BspFormat::DoomBSP;
   }
 
-  if (level_type == BSP_DoomBSP &&            // always allow for a valid map to be produced
+  if (Levelype == BspFormat::DoomBSP &&       // always allow for a valid map to be produced
       (level.vertices.size() > LIMIT_VERT     // even if it may not run on some older source ports
        || level.nodes.size() > LIMIT_NODE     // or the vanilla EXE
        || level.subsecs.size() > LIMIT_SUBSEC //
        || level.segs.size() > LIMIT_SEG))     //
   {
-    PrintLine(LOG_NORMAL, "WARNING: BSP overflow. Forcing DeePBSPV4 node format.");
+    PrintLine(Log::WARN, "[{}] BSP overflow. Forcing DeePBSPV4 node format.", __func__);
     config.total_warnings++;
-    level_type = BSP_DeePBSPV4;
+    Levelype = BspFormat::DeePBSPV4;
   }
 
-  return level.bsp_format = level_type;
+  return level.bsp_format = Levelype;
 }
 
 /* ----- whole-level routines --------------------------- */
 
-void LoadLevel(WadIO &io, level_t &level)
+void LoadLevel(WadIO &io, Level &level)
 {
   auto mark = Benchmarker(__func__);
   auto LEV = io.LumpName(level.lump);
 
   level.overflows = false;
 
-  PrintLine(LOG_NORMAL, "[%s] Reading %s", __func__, LEV);
+  PrintLine(Log::NORMAL, "[{}] Reading {}", __func__, LEV);
 
   level.num_new_vert = 0;
   level.num_real_lines = 0;
 
   switch (level.map_format)
   {
-  case MapFormat_Doom:
+  case MapFormat::Doom:
     GetVertices_Integral(io, level);
     GetSectors_Doom(io, level);
     GetSidedefs_Doom(io, level);
@@ -1104,7 +925,7 @@ void LoadLevel(WadIO &io, level_t &level)
     GetThings_Doom(io, level);
     PruneVerticesAtEnd(level);
     break;
-  case MapFormat_Hexen:
+  case MapFormat::Hexen:
     GetVertices_Integral(io, level);
     GetSectors_Doom(io, level);
     GetSidedefs_Doom(io, level);
@@ -1112,7 +933,7 @@ void LoadLevel(WadIO &io, level_t &level)
     GetThings_Hexen(io, level);
     PruneVerticesAtEnd(level);
     break;
-  case MapFormat_Doom64:
+  case MapFormat::Doom64:
     GetVertices_Fractional(io, level);
     GetSectors_Doom64(io, level);
     GetSidedefs_Doom64(io, level);
@@ -1120,18 +941,18 @@ void LoadLevel(WadIO &io, level_t &level)
     GetThings_Doom64(io, level);
     PruneVerticesAtEnd(level);
     break;
-  case MapFormat_UDMF:
+  case MapFormat::UDMF:
     ParseUDMF(io, level);
     break;
-  case MapFormat_INVALID:
-    PrintLine(LOG_ERROR, "[%s] Unknown level format on level %s", __func__, LEV);
+  case MapFormat::Invalid:
+    throw RuntimeException("[{}] Unknown level format on level {}", __func__, LEV);
     break;
   }
 
   if (config.verbose)
   {
-    PrintLine(LOG_NORMAL, "Loaded %zu vertices, %zu sectors, %zu sides, %zu lines, %zu things", level.vertices.size(),
-              level.sectors.size(), level.sidedefs.size(), level.linedefs.size(), level.things.size());
+    PrintLine(Log::NORMAL, "[{}] Loaded {} vertices, {} sectors, {} sides, {} lines, {} things", __func__,
+              level.vertices.size(), level.sectors.size(), level.sidedefs.size(), level.linedefs.size(), level.things.size());
   }
 
   DetectOverlappingVertices(level);
@@ -1142,8 +963,8 @@ void LoadLevel(WadIO &io, level_t &level)
   // -JL- Find sectors containing polyobjs
   switch (level.map_format)
   {
-  case MapFormat_Hexen:
-  case MapFormat_UDMF:
+  case MapFormat::Hexen:
+  case MapFormat::UDMF:
     DetectPolyobjSectors(config, level);
     break;
   default:
@@ -1155,7 +976,7 @@ void LoadLevel(WadIO &io, level_t &level)
 // Writing stuff
 //------------------------------------------------------------------------
 
-build_result_t SaveLevelBinary(WadIO &io, level_t &level)
+BuildResult SaveLevelBinary(WadIO &io, Level &level)
 {
   auto mark = Benchmarker(__func__);
 
@@ -1163,16 +984,16 @@ build_result_t SaveLevelBinary(WadIO &io, level_t &level)
   CheckBinaryFormatLimits(level);
 
   // Use fractional VERTEXES lump in some map formats
-  bool do_fractional = level.map_format == MapFormat_Doom64;
+  bool do_fractional = level.map_format == MapFormat::Doom64;
 
   // Generate LEAFS lump
-  bool do_leafs = level.map_format == MapFormat_Doom64;
+  bool do_leafs = level.map_format == MapFormat::Doom64;
 
   // On BSP overflow, bump to DeePBSPV4 from DoomBSP
-  bsp_format_t bsp_format = CheckFormatBSP(config, level);
+  BspFormat bsp_format = CheckFormatBSP(config, level);
 
   // Only include BSP-generated vertices in non-ZDBSP lump format
-  bool do_new_vert = bsp_format >= BSP_DoomBSP || bsp_format <= BSP_DeePBSPV4;
+  bool do_new_vert = bsp_format >= BspFormat::DoomBSP || bsp_format <= BspFormat::DeePBSPV4;
 
   // Use Zlib-compressed version of ZDBSP lump formats
   bool zdbsp_compress = config.compress;
@@ -1187,7 +1008,7 @@ build_result_t SaveLevelBinary(WadIO &io, level_t &level)
   io.LevelCopyLump(lump, "SIDEDEFS");
 
   // Do the four BSP lumps, before promptly doing the other normal lumps
-  if (bsp_format == BSP_DoomBSP)
+  if (bsp_format == BspFormat::DoomBSP)
   {
     NormaliseBspTree(level);
     if (!do_fractional) RoundOffBspTree(level);
@@ -1198,7 +1019,7 @@ build_result_t SaveLevelBinary(WadIO &io, level_t &level)
     PutSubsecs_DoomBSP(io, level);
     PutNodes_DoomBSP(io, level);
   }
-  else if (bsp_format == BSP_DeePBSPV4)
+  else if (bsp_format == BspFormat::DeePBSPV4)
   {
     NormaliseBspTree(level);
     if (!do_fractional) RoundOffBspTree(level);
@@ -1209,7 +1030,7 @@ build_result_t SaveLevelBinary(WadIO &io, level_t &level)
     PutSubsecs_DeePBSPV4(io, level);
     PutNodes_DeePBSPV4(io, level);
   }
-  else if (bsp_format == BSP_XNOD)
+  else if (bsp_format == BspFormat::XNOD)
   {
     // ZDBSP formats do not write to VERTEXES
     PutVertices(io, level, do_fractional, do_new_vert);
@@ -1217,7 +1038,7 @@ build_result_t SaveLevelBinary(WadIO &io, level_t &level)
     io.CreateEmptyLump("SSECTORS");
     PutTree_ZDBSP(io, level, "NODES", bsp_format, zdbsp_compress);
   }
-  else if (bsp_format >= BSP_XGLN && bsp_format <= BSP_XGL3)
+  else if (bsp_format >= BspFormat::XGLN && bsp_format <= BspFormat::XGL3)
   {
     // ZDBSP formats do not write to VERTEXES
     PutVertices(io, level, do_fractional, do_new_vert);
@@ -1234,33 +1055,32 @@ build_result_t SaveLevelBinary(WadIO &io, level_t &level)
   PutBlockmap(io, level);
 
   // The better? convex subsector option
-  if (do_leafs && bsp_format == BSP_DoomBSP)
+  if (do_leafs && bsp_format == BspFormat::DoomBSP)
   {
     PutLeafs_DoomBSP(io, level);
   }
-  else if (do_leafs && bsp_format == BSP_DeePBSPV4)
+  else if (do_leafs && bsp_format == BspFormat::DeePBSPV4)
   {
     PutLeafs_DeePBSPV4(io, level);
   }
 
   // Level scripts and stuff
-  if (level.map_format == MapFormat_Hexen)
+  if (level.map_format == MapFormat::Hexen)
   {
     io.LevelCopyLump(lump, "BEHAVIOR");
     io.LevelCopyLump(lump, "SCRIPTS");
   }
-  else if (level.map_format == MapFormat_Doom64)
+  else if (level.map_format == MapFormat::Doom64)
   {
     io.LevelCopyLump(lump, "LIGHTS");
     io.LevelCopyLump(lump, "MACROS");
     io.LevelCopyLump(lump, "SCRIPTS");
   }
 
-  return level.overflows ? BUILD_LumpOverflow : BUILD_OK;
+  return level.overflows ? BuildResult::Overflow : BuildResult::Ok;
 }
 
-
-build_result_t SaveLevelTextMap(WadIO &io, level_t &level)
+BuildResult SaveLevelTextMap(WadIO &io, Level &level)
 {
   auto mark = Benchmarker(__func__);
 
@@ -1272,7 +1092,7 @@ build_result_t SaveLevelTextMap(WadIO &io, level_t &level)
   io.LevelCopyLump(lump, "TEXTMAP");
 
   // Always use ZGL3 for UDMF maps
-  PutTree_ZDBSP(io, level, "ZNODES", BSP_XGL3, true);
+  PutTree_ZDBSP(io, level, "ZNODES", BspFormat::XGL3, true);
   PutReject(io, level);
   PutBlockmap(io, level);
 
@@ -1286,14 +1106,14 @@ build_result_t SaveLevelTextMap(WadIO &io, level_t &level)
   // Finish
   io.CreateEmptyLump("ENDMAP");
 
-  return BUILD_OK;
+  return BuildResult::Ok;
 }
 
 //------------------------------------------------------------------------
 // MAIN STUFF
 //------------------------------------------------------------------------
 
-size_t ComputeBspHeight(const node_t *node)
+size_t ComputeBspHeight(const Node *node)
 {
   if (node == nullptr)
   {
@@ -1308,7 +1128,7 @@ size_t ComputeBspHeight(const node_t *node)
 
 /* ----- build nodes for a single level ----- */
 
-build_result_e BuildLevel(WadIO &io, level_t &level, std::string_view filename)
+BuildResult BuildLevel(WadIO &io, Level &level, std::string_view filename)
 {
   LoadLevel(io, level);
 
@@ -1318,13 +1138,13 @@ build_result_e BuildLevel(WadIO &io, level_t &level, std::string_view filename)
   {
     if (config.analysis)
     {
-      PrintLine(LOG_NORMAL, "[%s] Starting analysis loop for %s", __func__, io.LumpName(level.lump));
+      PrintLine(Log::NORMAL, "[{}] Starting analysis loop for {}", __func__, io.LumpName(level.lump));
       GenerateAnalysis(io, level, filename);
     }
 
-    bbox_t dummy;
+    MapBoundBox dummy;
     // recursively create nodes
-    seg_t *seg_list = CreateSegs(level);
+    Segment *seg_list = CreateSegs(level);
     // recursive function T-T
     auto mark = Benchmarker("BuildNodes");
     BuildNodes(level, seg_list, 0, &dummy, &level.root_node, &level.root_sub, config.split_cost, config.fast, false);
@@ -1332,44 +1152,44 @@ build_result_e BuildLevel(WadIO &io, level_t &level, std::string_view filename)
 
   if (config.verbose)
   {
-    PrintLine(LOG_NORMAL, "Built %zu NODES, %zu SSECTORS, %zu SEGS, %zu VERTEXES", level.nodes.size(), level.subsecs.size(),
-              level.segs.size(), level.vertices.size());
+    PrintLine(Log::NORMAL, "[{}] Built {} NODES, {} SSECTORS, {} SEGS, {} VERTEXES", __func__, level.nodes.size(),
+              level.subsecs.size(), level.segs.size(), level.vertices.size());
   }
 
   if (config.verbose && level.root_node != nullptr)
   {
-    PrintLine(LOG_NORMAL, "Heights of subtrees: %zu / %zu", ComputeBspHeight(level.root_node->l.node),
+    PrintLine(Log::NORMAL, "[{}] Heights of subtrees: {} / {}", __func__, ComputeBspHeight(level.root_node->l.node),
               ComputeBspHeight(level.root_node->r.node));
   }
 
   ClockwiseBspTree(level);
 
-  build_result_t ret = BUILD_OK;
+  auto ret = BuildResult::Ok;
   switch (level.map_format)
   {
-  case MapFormat_Doom:
-  case MapFormat_Hexen:
-  case MapFormat_Doom64:
+  case MapFormat::Doom:
+  case MapFormat::Hexen:
+  case MapFormat::Doom64:
     ret = SaveLevelBinary(io, level);
     break;
     break;
-  case MapFormat_UDMF:
+  case MapFormat::UDMF:
     ret = SaveLevelTextMap(io, level);
     break;
   default:
     break;
   }
 
-  FreeVertices(level);
-  FreeSidedefs(level);
-  FreeLinedefs(level);
-  FreeSectors(level);
-  FreeThings(level);
-  FreeSegs(level);
-  FreeSubsecs(level);
-  FreeNodes(level);
-  FreeWallTips(level);
-  FreeIntersections(level);
+  level.FreeVertices();
+  level.FreeSidedefs();
+  level.FreeLinedefs();
+  level.FreeSectors();
+  level.FreeThings();
+  level.FreeSegs();
+  level.FreeSubsecs();
+  level.FreeNodes();
+  level.FreeWallTips();
+  level.FreeIntersections();
 
   if (config.analysis)
   {

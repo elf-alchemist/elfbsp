@@ -78,6 +78,7 @@ add_executable(${PROJECT_NAME}
   src/bsp.cpp
   src/info.cpp
   src/level.cpp
+  src/local.cpp
   src/main.cpp
   src/misc.cpp
   src/node.cpp

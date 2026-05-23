@@ -51,7 +51,7 @@ struct map_range_t
 
 static std::vector<map_range_t> map_list;
 
-buildinfo_t config;
+BuildInfo config;
 
 //------------------------------------------------------------------------
 
@@ -135,7 +135,7 @@ static void VisitFile(std::string_view filename)
     SetupAnalysisFile(in_file);
   }
 
-  PrintLine(LOG_NORMAL, "Building %s", in_file.c_str());
+  PrintLine(Log::NORMAL, "[{}] Building {}", __func__, in_file.c_str());
   {
     config.total_warnings = 0;
     auto wad = WadIO(in_file, out_file);
@@ -149,7 +149,7 @@ static void VisitFile(std::string_view filename)
     {
       if (wad.IsLevel(current) && CheckMapInMapList(wad.LumpName(current)))
       {
-        level_t level;
+        Level level;
         level.lump = current;
         level.map_format = wad.LevelFormat(current);
 
@@ -157,7 +157,7 @@ static void VisitFile(std::string_view filename)
         auto result = BuildLevel(wad, level, in_file);
 
         // handle a failed map (due to lump overflow)
-        if (result == BUILD_LumpOverflow)
+        if (result == BuildResult::Overflow)
         {
           levels_failed += 1;
         }
@@ -178,7 +178,7 @@ static void VisitFile(std::string_view filename)
 
     if (levels_visited == 0)
     {
-      PrintLine(LOG_NORMAL, "No matching levels found");
+      PrintLine(Log::NORMAL, "[{}] No matching levels found", __func__);
       total_empty_files += 1;
     }
 
@@ -186,13 +186,13 @@ static void VisitFile(std::string_view filename)
 
     if (levels_failed > 0)
     {
-      PrintLine(LOG_NORMAL, "Failed maps: %zu (out of %zu)", levels_failed, levels_visited);
+      PrintLine(Log::WARN, "[{}] Failed maps: {} (out of {})", __func__, levels_failed, levels_visited);
 
       // allow building other files
       total_failed_files += 1;
     }
 
-    PrintLine(LOG_NORMAL, "Serious warnings: %zu", config.total_warnings);
+    PrintLine(Log::WARN, "[{}] Serious warnings: {}", __func__, config.total_warnings);
   }
 
   if (is_same_file)
@@ -200,7 +200,7 @@ static void VisitFile(std::string_view filename)
     remove(in_file.c_str());
     if (rename(out_file.c_str(), in_file.c_str()))
     {
-      throw std::runtime_error("ERROR: Failed to rename output file (" + out_file + ") to input file (" + in_file + ")");
+      throw RuntimeException("Failed to rename output file ({}) to input file ({})", out_file, in_file);
     }
   }
 }
@@ -253,32 +253,32 @@ static void ParseMapRange(char *tok)
 
   if (!ValidateMapName(low))
   {
-    PrintLine(LOG_ERROR, "ERROR: illegal map name: '%s'", low);
+    throw RuntimeException("illegal map name: '{}'", low);
   }
 
   if (!ValidateMapName(high))
   {
-    PrintLine(LOG_ERROR, "ERROR: illegal map name: '%s'", high);
+    throw RuntimeException("illegal map name: '{}'", high);
   }
 
   if (strlen(low) < strlen(high))
   {
-    PrintLine(LOG_ERROR, "ERROR: bad map range (%s shorter than %s)", low, high);
+    throw RuntimeException("bad map range ({} shorter than {})", low, high);
   }
 
   if (strlen(low) > strlen(high))
   {
-    PrintLine(LOG_ERROR, "ERROR: bad map range (%s longer than %s)", low, high);
+    throw RuntimeException("bad map range ({} longer than {})", low, high);
   }
 
   if (low[0] != high[0])
   {
-    PrintLine(LOG_ERROR, "ERROR: bad map range (%s and %s start with different letters)", low, high);
+    throw RuntimeException("bad map range ({} and {} start with different letters)", low, high);
   }
 
   if (strcmp(low, high) > 0)
   {
-    PrintLine(LOG_ERROR, "ERROR: bad map range (wrong order, %s > %s)", low, high);
+    throw RuntimeException("bad map range (wrong order, {} > {})", low, high);
   }
 
   // Ok
@@ -297,7 +297,7 @@ static void ParseMapList(const char *arg)
   {
     if (*arg == ',')
     {
-      PrintLine(LOG_ERROR, "ERROR: bad map list (empty element)");
+      throw RuntimeException("bad map list (empty element)");
     }
 
     // copy characters up to next comma / end
@@ -308,7 +308,7 @@ static void ParseMapList(const char *arg)
     {
       if (len > sizeof(buffer) - 4)
       {
-        PrintLine(LOG_ERROR, "ERROR: bad map list (very long element)");
+        throw RuntimeException("bad map list (very long element)");
       }
 
       buffer[len++] = *arg++;
@@ -353,13 +353,13 @@ static void ParseShortArgument(const char *arg)
     case 'm':
     case 'o':
     case 't':
-      PrintLine(LOG_ERROR, "ERROR: cannot use option '-%c' like that", c);
+      throw RuntimeException("cannot use option '-{}' like that", c);
       return;
 
     case 'c':
       if (*arg == 0 || !isdigit(*arg))
       {
-        PrintLine(LOG_ERROR, "ERROR: missing value for '-c' option");
+        throw RuntimeException("missing value for '-c' option");
       }
 
       // we only accept one or two digits here
@@ -374,7 +374,7 @@ static void ParseShortArgument(const char *arg)
 
       if (val < SPLIT_COST_MIN || val > SPLIT_COST_MAX)
       {
-        PrintLine(LOG_ERROR, "ERROR: illegal value for '-c' option");
+        throw RuntimeException("illegal value for '-c' option");
       }
 
       config.split_cost = val;
@@ -383,11 +383,11 @@ static void ParseShortArgument(const char *arg)
     default:
       if (isprint(c) && !isspace(c))
       {
-        PrintLine(LOG_ERROR, "ERROR: unknown short option: '-%c'", c);
+        throw RuntimeException("unknown short option: '-{}'", c);
       }
       else
       {
-        PrintLine(LOG_ERROR, "ERROR: illegal short option (ascii code %d)", static_cast<unsigned char>(c));
+        throw RuntimeException("illegal short option (ascii code {})", static_cast<unsigned char>(c));
       }
       return;
     }
@@ -492,7 +492,7 @@ static int32_t ParseLongArgument(std::string name, const int32_t argc, const cha
   {
     if (argc < 1 || argv[0][0] == '-')
     {
-      PrintLine(LOG_ERROR, "ERROR: missing value for '--map' option");
+      throw RuntimeException("missing value for '--map' option");
     }
 
     ParseMapList(argv[0]);
@@ -503,48 +503,48 @@ static int32_t ParseLongArgument(std::string name, const int32_t argc, const cha
   {
     if (argc < 1 || !isdigit(argv[0][0]))
     {
-      PrintLine(LOG_ERROR, "ERROR: missing value for '--type' option");
+      throw RuntimeException("missing value for '--type' option");
     }
 
-    int32_t val = std::stoi(argv[0]);
+    auto val = static_cast<BspFormat>(std::stoi(argv[0]));
 
-    if (val < BSP_MIN || val > BSP_MAX)
+    if (val < BspFormat::MIN || val > BspFormat::MAX)
     {
-      PrintLine(LOG_ERROR, "ERROR: illegal value for '--type' option");
+      throw RuntimeException("illegal value for '--type' option");
     }
 
-    config.bsp_format = static_cast<bsp_format_t>(val);
+    config.bsp_format = val;
     used = 1;
   }
   else if (name == "--bmap")
   {
     if (argc < 1 || !isdigit(argv[0][0]))
     {
-      PrintLine(LOG_ERROR, "ERROR: missing value for '--bmap' option");
+      throw RuntimeException("missing value for '--bmap' option");
     }
 
-    int32_t val = std::stoi(argv[0]);
+    auto val = static_cast<BlockmapFormat>(std::stoi(argv[0]));
 
-    if (val < BMAP_MIN || val > BMAP_MAX)
+    if (val < BlockmapFormat::MIN || val > BlockmapFormat::MAX)
     {
-      PrintLine(LOG_ERROR, "ERROR: illegal value for '--bmap' option");
+      throw RuntimeException("illegal value for '--bmap' option");
     }
 
-    config.bmap_format = static_cast<bmap_format_t>(val);
+    config.bmap_format = val;
     used = 1;
   }
   else if (name == "--cost")
   {
     if (argc < 1 || !isdigit(argv[0][0]))
     {
-      PrintLine(LOG_ERROR, "ERROR: missing value for '--cost' option");
+      throw RuntimeException("missing value for '--cost' option");
     }
 
     int32_t val = std::stoi(argv[0]);
 
     if (val < SPLIT_COST_MIN || val > SPLIT_COST_MAX)
     {
-      PrintLine(LOG_ERROR, "ERROR: illegal value for '--cost' option");
+      throw RuntimeException("illegal value for '--cost' option");
     }
 
     config.split_cost = val;
@@ -563,12 +563,12 @@ static int32_t ParseLongArgument(std::string name, const int32_t argc, const cha
 
     if (argc < 1 || argv[0][0] == '-')
     {
-      PrintLine(LOG_ERROR, "ERROR: missing value for '--output' option");
+      throw RuntimeException("missing value for '--output' option");
     }
 
     if (!opt_output.empty())
     {
-      PrintLine(LOG_ERROR, "ERROR: cannot use '--output' option twice");
+      throw RuntimeException("cannot use '--output' option twice");
     }
 
     opt_output = argv[0];
@@ -578,12 +578,12 @@ static int32_t ParseLongArgument(std::string name, const int32_t argc, const cha
   {
     if (!ProcessDebugParam(name.c_str(), config.debug))
     {
-      PrintLine(LOG_ERROR, "ERROR: unknown debug parameter '%s'", name.c_str());
+      throw RuntimeException("unknown debug parameter '{}'", name);
     }
   }
   else
   {
-    PrintLine(LOG_ERROR, "ERROR: unknown long option: '%s'", name.c_str());
+    throw RuntimeException("unknown long option: '{}'", name);
   }
 
   return used;
@@ -625,7 +625,7 @@ void ParseCommandLine(int32_t argc, const char *argv[])
 
     if (arg == "-")
     {
-      PrintLine(LOG_ERROR, "ERROR: illegal option '-'");
+      throw RuntimeException("illegal option '-'");
     }
 
     if (arg == "--")
@@ -674,13 +674,13 @@ int32_t main(const int32_t argc, const char *argv[])
 
   if (opt_version)
   {
-    PrintLine(LOG_NORMAL, VERSION_INFO);
+    PrintLine(Log::NORMAL, VERSION_INFO);
     return 0;
   }
 
   if (opt_help || argc <= 1)
   {
-    PrintLine(LOG_NORMAL, PRINT_HELP);
+    PrintLine(Log::NORMAL, PRINT_HELP);
     return 0;
   }
 
@@ -688,7 +688,7 @@ int32_t main(const int32_t argc, const char *argv[])
 
   if (total_files == 0)
   {
-    PrintLine(LOG_ERROR, "ERROR: no files to process");
+    throw RuntimeException("no files to process");
     return 0;
   }
 
@@ -696,12 +696,12 @@ int32_t main(const int32_t argc, const char *argv[])
   {
     if (total_files > 1)
     {
-      PrintLine(LOG_ERROR, "ERROR: cannot use multiple input files with --output");
+      throw RuntimeException("cannot use multiple input files with --output");
     }
 
     if (wad_list[0] == opt_output)
     {
-      PrintLine(LOG_ERROR, "ERROR: input and output files are the same");
+      throw RuntimeException("input and output files are the same");
     }
   }
 
@@ -710,7 +710,7 @@ int32_t main(const int32_t argc, const char *argv[])
   {
     if (!FileExists(filename))
     {
-      throw std::runtime_error("ERROR: no such file: " + filename);
+      throw RuntimeException("no such file: {}", filename);
     }
   }
 
@@ -721,31 +721,31 @@ int32_t main(const int32_t argc, const char *argv[])
 
   if (total_failed_files > 0)
   {
-    PrintLine(LOG_NORMAL, "FAILURES occurred on %zu map%s in %zu file%s.", total_failed_maps, total_failed_maps == 1 ? "" : "s",
+    PrintLine(Log::NORMAL, "FAILURES occurred on {} map{} in {} file{}.", total_failed_maps, total_failed_maps == 1 ? "" : "s",
               total_failed_files, total_failed_files == 1 ? "" : "s");
 
     if (!config.verbose)
     {
-      PrintLine(LOG_NORMAL, "Rerun with --verbose to see more details.");
+      PrintLine(Log::NORMAL, "Rerun with --verbose to see more details.");
     }
 
     return 2;
   }
   else if (total_built_maps == 0)
   {
-    PrintLine(LOG_NORMAL, "NOTHING was built!");
+    PrintLine(Log::NORMAL, "NOTHING was built!");
 
     return 1;
   }
   else if (total_empty_files == 0)
   {
-    PrintLine(LOG_NORMAL, "Ok, built all files.");
+    PrintLine(Log::NORMAL, "Ok, built all files.");
   }
   else
   {
     size_t built = total_files - total_empty_files;
 
-    PrintLine(LOG_NORMAL, "Ok, built %zu file%s, %zu file%s empty.", built, (built == 1 ? "" : "s"), total_empty_files,
+    PrintLine(Log::NORMAL, "Ok, built {} file{}, {} file{} empty.", built, (built == 1 ? "" : "s"), total_empty_files,
               (total_empty_files == 1 ? " was" : "s were"));
   }
 

@@ -23,7 +23,6 @@
 #include "core.hpp"
 
 #include <cstdio>
-#include <stdexcept>
 
 //------------------------------------------------------------------------
 //  Utilities
@@ -61,7 +60,7 @@ WadIO::WadIO(std::string in_file, std::string out_file)
   this->read_file = fopen(in_file.c_str(), "rb");
   if (this->read_file == NULL)
   {
-    throw std::runtime_error("ERROR: Could not open input file");
+    throw RuntimeException("Could not open input file");
   }
 
   this->SafeRead(&this->read_header, sizeof(this->read_header));
@@ -73,7 +72,7 @@ WadIO::WadIO(std::string in_file, std::string out_file)
   {
     fclose(this->read_file);
     this->read_file = NULL;
-    throw std::runtime_error("ERROR: Input file is not a wad");
+    throw RuntimeException("Input file is not a wad");
   }
 
   auto num_entries = GetLittleEndian(this->read_header.num_entries);
@@ -81,7 +80,7 @@ WadIO::WadIO(std::string in_file, std::string out_file)
 
   if (fseek(this->read_file, dir_start, SEEK_SET))
   {
-    throw std::runtime_error("ERROR: Could not read wad directory");
+    throw RuntimeException("Could not read wad directory");
   }
 
   this->read_directory.resize(num_entries);
@@ -97,7 +96,7 @@ WadIO::WadIO(std::string in_file, std::string out_file)
   this->write_file = fopen(out_file.c_str(), "wb");
   if (this->write_file == NULL)
   {
-    throw std::runtime_error("ERROR: Could not open output file");
+    throw RuntimeException("Could not open output file");
   }
 
   this->write_header.ident[0] = this->read_header.ident[0];
@@ -135,7 +134,7 @@ void WadIO::SafeRead(void *buffer, size_t size)
 {
   if (fread(buffer, 1, size, this->read_file) != size)
   {
-    PrintLine(LOG_ERROR, "Failed to read");
+    throw RuntimeException("Failed to read");
   }
 }
 
@@ -190,7 +189,7 @@ bool WadIO::IsLevel(size_t lump_index) const
   {
     if (HAS_BIT(config.debug, DEBUG_WAD))
     {
-      PrintLine(LOG_DEBUG, "[%s] Detected level: %s (UDMF) [Index: %zu]", __func__, this->LumpName(lump_index), lump_index);
+      PrintLine(Log::DEBUG, "[{}] Detected level: {} (UDMF) [Index: {}]", __func__, this->LumpName(lump_index), lump_index);
     }
     return true;
   }
@@ -211,8 +210,8 @@ bool WadIO::IsLevel(size_t lump_index) const
   {
     if (HAS_BIT(config.debug, DEBUG_WAD))
     {
-      map_format_t format = this->LevelFormat(lump_index);
-      PrintLine(LOG_DEBUG, "[%s] Detected level: %s (%s) [Index: %zu]", __func__, this->LumpName(lump_index),
+      auto format = static_cast<size_t>(this->LevelFormat(lump_index));
+      PrintLine(Log::DEBUG, "[{}] Detected level: {} ({}) [Index: {}]", __func__, this->LumpName(lump_index),
                 format_name[format].data(), lump_index);
     }
     return true;
@@ -223,26 +222,26 @@ bool WadIO::IsLevel(size_t lump_index) const
   }
 }
 
-map_format_e WadIO::LevelFormat(size_t lump_index) const
+MapFormat WadIO::LevelFormat(size_t lump_index) const
 {
   // UDMF maps can contain BEHAVIOR or MACROS
   // check exclusively TEXTMAP
   if (this->IsLevelTextmapFormat(lump_index))
   {
-    return MapFormat_UDMF;
+    return MapFormat::UDMF;
   }
 
   if (this->LevelHasLump(lump_index, "BEHAVIOR"))
   {
-    return MapFormat_Hexen;
+    return MapFormat::Hexen;
   }
 
   if (this->LevelHasLump(lump_index, "LIGHTS") && this->LevelHasLump(lump_index, "MACROS"))
   {
-    return MapFormat_Doom64;
+    return MapFormat::Doom64;
   }
 
-  return MapFormat_Doom;
+  return MapFormat::Doom;
 }
 
 size_t WadIO::LevelLastLump(size_t lump_index) const
@@ -309,8 +308,7 @@ void WadIO::SafeWrite(const void *buffer, size_t size)
   {
     fclose(this->write_file);
     this->write_file = NULL;
-    throw std::runtime_error(
-        "ERROR: Failed to write. Check that this directory is writable and that you have enough free disk space.");
+    throw RuntimeException("Failed to write. Check that this directory is writable and that you have enough free disk space.");
   }
 }
 
@@ -409,7 +407,7 @@ void WadIO::Begin_Zlib(void)
   this->zout_stream.opaque = nullptr;
   if (Z_OK != zng_deflateInit(&this->zout_stream, Z_DEFAULT_COMPRESSION))
   {
-    PrintLine(LOG_ERROR, "ERROR: Trouble starting Zlib compression.");
+    throw RuntimeException("Trouble starting Zlib compression.");
   }
   this->zout_stream.next_out = this->zout_buffer;
   this->zout_stream.avail_out = sizeof(this->zout_buffer);
@@ -432,7 +430,7 @@ void WadIO::AddToLumpZ(const void *data, size_t length)
   {
     if (Z_OK != zng_deflate(&this->zout_stream, Z_NO_FLUSH))
     {
-      PrintLine(LOG_ERROR, "ERROR: Trouble Zlib compressing %zu bytes.", length);
+      throw RuntimeException("Trouble Zlib compressing {} bytes.", length);
     }
 
     if (this->zout_stream.avail_out == 0)
@@ -462,7 +460,7 @@ void WadIO::Finish_Zlib(void)
 
     if (err != Z_OK)
     {
-      PrintLine(LOG_ERROR, "ERROR: Trouble finishing Zlib compression.");
+      throw RuntimeException("Trouble finishing Zlib compression.");
     }
 
     if (this->zout_stream.avail_out == 0)

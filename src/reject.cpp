@@ -31,23 +31,21 @@
 //
 // Allocate the matrix, init sectors into individual groups.
 //
-static void Reject_Init(level_t &level)
+static void Reject_Init(Level &level)
 {
   level.reject_size = (level.sectors.size() * level.sectors.size() + 7) / 8;
 
   level.reject_matrix = new uint8_t[level.reject_size];
   memset(level.reject_matrix, 0, level.reject_size);
 
-  for (size_t i = 0; i < level.sectors.size(); i++)
+  for (auto sec : level.sectors)
   {
-    sector_t *sec = level.sectors[i];
-
-    sec->rej_group = i;
+    sec->rej_group = sec->index;
     sec->rej_next = sec->rej_prev = sec;
   }
 }
 
-static void Reject_Free(level_t &level)
+static void Reject_Free(Level &level)
 {
   delete[] level.reject_matrix;
   level.reject_matrix = nullptr;
@@ -58,21 +56,19 @@ static void Reject_Free(level_t &level)
 // Now we scan the linedef list.  For each two-sectored line,
 // merge the two sector groups into one.  That's it !
 //
-static void Reject_GroupSectors(level_t &level)
+static void Reject_GroupSectors(Level &level)
 {
-  for (size_t i = 0; i < level.linedefs.size(); i++)
+  for (auto line : level.linedefs)
   {
-    const linedef_t *line = level.linedefs[i];
-
     // must be valid two-sided line
     if (!line->right || !line->left)
     {
       continue;
     }
 
-    sector_t *sec1 = line->right->sector;
-    sector_t *sec2 = line->left->sector;
-    sector_t *tmp;
+    Sector *sec1 = line->right->sector;
+    Sector *sec2 = line->left->sector;
+    Sector *tmp;
 
     if (!sec1                                         // invalid
         || !sec2                                      // invalid
@@ -116,14 +112,14 @@ static void Reject_GroupSectors(level_t &level)
   }
 }
 
-static void Reject_ProcessSectors(level_t &level)
+static void Reject_ProcessSectors(Level &level)
 {
   for (size_t view = 0; view < level.sectors.size(); view++)
   {
     for (size_t target = 0; target < view; target++)
     {
-      sector_t *view_sec = level.sectors[view];
-      sector_t *targ_sec = level.sectors[target];
+      Sector *view_sec = level.sectors[view];
+      Sector *targ_sec = level.sectors[target];
 
       if (view_sec->rej_group == targ_sec->rej_group)
       {
@@ -142,13 +138,12 @@ static void Reject_ProcessSectors(level_t &level)
 }
 
 // Note: this routine is destructive to the group numbers
-static void Reject_DebugGroups(level_t &level)
+static void Reject_DebugGroups(Level &level)
 {
   if (HAS_NONE(config.debug, DEBUG_REJECT)) return;
 
-  for (size_t i = 0; i < level.sectors.size(); i++)
+  for (auto sec : level.sectors)
   {
-    sector_t *sec = level.sectors[i];
     size_t group = sec->rej_group;
     size_t num = 0;
 
@@ -157,13 +152,13 @@ static void Reject_DebugGroups(level_t &level)
     sec->rej_group = NO_INDEX;
     num++;
 
-    for (sector_t *tmp = sec->rej_next; tmp != sec; tmp = tmp->rej_next)
+    for (Sector *tmp = sec->rej_next; tmp != sec; tmp = tmp->rej_next)
     {
       tmp->rej_group = NO_INDEX;
       num++;
     }
 
-    PrintLine(LOG_NORMAL, "[%s] Group %zu  Sectors %zu", __func__, group, num);
+    PrintLine(Log::DEBUG, "[{}] Group {}  Sectors {}", __func__, group, num);
   }
 }
 
@@ -172,7 +167,7 @@ static void Reject_DebugGroups(level_t &level)
 // determining all isolated groups of sectors (islands that are
 // surrounded by void space).
 //
-void PutReject(WadIO &io, level_t &level)
+void PutReject(WadIO &io, Level &level)
 {
   auto mark = Benchmarker(__func__);
   io.StartWritingLump("REJECT");
@@ -192,6 +187,6 @@ void PutReject(WadIO &io, level_t &level)
 
   if (config.verbose)
   {
-    PrintLine(LOG_NORMAL, "Reject size: %zu", level.reject_size);
+    PrintLine(Log::NORMAL, "[{}] Reject size: {}", __func__, level.reject_size);
   }
 }
