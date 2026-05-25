@@ -134,10 +134,11 @@ Segment *SplitSeg(Level &level, Segment *old_seg, double x, double y)
 
   Vertex *new_vert = NewVertexFromSplitSeg(level, old_seg, x, y);
   Segment *new_seg = level.NewSeg();
+  level.num_real_segs++;
 
   // copy seg info
   new_seg[0] = old_seg[0];
-  new_seg->next = nullptr;
+  new_seg->next_convex = nullptr;
 
   old_seg->end = new_vert;
   new_seg->start = new_vert;
@@ -161,6 +162,7 @@ Segment *SplitSeg(Level &level, Segment *old_seg, double x, double y)
     }
 
     new_seg->partner = level.NewSeg();
+    level.num_real_segs++;
 
     // copy seg info
     // [ including the "next" field ]
@@ -176,7 +178,7 @@ Segment *SplitSeg(Level &level, Segment *old_seg, double x, double y)
     Recompute(new_seg->partner);
 
     // link it into list
-    old_seg->partner->next = new_seg->partner;
+    old_seg->partner->next_convex = new_seg->partner;
   }
 
   return new_seg;
@@ -321,7 +323,7 @@ bool EvalPartitionWorker(Quadtree *tree, Segment *part, double best_cost, double
   }
 
   /* check partition against all Segs */
-  for (Segment *check = tree->list; check; check = check->next)
+  for (Segment *check = tree->list; check; check = check->next_convex)
   {
     // This is the heart of my pruning idea - it catches
     // bad segs early on. Killough
@@ -551,7 +553,7 @@ double EvalPartition(Quadtree *tree, Segment *part, double best_cost, double spl
 
 void EvaluateFastWorker(Quadtree *tree, Segment **best_H, Segment **best_V, int mid_x, int mid_y)
 {
-  for (Segment *part = tree->list; part; part = part->next)
+  for (Segment *part = tree->list; part; part = part->next_convex)
   {
     /* ignore minisegs as partition candidates */
     if (part->linedef == nullptr)
@@ -656,7 +658,7 @@ Segment *FindFastSeg(Quadtree *tree, double split_cost)
 static void PickNodeWorker(Quadtree *part_list, Quadtree *tree, Segment **best, double *best_cost, double split_cost)
 {
   /* try each Seg as partition */
-  for (Segment *part = part_list->list; part; part = part->next)
+  for (Segment *part = part_list->list; part; part = part->next_convex)
   {
     if (HAS_BIT(config.debug, DEBUG_PICKNODE))
     {
@@ -757,7 +759,7 @@ Segment *PickNode(Quadtree *tree, int depth, double split_cost, bool fast)
 
 static void ListAddSeg(Segment **list_ptr, Segment *seg)
 {
-  seg->next = *list_ptr;
+  seg->next_convex = *list_ptr;
   *list_ptr = seg;
 }
 
@@ -872,7 +874,7 @@ void SeparateSegs(Level &level, Quadtree *tree, Segment *part, Segment **left_li
   while (tree->list != nullptr)
   {
     Segment *seg = tree->list;
-    tree->list = seg->next;
+    tree->list = seg->next_convex;
 
     seg->quad = nullptr;
     DivideOneSeg(level, seg, part, left_list, right_list, cut_list);
@@ -904,7 +906,7 @@ void FindLimits2(Segment *list, MapBoundBox *bbox)
   bbox->minx = bbox->miny = SHRT_MAX;
   bbox->maxx = bbox->maxy = SHRT_MIN;
 
-  for (; list != nullptr; list = list->next)
+  for (; list != nullptr; list = list->next_convex)
   {
     double x1 = list->start->x;
     double y1 = list->start->y;
@@ -978,6 +980,7 @@ void AddMinisegs(Level &level, Intersection *cut_list, Segment *part, Segment **
 
     Segment *seg = level.NewSeg();
     Segment *buddy = level.NewSeg();
+    level.num_mini_segs += 2;
 
     seg->partner = buddy;
     buddy->partner = seg;
@@ -1176,7 +1179,7 @@ static void AddList(Quadtree *quadtree, Segment *new_list)
   while (new_list != nullptr)
   {
     Segment *seg = new_list;
-    new_list = seg->next;
+    new_list = seg->next_convex;
 
     AddSeg(quadtree, seg);
   }
@@ -1187,7 +1190,7 @@ static void ConvertToList(Quadtree *quadtree, Segment **_list)
   while (quadtree->list != nullptr)
   {
     Segment *seg = quadtree->list;
-    quadtree->list = seg->next;
+    quadtree->list = seg->next_convex;
 
     ListAddSeg(_list, seg);
   }
@@ -1258,6 +1261,7 @@ int OnLineSide(Quadtree *quadtree, const Segment *part)
 Segment *CreateOneSeg(Level &level, Linedef *line, Vertex *start, Vertex *end, Sidedef *side, bool what_side)
 {
   Segment *seg = level.NewSeg();
+  level.num_real_segs++;
 
   // check for bad sidedef
   if (side->sector == nullptr)
@@ -1366,7 +1370,7 @@ static void DetermineMiddle(Subsector *subsec)
   int total = 0;
 
   // compute middle coordinates
-  for (Segment *seg = subsec->seg_list; seg; seg = seg->next)
+  for (Segment *seg = subsec->seg_list_convex; seg; seg = seg->next_convex)
   {
     subsec->mid_x += seg->start->x + seg->end->x;
     subsec->mid_y += seg->start->y + seg->end->y;
@@ -1381,23 +1385,46 @@ static void DetermineMiddle(Subsector *subsec)
   }
 }
 
-static void AddToTail(Subsector *subsec, Segment *seg)
+static void AddToTailConvex(Subsector *subsec, Segment *seg)
 {
-  seg->next = nullptr;
+  seg->next_convex = nullptr;
 
-  if (subsec->seg_list == nullptr)
+  if (subsec->seg_list_convex == nullptr)
   {
-    subsec->seg_list = seg;
+    subsec->seg_list_convex = seg;
+    subsec->seg_count_convex = 1;
     return;
   }
 
-  Segment *tail = subsec->seg_list;
-  while (tail->next != nullptr)
+  Segment *tail = subsec->seg_list_convex;
+  while (tail->next_convex != nullptr)
   {
-    tail = tail->next;
+    tail = tail->next_convex;
   }
 
-  tail->next = seg;
+  tail->next_convex = seg;
+  subsec->seg_count_convex++;
+}
+
+static void AddToTailNormal(Subsector *subsec, Segment *seg)
+{
+  seg->next_normal = nullptr;
+
+  if (subsec->seg_list_normal == nullptr)
+  {
+    subsec->seg_list_normal = seg;
+    subsec->seg_count_normal = 1;
+    return;
+  }
+
+  Segment *tail = subsec->seg_list_normal;
+  while (tail->next_normal != nullptr)
+  {
+    tail = tail->next_normal;
+  }
+
+  tail->next_normal = seg;
+  subsec->seg_count_normal++;
 }
 
 static void ClockwiseOrder(Subsector *subsec)
@@ -1411,7 +1438,7 @@ static void ClockwiseOrder(Subsector *subsec)
 
   std::vector<Segment *> array;
 
-  for (seg = subsec->seg_list; seg; seg = seg->next)
+  for (seg = subsec->seg_list_convex; seg; seg = seg->next_convex)
   {
     // compute angles now
     seg->cmp_angle = ComputeAngle(seg->start->x - subsec->mid_x, seg->start->y - subsec->mid_y);
@@ -1475,19 +1502,25 @@ static void ClockwiseOrder(Subsector *subsec)
   }
 
   // transfer sorted array back into sub
-  subsec->seg_list = nullptr;
+  subsec->seg_list_convex = nullptr;
+  subsec->seg_list_normal = nullptr;
+  subsec->seg_count_convex = 0;
+  subsec->seg_count_normal = 0;
 
   for (size_t j = 0; j < array.size(); j++)
   {
     size_t k = (first + j) % array.size();
-    AddToTail(subsec, array[k]);
+    AddToTailConvex(subsec, array[k]);
+
+    // Non-GL segments are added here
+    if (array[k]->linedef) AddToTailNormal(subsec, array[k]);
   }
 
   if (HAS_BIT(config.debug, DEBUG_SORTER))
   {
     PrintLine(Log::DEBUG, "[{}] Sorted SEGS around ({:1.1f},{:1.1f})", __func__, subsec->mid_x, subsec->mid_y);
 
-    for (seg = subsec->seg_list; seg; seg = seg->next)
+    for (seg = subsec->seg_list_convex; seg; seg = seg->next_convex)
     {
       PrintLine(Log::DEBUG, "[{}] Seg {}: Angle {:1.6f}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})", __func__, seg->index,
                 seg->cmp_angle, seg->start->x, seg->start->y, seg->end->x, seg->end->y);
@@ -1502,9 +1535,9 @@ static void SanityCheckClosed(Subsector *subsec)
 
   Segment *seg, *next;
 
-  for (seg = subsec->seg_list; seg; seg = seg->next)
+  for (seg = subsec->seg_list_convex; seg; seg = seg->next_convex)
   {
-    next = seg->next ? seg->next : subsec->seg_list;
+    next = seg->next_convex ? seg->next_convex : subsec->seg_list_convex;
 
     double dx = seg->end->x - next->start->x;
     double dy = seg->end->y - next->start->y;
@@ -1527,7 +1560,7 @@ static void SanityCheckClosed(Subsector *subsec)
 
     if (HAS_BIT(config.debug, DEBUG_SUBSEC))
     {
-      for (seg = subsec->seg_list; seg; seg = seg->next)
+      for (seg = subsec->seg_list_convex; seg; seg = seg->next_convex)
       {
         PrintLine(Log::DEBUG, "[{}] SEG {}  ({:1.1f},{:1.1f}) --> ({:1.1f},{:1.1f})", __func__, seg->index, seg->start->x,
                   seg->start->y, seg->end->x, seg->end->y);
@@ -1538,7 +1571,7 @@ static void SanityCheckClosed(Subsector *subsec)
 
 static void SanityCheckHasRealSeg(Subsector *subsec)
 {
-  for (Segment *seg = subsec->seg_list; seg; seg = seg->next)
+  for (Segment *seg = subsec->seg_list_convex; seg; seg = seg->next_convex)
   {
     if (seg->linedef != nullptr)
     {
@@ -1547,29 +1580,6 @@ static void SanityCheckHasRealSeg(Subsector *subsec)
   }
 
   throw RuntimeException("Subsector {} near ({:1.1f},{:1.1f}) has no real seg!", subsec->index, subsec->mid_x, subsec->mid_y);
-}
-
-static void RenumberSegs(Subsector *subsec, size_t &cur_seg_index)
-{
-  if (HAS_BIT(config.debug, DEBUG_SUBSEC))
-  {
-    PrintLine(Log::DEBUG, "[{}] Renumbering {}", __func__, subsec->index);
-  }
-
-  subsec->seg_count = 0;
-
-  for (Segment *seg = subsec->seg_list; seg; seg = seg->next)
-  {
-    seg->index = cur_seg_index;
-    cur_seg_index += 1;
-
-    subsec->seg_count++;
-
-    if (HAS_BIT(config.debug, DEBUG_SUBSEC))
-    {
-      PrintLine(Log::DEBUG, "[{}]   {}: Seg Index {}", __func__, subsec->seg_count, seg->index);
-    }
-  }
 }
 
 //
@@ -1583,8 +1593,8 @@ Subsector *CreateSubsec(Level &level, Quadtree *tree)
   sub->index = level.subsecs.size() - 1;
 
   // copy segs into subsector
-  sub->seg_list = nullptr;
-  ConvertToList(tree, &sub->seg_list);
+  sub->seg_list_convex = nullptr;
+  ConvertToList(tree, &sub->seg_list_convex);
   DetermineMiddle(sub);
 
   if (HAS_BIT(config.debug, DEBUG_SUBSEC))
@@ -1604,7 +1614,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox *bounds, Nod
   if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {
     PrintLine(Log::DEBUG, "[{}] BEGUN @ {}", __func__, depth);
-    for (const Segment *seg = list; seg; seg = seg->next)
+    for (const Segment *seg = list; seg; seg = seg->next_convex)
     {
       PrintLine(Log::DEBUG, "[{}]   {}SEG {}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})", __func__, seg->linedef ? "" : "MINI",
                 seg->index, seg->start->x, seg->start->y, seg->end->x, seg->end->y);
@@ -1691,91 +1701,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox *bounds, Nod
   }
 }
 
-void ClockwiseBspTree(Level &level)
-{
-  auto mark = Benchmarker(__func__);
-  size_t cur_seg_index = 0;
-
-  for (auto sub : level.subsecs)
-  {
-    ClockwiseOrder(sub);
-    RenumberSegs(sub, cur_seg_index);
-
-    // do some sanity checks
-    SanityCheckClosed(sub);
-    SanityCheckHasRealSeg(sub);
-  }
-}
-
-static void Normalise(Subsector *subsec)
-{
-  // use head + tail to maintain same order of segs
-  Segment *new_head = nullptr;
-  Segment *new_tail = nullptr;
-
-  if (HAS_BIT(config.debug, DEBUG_SUBSEC))
-  {
-    PrintLine(Log::DEBUG, "[{}] Normalising {}", __func__, subsec->index);
-  }
-
-  while (subsec->seg_list)
-  {
-    // remove head
-    Segment *seg = subsec->seg_list;
-    subsec->seg_list = seg->next;
-
-    // filter out minisegs
-    if (seg->linedef == nullptr)
-    {
-      if (HAS_BIT(config.debug, DEBUG_SUBSEC))
-      {
-        PrintLine(Log::DEBUG, "[{}] Removing miniseg {}", __func__, seg->index);
-      }
-
-      // this causes SortSegs() to remove the seg
-      seg->index = SEG_IS_GARBAGE;
-      continue;
-    }
-
-    // add it to the new list
-    seg->next = nullptr;
-
-    if (new_tail)
-    {
-      new_tail->next = seg;
-    }
-    else
-    {
-      new_head = seg;
-    }
-
-    new_tail = seg;
-
-    // this updated later
-    seg->index = NO_INDEX;
-  }
-
-  if (new_head == nullptr)
-  {
-    throw RuntimeException("Subsector {} normalised to being EMPTY", subsec->index);
-  }
-
-  subsec->seg_list = new_head;
-}
-
-void NormaliseBspTree(Level &level)
-{
-  // unlinks all minisegs from each subsector
-  size_t cur_seg_index = 0;
-
-  for (auto sub : level.subsecs)
-  {
-    Normalise(sub);
-    RenumberSegs(sub, cur_seg_index);
-  }
-}
-
-static void RoundOffSubsector(Level &level, Subsector *subsec)
+static void RoundOffSubsectorNormal(Level &level, Subsector *subsec)
 {
   // use head + tail to maintain same order of segs
   Segment *new_head = nullptr;
@@ -1793,7 +1719,7 @@ static void RoundOffSubsector(Level &level, Subsector *subsec)
   }
 
   // do an initial pass, just counting the degenerates
-  for (seg = subsec->seg_list; seg; seg = seg->next)
+  for (seg = subsec->seg_list_convex; seg; seg = seg->next_convex)
   {
     // is the seg degenerate ?
     if (FloatToShort(seg->start->x) == FloatToShort(seg->end->x) && FloatToShort(seg->start->y) == FloatToShort(seg->end->y))
@@ -1850,11 +1776,11 @@ static void RoundOffSubsector(Level &level, Subsector *subsec)
   }
 
   // second pass, remove the blighters...
-  while (subsec->seg_list != nullptr)
+  while (subsec->seg_list_convex != nullptr)
   {
     // remove head
-    seg = subsec->seg_list;
-    subsec->seg_list = seg->next;
+    seg = subsec->seg_list_convex;
+    subsec->seg_list_convex = seg->next_convex;
 
     if (seg->is_degenerate)
     {
@@ -1868,11 +1794,11 @@ static void RoundOffSubsector(Level &level, Subsector *subsec)
     }
 
     // add it to new list
-    seg->next = nullptr;
+    seg->next_convex = nullptr;
 
     if (new_tail)
     {
-      new_tail->next = seg;
+      new_tail->next_convex = seg;
     }
     else
     {
@@ -1880,9 +1806,6 @@ static void RoundOffSubsector(Level &level, Subsector *subsec)
     }
 
     new_tail = seg;
-
-    // this updated later
-    seg->index = NO_INDEX;
   }
 
   if (new_head == nullptr)
@@ -1890,16 +1813,36 @@ static void RoundOffSubsector(Level &level, Subsector *subsec)
     throw RuntimeException("Subsector {} rounded off to being EMPTY", subsec->index);
   }
 
-  subsec->seg_list = new_head;
+  subsec->seg_list_convex = new_head;
 }
 
 void RoundOffBspTree(Level &level)
 {
-  size_t cur_seg_index = 0;
+  for (auto sub : level.subsecs)
+  {
+    RoundOffSubsectorNormal(level, sub);
+  }
+}
+
+void PostProcessBspTree(Level &level)
+{
+  auto mark = Benchmarker(__func__);
+  size_t seg_first_normal = 0;
+  size_t seg_first_convex = 0;
 
   for (auto sub : level.subsecs)
   {
-    RoundOffSubsector(level, sub);
-    RenumberSegs(sub, cur_seg_index);
+    sub->seg_first_normal = seg_first_normal;
+    sub->seg_first_convex = seg_first_convex;
+
+    ClockwiseOrder(sub);
+
+    // okay, ClockwiseOrder() has counted the segs
+    seg_first_normal += sub->seg_count_normal;
+    seg_first_convex += sub->seg_count_convex;
+
+    // do some sanity checks
+    SanityCheckClosed(sub);
+    SanityCheckHasRealSeg(sub);
   }
 }

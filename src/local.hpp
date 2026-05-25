@@ -175,7 +175,8 @@ struct Mobj
 struct Segment
 {
   // link for list
-  Segment *next;
+  Segment *next_convex;
+  Segment *next_normal;
 
   Vertex *start; // from this vertex...
   Vertex *end;   // ... to this vertex
@@ -241,10 +242,16 @@ static constexpr uint32_t SEG_IS_GARBAGE = (1 << 29);
 struct Subsector
 {
   // list of segs
-  Segment *seg_list;
+  Segment *seg_list_convex;
+  Segment *seg_list_normal;
 
-  // count of segs -- only valid after RenumberSegs() is called
-  size_t seg_count;
+  // count of segs -- only valid after ClockwiseBspTree() is called
+  size_t seg_count_convex;
+  size_t seg_count_normal;
+
+  // first seg index in the seg lists -- only valid after ClockwiseBspTree() is called
+  size_t seg_first_convex;
+  size_t seg_first_normal;
 
   // subsector index.  Always valid, set when the subsector is
   // initially created.
@@ -361,6 +368,8 @@ struct Level
   size_t num_old_vert = 0;
   size_t num_new_vert = 0;
   size_t num_real_lines = 0;
+  size_t num_real_segs = 0;
+  size_t num_mini_segs = 0;
   size_t lump = NO_INDEX;
   bool overflows = false;
 

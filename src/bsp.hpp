@@ -167,18 +167,13 @@ static_size(MapSegmentXGLN, 11);
 static_size(MapSegmentXGL2, 13);
 static_size(MapNodeXGL3, 40);
 
-// put all the segs in each subsector into clockwise order, and renumber
-// the seg indices.
+// put all the segs in each subsector into clockwise order.
+// enumerate all subsectors' seg lists' first index and seg count.
 //
 // [ This cannot be done DURING BuildNodes() since splitting a seg with
 //   a partner will insert another seg into that partner's list, usually
 //   in the wrong place order-wise. ]
-void ClockwiseBspTree(Level &level);
-
-// traverse the BSP tree and do whatever is necessary to convert the
-// node information from GL standard to normal standard (for example,
-// removing minisegs).
-void NormaliseBspTree(Level &level);
+void PostProcessBspTree(Level &level);
 
 // traverse the BSP tree, doing whatever is necessary to round
 // vertices to integer coordinates (for example, removing segs whose
@@ -193,8 +188,6 @@ void PutReject(WadIO &io, Level &level);
 // the BSP tree lumps differ notably on each map format -- Doom/Hexen/Doom64
 // have NODES, SSECTORS & SEGS, but UDMF is generally only ZNODES, and there's
 // some format overlap between them
-void SortSegs(Level &level);
-
 void PutVertices(WadIO &io, Level &level, bool fractional, bool include_new_verts);
 
 void PutSegs_DoomBSP(WadIO &io, Level &level);

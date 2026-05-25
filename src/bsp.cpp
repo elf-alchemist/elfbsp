@@ -25,7 +25,6 @@
 #include "core.hpp"
 #include "local.hpp"
 
-#include <algorithm>
 #include <cstdint>
 #include <vector>
 
@@ -36,22 +35,6 @@ constexpr uint32_t NF_SUBSECTOR = BIT(31);
 //
 // Utility
 //
-
-void SortSegs(Level &level)
-{
-  // sort segs into ascending index
-  auto PredicateCompare_SegmentIndex = [](const Segment *Segment1, const Segment *Segment2) -> auto
-  { return Segment1->index < Segment2->index; };
-
-  std::sort(level.segs.begin(), level.segs.end(), PredicateCompare_SegmentIndex);
-
-  // remove unwanted segs
-  while (level.segs.size() > 0 && level.segs.back()->index == SEG_IS_GARBAGE)
-  {
-    UtilFree(level.segs.back());
-    level.segs.pop_back();
-  }
-}
 
 static inline int16_t VanillaSegDist(const Segment *seg)
 {
@@ -130,25 +113,28 @@ void PutSegs_DoomBSP(WadIO &io, Level &level)
 {
   io.StartWritingLump("SEGS");
 
-  for (auto seg : level.segs)
+  for (auto sub : level.subsecs)
   {
-    MapSegmentDoomBSP raw;
-
-    raw.start = GetLittleEndian(IndexToShort(seg->start->index));
-    raw.end = GetLittleEndian(IndexToShort(seg->end->index));
-    raw.angle = GetLittleEndian(VanillaSegAngle(seg));
-    raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
-    raw.flip = GetLittleEndian(seg->side);
-    raw.dist = GetLittleEndian(VanillaSegDist(seg));
-
-    io.AddToLump(&raw, sizeof(raw));
-
-    if (HAS_BIT(config.debug, DEBUG_BSP))
+    for (auto seg = sub->seg_list_normal; seg != nullptr; seg = seg->next_normal)
     {
-      PrintLine(Log::DEBUG,
-                "[{}] {}  Vert {:04X}->{:04X}  Line {:04X} {}  Angle {:04X}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})", __func__,
-                seg->index, GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef),
-                seg->side ? "L" : "R", GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
+      MapSegmentDoomBSP raw;
+
+      raw.start = GetLittleEndian(IndexToShort(seg->start->index));
+      raw.end = GetLittleEndian(IndexToShort(seg->end->index));
+      raw.angle = GetLittleEndian(VanillaSegAngle(seg));
+      raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
+      raw.flip = GetLittleEndian(seg->side);
+      raw.dist = GetLittleEndian(VanillaSegDist(seg));
+
+      io.AddToLump(&raw, sizeof(raw));
+
+      if (HAS_BIT(config.debug, DEBUG_BSP))
+      {
+        PrintLine(Log::DEBUG,
+                  "[{}] {}  Vert {:04X}->{:04X}  Line {:04X} {}  Angle {:04X}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})",
+                  __func__, seg->index, GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef),
+                  seg->side ? "L" : "R", GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
+      }
     }
   }
 }
@@ -161,8 +147,8 @@ void PutSubsecs_DoomBSP(WadIO &io, Level &level)
   {
     MapSubsectorDoomBSP raw;
 
-    raw.first = GetLittleEndian(IndexToShort(sub->seg_list->index));
-    raw.num = GetLittleEndian(IndexToShort(sub->seg_count));
+    raw.first = GetLittleEndian(IndexToShort(sub->seg_first_normal));
+    raw.num = GetLittleEndian(IndexToShort(sub->seg_count_normal));
 
     io.AddToLump(&raw, sizeof(raw));
 
@@ -263,8 +249,8 @@ void PutLeafs_DoomBSP(WadIO &io, Level &level)
 
   for (auto subsec : level.subsecs)
   {
-    Segment *seg = subsec->seg_list;
-    uint16_t seg_count = IndexToShort(subsec->seg_count);
+    Segment *seg = subsec->seg_list_convex;
+    uint16_t seg_count = IndexToShort(subsec->seg_count_convex);
 
     io.AddToLump(&seg_count, sizeof(seg_count));
 
@@ -293,7 +279,7 @@ void PutLeafs_DoomBSP(WadIO &io, Level &level)
 
       io.AddToLump(&raw, sizeof(raw));
 
-      seg = seg->next;
+      seg = seg->next_convex;
 
       if (HAS_BIT(config.debug, DEBUG_BSP))
       {
@@ -311,25 +297,28 @@ void PutSegs_DeePBSPV4(WadIO &io, Level &level)
 {
   io.StartWritingLump("SEGS");
 
-  for (auto seg : level.segs)
+  for (auto sub : level.subsecs)
   {
-    MapSegmentDeePBSPV4 raw;
-
-    raw.start = GetLittleEndian(IndexToInt(seg->start->index));
-    raw.end = GetLittleEndian(IndexToInt(seg->end->index));
-    raw.angle = GetLittleEndian(VanillaSegAngle(seg));
-    raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
-    raw.flip = GetLittleEndian(seg->side);
-    raw.dist = GetLittleEndian(VanillaSegDist(seg));
-
-    io.AddToLump(&raw, sizeof(raw));
-
-    if (HAS_BIT(config.debug, DEBUG_BSP))
+    for (auto seg = sub->seg_list_normal; seg != nullptr; seg = seg->next_normal)
     {
-      PrintLine(Log::DEBUG,
-                "[{}] {}  Vert {:08X}->{:08X}  Line {:04X} {}  Angle {:04X}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})", __func__,
-                seg->index, GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef),
-                seg->side ? "L" : "R", GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
+      MapSegmentDeePBSPV4 raw;
+
+      raw.start = GetLittleEndian(IndexToInt(seg->start->index));
+      raw.end = GetLittleEndian(IndexToInt(seg->end->index));
+      raw.angle = GetLittleEndian(VanillaSegAngle(seg));
+      raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
+      raw.flip = GetLittleEndian(seg->side);
+      raw.dist = GetLittleEndian(VanillaSegDist(seg));
+
+      io.AddToLump(&raw, sizeof(raw));
+
+      if (HAS_BIT(config.debug, DEBUG_BSP))
+      {
+        PrintLine(Log::DEBUG,
+                  "[{}] {}  Vert {:08X}->{:08X}  Line {:04X} {}  Angle {:04X}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})",
+                  __func__, seg->index, GetLittleEndian(raw.start), GetLittleEndian(raw.end), GetLittleEndian(raw.linedef),
+                  seg->side ? "L" : "R", GetLittleEndian(raw.angle), seg->start->x, seg->start->y, seg->end->x, seg->end->y);
+      }
     }
   }
 }
@@ -342,8 +331,8 @@ void PutSubsecs_DeePBSPV4(WadIO &io, Level &level)
   {
     MapSubsectorDeePBSPV4 raw;
 
-    raw.first = GetLittleEndian(IndexToInt(sub->seg_list->index));
-    raw.num = GetLittleEndian(IndexToShort(sub->seg_count));
+    raw.first = GetLittleEndian(IndexToInt(sub->seg_first_normal));
+    raw.num = GetLittleEndian(IndexToShort(sub->seg_count_normal));
 
     io.AddToLump(&raw, sizeof(raw));
 
@@ -445,17 +434,17 @@ void PutLeafs_DeePBSPV4(WadIO &io, Level &level)
 
   for (auto subsec : level.subsecs)
   {
-    Segment *seg = subsec->seg_list;
-    uint32_t seg_count = IndexToInt(subsec->seg_count);
+    Segment *seg = subsec->seg_list_convex;
+    uint32_t seg_count_convex = IndexToInt(subsec->seg_count_convex);
 
-    io.AddToLump(&seg_count, sizeof(seg_count));
+    io.AddToLump(&seg_count_convex, sizeof(seg_count_convex));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
-      PrintLine(Log::DEBUG, "[{}] Subsector[{}] leaf references: {}", __func__, subsec->index, seg_count);
+      PrintLine(Log::DEBUG, "[{}] Subsector[{}] leaf references: {}", __func__, subsec->index, seg_count_convex);
     }
 
-    for (size_t j = 0; j < seg_count; j++)
+    for (size_t j = 0; j < seg_count_convex; j++)
     {
       // Do not remove minisegs from tree before
       // we are able to write all this
@@ -475,7 +464,7 @@ void PutLeafs_DeePBSPV4(WadIO &io, Level &level)
 
       io.AddToLump(&raw, sizeof(raw));
 
-      seg = seg->next;
+      seg = seg->next_convex;
 
       if (HAS_BIT(config.debug, DEBUG_BSP))
       {
@@ -521,39 +510,29 @@ static void PutVertices_XNOD(WadIO &io, Level &level)
   }
 }
 
-static void PutSubsecs_XNOD(WadIO &io, Level &level)
+static void PutSubsecs_XNOD(WadIO &io, Level &level, bool do_convex)
 {
   uint32_t raw_num = GetLittleEndian(IndexToInt(level.subsecs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
-  size_t cur_seg_index = 0;
+  size_t seg_count = 0;
+  size_t sub_seg_count = 0;
+
   for (auto sub : level.subsecs)
   {
     MapSubsectorXNOD raw;
-    raw.segnum = GetLittleEndian(IndexToInt(sub->seg_count));
+    sub_seg_count = do_convex ? sub->seg_count_convex : sub->seg_count_normal;
+    raw.segnum = GetLittleEndian(IndexToInt(sub_seg_count));
     io.AddToLumpZ(&raw, sizeof(raw));
 
-    // sanity check the seg index values
-    size_t count = 0;
-    for (const Segment *seg = sub->seg_list; seg; seg = seg->next, cur_seg_index++)
-    {
-      if (cur_seg_index != seg->index)
-      {
-        throw RuntimeException("[{}] seg index mismatch in sub {} ({} != {})", __func__, sub->index, cur_seg_index, seg->index);
-      }
-
-      count++;
-    }
-
-    if (count != sub->seg_count)
-    {
-      throw RuntimeException("[{}] miscounted segs in sub {} ({} != {})", __func__, sub->index, count, sub->seg_count);
-    }
+    // sanity check the seg counts
+    seg_count += sub_seg_count;
   }
 
-  if (cur_seg_index != level.segs.size())
+  size_t total_seg_count = do_convex ? level.segs.size() : level.num_real_segs;
+  if (seg_count != total_seg_count)
   {
-    throw RuntimeException("[{}] miscounted segs ({} != {})", __func__, cur_seg_index, level.segs.size());
+    throw RuntimeException("[{}] miscounted segs ({} != {})", __func__, seg_count, total_seg_count);
   }
 }
 
@@ -803,10 +782,6 @@ static void PutNodes_XGL3(WadIO &io, Level &level)
 //
 void PutTree_ZDBSP(WadIO &io, Level &level, std::string lumpname, BspFormat bsp_format, bool compress)
 {
-  if (bsp_format == BspFormat::XNOD) NormaliseBspTree(level);
-
-  SortSegs(level);
-
   io.StartWritingLump(lumpname.c_str());
 
   if (bsp_format == BspFormat::XNOD) io.AddToLump(compress ? "ZNOD" : "XNOD", 4);
@@ -817,7 +792,7 @@ void PutTree_ZDBSP(WadIO &io, Level &level, std::string lumpname, BspFormat bsp_
   if (compress) io.Begin_Zlib();
 
   PutVertices_XNOD(io, level);
-  PutSubsecs_XNOD(io, level);
+  PutSubsecs_XNOD(io, level, bsp_format != BspFormat::XNOD);
 
   if (bsp_format == BspFormat::XNOD) PutSegs_XNOD(io, level);
   if (bsp_format == BspFormat::XGLN) PutSegs_XGLN(io, level);

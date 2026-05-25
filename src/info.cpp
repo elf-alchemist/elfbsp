@@ -157,6 +157,7 @@ void GenerateAnalysis(WadIO &io, Level &level, std::string_view filename)
     data.segs = level.segs.size();
 
     // TODO: sidedef math should account for non-seg-generating sides, actually
+    // TODO: 2 electric boogaloo, must adapt to using total and real seg counts
     data.splits = level.segs.size() - level.sidedefs.size();
     num_leafs = static_cast<double>(data.subsecs);
 

@@ -565,8 +565,7 @@ static void ParseSectorField(Sector *sector, const std::string &key, token_kind_
   // nothing actually needed
 }
 
-static void ParseSidedefField(Level &level, Sidedef *side, const std::string &key, token_kind_e kind,
-                              const std::string &value)
+static void ParseSidedefField(Level &level, Sidedef *side, const std::string &key, token_kind_e kind, const std::string &value)
 {
   if (key == "sector")
   {
@@ -581,8 +580,7 @@ static void ParseSidedefField(Level &level, Sidedef *side, const std::string &ke
   }
 }
 
-static void ParseLinedefField(Level &level, Linedef *line, const std::string &key, token_kind_e kind,
-                              const std::string &value)
+static void ParseLinedefField(Level &level, Linedef *line, const std::string &key, token_kind_e kind, const std::string &value)
 {
   if (key == "v1")
   {
@@ -891,7 +889,7 @@ static BspFormat CheckFormatBSP(BuildInfo &ctx, Level &level)
       (level.vertices.size() > LIMIT_VERT     // even if it may not run on some older source ports
        || level.nodes.size() > LIMIT_NODE     // or the vanilla EXE
        || level.subsecs.size() > LIMIT_SUBSEC //
-       || level.segs.size() > LIMIT_SEG))     //
+       || level.num_real_segs > LIMIT_SEG))   //
   {
     PrintLine(Log::WARN, "[{}] BSP overflow. Forcing DeePBSPV4 node format.", __func__);
     config.total_warnings++;
@@ -1010,9 +1008,7 @@ BuildResult SaveLevelBinary(WadIO &io, Level &level)
   // Do the four BSP lumps, before promptly doing the other normal lumps
   if (bsp_format == BspFormat::DoomBSP)
   {
-    NormaliseBspTree(level);
     if (!do_fractional) RoundOffBspTree(level);
-    SortSegs(level);
 
     PutVertices(io, level, do_fractional, do_new_vert);
     PutSegs_DoomBSP(io, level);
@@ -1021,9 +1017,7 @@ BuildResult SaveLevelBinary(WadIO &io, Level &level)
   }
   else if (bsp_format == BspFormat::DeePBSPV4)
   {
-    NormaliseBspTree(level);
     if (!do_fractional) RoundOffBspTree(level);
-    SortSegs(level);
 
     PutVertices(io, level, do_fractional, do_new_vert);
     PutSegs_DeePBSPV4(io, level);
@@ -1149,11 +1143,13 @@ BuildResult BuildLevel(WadIO &io, Level &level, std::string_view filename)
     auto mark = Benchmarker("BuildNodes");
     BuildNodes(level, seg_list, 0, &dummy, &level.root_node, &level.root_sub, config.split_cost, config.fast, false);
   }
+  PostProcessBspTree(level);
 
   if (config.verbose)
   {
-    PrintLine(Log::NORMAL, "[{}] Built {} NODES, {} SSECTORS, {} SEGS, {} VERTEXES", __func__, level.nodes.size(),
-              level.subsecs.size(), level.segs.size(), level.vertices.size());
+    PrintLine(Log::NORMAL, "[{}] Built {} NODES, {} SSECTORS, {} SEGS ({} REAL, {} MINI), {} VERTICES ({} MAP, {} BSP)",
+              __func__, level.nodes.size(), level.subsecs.size(), level.segs.size(), level.num_real_segs, level.num_mini_segs,
+              level.vertices.size(), level.num_old_vert, level.num_new_vert);
   }
 
   if (config.verbose && level.root_node != nullptr)
@@ -1161,8 +1157,6 @@ BuildResult BuildLevel(WadIO &io, Level &level, std::string_view filename)
     PrintLine(Log::NORMAL, "[{}] Heights of subtrees: {} / {}", __func__, ComputeBspHeight(level.root_node->l.node),
               ComputeBspHeight(level.root_node->r.node));
   }
-
-  ClockwiseBspTree(level);
 
   auto ret = BuildResult::Ok;
   switch (level.map_format)
