@@ -112,27 +112,171 @@ static void Reject_GroupSectors(Level &level)
   }
 }
 
-static void Reject_ProcessSectors(Level &level)
+// KnightMB Modification
+// Helper function to check line segment intersection
+static bool LinesIntersect(float ax, float ay, float bx, float by, float cx, float cy, float dx, float dy)
 {
-  for (size_t view = 0; view < level.sectors.size(); view++)
-  {
-    for (size_t target = 0; target < view; target++)
-    {
-      Sector *view_sec = level.sectors[view];
-      Sector *targ_sec = level.sectors[target];
+  float den = (bx - ax) * (dy - cy) - (by - ay) * (cx - dx);
+  if (den == 0.0f) return false; // Parallel lines
 
-      if (view_sec->rej_group == targ_sec->rej_group)
+  float u = ((cx - ax) * (dy - cy) - (cy - ay) * (dx - cx)) / den;
+  float v = ((cx - ax) * (by - ay) - (cy - ay) * (bx - ax)) / den;
+
+  return (u >= 0.0f && u <= 1.0f && v >= 0.0f && v <= 1.0f);
+}
+
+// KnightMB Modification
+// Basic geometry raycast to check if Sector A can see Sector B
+static bool CheckSectorVisibility(Level &level, size_t sector_A_idx, size_t sector_B_idx)
+{
+  const Sector *secA = level.sectors[sector_A_idx];
+  const Sector *secB = level.sectors[sector_B_idx];
+
+  float ax = 0.0f, ay = 0.0f, bx = 0.0f, by = 0.0f;
+
+  int countA = 0, countB = 0;
+  for (size_t i = 0; i < level.linedefs.size(); i++)
+  {
+    const Linedef *line = level.linedefs[i];
+    if (line->right && line->right->sector == secA)
+    {
+      ax += static_cast<float>(line->start->x + line->end->x) / 2.0f;
+      ay += static_cast<float>(line->start->y + line->end->y) / 2.0f;
+      countA++;
+    }
+    else if (line->left && line->left->sector == secA)
+    {
+      ax += static_cast<float>(line->start->x + line->end->x) / 2.0f;
+      ay += static_cast<float>(line->start->y + line->end->y) / 2.0f;
+      countA++;
+    }
+
+    if (line->right && line->right->sector == secB)
+    {
+      bx += static_cast<float>(line->start->x + line->end->x) / 2.0f;
+      by += static_cast<float>(line->start->y + line->end->y) / 2.0f;
+      countB++;
+    }
+    else if (line->left && line->left->sector == secB)
+    {
+      bx += static_cast<float>(line->start->x + line->end->x) / 2.0f;
+      by += static_cast<float>(line->start->y + line->end->y) / 2.0f;
+      countB++;
+    }
+  }
+
+  if (countA > 0)
+  {
+    ax /= static_cast<float>(countA);
+    ay /= static_cast<float>(countA);
+  }
+  if (countB > 0)
+  {
+    bx /= static_cast<float>(countB);
+    by /= static_cast<float>(countB);
+  }
+
+  // Create a bounding box for the ray segment itself
+  float ray_xmin = (ax < bx) ? ax : bx;
+  float ray_xmax = (ax > bx) ? ax : bx;
+  float ray_ymin = (ay < by) ? ay : by;
+  float ray_ymax = (ay > by) ? ay : by;
+
+  // Check if this ray intersects any sight-blocking, 1-sided linedefs
+  for (size_t i = 0; i < level.linedefs.size(); i++)
+  {
+    const Linedef *line = level.linedefs[i];
+
+    // If it's a 1-sided wall, it completely blocks vision
+    if (!line->left)
+    {
+      float cx = static_cast<float>(line->start->x);
+      float cy = static_cast<float>(line->start->y);
+      float dx = static_cast<float>(line->end->x);
+      float dy = static_cast<float>(line->end->y);
+
+      // Bounding Box Intersection Filter
+      float line_xmin = (cx < dx) ? cx : dx;
+      float line_xmax = (cx > dx) ? cx : dx;
+      float line_ymin = (cy < dy) ? cy : dy;
+      float line_ymax = (cy > dy) ? cy : dy;
+
+      // If the line's bounding box doesn't even touch the ray's bounding box,
+      // it is impossible for them to intersect. Skip the expensive math entirely!
+      if (line_xmax < ray_xmin || line_xmin > ray_xmax || line_ymax < ray_ymin || line_ymin > ray_ymax)
       {
         continue;
       }
 
+      if (LinesIntersect(ax, ay, bx, by, cx, cy, dx, dy))
+      {
+        return false; // Vision is BLOCKED
+      }
+    }
+  }
+
+  return true; // No solid wall crossed the ray path; assume visible
+}
+
+static void Reject_ProcessSectors(Level &level)
+{
+  size_t processed_count = 0; // Thread-safe tracking counter
+
+  if (HAS_BIT(config.debug, DEBUG_REJECT))
+  {
+    PrintLine(Log::DEBUG, "Processing REJECT table for %zu sectors...", level.sectors.size());
+  }
+
+// Setup parallel process for multi-core systems
+#pragma omp parallel for schedule(dynamic, 4)
+  for (size_t view = 0; view < level.sectors.size(); view++)
+  {
+    // Store the incremented value atomically to safely print progress
+    size_t current_progress;
+
+#pragma omp atomic capture
+    {
+      processed_count++;
+      current_progress = processed_count;
+    }
+
+    // Safely print progress without using a master directive restriction
+    if (HAS_BIT(config.debug, DEBUG_REJECT) && (current_progress % 500 == 0 || current_progress == level.sectors.size()))
+    {
+      PrintLine(Log::NORMAL, "  Progress: {} / {} sectors handled...", current_progress, level.sectors.size());
+    }
+
+    for (size_t target = 0; target < view; target++)
+    {
+      Sector *view_sec = level.sectors[view];
+      Sector *targ_sec = level.sectors[target];
+      bool is_rejected = false;
+
+      if (view_sec->rej_group != targ_sec->rej_group)
+      {
+        is_rejected = true;
+      }
+      else
+      {
+        if (!CheckSectorVisibility(level, view, target))
+        {
+          is_rejected = true;
+        }
+      }
+
       // for symmetry, do both sides at same time
 
-      size_t p1 = view * level.sectors.size() + target;
-      size_t p2 = target * level.sectors.size() + view;
+      if (is_rejected)
+      {
+        size_t p1 = view * level.sectors.size() + target;
+        size_t p2 = target * level.sectors.size() + view;
 
-      level.reject_matrix[p1 >> 3] |= (1 << (p1 & 7));
-      level.reject_matrix[p2 >> 3] |= (1 << (p2 & 7));
+#pragma omp critical(matrix_write)
+        {
+          level.reject_matrix[p1 >> 3] |= (1 << (p1 & 7));
+          level.reject_matrix[p2 >> 3] |= (1 << (p2 & 7));
+        }
+      }
     }
   }
 }

@@ -73,6 +73,11 @@ set(ZLIB_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(library/zlib-ng EXCLUDE_FROM_ALL)
 
+find_package(OpenMP REQUIRED)
+if(OpenMP_CXX_FOUND)
+    link_libraries(OpenMP::OpenMP_CXX)
+endif()
+
 add_executable(${PROJECT_NAME}
   src/blockmap.cpp
   src/bsp.cpp
