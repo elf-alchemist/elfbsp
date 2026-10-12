@@ -29,6 +29,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "zlib-ng.h"
+
 // Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
 constexpr uint16_t NF_SUBSECTOR_VANILLA = BIT(15);
 constexpr uint32_t NF_SUBSECTOR = BIT(31);
@@ -97,6 +99,20 @@ static inline short_angle_t VanillaSegAngle(const Segment *seg)
   return result;
 }
 
+// Must be in simple ISO8601 format
+// i.e. 1970-01-01 00:00:00.000
+static std::string TimeString(void)
+{
+  using namespace std::chrono;
+  auto now = system_clock::now();
+  return std::format("{:%F %T}", floor<milliseconds>(now));
+}
+
+//
+// Write out the full set of vertices
+//
+
+// TODO: add glbsp
 void PutVertices(WadIO &io, Level &level, bool fractional, bool include_new_verts)
 {
   const size_t vert_count = include_new_verts ? level.vertices.size() : level.num_old_vert;
@@ -486,7 +502,7 @@ void PutLeafs_DeePBSPV4(WadIO &io, Level &level)
 }
 
 //
-// ZDBSP formats
+// ZDBSP formats -- XNOD, ZNOD, XGLN, ZGLN, XGL2, ZGL2, XGL3, ZGL3
 //
 
 static void PutVertices_XNOD(WadIO &io, Level &level)
@@ -797,6 +813,97 @@ static void PutNodes_XGL3(WadIO &io, Level &level)
     throw RuntimeException("[{}] miscounted ({} != {})", __func__, node_cur_index, level.nodes.size());
   }
 }
+
+//
+// glBSP formats
+//
+
+constexpr auto GL_VERT_15 = BIT(15);
+constexpr auto GL_VERT_30 = BIT(30);
+constexpr auto GL_VERT_31 = BIT(31);
+
+template <typename IndexType, IndexType B>
+static inline IndexType VertexIndex_GL(Level &level, const Vertex *v)
+{
+  static_assert(std::is_same<IndexType, uint16_t>() || std::is_same<IndexType, uint32_t>(), "Invalid GL vertex index type");
+  static_assert(B == GL_VERT_15 || B == GL_VERT_30 || B == GL_VERT_31, "Invalid GL vertex index bit");
+  auto index = static_cast<IndexType>(v->index);
+  return !v->is_new ? index : ((index - level.num_old_vert) | B);
+}
+
+static uint32_t CalcChecksumGLBSP(WadIO &io, Level &level)
+{
+  uint32_t crc = 1;
+
+  auto vertexes = io.ReadLevelLump<byte>(level.lump, "VERTEXES");
+  if (vertexes.size() > 0)
+  {
+    crc = zng_adler32(crc, vertexes.data(), IndexToInt(vertexes.size()));
+  }
+
+  auto linedefs = io.ReadLevelLump<byte>(level.lump, "LINEDEFS");
+  if (linedefs.size() > 0)
+  {
+    crc = zng_adler32(crc, linedefs.data(), IndexToInt(linedefs.size()));
+  }
+
+  return crc;
+}
+
+void WriteGLMarker(WadIO &io, Level &level)
+{
+  std::string marker;
+  uint32_t crc = CalcChecksumGLBSP(io, level);
+  auto name = io.LumpName(level.lump);
+  auto gl_name = io.GlBspHeaderName(level.lump);
+
+  io.StartWritingLump(gl_name);
+  if (gl_name == "GL_LEVEL")
+  {
+    marker += std::format("LEVEL={}\n", name);
+  }
+  marker += std::format("BUILDER={}\n", PROJECT_STRING);
+  marker += std::format("CHECKSUM=0x{:08x}\n", crc);
+  marker += std::format("TIME={}\n", TimeString());
+
+  io.AddToLump(marker.c_str(), marker.size());
+}
+
+// This family is... messy
+#define GLBSP_ASSERT(e, t, h, err) \
+  if constexpr (format == e) static_assert(std::is_same_v<RawType, t> && std::string_view(magic_header) == h, err)
+
+template <GlBspFormat format, typename RawType, const char *magic_header>
+void PutNodes_GLBSP(Level &level)
+{
+  GLBSP_ASSERT(GlBspFormat::V1, MapNodeDoomBSP, "", "[PutNodes_GLBSP]: V1 format is malformed!");
+  GLBSP_ASSERT(GlBspFormat::V2, MapNodeDoomBSP, "", "[PutNodes_GLBSP]: V2 format is malformed!");
+  GLBSP_ASSERT(GlBspFormat::V3, MapNodeDoomBSP, "", "[PutNodes_GLBSP]: V3 format is malformed!");
+  GLBSP_ASSERT(GlBspFormat::V4, MapNodeDeePBSPV4, "", "[PutNodes_GLBSP]: V4 format is malformed!");
+  GLBSP_ASSERT(GlBspFormat::V5, MapNodeDeePBSPV4, "", "[PutNodes_GLBSP]: V5 format is malformed!");
+}
+
+template <GlBspFormat format, typename RawType, const char *magic_header>
+void PutSubsectors_GLBSP(Level &level)
+{
+  GLBSP_ASSERT(GlBspFormat::V1, MapSubsectorDoomBSP, "", "[PutSubsectors_GLBSP]: V1 format is malformed!");
+  GLBSP_ASSERT(GlBspFormat::V2, MapSubsectorDoomBSP, "", "[PutSubsectors_GLBSP]: V2 format is malformed!");
+  GLBSP_ASSERT(GlBspFormat::V3, MapSubsectorGlv3, "gNd3", "[PutSubsectors_GLBSP]: V3 format is malformed!");
+  GLBSP_ASSERT(GlBspFormat::V4, MapSubsectorDeePBSPV4, "", "[PutSubsectors_GLBSP]: V4 format is malformed!");
+  GLBSP_ASSERT(GlBspFormat::V5, MapSubsectorGlv3, "", "[PutSubsectors_GLBSP]: V5 format is malformed!");
+}
+
+template <GlBspFormat format, typename RawType, const char *magic_header>
+void PutSegs_GLBSP(Level &level)
+{
+  GLBSP_ASSERT(GlBspFormat::V1, MapSegmentGlv1, "", "[PutSegs_GLBSP]: V1 format is malformed!");
+  GLBSP_ASSERT(GlBspFormat::V2, MapSegmentGlv1, "", "[PutSegs_GLBSP]: V2 format is malformed!");
+  GLBSP_ASSERT(GlBspFormat::V3, MapSegmentGlv3, "gNd3", "[PutSegs_GLBSP]: V3 format is malformed!");
+  GLBSP_ASSERT(GlBspFormat::V4, MapSegmentGlv4, "", "[PutSegs_GLBSP]: V4 format is malformed!");
+  GLBSP_ASSERT(GlBspFormat::V5, MapSegmentGlv3, "", "[PutSegs_GLBSP]: V5 format is malformed!");
+}
+
+#undef GLBSP_ASSERT
 
 //
 // The family of ZDBSP BSP tree formats use a single lump no matter what

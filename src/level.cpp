@@ -663,7 +663,7 @@ static BspFormat CheckFormatBSP(BuildInfo &ctx, Level &level)
   {
     // Clamp Doom64 maps to only vanilla and DeePBSPV4 formats.
     // With support for fractional coordinates, it doesn't
-    // make sense for it to need to support XNOD, etc.
+    // make sense for it to _need_ to support ZDBSP formats
     Levelype = BspFormat::DoomBSP;
   }
 
@@ -678,7 +678,32 @@ static BspFormat CheckFormatBSP(BuildInfo &ctx, Level &level)
     Levelype = BspFormat::DeePBSPV4;
   }
 
-  return level.bsp_format = Levelype;
+  return Levelype;
+}
+
+GlBspFormat CheckFormatGLBSP(BuildInfo &ctx, Level &level, BspFormat bsp_format)
+{
+  // GLBSP formats are only valid in some cases
+  GlBspFormat GlBspLevelType = ctx.glbsp_format;
+
+  if (level.map_format == MapFormat::Doom64  // Doom64 already has LEAFS
+      || level.map_format == MapFormat::UDMF // UDMF does not use loose lumps
+      || bsp_format >= BspFormat::XNOD)      // Only makes sense in legacy formats
+  {
+    GlBspLevelType = GlBspFormat::None;
+  }
+
+  if (GlBspLevelType >= GlBspFormat::V1 && GlBspLevelType <= GlBspFormat::V2
+      && (level.vertices.size() > LIMIT_VERT     //
+          || level.nodes.size() > LIMIT_NODE     //
+          || level.subsecs.size() > LIMIT_SUBSEC //
+          || level.segs.size() > LIMIT_SEG))     //
+  {
+    PrintLine(Log::NORMAL, "[{}] GLBSP overflow. Forcing GLBSP V5 node format.", __func__);
+    GlBspLevelType = GlBspFormat::V5;
+  }
+
+  return GlBspLevelType;
 }
 
 /* ----- whole-level routines --------------------------- */
@@ -857,6 +882,8 @@ static BuildResult SaveLevelBinary(WadIO &io, Level &level)
   // On BSP overflow, bump to DeePBSPV4 from DoomBSP
   BspFormat bsp_format = CheckFormatBSP(config, level);
 
+  // TODO: extract glbsp lump data here
+
   // Copy marker wholesale
   size_t lump = level.lumps.label;
   io.CopyLump(lump);
@@ -889,6 +916,8 @@ static BuildResult SaveLevelBinary(WadIO &io, Level &level)
     io.LevelCopyLump(lump, "MACROS");
     io.LevelCopyLump(lump, "SCRIPTS");
   }
+
+  // TODO: write glbsp lumps right here
 
   return level.overflows ? BuildResult::Overflow : BuildResult::Ok;
 }

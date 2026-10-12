@@ -178,6 +178,8 @@ constexpr size_t NO_INDEX = static_cast<size_t>(-1);
 constexpr uint16_t NO_INDEX_INT16 = static_cast<uint16_t>(-1);
 constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
 
+constexpr time_t NO_TIME = static_cast<time_t>(-1);
+
 constexpr size_t WAD_LUMP_NAME = 8;
 
 constexpr size_t MSG_BUFFER_LENGTH = 1024;
@@ -296,25 +298,6 @@ enum Debug : uint32_t
   DEBUG_SUBSEC = BIT(12),
   DEBUG_WAD = BIT(13),
 };
-
-// Safe, portable vsnprintf().
-inline int32_t PRINTF_ATTR(2, 0) M_vsnprintf(char *buf, const char *s, va_list args)
-{
-  // Windows (and other OSes?) has a vsnprintf() that doesn't always
-  // append a trailing \0. So we must do it, and write into a buffer
-  // that is one byte shorter; otherwise this function is unsafe.
-  int32_t result = vsnprintf(buf, MSG_BUFFER_LENGTH, s, args);
-
-  // If truncated, change the final char in the buffer to a \0.
-  // A negative result indicates a truncated buffer on Windows.
-  if (result < 0 || result >= static_cast<int32_t>(MSG_BUFFER_LENGTH))
-  {
-    buf[MSG_BUFFER_LENGTH - 1] = '\0';
-    result = static_cast<int32_t>(MSG_BUFFER_LENGTH) - 1;
-  }
-
-  return result;
-}
 
 //
 //  show a message
@@ -583,51 +566,6 @@ enum class MapFormat
   UDMF,
 };
 
-static std::string_view format_name[] = {"ERROR", "Doom Format", "Hexen Format", "Doom64 Format", "UDMF"};
-
-// Lump order in a map WAD: each map needs a couple of lumps
-// to provide a complete scene geometry description.
-enum lump_order_t
-{
-  LL_LABEL = 0, // A separator name, ExMx or MAPxx
-  LL_THINGS,    // Monsters, items..
-  LL_LINEDEFS,  // LineDefs, from editing
-  LL_SIDEDEFS,  // SideDefs, from editing
-  LL_VERTEXES,  // Vertices, edited and BSP splits generated
-  LL_SEGS,      // LineSegs, from LineDefs split by BSP
-  LL_SSECTORS,  // SubSectors, list of LineSegs
-  LL_NODES,     // BSP nodes
-  LL_SECTORS,   // Sectors, from editing
-  LL_REJECT,    // LUT, sector-sector visibility
-  LL_BLOCKMAP,  // LUT, motion clipping, walls/grid element
-  LL_BEHAVIOR,  // ACS bytecode
-  LL_SCRIPTS,   // ACS source code
-
-  D64_LEAFS = LL_BLOCKMAP + 1, // PSX/N64 hardware rendering
-  D64_LIGHTS,                  // Colored sectors
-  D64_MACROS,                  // BLAM
-  D64_SCRIPTS,                 // BLAM
-
-  LL_TEXTMAP = LL_LABEL + 1, // UDMF geometry
-  LL_ENDMAP,                 // UDMF end marker
-
-  GL_LABEL = 0,
-  GL_VERT,
-  GL_SEGS,
-  GL_SSECT,
-  GL_NODES,
-  GL_PVS,
-
-  LM_LABEL = 0,
-  LM_CELLS,
-  LM_SUN,
-  LM_SURFS,
-  LM_TXCRD,
-  LM_LMAPS,
-};
-
-static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
-
 struct MapVertexIntegral
 {
   int16_t x;
@@ -823,6 +761,19 @@ enum class BspFormat : uint8_t
 
   MIN = DoomBSP,
   MAX = XGL3,
+};
+
+enum class GlBspFormat : uint8_t
+{
+  None,
+  V1,
+  V2,
+  V3,
+  V4,
+  V5,
+
+  MIN = V1,
+  MAX = V5,
 };
 
 enum class BlockmapFormat : uint8_t
@@ -1226,6 +1177,7 @@ struct BuildInfo
   uint32_t debug = DEBUG_NONE;
 
   BspFormat bsp_format = BspFormat::XNOD;
+  GlBspFormat glbsp_format = GlBspFormat::V2;
   BlockmapFormat bmap_format = BlockmapFormat::DoomBSP;
   bool fast = false;     // use a faster method to pick nodes
   bool analysis = false; // write out CSV for data analysis and visualization

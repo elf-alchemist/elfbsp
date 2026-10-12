@@ -147,18 +147,64 @@ struct MapSegmentXGL2
 
 struct MapNodeXGL3
 {
-  int32_t x, y;         // starting point
-  int32_t dx, dy;       // offset to ending point
+  fixed_t x, y;         // starting point
+  fixed_t dx, dy;       // offset to ending point
   MapBoundBox b1, b2;   // bounding rectangles
   uint32_t right, left; // children: Node or SSector (if high bit is set)
+} PACKEDATTR;
+
+//
+// glBSP
+// * legacy format, hardly supported outside of old GL ports
+// * compared to vanilla, some types were raise to 32bit
+// * convex minisegs are always required
+// * each version (V1->V2->V3->V4->V5) builds on top of the previous
+//
+
+constexpr uint16_t GL_V1_VERT = BIT(15);
+constexpr uint32_t GL_V3_VERT = BIT(30);
+constexpr uint32_t GL_V5_VERT = BIT(31);
+
+struct MapSubsectorGlv3
+{
+  uint32_t num;   // number of Segs in this Sub-Sector
+  uint32_t first; // first Seg
+} PACKEDATTR;
+
+struct MapSegmentGlv1
+{
+  uint16_t start;   // from this vertex...
+  uint16_t end;     // ... to this vertex
+  uint16_t linedef; // linedef that this seg goes along
+  uint16_t flip;    // true if not the same direction as linedef
+  uint16_t partner; // partner segment, islands!
+} PACKEDATTR;
+
+struct MapSegmentGlv3
+{
+  uint32_t start;   // from this vertex...
+  uint32_t end;     // ... to this vertex
+  uint16_t linedef; // linedef that this seg goes along
+  uint16_t flip;    // true if not the same direction as linedef
+  uint32_t partner; // partner segment, islands!
+} PACKEDATTR;
+
+struct MapSegmentGlv4
+{
+  uint32_t start;   // from this vertex...
+  uint32_t end;     // ... to this vertex
+  uint16_t linedef; // linedef that this seg goes along
+  uint16_t flip;    // true if not the same direction as linedef
 } PACKEDATTR;
 
 static_size(MapNodeDoomBSP, 28);
 static_size(MapSubsectorDoomBSP, 4);
 static_size(MapSegmentDoomBSP, 12);
+
 static_size(MapNodeDeePBSPV4, 32);
 static_size(MapSubsectorDeePBSPV4, 6);
 static_size(MapSegmentDeePBSPV4, 16);
+
 static_size(MapVertexXNOD, 8);
 static_size(MapNodeXNOD, 32);
 static_size(MapSubsectorXNOD, 4);
@@ -166,6 +212,35 @@ static_size(MapSegmentXNOD, 11);
 static_size(MapSegmentXGLN, 11);
 static_size(MapSegmentXGL2, 13);
 static_size(MapNodeXGL3, 40);
+
+// MapVertexGlv1 identical to MapVertexIntegral
+// MapVertexGlv2 identical to MapVertexFractional (+ header)
+// MapNodeGlv1 identical to MapNodeDoomBSP
+// MapNodeGlv4 identical to MapNodeDeePBSPV4
+// MapSubsectorGlv1 identical to MapSubsectorDoomBSP
+// MapSubsectorGlv4 identical to MapSubsectorDeePBSPV4
+static_size(MapSubsectorGlv3, 8); // unique
+static_size(MapSegmentGlv1, 10);  // unique
+static_size(MapSegmentGlv3, 16);  // unique
+static_size(MapSegmentGlv4, 12);  // unique
+
+struct ExtractedGlBspLumps
+{
+  std::vector<MapNodeDoomBSP> nodes0;
+  std::vector<MapNodeDeePBSPV4> nodes1;
+
+  std::vector<MapSubsectorDoomBSP> subsectors0;
+  std::vector<MapSubsectorGlv3> subsectors1;
+  std::vector<MapSubsectorDeePBSPV4> subsectors2;
+
+  std::vector<MapSegmentGlv1> segs0;
+  std::vector<MapSegmentGlv3> segs1;
+  std::vector<MapSegmentGlv4> segs2;
+
+  // used in Adler32 checksum
+  std::vector<byte> verts;
+  std::vector<byte> linedefs0;
+};
 
 // put all the segs in each subsector into clockwise order, and renumber
 // the seg indices.
