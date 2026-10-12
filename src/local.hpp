@@ -353,7 +353,7 @@ struct BlockList
   std::vector<size_t> lines;
 };
 
-// Note: ZDoom format support based on code (C) 2002,2003 Marisa "Randi" Heit
+// Note: ZDBSP format support based on code (C) 2002,2003 Marisa "Randi" Heit
 
 struct Level
 {
@@ -378,7 +378,6 @@ struct Level
   std::vector<Node *> nodes;
   std::vector<WallTip *> walltips;
   std::vector<Intersection *> intercuts;
-  BspFormat bsp_format = BspFormat::XNOD;
 
   uint8_t *reject_matrix;
   size_t reject_size;
@@ -404,6 +403,7 @@ struct Level
   Sector *NewSector(void);
   Mobj *NewThing(void);
 
+  Vertex *NewBspVertex(void);
   Segment *NewSeg(void);
   Subsector *NewSubsec(void);
   Node *NewNode(void);

@@ -72,9 +72,9 @@ struct WadIO
   ~WadIO(void);
 
   // Read operations
-  void SafeRead(void *buffer, size_t size);
+  void SafeRead(void *buffer, size_t size) const;
   size_t NumLumps(void) const;
-  const char *LumpName(size_t lump_index) const;
+  std::string_view LumpName(size_t lump_index) const;
   bool IsLevelLump(size_t lump_index) const;
   bool IsLevelTextmapFormat(size_t lump_index) const;
   bool IsLevel(size_t lump_index) const;
@@ -86,6 +86,11 @@ struct WadIO
   std::vector<T> ReadLump(size_t lump_index);
   template <typename T>
   std::vector<T> ReadLevelLump(size_t lump_index, std::string_view name);
+
+  // Handle GlBsp lumps
+  std::string_view GlBspHeaderName(size_t lump_index) const;
+  bool IsGlBspLump(size_t lump_index) const;
+  size_t GlBspLastLump(size_t lump_index) const;
 
   // Write operations
   void SafeWrite(const void *buffer, size_t size);

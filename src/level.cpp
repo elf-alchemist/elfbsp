@@ -565,8 +565,7 @@ static void ParseSectorField(Sector *sector, const std::string &key, token_kind_
   // nothing actually needed
 }
 
-static void ParseSidedefField(Level &level, Sidedef *side, const std::string &key, token_kind_e kind,
-                              const std::string &value)
+static void ParseSidedefField(Level &level, Sidedef *side, const std::string &key, token_kind_e kind, const std::string &value)
 {
   if (key == "sector")
   {
@@ -581,8 +580,7 @@ static void ParseSidedefField(Level &level, Sidedef *side, const std::string &ke
   }
 }
 
-static void ParseLinedefField(Level &level, Linedef *line, const std::string &key, token_kind_e kind,
-                              const std::string &value)
+static void ParseLinedefField(Level &level, Linedef *line, const std::string &key, token_kind_e kind, const std::string &value)
 {
   if (key == "v1")
   {
@@ -883,7 +881,7 @@ static BspFormat CheckFormatBSP(BuildInfo &ctx, Level &level)
   {
     // Clamp Doom64 maps to only vanilla and DeePBSPV4 formats.
     // With support for fractional coordinates, it doesn't
-    // make sense for it to need to support XNOD, etc.
+    // make sense for it to _need_ to support ZDBSP formats
     Levelype = BspFormat::DoomBSP;
   }
 
@@ -898,7 +896,32 @@ static BspFormat CheckFormatBSP(BuildInfo &ctx, Level &level)
     Levelype = BspFormat::DeePBSPV4;
   }
 
-  return level.bsp_format = Levelype;
+  return Levelype;
+}
+
+GlBspFormat CheckFormatGLBSP(BuildInfo &ctx, Level &level, BspFormat bsp_format)
+{
+  // GLBSP formats are only valid in some cases
+  GlBspFormat GlBspLevelType = ctx.glbsp_format;
+
+  if (level.map_format == MapFormat::Doom64  // Doom64 already has LEAFS
+      || level.map_format == MapFormat::UDMF // UDMF does not use loose lumps
+      || bsp_format >= BspFormat::XNOD)      // Only makes sense in legacy formats
+  {
+    GlBspLevelType = GlBspFormat::None;
+  }
+
+  if (GlBspLevelType >= GlBspFormat::V1 && GlBspLevelType <= GlBspFormat::V2
+      && (level.vertices.size() > LIMIT_VERT     //
+          || level.nodes.size() > LIMIT_NODE     //
+          || level.subsecs.size() > LIMIT_SUBSEC //
+          || level.segs.size() > LIMIT_SEG))     //
+  {
+    PrintLine(Log::NORMAL, "[{}] GLBSP overflow. Forcing GLBSP V5 node format.", __func__);
+    GlBspLevelType = GlBspFormat::V5;
+  }
+
+  return GlBspLevelType;
 }
 
 /* ----- whole-level routines --------------------------- */
@@ -992,11 +1015,16 @@ BuildResult SaveLevelBinary(WadIO &io, Level &level)
   // On BSP overflow, bump to DeePBSPV4 from DoomBSP
   BspFormat bsp_format = CheckFormatBSP(config, level);
 
-  // Only include BSP-generated vertices in non-ZDBSP lump format
+  // Check GLBSP format
+  GlBspFormat glbsp_format = CheckFormatGLBSP(config, level, bsp_format);
+
+  // Only include BSP-generated vertices in VERTEXES when using the legacy lump formats
   bool do_new_vert = bsp_format >= BspFormat::DoomBSP || bsp_format <= BspFormat::DeePBSPV4;
 
   // Use Zlib-compressed version of ZDBSP lump formats
   bool zdbsp_compress = config.compress;
+
+  // TODO: extract glbsp lump data here
 
   // Copy marker wholesale
   size_t lump = level.lump;
@@ -1076,6 +1104,8 @@ BuildResult SaveLevelBinary(WadIO &io, Level &level)
     io.LevelCopyLump(lump, "MACROS");
     io.LevelCopyLump(lump, "SCRIPTS");
   }
+
+  // TODO: write glbsp lumps right here
 
   return level.overflows ? BuildResult::Overflow : BuildResult::Ok;
 }
