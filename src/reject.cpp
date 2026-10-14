@@ -26,6 +26,7 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 //------------------------------------------------------------------------
 // REJECT : Generate the reject table
@@ -119,18 +120,20 @@ static void Reject_GroupSectors(Level &level)
 // Hold processed line segment 2D geometry checks.
 struct SightSegment
 {
-    float x1, y1, x2, y2;
+    double x1, y1, x2, y2;
 };
 
 // Precalculated axis-aligned bounding box (AABB) information per sector.
 struct SectorBBox
 {
-    float minX = 1e9f, maxX = -1e9f;
-    float minY = 1e9f, maxY = -1e9f;
+    double minX = std::numeric_limits<double>::max();
+    double maxX = std::numeric_limits<double>::lowest();
+    double minY = std::numeric_limits<double>::max();
+    double maxY = std::numeric_limits<double>::lowest();
 };
 
 // Classify which side of a linedef split plane a vertex falls on.
-inline float SegmentSide(float ax, float ay, float bx, float by, float cx, float cy)
+inline double SegmentSide(double ax, double ay, double bx, double by, double cx, double cy)
 {
   return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
 }
@@ -140,29 +143,30 @@ inline float SegmentSide(float ax, float ay, float bx, float by, float cx, float
 inline bool TrueSegmentsIntersect(const SightSegment& s1, const SightSegment& s2)
 {
   // Check if endpoints of segment 1 lie on opposite sides of segment 2
-  float d1 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1);
-  float d2 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x2, s1.y2);
+  double d1 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1);
+  double d2 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x2, s1.y2);
   // Check if endpoints of segment 2 lie on opposite sides of segment 1
-  float d3 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x1, s2.y1);
-  float d4 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x2, s2.y2);
-  // Using 1e-3f instead of 0.0f. Tighter tolerances caused micro-gaps
+  double d3 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x1, s2.y1);
+  double d4 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x2, s2.y2);
+  
+  // Using 1e-3 instead of 0.0, Tighter tolerances caused micro-gaps
   // where rays slipped through overlapping linedef vertices in E1M1.
-  if (((d1 > 1e-3f && d2 < -1e-3f) || (d1 < -1e-3f && d2 > 1e-3f)) &&
-  ((d3 > 1e-3f && d4 < -1e-3f) || (d3 < -1e-3f && d4 > 1e-3f)))
+  if (((d1 > 1e-3 && d2 < -1e-3) || (d1 < -1e-3 && d2 > 1e-3)) &&
+      ((d3 > 1e-3 && d4 < -1e-3) || (d3 < -1e-3 && d4 > 1e-3)))
   {
     return true;
   }
 
-  // Boundary intersection guard
-  auto isPointOnSeg = [](float ax, float ay, float bx, float by, float cx, float cy) -> bool
+  // Boundary intersection guard using double parameters and project-native epsilon
+  auto isPointOnSeg = [](double ax, double ay, double bx, double by, double cx, double cy) -> bool
   {
-    if (cx < std::min(ax, bx) - 0.1f || cx > std::max(ax, bx) + 0.1f) return false;
-    if (cy < std::min(ay, by) - 0.1f || cy > std::max(ay, by) + 0.1f) return false;
+    // Broadphase bounding box check using DIST_EPSILON as the safety margin threshold
+    if (cx < std::min(ax, bx) - DIST_EPSILON || cx > std::max(ax, bx) + DIST_EPSILON) return false;
+    if (cy < std::min(ay, by) - DIST_EPSILON || cy > std::max(ay, by) + DIST_EPSILON) return false;
 
-    // Collinear test
-    return std::abs((bx - ax) * (cy - ay) - (by - ay) * (cx - ax)) < 0.1f;
+    // Collinear test checking if this falls within our distance epsilon
+    return std::abs((bx - ax) * (cy - ay) - (by - ay) * (cx - ax)) < DIST_EPSILON;
   };
-
 
   // Check for boundary vertex snaps (prevents rays slipping through wall-to-wall joins damn it!)
   if (isPointOnSeg(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1)) return true;
@@ -175,18 +179,20 @@ inline bool TrueSegmentsIntersect(const SightSegment& s1, const SightSegment& s2
 
 // Is ray blocked by any solid walls.
 // Uses fast AABB to reject and minimize redudant test.
-inline bool IsRayBlocked(const SightSegment& ray, const std::vector<const SightSegment*>& localBlockers, float maxRayLengthSq)
+inline bool IsRayBlocked(const SightSegment& ray,
+                         const std::vector<const SightSegment*>& localBlockers,
+                         double maxRayLengthSq)
 {
-  const float dx = ray.x2 - ray.x1;
-  const float dy = ray.y2 - ray.y1;
-  const float currentDistSq = (dx * dx) + (dy * dy);
+  const double dx = ray.x2 - ray.x1;
+  const double dy = ray.y2 - ray.y1;
+  const double currentDistSq = (dx * dx) + (dy * dy);
 
   // Instantly skip rays that exceed the dynamically calculated max sector span.
   // Using squared distances avoids slow calculations in our heaviest inner loop.
   if (currentDistSq > maxRayLengthSq) return true;
 
-  const float rMinX = std::min(ray.x1, ray.x2), rMaxX = std::max(ray.x1, ray.x2);
-  const float rMinY = std::min(ray.y1, ray.y2), rMaxY = std::max(ray.y1, ray.y2);
+  const double rMinX = std::min(ray.x1, ray.x2), rMaxX = std::max(ray.x1, ray.x2);
+  const double rMinY = std::min(ray.y1, ray.y2), rMaxY = std::max(ray.y1, ray.y2);
 
   for (const auto* blockerPtr : localBlockers)
   {
@@ -197,10 +203,9 @@ inline bool IsRayBlocked(const SightSegment& ray, const std::vector<const SightS
     {
       continue;
     }
-    // Ignore intersection tests if the sight ray is touching the exact corner
-    // vertex of a blocker segment.
-    if ((std::abs(ray.x1 - blocker.x1) < 0.1f && std::abs(ray.y1 - blocker.y1) < 0.1f) ||
-        (std::abs(ray.x1 - blocker.x2) < 0.1f && std::abs(ray.y1 - blocker.y2) < 0.1f))
+    // Ignore intersection tests if the sight ray is touching the exact corner vertex.
+    if ((std::abs(ray.x1 - blocker.x1) < DIST_EPSILON && std::abs(ray.y1 - blocker.y1) < DIST_EPSILON) ||
+        (std::abs(ray.x1 - blocker.x2) < DIST_EPSILON && std::abs(ray.y1 - blocker.y2) < DIST_EPSILON))
     {
       continue;
     }
@@ -211,7 +216,10 @@ inline bool IsRayBlocked(const SightSegment& ray, const std::vector<const SightS
 
 // Tests between lines of Sector A and lines of Sector B.
 // Returns true if a valid line of sight connects the two places.
-static bool DoVisibilityTest(const std::vector<SightSegment>& linesA, const std::vector<SightSegment>& linesB, const std::vector<const SightSegment*>& localizedBlockers, float maxRayLengthSq)
+static bool DoVisibilityTest(const std::vector<SightSegment>& linesA,
+                             const std::vector<SightSegment>& linesB,
+                             const std::vector<const SightSegment*>& localizedBlockers,
+                             double maxRayLengthSq)
 {
   for (const auto& segA : linesA)
   {
@@ -223,8 +231,8 @@ static bool DoVisibilityTest(const std::vector<SightSegment>& linesA, const std:
       if (!IsRayBlocked({segA.x2, segA.y2, segB.x1, segB.y1}, localizedBlockers, maxRayLengthSq)) return true;
       if (!IsRayBlocked({segA.x2, segA.y2, segB.x2, segB.y2}, localizedBlockers, maxRayLengthSq)) return true;
       // Captures narrow visual paths (windows, stairs, holes, etc.) that corner checks miss.
-      float midAx = (segA.x1 + segA.x2) * 0.5f; float midAy = (segA.y1 + segA.y2) * 0.5f;
-      float midBx = (segB.x1 + segB.x2) * 0.5f; float midBy = (segB.y1 + segB.y2) * 0.5f;
+      double midAx = (segA.x1 + segA.x2) * 0.5; double midAy = (segA.y1 + segA.y2) * 0.5;
+      double midBx = (segB.x1 + segB.x2) * 0.5; double midBy = (segB.y1 + segB.y2) * 0.5;
 
       if (!IsRayBlocked({midAx, midAy, midBx, midBy}, localizedBlockers, maxRayLengthSq)) return true;
       if (!IsRayBlocked({midAx, midAy, segB.x1, segB.y1}, localizedBlockers, maxRayLengthSq)) return true;
@@ -259,23 +267,32 @@ static void Reject_ProcessSectors(Level &level)
     return; // Exit out early!
   }
 
-  std::vector<std::vector<SightSegment>> sectorLines(num_secs);
-  std::vector<SectorBBox> sectorBoxes(num_secs);
+  // Declare empty first
+  std::vector<std::vector<SightSegment>> sectorLines;
+  std::vector<SectorBBox> sectorBoxes;
   std::vector<SightSegment> solidBlockers;
+
+  // Allocate the size right after
+  sectorLines.resize(num_secs);
+  sectorBoxes.resize(num_secs);
 
   // Pre-allocate bit-matrix to track touching sectors instantly.
   size_t adj_matrix_size = (num_secs * num_secs + 7) / 8;
   std::vector<uint8_t> adjacencyMatrix(adj_matrix_size, 0);
 
-  float mapMinX = 1e9f, mapMaxX = -1e9f;
-  float mapMinY = 1e9f, mapMaxY = -1e9f;
+  // Tracking limits for the entire map canvas initialized using maximum bounds
+  double mapMinX = std::numeric_limits<double>::max();
+  double mapMaxX = std::numeric_limits<double>::lowest();
+  double mapMinY = std::numeric_limits<double>::max();
+  double mapMaxY = std::numeric_limits<double>::lowest();
+
   // Parse geometry and build basic sector tracking dimensions
   for (const auto* line : level.linedefs)
   {
     if (!line || !line->start || !line->end) continue;
 
-    SightSegment seg = { static_cast<float>(line->start->x), static_cast<float>(line->start->y),
-                         static_cast<float>(line->end->x),   static_cast<float>(line->end->y) };
+    SightSegment seg = { static_cast<double>(line->start->x), static_cast<double>(line->start->y),
+                         static_cast<double>(line->end->x),   static_cast<double>(line->end->y) };
 
     mapMinX = std::min({mapMinX, seg.x1, seg.x2}); mapMaxX = std::max({mapMaxX, seg.x1, seg.x2});
     mapMinY = std::min({mapMinY, seg.y1, seg.y2}); mapMaxY = std::max({mapMaxY, seg.y1, seg.y2});
@@ -322,22 +339,22 @@ static void Reject_ProcessSectors(Level &level)
 
   // Calculate the max sector span across the map to scale ray bounds correctly.
   // This value caps our visibility ray checks on wide open fields without manual configuration.
-  float maxSectorSpanSq = 4096.0f * 4096.0f; 
+  double maxSectorSpanSq = 4096.0 * 4096.0; 
 
   for (size_t i = 0; i < num_secs; ++i)
   {
     const auto& box = sectorBoxes[i];
     if (box.maxX > box.minX && box.maxY > box.minY)
     {
-      float sWidth = box.maxX - box.minX;
-      float sHeight = box.maxY - box.minY;
-      float currentSpanSq = ((sWidth * sWidth) + (sHeight * sHeight)) * 4.0f;
+      double sWidth = box.maxX - box.minX;
+      double sHeight = box.maxY - box.minY;
+      double currentSpanSq = ((sWidth * sWidth) + (sHeight * sHeight)) * 4.0;
       if (currentSpanSq > maxSectorSpanSq) maxSectorSpanSq = currentSpanSq;
     }
   }
 
   // Build Spatial Hash Reference Map
-  constexpr float CELL_SIZE = 512.0f;
+  constexpr double CELL_SIZE = 512.0;
   const size_t gridCols = static_cast<size_t>(std::ceil((mapMaxX - mapMinX) / CELL_SIZE)) + 1;
   const size_t gridRows = static_cast<size_t>(std::ceil((mapMaxY - mapMinY) / CELL_SIZE)) + 1;
   std::vector<std::vector<size_t>> grid(gridCols * gridRows);
@@ -345,20 +362,20 @@ static void Reject_ProcessSectors(Level &level)
   // Yet Another Accuracy Fix! Grid Edge Leaks :(
   // Using a 1.0 map-unit padding ensures that wall lines landing directly on grid border seams
   // are added to preventing visibility rays from leaking through gaps.
-  constexpr float PADDING = 1.0f;
+  constexpr double PADDING = 1.0;
 
   for (size_t i = 0; i < solidBlockers.size(); ++i)
   {
     const auto& blocker = solidBlockers[i];
-    float minX = std::min(blocker.x1, blocker.x2) - PADDING;
-    float maxX = std::max(blocker.x1, blocker.x2) + PADDING;
-    float minY = std::min(blocker.y1, blocker.y2) - PADDING;
-    float maxY = std::max(blocker.y1, blocker.y2) + PADDING;
+    double minX = std::min(blocker.x1, blocker.x2) - PADDING;
+    double maxX = std::max(blocker.x1, blocker.x2) + PADDING;
+    double minY = std::min(blocker.y1, blocker.y2) - PADDING;
+    double maxY = std::max(blocker.y1, blocker.y2) + PADDING;
 
-    const size_t bMinX = static_cast<size_t>(std::max(0.0f, std::min(static_cast<float>(gridCols - 1), std::floor((minX - mapMinX) / CELL_SIZE))));
-    const size_t bMaxX = static_cast<size_t>(std::max(0.0f, std::min(static_cast<float>(gridCols - 1), std::floor((maxX - mapMinX) / CELL_SIZE))));
-    const size_t bMinY = static_cast<size_t>(std::max(0.0f, std::min(static_cast<float>(gridRows - 1), std::floor((minY - mapMinY) / CELL_SIZE))));
-    const size_t bMaxY = static_cast<size_t>(std::max(0.0f, std::min(static_cast<float>(gridRows - 1), std::floor((maxY - mapMinY) / CELL_SIZE))));
+    const size_t bMinX = static_cast<size_t>(std::max(0.0, std::min(static_cast<double>(gridCols - 1), std::floor((minX - mapMinX) / CELL_SIZE))));
+    const size_t bMaxX = static_cast<size_t>(std::max(0.0, std::min(static_cast<double>(gridCols - 1), std::floor((maxX - mapMinX) / CELL_SIZE))));
+    const size_t bMinY = static_cast<size_t>(std::max(0.0, std::min(static_cast<double>(gridRows - 1), std::floor((minY - mapMinY) / CELL_SIZE))));
+    const size_t bMaxY = static_cast<size_t>(std::max(0.0, std::min(static_cast<double>(gridRows - 1), std::floor((maxY - mapMinY) / CELL_SIZE))));
 
     for (size_t x = bMinX; x <= bMaxX; ++x)
     {
@@ -407,15 +424,32 @@ static void Reject_ProcessSectors(Level &level)
       // Clamp the box grid coordinates to the
       // specific segment connecting Sector A and Sector B. This prevents
       // copying giant unneeded canvas sectors across wide maps.
-      const float cMinX = std::min({boxA.minX, boxA.maxX, boxB.minX, boxB.maxX});
-      const float cMaxX = std::max({boxA.minX, boxA.maxX, boxB.minX, boxB.maxX});
-      const float cMinY = std::min({boxA.minY, boxA.maxY, boxB.minY, boxB.maxY});
-      const float cMaxY = std::max({boxA.minY, boxA.maxY, boxB.minY, boxB.maxY});
+      const double cMinX = std::min({boxA.minX, boxA.maxX, boxB.minX, boxB.maxX});
+      const double cMaxX = std::max({boxA.minX, boxA.maxX, boxB.minX, boxB.maxX});
+      const double cMinY = std::min({boxA.minY, boxA.maxY, boxB.minY, boxB.maxY});
+      const double cMaxY = std::max({boxA.minY, boxA.maxY, boxB.minY, boxB.maxY});
 
-      const size_t gcMinX = static_cast<size_t>(std::max(0.0f, std::floor((cMinX - mapMinX) / CELL_SIZE)));
-      const size_t gcMaxX = std::min(gridCols - 1, static_cast<size_t>(std::max(0.0f, std::floor((cMaxX - mapMinX) / CELL_SIZE))));
-      const size_t gcMinY = static_cast<size_t>(std::max(0.0f, std::floor((cMinY - mapMinY) / CELL_SIZE)));
-      const size_t gcMaxY = std::min(gridRows - 1, static_cast<size_t>(std::max(0.0f, std::floor((cMaxY - mapMinY) / CELL_SIZE))));
+      // X Axis Bounds
+      double deltaMinX = cMinX - mapMinX;
+      double rawGridMinX = std::floor(deltaMinX / CELL_SIZE);
+      double clampedGridMinX = std::max(0.0, rawGridMinX);
+      const size_t gcMinX = static_cast<size_t>(clampedGridMinX);
+
+      double deltaMaxX = cMaxX - mapMinX;
+      double rawGridMaxX = std::floor(deltaMaxX / CELL_SIZE);
+      double clampedGridMaxX = std::max(0.0, rawGridMaxX);
+      const size_t gcMaxX = std::min(gridCols - 1, static_cast<size_t>(clampedGridMaxX));
+
+      // Y Axis Bounds
+      double deltaMinY = cMinY - mapMinY;
+      double rawGridMinY = std::floor(deltaMinY / CELL_SIZE);
+      double clampedGridMinY = std::max(0.0, rawGridMinY);
+      const size_t gcMinY = static_cast<size_t>(clampedGridMinY);
+
+      double deltaMaxY = cMaxY - mapMinY;
+      double rawGridMaxY = std::floor(deltaMaxY / CELL_SIZE);
+      double clampedGridMaxY = std::max(0.0, rawGridMaxY);
+      const size_t gcMaxY = std::min(gridRows - 1, static_cast<size_t>(clampedGridMaxY));
 
       localizedBlockers.clear();
       visitMarker++;
