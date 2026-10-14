@@ -23,10 +23,6 @@
 
 #include "core.hpp"
 #include "local.hpp"
-#include <vector>
-#include <algorithm>
-#include <cmath>
-#include <limits>
 
 //------------------------------------------------------------------------
 // REJECT : Generate the reject table
@@ -278,7 +274,8 @@ static void Reject_ProcessSectors(Level &level)
 
   // Pre-allocate bit-matrix to track touching sectors instantly.
   size_t adj_matrix_size = (num_secs * num_secs + 7) / 8;
-  std::vector<uint8_t> adjacencyMatrix(adj_matrix_size, 0);
+  std::vector<uint8_t> adjacencyMatrix;
+  adjacencyMatrix.assign(adj_matrix_size, 0);
 
   // Tracking limits for the entire map canvas initialized using maximum bounds
   double mapMinX = std::numeric_limits<double>::max();
@@ -291,11 +288,18 @@ static void Reject_ProcessSectors(Level &level)
   {
     if (!line || !line->start || !line->end) continue;
 
-    SightSegment seg = { static_cast<double>(line->start->x), static_cast<double>(line->start->y),
-                         static_cast<double>(line->end->x),   static_cast<double>(line->end->y) };
+    SightSegment seg = {
+        static_cast<double>(line->start->x),
+        static_cast<double>(line->start->y),
+        static_cast<double>(line->end->x),
+        static_cast<double>(line->end->y)
+    };
 
-    mapMinX = std::min({mapMinX, seg.x1, seg.x2}); mapMaxX = std::max({mapMaxX, seg.x1, seg.x2});
-    mapMinY = std::min({mapMinY, seg.y1, seg.y2}); mapMaxY = std::max({mapMaxY, seg.y1, seg.y2});
+    mapMinX = std::min({mapMinX, seg.x1, seg.x2});
+    mapMaxX = std::max({mapMaxX, seg.x1, seg.x2});
+    mapMinY = std::min({mapMinY, seg.y1, seg.y2});
+    mapMaxY = std::max({mapMaxY, seg.y1, seg.y2});
+
 
     if (!line->left || !line->right)
     {
@@ -357,7 +361,8 @@ static void Reject_ProcessSectors(Level &level)
   constexpr double CELL_SIZE = 512.0;
   const size_t gridCols = static_cast<size_t>(std::ceil((mapMaxX - mapMinX) / CELL_SIZE)) + 1;
   const size_t gridRows = static_cast<size_t>(std::ceil((mapMaxY - mapMinY) / CELL_SIZE)) + 1;
-  std::vector<std::vector<size_t>> grid(gridCols * gridRows);
+  std::vector<std::vector<size_t>> grid;
+  grid.resize(gridCols * gridRows);
 
   // Yet Another Accuracy Fix! Grid Edge Leaks :(
   // Using a 1.0 map-unit padding ensures that wall lines landing directly on grid border seams
@@ -372,10 +377,19 @@ static void Reject_ProcessSectors(Level &level)
     double minY = std::min(blocker.y1, blocker.y2) - PADDING;
     double maxY = std::max(blocker.y1, blocker.y2) + PADDING;
 
-    const size_t bMinX = static_cast<size_t>(std::max(0.0, std::min(static_cast<double>(gridCols - 1), std::floor((minX - mapMinX) / CELL_SIZE))));
-    const size_t bMaxX = static_cast<size_t>(std::max(0.0, std::min(static_cast<double>(gridCols - 1), std::floor((maxX - mapMinX) / CELL_SIZE))));
-    const size_t bMinY = static_cast<size_t>(std::max(0.0, std::min(static_cast<double>(gridRows - 1), std::floor((minY - mapMinY) / CELL_SIZE))));
-    const size_t bMaxY = static_cast<size_t>(std::max(0.0, std::min(static_cast<double>(gridRows - 1), std::floor((maxY - mapMinY) / CELL_SIZE))));
+    // This acts as a spatial boundary filter.
+    // Its' job is to take raw map coordinates and mathematically pin them to the
+    // exact 2D grid cells of the spatial hash map.
+    double rawBMinX = std::floor((minX - mapMinX) / CELL_SIZE);
+    double rawBMaxX = std::floor((maxX - mapMinX) / CELL_SIZE);
+    double rawBMinY = std::floor((minY - mapMinY) / CELL_SIZE);
+    double rawBMaxY = std::floor((maxY - mapMinY) / CELL_SIZE);
+
+    // Modernized with std::clamp
+    const size_t bMinX = static_cast<size_t>(std::clamp(rawBMinX, 0.0, static_cast<double>(gridCols - 1)));
+    const size_t bMaxX = static_cast<size_t>(std::clamp(rawBMaxX, 0.0, static_cast<double>(gridCols - 1)));
+    const size_t bMinY = static_cast<size_t>(std::clamp(rawBMinY, 0.0, static_cast<double>(gridRows - 1)));
+    const size_t bMaxY = static_cast<size_t>(std::clamp(rawBMaxY, 0.0, static_cast<double>(gridRows - 1)));
 
     for (size_t x = bMinX; x <= bMaxX; ++x)
     {
@@ -390,8 +404,8 @@ static void Reject_ProcessSectors(Level &level)
   std::vector<const SightSegment*> localizedBlockers;
   localizedBlockers.reserve(solidBlockers.size());
   // Replaces slow vector sorting operations with a high-speed bitset lookup tag.
-  std::vector<int> blockerVisited(solidBlockers.size(), -1);
-  int visitMarker = 0;
+  std::vector<int32_t> blockerVisited(solidBlockers.size(), -1);
+  int32_t visitMarker = 0;
   // Symmetrical Evaluation Loops
   for (size_t view = 0; view < num_secs; view++)
   {
