@@ -122,19 +122,105 @@ static void Reject_GroupSectors(Level &level)
 }
 
 // Hold processed line segment 2D geometry checks.
+// Bounds are computed once so the loop never calls min/max.
 struct SightSegment
 {
-    double x1, y1, x2, y2;
+  double x1;
+  double y1;
+  double x2;
+  double y2;
+  double minX;
+  double maxX;
+  double minY;
+  double maxY;
+  bool solid = false; // one-sided line; only used to prune rays
+
+  SightSegment(double ax, double ay, double bx, double by)
+      : x1(ax),
+        y1(ay),
+        x2(bx),
+        y2(by),
+        minX(std::min(ax, bx)),
+        maxX(std::max(ax, bx)),
+        minY(std::min(ay, by)),
+        maxY(std::max(ay, by))
+  {
+  }
+};
+
+// Used by the SectorPoints to store isolated corner vertices
+// and line midpoints, allowing the ray-caster to run without continuously
+// running through large linedef arrays.
+struct SightPoint
+{
+  double x;
+  double y;
+};
+
+// Ray endpoints for one sector, built once and reused for every pair it's in.
+struct SectorPoints
+{
+  std::vector<SightPoint> verts;      // Every unique linedef endpoint
+  std::vector<SightPoint> firstVerts; // Unique first endpoints only
+  std::vector<SightPoint> openMids;   // Midpoints of non-solid lines
+  std::vector<SightPoint> allMids;    // Midpoints of every line
 };
 
 // Precalculated axis-aligned bounding box (AABB) information per sector.
 struct SectorBBox
 {
-    double minX = std::numeric_limits<double>::max();
-    double maxX = std::numeric_limits<double>::lowest();
-    double minY = std::numeric_limits<double>::max();
-    double maxY = std::numeric_limits<double>::lowest();
+  double minX = std::numeric_limits<double>::max();
+  double maxX = std::numeric_limits<double>::lowest();
+  double minY = std::numeric_limits<double>::max();
+  double maxY = std::numeric_limits<double>::lowest();
 };
+
+// Removes coordinate duplicates and sort points along the X-axis.
+static void SortUnique(std::vector<SightPoint>& v)
+{
+  std::sort(v.begin(), v.end(), [](const SightPoint& a, const SightPoint& b)
+  {
+    return a.x < b.x || (a.x == b.x && a.y < b.y);
+  });
+
+  v.erase(std::unique(v.begin(), v.end(), [](const SightPoint& a, const SightPoint& b)
+  {
+    return a.x == b.x && a.y == b.y;
+  }), v.end());
+}
+
+// This extracts and groups unique locations (corners, open door frames, etc.) exactly once.
+// This will shift heavy allocation and duplication entirely out of the inner loops.
+static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines)
+{
+  SectorPoints pts;
+
+  for (const auto& s : lines)
+  {
+    // Log absolute raw corner coordinates.
+    pts.verts.push_back({s.x1, s.y1});
+    pts.verts.push_back({s.x2, s.y2});
+    pts.firstVerts.push_back({s.x1, s.y1});
+
+    // Do structural midpoints once
+    const SightPoint mid = {(s.x1 + s.x2) * 0.5, (s.y1 + s.y2) * 0.5};
+    pts.allMids.push_back(mid);
+
+    // Non-solid structural lines can be open portals or windows.
+    // These are the most likely to have a clear sightline.
+    if (!s.solid)
+    {
+      pts.openMids.push_back(mid);
+    }
+  }
+
+  // Strip out layout redundancies.
+  SortUnique(pts.verts);
+  SortUnique(pts.firstVerts);
+  SortUnique(pts.openMids);
+  SortUnique(pts.allMids);
+  return pts;
+}
 
 // Classify which side of a linedef split plane a vertex falls on.
 inline double SegmentSide(double ax, double ay, double bx, double by, double cx, double cy)
@@ -142,108 +228,171 @@ inline double SegmentSide(double ax, double ay, double bx, double by, double cx,
   return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
 }
 
+// Is point (cx,cy) on segment (ax,ay)-(bx,by), within DIST_EPSILON?
+static inline bool IsPointOnSegment(double ax, double ay, double bx, double by, double cx, double cy)
+{
+  // Broadphase bounding box check using DIST_EPSILON as the safety margin threshold
+  if (cx < std::min(ax, bx) - DIST_EPSILON || cx > std::max(ax, bx) + DIST_EPSILON) return false;
+  if (cy < std::min(ay, by) - DIST_EPSILON || cy > std::max(ay, by) + DIST_EPSILON) return false;
+
+  // Collinear test checking if this falls within our distance epsilon
+  return std::abs((bx - ax) * (cy - ay) - (by - ay) * (cx - ax)) < DIST_EPSILON;
+}
+
 // 2D intersection check between two line segments.
-// Guards against vertex collinear edge alignment failures.
 inline bool TrueSegmentsIntersect(const SightSegment& s1, const SightSegment& s2)
 {
-  // Check if endpoints of segment 1 lie on opposite sides of segment 2
   double d1 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1);
   double d2 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x2, s1.y2);
-  // Check if endpoints of segment 2 lie on opposite sides of segment 1
   double d3 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x1, s2.y1);
   double d4 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x2, s2.y2);
 
-  // Using 1e-3 instead of 0.0, Tighter tolerances caused micro-gaps
-  // where rays slipped through overlapping linedef vertices in E1M1.
   if (((d1 > 1e-3 && d2 < -1e-3) || (d1 < -1e-3 && d2 > 1e-3)) &&
       ((d3 > 1e-3 && d4 < -1e-3) || (d3 < -1e-3 && d4 > 1e-3)))
   {
     return true;
   }
 
-  // Boundary intersection guard using double parameters and project-native epsilon
-  auto isPointOnSeg = [](double ax, double ay, double bx, double by, double cx, double cy) -> bool
-  {
-    // Broadphase bounding box check using DIST_EPSILON as the safety margin threshold
-    if (cx < std::min(ax, bx) - DIST_EPSILON || cx > std::max(ax, bx) + DIST_EPSILON) return false;
-    if (cy < std::min(ay, by) - DIST_EPSILON || cy > std::max(ay, by) + DIST_EPSILON) return false;
-
-    // Collinear test checking if this falls within our distance epsilon
-    return std::abs((bx - ax) * (cy - ay) - (by - ay) * (cx - ax)) < DIST_EPSILON;
-  };
-
-  // Check for boundary vertex snaps (prevents rays slipping through wall-to-wall joins damn it!)
-  if (isPointOnSeg(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1)) return true;
-  if (isPointOnSeg(s2.x1, s2.y1, s2.x2, s2.y2, s1.x2, s1.y2)) return true;
-  if (isPointOnSeg(s1.x1, s1.y1, s1.x2, s1.y2, s2.x1, s2.y1)) return true;
-  if (isPointOnSeg(s1.x1, s1.y1, s1.x2, s1.y2, s2.x2, s2.y2)) return true;
+  if (IsPointOnSegment(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1)) return true;
+  if (IsPointOnSegment(s2.x1, s2.y1, s2.x2, s2.y2, s1.x2, s1.y2)) return true;
+  if (IsPointOnSegment(s1.x1, s1.y1, s1.x2, s1.y2, s2.x1, s2.y1)) return true;
+  if (IsPointOnSegment(s1.x1, s1.y1, s1.x2, s1.y2, s2.x2, s2.y2)) return true;
 
   return false;
 }
 
 // Is ray blocked by any solid walls.
-// Uses fast AABB to reject and minimize redudant test.
+// Uses fast AABB to reject and minimize redundant tests.
 inline bool IsRayBlocked(const SightSegment& ray,
                          const std::vector<const SightSegment*>& localBlockers,
                          double maxRayLengthSq)
 {
   const double dx = ray.x2 - ray.x1;
   const double dy = ray.y2 - ray.y1;
-  const double currentDistSq = (dx * dx) + (dy * dy);
 
   // Instantly skip rays that exceed the dynamically calculated max sector span.
   // Using squared distances avoids slow calculations in our heaviest inner loop.
-  if (currentDistSq > maxRayLengthSq) return true;
+  if ((dx * dx) + (dy * dy) > maxRayLengthSq) return true;
 
-  const double rMinX = std::min(ray.x1, ray.x2), rMaxX = std::max(ray.x1, ray.x2);
-  const double rMinY = std::min(ray.y1, ray.y2), rMaxY = std::max(ray.y1, ray.y2);
-
-  for (const auto* blockerPtr : localBlockers)
+  for (const SightSegment* blockerPtr : localBlockers)
   {
-    const auto& blocker = *blockerPtr;
-    // AABB Check, Skip instantly if the blocker's bounding box does not overlap the ray's span.
-    if (std::max(blocker.x1, blocker.x2) < rMinX || std::min(blocker.x1, blocker.x2) > rMaxX ||
-        std::max(blocker.y1, blocker.y2) < rMinY || std::min(blocker.y1, blocker.y2) > rMaxY)
+    const SightSegment& blocker = *blockerPtr;
+
+    // AABB check, skip instantly if the blocker's bounding box does not overlap the ray's span.
+    if (blocker.maxX < ray.minX || blocker.minX > ray.maxX ||
+        blocker.maxY < ray.minY || blocker.minY > ray.maxY)
     {
       continue;
     }
+
     // Ignore intersection tests if the sight ray is touching the exact corner vertex.
     if ((std::abs(ray.x1 - blocker.x1) < DIST_EPSILON && std::abs(ray.y1 - blocker.y1) < DIST_EPSILON) ||
         (std::abs(ray.x1 - blocker.x2) < DIST_EPSILON && std::abs(ray.y1 - blocker.y2) < DIST_EPSILON))
     {
       continue;
     }
+
     if (TrueSegmentsIntersect(ray, blocker)) return true;
   }
+
   return false;
 }
 
-// Tests between lines of Sector A and lines of Sector B.
+// Tests between the points of Sector A and the points of Sector B.
 // Returns true if a valid line of sight connects the two places.
-static bool DoVisibilityTest(const std::vector<SightSegment>& linesA,
-                             const std::vector<SightSegment>& linesB,
+static bool DoVisibilityTest(const SectorPoints& A,
+                             const SectorPoints& B,
                              const std::vector<const SightSegment*>& localizedBlockers,
                              double maxRayLengthSq)
 {
-  for (const auto& segA : linesA)
+  auto clear = [&](const SightPoint& from, const SightPoint& to) -> bool
   {
-    for (const auto& segB : linesB)
-    {
-      // Corner check, cast rays directly between absolute structural vertices.
-      if (!IsRayBlocked({segA.x1, segA.y1, segB.x1, segB.y1}, localizedBlockers, maxRayLengthSq)) return true;
-      if (!IsRayBlocked({segA.x1, segA.y1, segB.x2, segB.y2}, localizedBlockers, maxRayLengthSq)) return true;
-      if (!IsRayBlocked({segA.x2, segA.y2, segB.x1, segB.y1}, localizedBlockers, maxRayLengthSq)) return true;
-      if (!IsRayBlocked({segA.x2, segA.y2, segB.x2, segB.y2}, localizedBlockers, maxRayLengthSq)) return true;
-      // Captures narrow visual paths (windows, stairs, holes, etc.) that corner checks miss.
-      double midAx = (segA.x1 + segA.x2) * 0.5; double midAy = (segA.y1 + segA.y2) * 0.5;
-      double midBx = (segB.x1 + segB.x2) * 0.5; double midBy = (segB.y1 + segB.y2) * 0.5;
+    return !IsRayBlocked({from.x, from.y, to.x, to.y}, localizedBlockers, maxRayLengthSq);
+  };
 
-      if (!IsRayBlocked({midAx, midAy, midBx, midBy}, localizedBlockers, maxRayLengthSq)) return true;
-      if (!IsRayBlocked({midAx, midAy, segB.x1, segB.y1}, localizedBlockers, maxRayLengthSq)) return true;
-      if (!IsRayBlocked({segA.x1, segA.y1, midBx, midBy}, localizedBlockers, maxRayLengthSq)) return true;
+  // Portal midpoint to portal midpoint first is most likely to succeed,
+  // so visible pairs usually exit early.
+  for (const auto& a : A.openMids)
+  {
+    for (const auto& b : B.openMids)
+    {
+      if (clear(a, b)) return true;
     }
   }
+
+  // Portal midpoint to the first endpoint of each line in B.
+  for (const auto& a : A.openMids)
+  {
+    for (const auto& b : B.firstVerts)
+    {
+      if (clear(a, b)) return true;
+    }
+  }
+
+  // First endpoint of each line in A to any midpoint in B. Solid midpoints stay
+  // in this list on purpose because a ray from a shared corner along a solid wall is
+  // not blocked by that wall because IsRayBlocked skips blockers touching the ray start.
+  for (const auto& a : A.firstVerts)
+  {
+    for (const auto& b : B.allMids)
+    {
+      if (clear(a, b)) return true;
+    }
+  }
+
+  // Corner to corner.
+  for (const auto& a : A.verts)
+  {
+    for (const auto& b : B.verts)
+    {
+      if (clear(a, b)) return true;
+    }
+  }
+
   return false;
+}
+
+// Maps a coordinate to a grid cell index, clamp to [0, limit]
+static inline size_t GetCellIndex(double v, double origin, size_t limit, double cellSize)
+{
+  const double c = std::floor((v - origin) / cellSize);
+  return static_cast<size_t>(std::clamp(c, 0.0, static_cast<double>(limit)));
+}
+
+// Mark a sector pair as blind in both directions.
+static inline void SetPairBits(Level &level, size_t view, size_t target, size_t num_secs)
+{
+  const size_t p1 = view * num_secs + target;
+  const size_t p2 = target * num_secs + view;
+  level.reject_matrix[p1 >> 3] |= (1 << (p1 & 7));
+  level.reject_matrix[p2 >> 3] |= (1 << (p2 & 7));
+}
+
+// Mark a sector pair as blind in both directions using thread-safe atomic guards.
+static inline void SetPairBitsAtomic(Level &level, size_t view, size_t target, size_t num_secs)
+{
+  const size_t p1 = view * num_secs + target;
+  const size_t p2 = target * num_secs + view;
+  const uint8_t bit1 = static_cast<uint8_t>(1u << (p1 & 7));
+  const uint8_t bit2 = static_cast<uint8_t>(1u << (p2 & 7));
+  #ifdef _OPENMP
+    #pragma omp atomic
+  #endif
+  level.reject_matrix[p1 >> 3] |= bit1;
+  #ifdef _OPENMP
+    #pragma omp atomic
+  #endif
+  level.reject_matrix[p2 >> 3] |= bit2;
+}
+
+// Restore process priority back to default.
+static inline void RestorePriority()
+{
+  #if defined(_WIN32)
+    SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
+  #else
+    setpriority(PRIO_PROCESS, 0, 0);
+  #endif
 }
 
 // Main process now, handles everything!
@@ -252,23 +401,30 @@ static void Reject_ProcessSectors(Level &level)
   const size_t num_secs = level.sectors.size();
   if (num_secs == 0) return;
 
+  // Snapshot of the group numbers. Read-only from here on, so the parallel
+  // loop can compare groups without touching the shared reject matrix.
+  std::vector<size_t> groupOf(num_secs);
+  for (size_t i = 0; i < num_secs; ++i)
+  {
+    groupOf[i] = level.sectors[i]->rej_group;
+  }
+
+  // Fills the reject matrix for all mismatched void island groups in bulk.
+  // Disconnected islands completely enveloped by void space share no visual vectors, duh!
+  for (size_t view = 0; view < num_secs; view++)
+  {
+    for (size_t target = 0; target < view; target++)
+    {
+      if (groupOf[view] != groupOf[target])
+      {
+        SetPairBits(level, view, target, num_secs);
+      }
+    }
+  }
+
   // If the user enables the fast compile mode (-f or --fast), skip the heavy CPU stuff!
   if (config.fast)
   {
-    for (size_t view = 0; view < num_secs; view++)
-    {
-      for (size_t target = 0; target < view; target++)
-      {
-        // Disconnected islands completely enveloped by void space share no visual vectors, duh!
-        if (level.sectors[view]->rej_group != level.sectors[target]->rej_group)
-        {
-          const size_t p1 = view * num_secs + target, p2 = target * num_secs + view;
-          level.reject_matrix[p1 >> 3] |= (1 << (p1 & 7));
-          level.reject_matrix[p2 >> 3] |= (1 << (p2 & 7));
-        }
-      }
-    }
-
     return; // Exit out early!
   }
 
@@ -281,21 +437,6 @@ static void Reject_ProcessSectors(Level &level)
     // On Unix/Linux/macOS systems, set priority nice value to 10
     setpriority(PRIO_PROCESS, 0, 10);
   #endif
-
-  // Fills the reject matrix table for all mismatched void island groups in bulk.
-  // This shifts trivial checks out of the heavy nested evaluation loops.
-  for (size_t view = 0; view < num_secs; view++)
-  {
-    for (size_t target = 0; target < view; target++)
-    {
-      if (level.sectors[view]->rej_group != level.sectors[target]->rej_group)
-      {
-        const size_t p1 = view * num_secs + target, p2 = target * num_secs + view;
-        level.reject_matrix[p1 >> 3] |= (1 << (p1 & 7));
-        level.reject_matrix[p2 >> 3] |= (1 << (p2 & 7));
-      }
-    }
-  }
 
   // Declare empty first
   std::vector<std::vector<SightSegment>> sectorLines;
@@ -322,59 +463,83 @@ static void Reject_ProcessSectors(Level &level)
   {
     if (!line || !line->start || !line->end) continue;
 
-    SightSegment seg = {
+    SightSegment seg(
         static_cast<double>(line->start->x),
         static_cast<double>(line->start->y),
         static_cast<double>(line->end->x),
         static_cast<double>(line->end->y)
-    };
+    );
 
     mapMinX = std::min({mapMinX, seg.x1, seg.x2});
     mapMaxX = std::max({mapMaxX, seg.x1, seg.x2});
     mapMinY = std::min({mapMinY, seg.y1, seg.y2});
     mapMaxY = std::max({mapMaxY, seg.y1, seg.y2});
 
-    if (!line->left || !line->right)
+    const Sector* sRight = line->right ? line->right->sector : nullptr;
+    const Sector* sLeft  = line->left  ? line->left->sector  : nullptr;
+    const bool isSolid   = !sRight || !sLeft;
+
+    // The flag is only used to prune rays that are always blocked.
+    // Require length > 1 so a degenerate line never gets pruned.
+    const double ldx = seg.x2 - seg.x1;
+    const double ldy = seg.y2 - seg.y1;
+    seg.solid = isSolid && (ldx * ldx + ldy * ldy) > 1.0;
+
+    if (isSolid)
     {
       solidBlockers.push_back(seg);
     }
-    else
+    else if (sLeft != sRight)
     {
-      const auto* sLeft  = line->left->sector;
-      const auto* sRight = line->right->sector;
-
-      if (!sLeft || !sRight)
-      {
-        solidBlockers.push_back(seg);
-      }
-      else if (sLeft != sRight)
-      {
-        // Accuracy Fix!
-        // If a two-sided linedef sits between two different sectors, they share a physical edge.
-        // We log this connection in our bitset matrix to bypass ray casting entirely later.
-        size_t idx1 = sLeft->index * num_secs + sRight->index;
-        size_t idx2 = sRight->index * num_secs + sLeft->index;
-        adjacencyMatrix[idx1 >> 3] |= (1 << (idx1 & 7));
-        adjacencyMatrix[idx2 >> 3] |= (1 << (idx2 & 7));
-      }
+      // Accuracy Fix!
+      // If a two-sided linedef sits between two different sectors, they share a physical edge.
+      // We log this connection in our bitset matrix to bypass ray casting entirely later.
+      size_t idx1 = sLeft->index * num_secs + sRight->index;
+      size_t idx2 = sRight->index * num_secs + sLeft->index;
+      adjacencyMatrix[idx1 >> 3] |= (1 << (idx1 & 7));
+      adjacencyMatrix[idx2 >> 3] |= (1 << (idx2 & 7));
     }
 
-    // Map lines to their parent sectors and track bounding boxes
-    for (size_t i = 0; i < num_secs; ++i)
+    // Map the line straight to its parent sectors and track their bounding boxes.
+    if (sRight)
     {
-      const auto* sec = level.sectors[i];
-      if ((line->right && line->right->sector == sec) || (line->left && line->left->sector == sec))
-      {
-        sectorLines[i].push_back(seg);
-        auto& box = sectorBoxes[i];
-
-        box.minX = std::min({box.minX, seg.x1, seg.x2}); box.maxX = std::max({box.maxX, seg.x1, seg.x2});
-        box.minY = std::min({box.minY, seg.y1, seg.y2}); box.maxY = std::max({box.maxY, seg.y1, seg.y2});
-      }
+      const size_t rIdx = sRight->index;
+      auto& box = sectorBoxes[rIdx];
+      sectorLines[rIdx].push_back(seg);
+      box.minX = std::min({box.minX, seg.x1, seg.x2});
+      box.maxX = std::max({box.maxX, seg.x1, seg.x2});
+      box.minY = std::min({box.minY, seg.y1, seg.y2});
+      box.maxY = std::max({box.maxY, seg.y1, seg.y2});
+    }
+    if (sLeft && sLeft != sRight)
+    {
+      const size_t lIdx = sLeft->index;
+      auto& box = sectorBoxes[lIdx];
+      sectorLines[lIdx].push_back(seg);
+      box.minX = std::min({box.minX, seg.x1, seg.x2});
+      box.maxX = std::max({box.maxX, seg.x1, seg.x2});
+      box.minY = std::min({box.minY, seg.y1, seg.y2});
+      box.maxY = std::max({box.maxY, seg.y1, seg.y2});
     }
   }
+
+  // No usable geometry at all?
+  if (mapMinX > mapMaxX || mapMinY > mapMaxY)
+  {
+    RestorePriority();
+    return;
+  }
+
+  // Build the per-sector ray endpoint lists once, reused for every pair.
+  std::vector<SectorPoints> sectorPoints(num_secs);
+  for (size_t i = 0; i < num_secs; ++i)
+  {
+    sectorPoints[i] = BuildSectorPoints(sectorLines[i]);
+  }
+
   // Calculate the max sector span across the map to scale ray bounds correctly.
   // This value caps our visibility ray checks on wide open fields without manual configuration.
+  // 4096 seems to have worked well for a long time. ;)
   double maxSectorSpanSq = 4096.0 * 4096.0;
 
   for (size_t i = 0; i < num_secs; ++i)
@@ -404,24 +569,14 @@ static void Reject_ProcessSectors(Level &level)
   for (size_t i = 0; i < solidBlockers.size(); ++i)
   {
     const auto& blocker = solidBlockers[i];
-    double minX = std::min(blocker.x1, blocker.x2) - PADDING;
-    double maxX = std::max(blocker.x1, blocker.x2) + PADDING;
-    double minY = std::min(blocker.y1, blocker.y2) - PADDING;
-    double maxY = std::max(blocker.y1, blocker.y2) + PADDING;
 
     // This acts as a spatial boundary filter.
-    // Its' job is to take raw map coordinates and mathematically pin them to the
+    // Its job is to take raw map coordinates and mathematically pin them to the
     // exact 2D grid cells of the spatial hash map.
-    double rawBMinX = std::floor((minX - mapMinX) / CELL_SIZE);
-    double rawBMaxX = std::floor((maxX - mapMinX) / CELL_SIZE);
-    double rawBMinY = std::floor((minY - mapMinY) / CELL_SIZE);
-    double rawBMaxY = std::floor((maxY - mapMinY) / CELL_SIZE);
-
-    // Modernized with std::clamp
-    const size_t bMinX = static_cast<size_t>(std::clamp(rawBMinX, 0.0, static_cast<double>(gridCols - 1)));
-    const size_t bMaxX = static_cast<size_t>(std::clamp(rawBMaxX, 0.0, static_cast<double>(gridCols - 1)));
-    const size_t bMinY = static_cast<size_t>(std::clamp(rawBMinY, 0.0, static_cast<double>(gridRows - 1)));
-    const size_t bMaxY = static_cast<size_t>(std::clamp(rawBMaxY, 0.0, static_cast<double>(gridRows - 1)));
+    const size_t bMinX = GetCellIndex(blocker.minX - PADDING, mapMinX, gridCols - 1, CELL_SIZE);
+    const size_t bMaxX = GetCellIndex(blocker.maxX + PADDING, mapMinX, gridCols - 1, CELL_SIZE);
+    const size_t bMinY = GetCellIndex(blocker.minY - PADDING, mapMinY, gridRows - 1, CELL_SIZE);
+    const size_t bMaxY = GetCellIndex(blocker.maxY + PADDING, mapMinY, gridRows - 1, CELL_SIZE);
 
     for (size_t x = bMinX; x <= bMaxX; ++x)
     {
@@ -444,119 +599,109 @@ static void Reject_ProcessSectors(Level &level)
     }
   }
 
-  // Parallelizes the loop across available CPU cores.
-  // Using 'dynamic' scheduling will make sure each
-  // loop is immediately picked up by the next available CPU.
-  // Not evenly dividing out the visiblity work on purpose because some sectors
-  // take longer than others, which would cause a stall in the queue.
-  #ifdef _OPENMP
-      #pragma omp parallel for schedule(dynamic)
-  #endif
-  for (size_t a = 0; a < activeSectors.size(); a++) // Symmetrical Evaluation Loops
-  {
-    // Map our active iterator index back to the real sector index
-    size_t view = activeSectors[a];
-    const auto& boxA = sectorBoxes[view];
+  // Signed loop counter
+  // OpenMP 2.0 compilers (MSVC) require one.
+  const ptrdiff_t activeCount = static_cast<ptrdiff_t>(activeSectors.size());
 
-    // Thread-Isolated Storage Buffers.
-    // Allocating inside the loop boundary guarantees that each active core receives
-    // a completely private, unshared space to prevent memory corruption data races.
+  // Parallelizes the loop across available CPU cores.
+  // Dynamic scheduling lets each idle core pick up the next sector immediately,
+  // because some sectors take far longer than others.
+  #ifdef _OPENMP
+    #pragma omp parallel
+  #endif
+  {
+    // Thread-private buffers, allocated once per thread instead of once per sector.
     std::vector<const SightSegment*> localizedBlockers;
     localizedBlockers.reserve(solidBlockers.size());
 
-    // Replaces slow vector sorting operations with a high-speed bitset lookup tag.
-    std::vector<int32_t> blockerVisited(solidBlockers.size(), -1);
-    int32_t visitMarker = 0;
+    // A blocker is "seen" if its stamp == visitMarker.
+    std::vector<uint32_t> blockerVisited(solidBlockers.size(), 0);
+    uint32_t visitMarker = 0;
 
-    for (size_t b = 0; b < a; b++)
+    #ifdef _OPENMP
+      #pragma omp for schedule(dynamic)
+    #endif
+    for (ptrdiff_t i = 0; i < activeCount; i++)
     {
-      // Map our active target iterator index back to the real sector index
-      size_t target = activeSectors[b];
+      // Walk from the last active sector down.
+      // Row 'a' tests 'a' targets, so the biggest rows go first
+      // and no long row is left as a straggler.
+      const size_t a = static_cast<size_t>(activeCount - 1 - i);
 
-      // If this sector pair was already flagged as disconnected by our 1D check,
-      // drop it instantly before fetching variables or starting spatial culling math.
-      size_t preBlindIdx = view * num_secs + target;
-      if ((level.reject_matrix[preBlindIdx >> 3] & (1 << (preBlindIdx & 7))) != 0)
+      // Map our active iterator index back to the real sector index
+      const size_t view = activeSectors[a];
+      const auto& boxA = sectorBoxes[view];
+
+      for (size_t b = 0; b < a; b++)
       {
-        continue;
-      }
+        // Map our active target iterator index back to the real sector index
+        const size_t target = activeSectors[b];
 
-      // Wow Yet Again Another Accuracy Fix! :(
-      // If these sectors touch directly, they are unconditionally visible!
-      // Skipping curved alternative geometric checks prevents tunnel/cave blindness bugs.
-      size_t adjIdx = view * num_secs + target;
-      if ((adjacencyMatrix[adjIdx >> 3] & (1 << (adjIdx & 7))) != 0)
-      {
-        continue;
-      }
-
-      const auto& boxB = sectorBoxes[target];
-
-      // Clamp the box grid coordinates to the
-      // specific segment connecting Sector A and Sector B. This prevents
-      // copying giant unneeded canvas sectors across wide maps.
-      const double cMinX = std::min({boxA.minX, boxA.maxX, boxB.minX, boxB.maxX});
-      const double cMaxX = std::max({boxA.minX, boxA.maxX, boxB.minX, boxB.maxX});
-      const double cMinY = std::min({boxA.minY, boxA.maxY, boxB.minY, boxB.maxY});
-      const double cMaxY = std::max({boxA.minY, boxA.maxY, boxB.minY, boxB.maxY});
-
-      // --- X Axis Bounds Processing ---
-      double deltaMinX = cMinX - mapMinX;
-      double rawGridMinX = std::floor(deltaMinX / CELL_SIZE);
-      double clampedGridMinX = std::max(0.0, rawGridMinX);
-      const size_t gcMinX = static_cast<size_t>(clampedGridMinX);
-
-      double deltaMaxX = cMaxX - mapMinX;
-      double rawGridMaxX = std::floor(deltaMaxX / CELL_SIZE);
-      double clampedGridMaxX = std::max(0.0, rawGridMaxX);
-      const size_t gcMaxX = std::min(gridCols - 1, static_cast<size_t>(clampedGridMaxX));
-
-      // --- Y Axis Bounds Processing ---
-      double deltaMinY = cMinY - mapMinY;
-      double rawGridMinY = std::floor(deltaMinY / CELL_SIZE);
-      double clampedGridMinY = std::max(0.0, rawGridMinY);
-      const size_t gcMinY = static_cast<size_t>(clampedGridMinY);
-
-      double deltaMaxY = cMaxY - mapMinY;
-      double rawGridMaxY = std::floor(deltaMaxY / CELL_SIZE);
-      double clampedGridMaxY = std::max(0.0, rawGridMaxY);
-      const size_t gcMaxY = std::min(gridRows - 1, static_cast<size_t>(clampedGridMaxY));
-
-      localizedBlockers.clear();
-      visitMarker++;
-
-      for (size_t x = gcMinX; x <= gcMaxX; ++x)
-      {
-        for (size_t y = gcMinY; y <= gcMaxY; ++y)
+        // Sectors in different groups were already marked blind in bulk.
+        if (groupOf[view] != groupOf[target])
         {
-          for (size_t blockerIdx : grid[y * gridCols + x])
+          continue;
+        }
+
+        // Wow Yet Again Another Accuracy Fix! :(
+        // If these sectors touch directly, they are unconditionally visible!
+        // Skipping curved alternative geometric checks prevents tunnel/cave blindness bugs.
+        const size_t adjIdx = view * num_secs + target;
+        if ((adjacencyMatrix[adjIdx >> 3] & (1 << (adjIdx & 7))) != 0)
+        {
+          continue;
+        }
+
+        const auto& boxB = sectorBoxes[target];
+
+        // Every ray endpoint lies inside its sector's bbox, so no ray can be shorter
+        // than the gap between the boxes. IsRayBlocked rejects anything longer than
+        // maxSectorSpanSq anyway, so such a pair is blind without casting ray.
+        const double gapX = std::max({0.0, boxB.minX - boxA.maxX, boxA.minX - boxB.maxX});
+        const double gapY = std::max({0.0, boxB.minY - boxA.maxY, boxA.minY - boxB.maxY});
+        if ((gapX * gapX) + (gapY * gapY) > maxSectorSpanSq)
+        {
+          SetPairBitsAtomic(level, view, target, num_secs);
+          continue;
+        }
+
+        // Clamp the box grid coordinates to the specific region connecting
+        // Sector A and Sector B. This prevents copying giant unneeded canvas
+        // sectors across wide maps.
+        const size_t gcMinX = GetCellIndex(std::min(boxA.minX, boxB.minX), mapMinX, gridCols - 1, CELL_SIZE);
+        const size_t gcMaxX = GetCellIndex(std::max(boxA.maxX, boxB.maxX), mapMinX, gridCols - 1, CELL_SIZE);
+        const size_t gcMinY = GetCellIndex(std::min(boxA.minY, boxB.minY), mapMinY, gridRows - 1, CELL_SIZE);
+        const size_t gcMaxY = GetCellIndex(std::max(boxA.maxY, boxB.maxY), mapMinY, gridRows - 1, CELL_SIZE);
+
+        localizedBlockers.clear();
+        visitMarker++;
+
+        for (size_t x = gcMinX; x <= gcMaxX; ++x)
+        {
+          for (size_t y = gcMinY; y <= gcMaxY; ++y)
           {
-            if (blockerVisited[blockerIdx] != visitMarker)
+            for (size_t blockerIdx : grid[y * gridCols + x])
             {
-              blockerVisited[blockerIdx] = visitMarker;
-              localizedBlockers.push_back(&solidBlockers[blockerIdx]);
+              if (blockerVisited[blockerIdx] != visitMarker)
+              {
+                blockerVisited[blockerIdx] = visitMarker;
+                localizedBlockers.push_back(&solidBlockers[blockerIdx]);
+              }
             }
           }
         }
-      }
-      // Execute magic raycasting and hope a cosmic ray doesn't hit the CPU from space!
-      if (!DoVisibilityTest(sectorLines[view], sectorLines[target], localizedBlockers, maxSectorSpanSq))
-      {
-        const size_t p1 = view * num_secs + target, p2 = target * num_secs + view;
-        level.reject_matrix[p1 >> 3] |= (1 << (p1 & 7));
-        level.reject_matrix[p2 >> 3] |= (1 << (p2 & 7));
+
+        // Execute magic raycasting and hope a cosmic ray doesn't hit the CPU from space!
+        if (!DoVisibilityTest(sectorPoints[view], sectorPoints[target], localizedBlockers, maxSectorSpanSq))
+        {
+          SetPairBitsAtomic(level, view, target, num_secs);
+        }
       }
     }
   }
 
   // Restore process priority back to normal status once the heavy CPU work finishes
-  #if defined(_WIN32)
-    // Windows
-    SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
-  #else
-    // Unix/Linux/macOS
-    setpriority(PRIO_PROCESS, 0, 0);
-  #endif
+  RestorePriority();
 }
 
 // Note: this routine is destructive to the group numbers
