@@ -172,7 +172,7 @@ inline bool TrueSegmentsIntersect(const SightSegment& s1, const SightSegment& s2
     return std::abs((bx - ax) * (cy - ay) - (by - ay) * (cx - ax)) < DIST_EPSILON;
   };
 
-  // Check for boundary vertex snaps prevents rays slipping through wall-to-wall joins damn it!
+  // Check for boundary vertex snaps (prevents rays slipping through wall-to-wall joins damn it!)
   if (isPointOnSeg(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1)) return true;
   if (isPointOnSeg(s2.x1, s2.y1, s2.x2, s2.y2, s1.x2, s1.y2)) return true;
   if (isPointOnSeg(s1.x1, s1.y1, s1.x2, s1.y2, s2.x1, s2.y1)) return true;
@@ -201,20 +201,12 @@ inline bool IsRayBlocked(const SightSegment& ray,
   for (const auto* blockerPtr : localBlockers)
   {
     const auto& blocker = *blockerPtr;
-
-    // If the blocker fails the X-axis overlap, it drops out instantly before reading Y.
-    const double bMaxX = (blocker.x1 > blocker.x2) ? blocker.x1 : blocker.x2;
-    if (bMaxX < rMinX) continue;
-
-    const double bMinX = (blocker.x1 < blocker.x2) ? blocker.x1 : blocker.x2;
-    if (bMinX > rMaxX) continue;
-
-    const double bMaxY = (blocker.y1 > blocker.y2) ? blocker.y1 : blocker.y2;
-    if (bMaxY < rMinY) continue;
-
-    const double bMinY = (blocker.y1 < blocker.y2) ? blocker.y1 : blocker.y2;
-    if (bMinY > rMaxY) continue;
-
+    // AABB Check, Skip instantly if the blocker's bounding box does not overlap the ray's span.
+    if (std::max(blocker.x1, blocker.x2) < rMinX || std::min(blocker.x1, blocker.x2) > rMaxX ||
+        std::max(blocker.y1, blocker.y2) < rMinY || std::min(blocker.y1, blocker.y2) > rMaxY)
+    {
+      continue;
+    }
     // Ignore intersection tests if the sight ray is touching the exact corner vertex.
     if ((std::abs(ray.x1 - blocker.x1) < DIST_EPSILON && std::abs(ray.y1 - blocker.y1) < DIST_EPSILON) ||
         (std::abs(ray.x1 - blocker.x2) < DIST_EPSILON && std::abs(ray.y1 - blocker.y2) < DIST_EPSILON))
@@ -237,21 +229,18 @@ static bool DoVisibilityTest(const std::vector<SightSegment>& linesA,
   {
     for (const auto& segB : linesB)
     {
+      // Corner check, cast rays directly between absolute structural vertices.
+      if (!IsRayBlocked({segA.x1, segA.y1, segB.x1, segB.y1}, localizedBlockers, maxRayLengthSq)) return true;
+      if (!IsRayBlocked({segA.x1, segA.y1, segB.x2, segB.y2}, localizedBlockers, maxRayLengthSq)) return true;
+      if (!IsRayBlocked({segA.x2, segA.y2, segB.x1, segB.y1}, localizedBlockers, maxRayLengthSq)) return true;
+      if (!IsRayBlocked({segA.x2, segA.y2, segB.x2, segB.y2}, localizedBlockers, maxRayLengthSq)) return true;
       // Captures narrow visual paths (windows, stairs, holes, etc.) that corner checks miss.
-      // Midpoint testing the clear center sightline first allows open sector pairs
-      // to exit immediately on Ray 1, skipping the 6 corner checks.
       double midAx = (segA.x1 + segA.x2) * 0.5; double midAy = (segA.y1 + segA.y2) * 0.5;
       double midBx = (segB.x1 + segB.x2) * 0.5; double midBy = (segB.y1 + segB.y2) * 0.5;
 
       if (!IsRayBlocked({midAx, midAy, midBx, midBy}, localizedBlockers, maxRayLengthSq)) return true;
       if (!IsRayBlocked({midAx, midAy, segB.x1, segB.y1}, localizedBlockers, maxRayLengthSq)) return true;
       if (!IsRayBlocked({segA.x1, segA.y1, midBx, midBy}, localizedBlockers, maxRayLengthSq)) return true;
-
-      // Corner check, cast rays directly between absolute structural vertices.
-      if (!IsRayBlocked({segA.x1, segA.y1, segB.x1, segB.y1}, localizedBlockers, maxRayLengthSq)) return true;
-      if (!IsRayBlocked({segA.x1, segA.y1, segB.x2, segB.y2}, localizedBlockers, maxRayLengthSq)) return true;
-      if (!IsRayBlocked({segA.x2, segA.y2, segB.x1, segB.y1}, localizedBlockers, maxRayLengthSq)) return true;
-      if (!IsRayBlocked({segA.x2, segA.y2, segB.x2, segB.y2}, localizedBlockers, maxRayLengthSq)) return true;
     }
   }
   return false;
@@ -292,6 +281,21 @@ static void Reject_ProcessSectors(Level &level)
     // On Unix/Linux/macOS systems, set priority nice value to 10
     setpriority(PRIO_PROCESS, 0, 10);
   #endif
+
+  // Fills the reject matrix table for all mismatched void island groups in bulk.
+  // This shifts trivial checks out of the heavy nested evaluation loops.
+  for (size_t view = 0; view < num_secs; view++)
+  {
+    for (size_t target = 0; target < view; target++)
+    {
+      if (level.sectors[view]->rej_group != level.sectors[target]->rej_group)
+      {
+        const size_t p1 = view * num_secs + target, p2 = target * num_secs + view;
+        level.reject_matrix[p1 >> 3] |= (1 << (p1 & 7));
+        level.reject_matrix[p2 >> 3] |= (1 << (p2 & 7));
+      }
+    }
+  }
 
   // Declare empty first
   std::vector<std::vector<SightSegment>> sectorLines;
@@ -352,13 +356,6 @@ static void Reject_ProcessSectors(Level &level)
         size_t idx2 = sRight->index * num_secs + sLeft->index;
         adjacencyMatrix[idx1 >> 3] |= (1 << (idx1 & 7));
         adjacencyMatrix[idx2 >> 3] |= (1 << (idx2 & 7));
-      }
-      else
-      {
-        // If the line connects the same sector on both sides (sLeft == sRight),
-        // it represents a solid internal room barrier or decorative structural pillar.
-        // Pushing this into solidBlockers catches rays trying to pass through internal walls early.
-        solidBlockers.push_back(seg);
       }
     }
 
@@ -435,6 +432,18 @@ static void Reject_ProcessSectors(Level &level)
     }
   }
 
+  // Maps only the sectors that physically possess line geometry.
+  // This helps to stop wasting allocation overhead on dead void space control sectors.
+  std::vector<size_t> activeSectors;
+  activeSectors.reserve(num_secs);
+  for (size_t i = 0; i < num_secs; ++i)
+  {
+    if (!sectorLines[i].empty())
+    {
+      activeSectors.push_back(i);
+    }
+  }
+
   // Parallelizes the loop across available CPU cores.
   // Using 'dynamic' scheduling will make sure each
   // loop is immediately picked up by the next available CPU.
@@ -443,12 +452,13 @@ static void Reject_ProcessSectors(Level &level)
   #ifdef _OPENMP
       #pragma omp parallel for schedule(dynamic)
   #endif
-  for (size_t view = 0; view < num_secs; view++) // Symmetrical Evaluation Loops
+  for (size_t a = 0; a < activeSectors.size(); a++) // Symmetrical Evaluation Loops
   {
-    if (sectorLines[view].empty()) continue;
+    // Map our active iterator index back to the real sector index
+    size_t view = activeSectors[a];
     const auto& boxA = sectorBoxes[view];
 
-    // Thread-Isolated Storage.
+    // Thread-Isolated Storage Buffers.
     // Allocating inside the loop boundary guarantees that each active core receives
     // a completely private, unshared space to prevent memory corruption data races.
     std::vector<const SightSegment*> localizedBlockers;
@@ -458,18 +468,19 @@ static void Reject_ProcessSectors(Level &level)
     std::vector<int32_t> blockerVisited(solidBlockers.size(), -1);
     int32_t visitMarker = 0;
 
-    for (size_t target = 0; target < view; target++)
+    for (size_t b = 0; b < a; b++)
     {
-      if (sectorLines[target].empty()) continue;
+      // Map our active target iterator index back to the real sector index
+      size_t target = activeSectors[b];
 
-      // Void Pruning, skip processing if sectors belong to independent standalone sub-maps.
-      if (level.sectors[view]->rej_group != level.sectors[target]->rej_group)
+      // If this sector pair was already flagged as disconnected by our 1D check,
+      // drop it instantly before fetching variables or starting spatial culling math.
+      size_t preBlindIdx = view * num_secs + target;
+      if ((level.reject_matrix[preBlindIdx >> 3] & (1 << (preBlindIdx & 7))) != 0)
       {
-        const size_t p1 = view * num_secs + target, p2 = target * num_secs + view;
-        level.reject_matrix[p1 >> 3] |= (1 << (p1 & 7));
-        level.reject_matrix[p2 >> 3] |= (1 << (p2 & 7));
         continue;
       }
+
       // Wow Yet Again Another Accuracy Fix! :(
       // If these sectors touch directly, they are unconditionally visible!
       // Skipping curved alternative geometric checks prevents tunnel/cave blindness bugs.
@@ -528,22 +539,8 @@ static void Reject_ProcessSectors(Level &level)
           }
         }
       }
-      // Compare the number of lines in view vs target. Pass the smaller vector as the
-      // first parameter. This forces the ray-caster's loop to be as small as possible,
-      // increasing performance on large maps.
-      bool isVisible = false;
-      if (sectorLines[view].size() <= sectorLines[target].size())
-      {
-        // Execute magic raycasting
-        isVisible = DoVisibilityTest(sectorLines[view], sectorLines[target], localizedBlockers, maxSectorSpanSq);
-      }
-      else
-      {
-        // Execute magic raycasting
-        isVisible = DoVisibilityTest(sectorLines[target], sectorLines[view], localizedBlockers, maxSectorSpanSq);
-      }
-
-      if (!isVisible)
+      // Execute magic raycasting and hope a cosmic ray doesn't hit the CPU from space!
+      if (!DoVisibilityTest(sectorLines[view], sectorLines[target], localizedBlockers, maxSectorSpanSq))
       {
         const size_t p1 = view * num_secs + target, p2 = target * num_secs + view;
         level.reject_matrix[p1 >> 3] |= (1 << (p1 & 7));
