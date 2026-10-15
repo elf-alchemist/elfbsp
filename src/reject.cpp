@@ -24,6 +24,14 @@
 #include "core.hpp"
 #include "local.hpp"
 
+// Native platform headers required for low-level process priority
+#ifdef _WIN32
+  #include <windows.h>
+#else
+  #include <unistd.h>
+  #include <sys/resource.h>
+#endif
+
 //------------------------------------------------------------------------
 // REJECT : Generate the reject table
 //------------------------------------------------------------------------
@@ -144,7 +152,7 @@ inline bool TrueSegmentsIntersect(const SightSegment& s1, const SightSegment& s2
   // Check if endpoints of segment 2 lie on opposite sides of segment 1
   double d3 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x1, s2.y1);
   double d4 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x2, s2.y2);
-  
+
   // Using 1e-3 instead of 0.0, Tighter tolerances caused micro-gaps
   // where rays slipped through overlapping linedef vertices in E1M1.
   if (((d1 > 1e-3 && d2 < -1e-3) || (d1 < -1e-3 && d2 > 1e-3)) &&
@@ -260,8 +268,19 @@ static void Reject_ProcessSectors(Level &level)
         }
       }
     }
+
     return; // Exit out early!
   }
+
+  // Lowers the operating system priority for this process.
+  // This prevents the PC from becoming choppy or unresponsive during long compile times.
+  #if defined(_WIN32)
+    // On Windows, set priority to below normal
+    SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
+  #else
+    // On Unix/Linux/macOS systems, set priority nice value to 10
+    setpriority(PRIO_PROCESS, 0, 10);
+  #endif
 
   // Declare empty first
   std::vector<std::vector<SightSegment>> sectorLines;
@@ -300,7 +319,6 @@ static void Reject_ProcessSectors(Level &level)
     mapMinY = std::min({mapMinY, seg.y1, seg.y2});
     mapMaxY = std::max({mapMaxY, seg.y1, seg.y2});
 
-
     if (!line->left || !line->right)
     {
       solidBlockers.push_back(seg);
@@ -309,8 +327,8 @@ static void Reject_ProcessSectors(Level &level)
     {
       const auto* sLeft  = line->left->sector;
       const auto* sRight = line->right->sector;
-      
-      if (!sLeft || !sRight) 
+
+      if (!sLeft || !sRight)
       {
         solidBlockers.push_back(seg);
       }
@@ -340,10 +358,9 @@ static void Reject_ProcessSectors(Level &level)
       }
     }
   }
-
   // Calculate the max sector span across the map to scale ray bounds correctly.
   // This value caps our visibility ray checks on wide open fields without manual configuration.
-  double maxSectorSpanSq = 4096.0 * 4096.0; 
+  double maxSectorSpanSq = 4096.0 * 4096.0;
 
   for (size_t i = 0; i < num_secs; ++i)
   {
@@ -400,17 +417,27 @@ static void Reject_ProcessSectors(Level &level)
     }
   }
 
-  // Move loop structures to eliminate allocation thrashing
-  std::vector<const SightSegment*> localizedBlockers;
-  localizedBlockers.reserve(solidBlockers.size());
-  // Replaces slow vector sorting operations with a high-speed bitset lookup tag.
-  std::vector<int32_t> blockerVisited(solidBlockers.size(), -1);
-  int32_t visitMarker = 0;
-  // Symmetrical Evaluation Loops
-  for (size_t view = 0; view < num_secs; view++)
+  // Parallelizes the loop across available CPU cores.
+  // Using 'dynamic' scheduling will make sure each
+  // loop is immediately picked up by the next available CPU.
+  // Not evenly dividing out the visiblity work on purpose because some sectors
+  // take longer than others, which would cause a stall in the queue.
+  #ifdef _OPENMP
+      #pragma omp parallel for schedule(dynamic)
+  #endif
+  for (size_t view = 0; view < num_secs; view++) // Symmetrical Evaluation Loops
   {
     if (sectorLines[view].empty()) continue;
     const auto& boxA = sectorBoxes[view];
+
+    // Thread-Isolated Storage Buffers: Allocating inside the loop boundary guarantees that
+    // each active core receives a completely private, unshared scratch space to prevent memory corruption data races.
+    std::vector<const SightSegment*> localizedBlockers;
+    localizedBlockers.reserve(solidBlockers.size());
+
+    // Replaces slow vector sorting operations with a high-speed bitset lookup tag.
+    std::vector<int32_t> blockerVisited(solidBlockers.size(), -1);
+    int32_t visitMarker = 0;
 
     for (size_t target = 0; target < view; target++)
     {
@@ -428,13 +455,13 @@ static void Reject_ProcessSectors(Level &level)
       // If these sectors touch directly, they are unconditionally visible!
       // Skipping curved alternative geometric checks prevents tunnel/cave blindness bugs.
       size_t adjIdx = view * num_secs + target;
-      if ((adjacencyMatrix[adjIdx >> 3] & (1 << (adjIdx & 7))) != 0) 
+      if ((adjacencyMatrix[adjIdx >> 3] & (1 << (adjIdx & 7))) != 0)
       {
-        continue; 
+        continue;
       }
 
       const auto& boxB = sectorBoxes[target];
-      
+
       // Clamp the box grid coordinates to the
       // specific segment connecting Sector A and Sector B. This prevents
       // copying giant unneeded canvas sectors across wide maps.
@@ -443,7 +470,7 @@ static void Reject_ProcessSectors(Level &level)
       const double cMinY = std::min({boxA.minY, boxA.maxY, boxB.minY, boxB.maxY});
       const double cMaxY = std::max({boxA.minY, boxA.maxY, boxB.minY, boxB.maxY});
 
-      // X Axis Bounds
+      // --- X Axis Bounds Processing ---
       double deltaMinX = cMinX - mapMinX;
       double rawGridMinX = std::floor(deltaMinX / CELL_SIZE);
       double clampedGridMinX = std::max(0.0, rawGridMinX);
@@ -454,7 +481,7 @@ static void Reject_ProcessSectors(Level &level)
       double clampedGridMaxX = std::max(0.0, rawGridMaxX);
       const size_t gcMaxX = std::min(gridCols - 1, static_cast<size_t>(clampedGridMaxX));
 
-      // Y Axis Bounds
+      // --- Y Axis Bounds Processing ---
       double deltaMinY = cMinY - mapMinY;
       double rawGridMinY = std::floor(deltaMinY / CELL_SIZE);
       double clampedGridMinY = std::max(0.0, rawGridMinY);
@@ -491,6 +518,15 @@ static void Reject_ProcessSectors(Level &level)
       }
     }
   }
+
+  // Restore process priority back to normal status once the heavy CPU work finishes
+  #if defined(_WIN32)
+    // Windows
+    SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
+  #else
+    // Unix/Linux/macOS
+    setpriority(PRIO_PROCESS, 0, 0);
+  #endif
 }
 
 // Note: this routine is destructive to the group numbers
