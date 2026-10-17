@@ -73,6 +73,15 @@ set(ZLIB_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(library/zlib-ng EXCLUDE_FROM_ALL)
 
+# Attempt to locate OpenMP libraries.
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+  message(STATUS "OpenMP Multi-Threading: Enabled")
+else()
+  # If missing, defaults back to single-thread build.
+  message(STATUS "Single-core mode")
+endif()
+
 add_executable(${PROJECT_NAME}
   src/blockmap.cpp
   src/bsp.cpp
@@ -185,6 +194,10 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME} PRIVATE
   zlibstatic
 )
+
+if(OpenMP_CXX_FOUND)
+  target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
 if(ENABLE_WERROR)
   target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
