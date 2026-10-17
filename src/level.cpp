@@ -993,7 +993,7 @@ BuildResult SaveLevelBinary(WadIO &io, Level &level)
   BspFormat bsp_format = CheckFormatBSP(config, level);
 
   // Only include BSP-generated vertices in non-ZDBSP lump format
-  bool do_new_vert = bsp_format >= BspFormat::DoomBSP || bsp_format <= BspFormat::DeePBSPV4;
+  bool do_new_vert = bsp_format == BspFormat::DoomBSP || bsp_format == BspFormat::DeePBSPV4;
 
   // Use Zlib-compressed version of ZDBSP lump formats
   bool zdbsp_compress = config.compress;
