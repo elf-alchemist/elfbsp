@@ -222,6 +222,105 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines)
   return pts;
 }
 
+// Uniform grid of solid blockers in CSR form (one flat array instead of a vector per cell).
+struct BlockerGrid
+{
+  double originX = 0.0;
+  double originY = 0.0;
+  double cellSize = 512.0;
+  ptrdiff_t cols = 0;
+  ptrdiff_t rows = 0;
+  std::vector<uint32_t> cellStart; // cols * rows + 1 offsets into 'items' below
+  std::vector<uint32_t> items;     // blocker indices, grouped by cell
+};
+
+// Per-thread space for the ray walk. A blocker that spans several cells
+// would otherwise be tested once per cell; the stamp makes it once per ray.
+struct RayWalkSpace
+{
+  std::vector<uint32_t> seen; // stamp of the last ray that tested each blocker
+  uint32_t stamp = 0;
+
+  explicit RayWalkSpace(size_t blockerCount) : seen(blockerCount, 0) {}
+
+  // Start a new ray. Return to compare against 'seen'
+  uint32_t Next()
+  {
+    if (++stamp == 0) // Wrapped around? Clear and restart.
+    {
+      std::fill(seen.begin(), seen.end(), 0);
+      stamp = 1;
+    }
+    return stamp;
+  }
+};
+
+// Maps a coordinate to a grid cell index, clamp to [0, limit]
+static inline size_t GetCellIndex(double v, double origin, size_t limit, double cellSize)
+{
+  const double c = std::floor((v - origin) / cellSize);
+  return static_cast<size_t>(std::clamp(c, 0.0, static_cast<double>(limit)));
+}
+
+// Each blocker is registered in every cell its
+// padded bounding box covers, same coverage as the old vector-of-vectors grid.
+static BlockerGrid BuildBlockerGrid(const std::vector<SightSegment>& blockers,
+                                    double originX, double originY,
+                                    size_t cols, size_t rows,
+                                    double cellSize, double padding)
+{
+  BlockerGrid g;
+  g.originX = originX;
+  g.originY = originY;
+  g.cellSize = cellSize;
+  g.cols = static_cast<ptrdiff_t>(cols);
+  g.rows = static_cast<ptrdiff_t>(rows);
+  g.cellStart.assign(cols * rows + 1, 0);
+
+  // Calls fn(cellIndex) for every cell the blocker's padded bbox covers.
+  auto forEachCell = [&](const SightSegment& s, auto&& fn)
+  {
+    const size_t x0 = GetCellIndex(s.minX - padding, originX, cols - 1, cellSize);
+    const size_t x1 = GetCellIndex(s.maxX + padding, originX, cols - 1, cellSize);
+    const size_t y0 = GetCellIndex(s.minY - padding, originY, rows - 1, cellSize);
+    const size_t y1 = GetCellIndex(s.maxY + padding, originY, rows - 1, cellSize);
+
+    for (size_t y = y0; y <= y1; ++y)
+    {
+      for (size_t x = x0; x <= x1; ++x)
+      {
+        fn(y * cols + x);
+      }
+    }
+  };
+
+  // Count entries per cell.
+  for (const auto& b : blockers)
+  {
+    forEachCell(b, [&](size_t cell) { g.cellStart[cell + 1]++; });
+  }
+
+  // Prefix sum turns the counts into start offsets.
+  for (size_t i = 0; i < cols * rows; ++i)
+  {
+    g.cellStart[i + 1] += g.cellStart[i];
+  }
+
+  // Fill the flat item array.
+  g.items.resize(g.cellStart.back());
+  std::vector<uint32_t> fillPos(g.cellStart.begin(), g.cellStart.end() - 1);
+
+  for (size_t i = 0; i < blockers.size(); ++i)
+  {
+    forEachCell(blockers[i], [&](size_t cell)
+    {
+      g.items[fillPos[cell]++] = static_cast<uint32_t>(i);
+    });
+  }
+
+  return g;
+}
+
 // Classify which side of a linedef split plane a vertex falls on.
 inline double SegmentSide(double ax, double ay, double bx, double by, double cx, double cy)
 {
@@ -261,10 +360,13 @@ inline bool TrueSegmentsIntersect(const SightSegment& s1, const SightSegment& s2
   return false;
 }
 
-// Is ray blocked by any solid walls.
-// Uses fast AABB to reject and minimize redundant tests.
-inline bool IsRayBlocked(const SightSegment& ray,
-                         const std::vector<const SightSegment*>& localBlockers,
+// Is ray blocked by any solid walls?
+// Walks only the grid cells the ray passes through DDA,
+// so each ray is tested against nearby blockers instead of a gathered list.
+static bool IsRayBlocked(const SightSegment& ray,
+                         const std::vector<SightSegment>& blockers,
+                         const BlockerGrid& grid,
+                         RayWalkSpace& scratch,
                          double maxRayLengthSq)
 {
   const double dx = ray.x2 - ray.x1;
@@ -274,25 +376,102 @@ inline bool IsRayBlocked(const SightSegment& ray,
   // Using squared distances avoids slow calculations in our heaviest inner loop.
   if ((dx * dx) + (dy * dy) > maxRayLengthSq) return true;
 
-  for (const SightSegment* blockerPtr : localBlockers)
+  // Ray start position in grid cell units.
+  const double inv = 1.0 / grid.cellSize;
+  const double fx = (ray.x1 - grid.originX) * inv;
+  const double fy = (ray.y1 - grid.originY) * inv;
+
+  auto clampCell = [](double v, ptrdiff_t limit) -> ptrdiff_t
   {
-    const SightSegment& blocker = *blockerPtr;
+    return static_cast<ptrdiff_t>(std::clamp(std::floor(v), 0.0, static_cast<double>(limit)));
+  };
 
-    // AABB check, skip instantly if the blocker's bounding box does not overlap the ray's span.
-    if (blocker.maxX < ray.minX || blocker.minX > ray.maxX ||
-        blocker.maxY < ray.minY || blocker.minY > ray.maxY)
+  // Cell holding the ray start, and cell holding the ray end.
+  ptrdiff_t cx = clampCell(fx, grid.cols - 1);
+  ptrdiff_t cy = clampCell(fy, grid.rows - 1);
+  const ptrdiff_t endCx = clampCell((ray.x2 - grid.originX) * inv, grid.cols - 1);
+  const ptrdiff_t endCy = clampCell((ray.y2 - grid.originY) * inv, grid.rows - 1);
+
+  // Direction of travel on each axis (-1, 0 or +1).
+  const ptrdiff_t stepX = (dx > 0) - (dx < 0);
+  const ptrdiff_t stepY = (dy > 0) - (dy < 0);
+
+  // Ray parameter at which the ray crosses the next cell border on each axis,
+  // and how much t advances per whole cell. An axis with no movement never advances.
+  constexpr double kInf = std::numeric_limits<double>::infinity();
+  double tMaxX = kInf;
+  double tDeltaX = kInf;
+  double tMaxY = kInf;
+  double tDeltaY = kInf;
+
+  if (stepX != 0)
+  {
+    const double border = static_cast<double>(stepX > 0 ? cx + 1 : cx);
+    tMaxX = (border - fx) * grid.cellSize / dx;
+    tDeltaX = grid.cellSize / std::abs(dx);
+  }
+  if (stepY != 0)
+  {
+    const double border = static_cast<double>(stepY > 0 ? cy + 1 : cy);
+    tMaxY = (border - fy) * grid.cellSize / dy;
+    tDeltaY = grid.cellSize / std::abs(dy);
+  }
+
+  // Walk exactly this many steps. Counting steps will stop even if
+  // rounding picks a neighbouring cell at a corner.
+  ptrdiff_t remaining = std::abs(endCx - cx) + std::abs(endCy - cy);
+  const uint32_t stamp = scratch.Next();
+
+  for (;;)
+  {
+    const size_t cell = static_cast<size_t>(cy * grid.cols + cx);
+
+    for (uint32_t k = grid.cellStart[cell]; k < grid.cellStart[cell + 1]; ++k)
     {
-      continue;
+      // A blocker spanning several cells is only tested once per ray.
+      const uint32_t idx = grid.items[k];
+      if (scratch.seen[idx] == stamp) continue;
+      scratch.seen[idx] = stamp;
+
+      const SightSegment& blocker = blockers[idx];
+
+      // AABB check, skip instantly if the blocker's bounding box does not overlap the ray's span.
+      if (blocker.maxX < ray.minX || blocker.minX > ray.maxX ||
+          blocker.maxY < ray.minY || blocker.minY > ray.maxY)
+      {
+        continue;
+      }
+
+      // Ignore intersection tests if the sight ray is touching the exact corner vertex.
+      if ((std::abs(ray.x1 - blocker.x1) < DIST_EPSILON && std::abs(ray.y1 - blocker.y1) < DIST_EPSILON) ||
+          (std::abs(ray.x1 - blocker.x2) < DIST_EPSILON && std::abs(ray.y1 - blocker.y2) < DIST_EPSILON))
+      {
+        continue;
+      }
+
+      if (TrueSegmentsIntersect(ray, blocker)) return true;
     }
 
-    // Ignore intersection tests if the sight ray is touching the exact corner vertex.
-    if ((std::abs(ray.x1 - blocker.x1) < DIST_EPSILON && std::abs(ray.y1 - blocker.y1) < DIST_EPSILON) ||
-        (std::abs(ray.x1 - blocker.x2) < DIST_EPSILON && std::abs(ray.y1 - blocker.y2) < DIST_EPSILON))
-    {
-      continue;
-    }
+    // Reached the end cell and nothing blocked the ray.
+    if (remaining-- == 0) break;
 
-    if (TrueSegmentsIntersect(ray, blocker)) return true;
+    // Step into the neighbouring cell whose border the ray reaches first.
+    // Once a row or column matches the end cell, only the other axis can move.
+    bool stepInX;
+    if (cx == endCx)      stepInX = false;
+    else if (cy == endCy) stepInX = true;
+    else                  stepInX = tMaxX < tMaxY;
+
+    if (stepInX)
+    {
+      cx += stepX;
+      tMaxX += tDeltaX;
+    }
+    else
+    {
+      cy += stepY;
+      tMaxY += tDeltaY;
+    }
   }
 
   return false;
@@ -302,12 +481,14 @@ inline bool IsRayBlocked(const SightSegment& ray,
 // Returns true if a valid line of sight connects the two places.
 static bool DoVisibilityTest(const SectorPoints& A,
                              const SectorPoints& B,
-                             const std::vector<const SightSegment*>& localizedBlockers,
+                             const std::vector<SightSegment>& blockers,
+                             const BlockerGrid& grid,
+                             RayWalkSpace& scratch,
                              double maxRayLengthSq)
 {
   auto clear = [&](const SightPoint& from, const SightPoint& to) -> bool
   {
-    return !IsRayBlocked({from.x, from.y, to.x, to.y}, localizedBlockers, maxRayLengthSq);
+    return !IsRayBlocked({from.x, from.y, to.x, to.y}, blockers, grid, scratch, maxRayLengthSq);
   };
 
   // Portal midpoint to portal midpoint first is most likely to succeed,
@@ -350,13 +531,6 @@ static bool DoVisibilityTest(const SectorPoints& A,
   }
 
   return false;
-}
-
-// Maps a coordinate to a grid cell index, clamp to [0, limit]
-static inline size_t GetCellIndex(double v, double origin, size_t limit, double cellSize)
-{
-  const double c = std::floor((v - origin) / cellSize);
-  return static_cast<size_t>(std::clamp(c, 0.0, static_cast<double>(limit)));
 }
 
 // Mark a sector pair as blind in both directions.
@@ -554,38 +728,18 @@ static void Reject_ProcessSectors(Level &level)
     }
   }
 
-  // Build Spatial Hash Reference Map
+  // Build the spatial grid as a flat CSR array.
   constexpr double CELL_SIZE = 512.0;
-  const size_t gridCols = static_cast<size_t>(std::ceil((mapMaxX - mapMinX) / CELL_SIZE)) + 1;
-  const size_t gridRows = static_cast<size_t>(std::ceil((mapMaxY - mapMinY) / CELL_SIZE)) + 1;
-  std::vector<std::vector<size_t>> grid;
-  grid.resize(gridCols * gridRows);
 
   // Yet Another Accuracy Fix! Grid Edge Leaks :(
   // Using a 1.0 map-unit padding ensures that wall lines landing directly on grid border seams
   // are added to preventing visibility rays from leaking through gaps.
   constexpr double PADDING = 1.0;
 
-  for (size_t i = 0; i < solidBlockers.size(); ++i)
-  {
-    const auto& blocker = solidBlockers[i];
-
-    // This acts as a spatial boundary filter.
-    // Its job is to take raw map coordinates and mathematically pin them to the
-    // exact 2D grid cells of the spatial hash map.
-    const size_t bMinX = GetCellIndex(blocker.minX - PADDING, mapMinX, gridCols - 1, CELL_SIZE);
-    const size_t bMaxX = GetCellIndex(blocker.maxX + PADDING, mapMinX, gridCols - 1, CELL_SIZE);
-    const size_t bMinY = GetCellIndex(blocker.minY - PADDING, mapMinY, gridRows - 1, CELL_SIZE);
-    const size_t bMaxY = GetCellIndex(blocker.maxY + PADDING, mapMinY, gridRows - 1, CELL_SIZE);
-
-    for (size_t x = bMinX; x <= bMaxX; ++x)
-    {
-      for (size_t y = bMinY; y <= bMaxY; ++y)
-      {
-        grid[y * gridCols + x].push_back(i);
-      }
-    }
-  }
+  const size_t gridCols = static_cast<size_t>(std::ceil((mapMaxX - mapMinX) / CELL_SIZE)) + 1;
+  const size_t gridRows = static_cast<size_t>(std::ceil((mapMaxY - mapMinY) / CELL_SIZE)) + 1;
+  const BlockerGrid grid = BuildBlockerGrid(solidBlockers, mapMinX, mapMinY,
+                                            gridCols, gridRows, CELL_SIZE, PADDING);
 
   // Maps only the sectors that physically possess line geometry.
   // This helps to stop wasting allocation overhead on dead void space control sectors.
@@ -610,13 +764,8 @@ static void Reject_ProcessSectors(Level &level)
     #pragma omp parallel
   #endif
   {
-    // Thread-private buffers, allocated once per thread instead of once per sector.
-    std::vector<const SightSegment*> localizedBlockers;
-    localizedBlockers.reserve(solidBlockers.size());
-
-    // A blocker is "seen" if its stamp == visitMarker.
-    std::vector<uint32_t> blockerVisited(solidBlockers.size(), 0);
-    uint32_t visitMarker = 0;
+    // Just one thread-private
+    RayWalkSpace scratch(solidBlockers.size());
 
     #ifdef _OPENMP
       #pragma omp for schedule(dynamic)
@@ -656,7 +805,7 @@ static void Reject_ProcessSectors(Level &level)
 
         // Every ray endpoint lies inside its sector's bbox, so no ray can be shorter
         // than the gap between the boxes. IsRayBlocked rejects anything longer than
-        // maxSectorSpanSq anyway, so such a pair is blind without casting ray.
+        // maxSectorSpanSq anyway, so such a pair is blind without casting a ray.
         const double gapX = std::max({0.0, boxB.minX - boxA.maxX, boxA.minX - boxB.maxX});
         const double gapY = std::max({0.0, boxB.minY - boxA.maxY, boxA.minY - boxB.maxY});
         if ((gapX * gapX) + (gapY * gapY) > maxSectorSpanSq)
@@ -665,34 +814,9 @@ static void Reject_ProcessSectors(Level &level)
           continue;
         }
 
-        // Clamp the box grid coordinates to the specific region connecting
-        // Sector A and Sector B. This prevents copying giant unneeded canvas
-        // sectors across wide maps.
-        const size_t gcMinX = GetCellIndex(std::min(boxA.minX, boxB.minX), mapMinX, gridCols - 1, CELL_SIZE);
-        const size_t gcMaxX = GetCellIndex(std::max(boxA.maxX, boxB.maxX), mapMinX, gridCols - 1, CELL_SIZE);
-        const size_t gcMinY = GetCellIndex(std::min(boxA.minY, boxB.minY), mapMinY, gridRows - 1, CELL_SIZE);
-        const size_t gcMaxY = GetCellIndex(std::max(boxA.maxY, boxB.maxY), mapMinY, gridRows - 1, CELL_SIZE);
-
-        localizedBlockers.clear();
-        visitMarker++;
-
-        for (size_t x = gcMinX; x <= gcMaxX; ++x)
-        {
-          for (size_t y = gcMinY; y <= gcMaxY; ++y)
-          {
-            for (size_t blockerIdx : grid[y * gridCols + x])
-            {
-              if (blockerVisited[blockerIdx] != visitMarker)
-              {
-                blockerVisited[blockerIdx] = visitMarker;
-                localizedBlockers.push_back(&solidBlockers[blockerIdx]);
-              }
-            }
-          }
-        }
-
-        // Execute magic raycasting and hope a cosmic ray doesn't hit the CPU from space!
-        if (!DoVisibilityTest(sectorPoints[view], sectorPoints[target], localizedBlockers, maxSectorSpanSq))
+        // Each ray now walks the grid on its own inside IsRayBlocked via DDA steps.
+        if (!DoVisibilityTest(sectorPoints[view], sectorPoints[target],
+                              solidBlockers, grid, scratch, maxSectorSpanSq))
         {
           SetPairBitsAtomic(level, view, target, num_secs);
         }
