@@ -219,6 +219,33 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines)
   SortUnique(pts.firstVerts);
   SortUnique(pts.openMids);
   SortUnique(pts.allMids);
+
+  // The ray loops only ask whether any ray is clear, so the order of the points never
+  // changes the result. Ordering them by angle around the sector's center puts neighbouring
+  // rays in similar directions, so the same wall usually stops several rays in a row.
+  if (!pts.verts.empty())
+  {
+    double cx = 0.0;
+    double cy = 0.0;
+    for (const auto& v : pts.verts)
+    {
+      cx += v.x;
+      cy += v.y;
+    }
+    cx /= static_cast<double>(pts.verts.size());
+    cy /= static_cast<double>(pts.verts.size());
+
+    auto byAngle = [cx, cy](const SightPoint& a, const SightPoint& b)
+    {
+      return std::atan2(a.y - cy, a.x - cx) < std::atan2(b.y - cy, b.x - cx);
+    };
+
+    std::sort(pts.verts.begin(), pts.verts.end(), byAngle);
+    std::sort(pts.firstVerts.begin(), pts.firstVerts.end(), byAngle);
+    std::sort(pts.openMids.begin(), pts.openMids.end(), byAngle);
+    std::sort(pts.allMids.begin(), pts.allMids.end(), byAngle);
+  }
+
   return pts;
 }
 
@@ -230,7 +257,7 @@ struct BlockerGrid
   double cellSize = 512.0;
   ptrdiff_t cols = 0;
   ptrdiff_t rows = 0;
-  std::vector<uint32_t> cellStart; // cols * rows + 1 offsets into 'items' below
+  std::vector<uint32_t> cellStart; // cols * rows + 1 offsets into 'items'
   std::vector<uint32_t> items;     // blocker indices, grouped by cell
 };
 
@@ -248,7 +275,7 @@ struct RayWalkSpace
   // tend to be stopped by the same few walls, so testing these before the grid walk
   // resolves most blocked rays without walking the grid at all.
   uint32_t ring[RING_SIZE] = {};
-  int ringCount = 0;
+  int32_t ringCount = 0;
 
   explicit RayWalkSpace(size_t blockerCount)
       : seen(blockerCount, 0)
@@ -267,10 +294,10 @@ struct RayWalkSpace
   }
 
   // Move the ring entry at 'i' to the front.
-  void Promote(int i)
+  void Promote(int32_t i)
   {
     const uint32_t id = ring[i];
-    for (int j = i; j > 0; --j)
+    for (int32_t j = i; j > 0; --j)
     {
       ring[j] = ring[j - 1];
     }
@@ -281,8 +308,8 @@ struct RayWalkSpace
   void Push(uint32_t id)
   {
     // The power of the Rings!!
-    const int n = (ringCount < RING_SIZE) ? ringCount + 1 : RING_SIZE;
-    for (int j = n - 1; j > 0; --j)
+    const int32_t n = (ringCount < RING_SIZE) ? ringCount + 1 : RING_SIZE;
+    for (int32_t j = n - 1; j > 0; --j)
     {
       ring[j] = ring[j - 1];
     }
@@ -386,6 +413,15 @@ inline bool TrueSegmentsIntersect(const SightSegment& s1, const SightSegment& s2
       ((d3 > 1e-3 && d4 < -1e-3) || (d3 < -1e-3 && d4 > 1e-3)))
   {
     return true;
+  }
+
+  // Each below can only succeed when its' cross product, which is
+  // exactly d1 to d4 again, is smaller than DIST_EPSILON.
+  // If none of them are, all four calls will fail and can be skipped.
+  if (std::abs(d1) >= DIST_EPSILON && std::abs(d2) >= DIST_EPSILON &&
+      std::abs(d3) >= DIST_EPSILON && std::abs(d4) >= DIST_EPSILON)
+  {
+    return false;
   }
 
   if (IsPointOnSegment(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1)) return true;
@@ -770,7 +806,6 @@ static void Reject_ProcessSectors(Level &level)
 
   // Calculate the max sector span across the map to scale ray bounds correctly.
   // This value caps our visibility ray checks on wide open fields without manual configuration.
-  // 4096 seems to have worked well for a long time. ;)
   double maxSectorSpanSq = 4096.0 * 4096.0;
 
   for (size_t i = 0; i < num_secs; ++i)
@@ -787,7 +822,6 @@ static void Reject_ProcessSectors(Level &level)
 
   // Build the spatial grid as a flat CSR array.
   // Dense maps pack many walls into a few cells, so small cells keep each ray's candidate list short.
-  // Original value was 512.0 but too big for large, dense, lots of tiny void wall maps.
   constexpr double CELL_SIZE = 128.0;
 
   // Yet Another Accuracy Fix! Grid Edge Leaks :(
@@ -883,7 +917,7 @@ static void Reject_ProcessSectors(Level &level)
     }
   }
 
-  // Restore process priority back to normal status once the heavy CPU work finishes
+  // Restore process priority back to normal once the heavy CPU work finishes
   RestorePriority();
 }
 
