@@ -238,10 +238,22 @@ struct BlockerGrid
 // would otherwise be tested once per cell; the stamp makes it once per ray.
 struct RayWalkSpace
 {
+  // It's ring cache time!
+  static constexpr int RING_SIZE = 8;
+
   std::vector<uint32_t> seen; // stamp of the last ray that tested each blocker
   uint32_t stamp = 0;
 
-  explicit RayWalkSpace(size_t blockerCount) : seen(blockerCount, 0) {}
+  // The blockers that most recently stopped a ray, newest first. Consecutive rays
+  // tend to be stopped by the same few walls, so testing these before the grid walk
+  // resolves most blocked rays without walking the grid at all.
+  uint32_t ring[RING_SIZE] = {};
+  int ringCount = 0;
+
+  explicit RayWalkSpace(size_t blockerCount)
+      : seen(blockerCount, 0)
+  {
+  }
 
   // Start a new ray. Return to compare against 'seen'
   uint32_t Next()
@@ -252,6 +264,30 @@ struct RayWalkSpace
       stamp = 1;
     }
     return stamp;
+  }
+
+  // Move the ring entry at 'i' to the front.
+  void Promote(int i)
+  {
+    const uint32_t id = ring[i];
+    for (int j = i; j > 0; --j)
+    {
+      ring[j] = ring[j - 1];
+    }
+    ring[0] = id;
+  }
+
+  // Put a new blocker at the front, dropping the oldest one when the ring is full.
+  void Push(uint32_t id)
+  {
+    // The power of the Rings!!
+    const int n = (ringCount < RING_SIZE) ? ringCount + 1 : RING_SIZE;
+    for (int j = n - 1; j > 0; --j)
+    {
+      ring[j] = ring[j - 1];
+    }
+    ring[0] = id;
+    ringCount = n;
   }
 };
 
@@ -277,7 +313,7 @@ static BlockerGrid BuildBlockerGrid(const std::vector<SightSegment>& blockers,
   g.rows = static_cast<ptrdiff_t>(rows);
   g.cellStart.assign(cols * rows + 1, 0);
 
-  // Calls fn(cellIndex) for every cell the blocker's padded bbox covers.
+  // Calls (cellIndex) for every cell the blocker's padded bbox covers.
   auto forEachCell = [&](const SightSegment& s, auto&& fn)
   {
     const size_t x0 = GetCellIndex(s.minX - padding, originX, cols - 1, cellSize);
@@ -376,6 +412,38 @@ static bool IsRayBlocked(const SightSegment& ray,
   // Using squared distances avoids slow calculations in our heaviest inner loop.
   if ((dx * dx) + (dy * dy) > maxRayLengthSq) return true;
 
+  // The same checks apply to every candidate blocker, whether it comes from
+  // the recent-blocker ring or from the grid walk below.
+  auto blocks = [&ray](const SightSegment& blocker) -> bool
+  {
+    // AABB check, skip instantly if the blocker's bounding box does not overlap the ray's span.
+    if (blocker.maxX < ray.minX || blocker.minX > ray.maxX ||
+        blocker.maxY < ray.minY || blocker.minY > ray.maxY)
+    {
+      return false;
+    }
+
+    // Ignore intersection tests if the sight ray is touching the exact corner vertex.
+    if ((std::abs(ray.x1 - blocker.x1) < DIST_EPSILON && std::abs(ray.y1 - blocker.y1) < DIST_EPSILON) ||
+        (std::abs(ray.x1 - blocker.x2) < DIST_EPSILON && std::abs(ray.y1 - blocker.y2) < DIST_EPSILON))
+    {
+      return false;
+    }
+
+    return TrueSegmentsIntersect(ray, blocker);
+  };
+
+  // Try the walls that stopped the previous rays first. This is only a reordering of
+  // the same tests, so a ray is blocked here only if the full walk would also block it.
+  for (int32_t i = 0; i < scratch.ringCount; ++i)
+  {
+    if (blocks(blockers[scratch.ring[i]]))
+    {
+      scratch.Promote(i);
+      return true;
+    }
+  }
+
   // Ray start position in grid cell units.
   const double inv = 1.0 / grid.cellSize;
   const double fx = (ray.x1 - grid.originX) * inv;
@@ -433,23 +501,12 @@ static bool IsRayBlocked(const SightSegment& ray,
       if (scratch.seen[idx] == stamp) continue;
       scratch.seen[idx] = stamp;
 
-      const SightSegment& blocker = blockers[idx];
-
-      // AABB check, skip instantly if the blocker's bounding box does not overlap the ray's span.
-      if (blocker.maxX < ray.minX || blocker.minX > ray.maxX ||
-          blocker.maxY < ray.minY || blocker.minY > ray.maxY)
+      if (blocks(blockers[idx]))
       {
-        continue;
+        // Remember the wall that stopped this ray, the next ray will likely hit it too.
+        scratch.Push(idx);
+        return true;
       }
-
-      // Ignore intersection tests if the sight ray is touching the exact corner vertex.
-      if ((std::abs(ray.x1 - blocker.x1) < DIST_EPSILON && std::abs(ray.y1 - blocker.y1) < DIST_EPSILON) ||
-          (std::abs(ray.x1 - blocker.x2) < DIST_EPSILON && std::abs(ray.y1 - blocker.y2) < DIST_EPSILON))
-      {
-        continue;
-      }
-
-      if (TrueSegmentsIntersect(ray, blocker)) return true;
     }
 
     // Reached the end cell and nothing blocked the ray.
@@ -729,7 +786,9 @@ static void Reject_ProcessSectors(Level &level)
   }
 
   // Build the spatial grid as a flat CSR array.
-  constexpr double CELL_SIZE = 512.0;
+  // Dense maps pack many walls into a few cells, so small cells keep each ray's candidate list short.
+  // Original value was 512.0 but too big for large, dense, lots of tiny void wall maps.
+  constexpr double CELL_SIZE = 128.0;
 
   // Yet Another Accuracy Fix! Grid Edge Leaks :(
   // Using a 1.0 map-unit padding ensures that wall lines landing directly on grid border seams
