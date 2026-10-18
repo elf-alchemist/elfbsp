@@ -25,7 +25,6 @@
 #include "core.hpp"
 #include "info.hpp"
 #include "local.hpp"
-#include "parse.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -40,13 +39,9 @@ bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y
   {
     if (y1 > ymax)
     {
-      if (y2 > ymax)
-      {
-        return false;
-      }
+      if (y2 > ymax) return false;
 
-      x1 = x1
-           + static_cast<int32_t>(static_cast<double>(x2 - x1) * static_cast<double>(ymax - y1) / static_cast<double>(y2 - y1));
+      x1 = x1 + ((x2 - x1) * (ymax - y1) / (y2 - y1));
       y1 = ymax;
 
       count = 2;
@@ -55,13 +50,9 @@ bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y
 
     if (y1 < ymin)
     {
-      if (y2 < ymin)
-      {
-        return false;
-      }
+      if (y2 < ymin) return false;
 
-      x1 = x1
-           + static_cast<int32_t>(static_cast<double>(x2 - x1) * static_cast<double>(ymin - y1) / static_cast<double>(y2 - y1));
+      x1 = x1 + ((x2 - x1) * (ymin - y1) / (y2 - y1));
       y1 = ymin;
 
       count = 2;
@@ -70,13 +61,9 @@ bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y
 
     if (x1 > xmax)
     {
-      if (x2 > xmax)
-      {
-        return false;
-      }
+      if (x2 > xmax) return false;
 
-      y1 = y1
-           + static_cast<int32_t>(static_cast<double>(y2 - y1) * static_cast<double>(xmax - x1) / static_cast<double>(x2 - x1));
+      y1 = y1 + ((y2 - y1) * (xmax - x1) / (x2 - x1));
       x1 = xmax;
 
       count = 2;
@@ -85,13 +72,9 @@ bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y
 
     if (x1 < xmin)
     {
-      if (x2 < xmin)
-      {
-        return false;
-      }
+      if (x2 < xmin) return false;
 
-      y1 = y1
-           + static_cast<int32_t>(static_cast<double>(y2 - y1) * static_cast<double>(xmin - x1) / static_cast<double>(x2 - x1));
+      y1 = y1 + ((y2 - y1) * (xmin - x1) / (x2 - x1));
       x1 = xmin;
 
       count = 2;
@@ -140,18 +123,18 @@ static void ValidateLinedef(Level &level, Linedef *line)
     }
   }
 
-  if (config.effects                                            // Effects enabled ...
-      && line->left                                             // ... side exists ...
-      && line->left->tex_lower[0] != '-'                        // ... lower texture isn't empty ...
-      && StringCaseCmp(line->left->tex_lower, "BSPNOSEG") == 0) // ... lower texture is BSPNOSEG
+  if (config.effects                                   // Effects enabled ...
+      && line->left                                    // ... side exists ...
+      && line->left->tex_lower[0] != '-'               // ... lower texture isn't empty ...
+      && StringCmp(line->left->tex_lower, "BSPNOSEG")) // ... lower texture is BSPNOSEG
   {
     line->effects |= FX_DoNotRenderBack;
   }
 
-  if (config.effects                                             // Effects enabled ...
-      && line->right                                             // ... side exists ...
-      && line->right->tex_lower[0] != '-'                        // ... lower texture isn't empty ...
-      && StringCaseCmp(line->right->tex_lower, "BSPNOSEG") == 0) // ... lower texture is BSPNOSEG
+  if (config.effects                                    // Effects enabled ...
+      && line->right                                    // ... side exists ...
+      && line->right->tex_lower[0] != '-'               // ... lower texture isn't empty ...
+      && StringCmp(line->right->tex_lower, "BSPNOSEG")) // ... lower texture is BSPNOSEG
   {
     line->effects |= FX_DoNotRenderFront;
   }
@@ -262,10 +245,14 @@ static void GetSidedefs_Doom(WadIO &io, Level &level)
 
     side->offset_x = GetLittleEndian(raw.x_offset);
     side->offset_y = GetLittleEndian(raw.y_offset);
+    side->sector = level.SafeLookupSector(GetLittleEndian(raw.sector), side->index);
+
     memcpy(side->tex_upper, raw.upper_tex, 8);
     memcpy(side->tex_lower, raw.lower_tex, 8);
     memcpy(side->tex_middle, raw.mid_tex, 8);
-    side->sector = level.SafeLookupSector(GetLittleEndian(raw.sector), side->index);
+    CStringToUpper(side->tex_upper);
+    CStringToUpper(side->tex_lower);
+    CStringToUpper(side->tex_middle);
   }
 }
 
@@ -287,7 +274,7 @@ static void GetLinedefs_Doom(WadIO &io, Level &level)
     line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
     line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
     line->special = GetLittleEndian(raw.special);
-    line->tag = GetLittleEndian(raw.tag);
+    line->id = GetLittleEndian(raw.tag);
 
     line->start->is_used = true;
     line->end->is_used = true;
@@ -302,7 +289,7 @@ static void GetLinedefs_Doom(WadIO &io, Level &level)
     if (!config.effects) continue;
 
     // Line tags ( 900 <= x <=999 ) are considered "precious" and will, therefore, have a much higher seg split cost
-    switch (line->tag)
+    switch (line->id)
     {
     case 900 ... 996:
       line->effects |= FX_DoNotSplitSeg;
@@ -473,7 +460,7 @@ static void GetLinedefs_Doom64(WadIO &io, Level &level)
     line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), line->index);
     line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), line->index);
     line->special = GetLittleEndian(raw.special);
-    line->tag = GetLittleEndian(raw.tag);
+    line->id = GetLittleEndian(raw.tag);
     line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
     line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
 
@@ -521,325 +508,114 @@ static void GetThings_Doom64(WadIO &io, Level &level)
   }
 }
 
-/* ----- UDMF reading routines ------------------------- */
-
-static constexpr uint32_t UDMF_THING = 1;
-static constexpr uint32_t UDMF_VERTEX = 2;
-static constexpr uint32_t UDMF_SECTOR = 3;
-static constexpr uint32_t UDMF_SIDEDEF = 4;
-static constexpr uint32_t UDMF_LINEDEF = 5;
-
-static void ParseThingField(Mobj *thing, const std::string &key, token_kind_e kind, const std::string &value)
+void GetVertices_UDMF(Level &level)
 {
-  if (key == "x")
+  level.num_old_vert = level.udmf_vertex.size();
+  level.vertices.reserve(level.num_old_vert);
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    thing->x = LEX_Double(value);
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, level.udmf_vertex.size());
   }
 
-  if (key == "y")
+  for (auto &u_vertex : level.udmf_vertex)
   {
-    thing->y = LEX_Double(value);
-  }
-
-  if (key == "type")
-  {
-    thing->type = static_cast<DoomEdNum>(LEX_Int16(value));
+    auto v = level.NewVertex();
+    v->x = u_vertex.x;
+    v->y = u_vertex.y;
   }
 }
 
-static void ParseVertexField(Vertex *vertex, const std::string &key, token_kind_e kind, const std::string &value)
+void GetSectors_UDMF(Level &level)
 {
-  if (key == "x")
+  level.sectors.reserve(level.udmf_sector.size());
+
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    vertex->x = LEX_Double(value);
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, level.udmf_sector.size());
   }
 
-  if (key == "y")
+  for (auto &_ : level.udmf_sector)
   {
-    vertex->y = LEX_Double(value);
+    auto s = level.NewSector();
+    s->effects = FX_Sector_None;
   }
 }
 
-static void ParseSectorField(Sector *sector, const std::string &key, token_kind_e kind, const std::string &value)
+void GetSidedefs_UDMF(Level &level)
 {
-  // nothing actually needed
-}
+  level.sidedefs.reserve(level.udmf_sidedef.size());
 
-static void ParseSidedefField(Level &level, Sidedef *side, const std::string &key, token_kind_e kind,
-                              const std::string &value)
-{
-  if (key == "sector")
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    size_t num = LEX_Index(value);
-
-    if (num >= level.sectors.size())
-    {
-      throw RuntimeException("illegal sector number #{}", static_cast<size_t>(num));
-    }
-
-    side->sector = level.sectors[num];
-  }
-}
-
-static void ParseLinedefField(Level &level, Linedef *line, const std::string &key, token_kind_e kind,
-                              const std::string &value)
-{
-  if (key == "v1")
-  {
-    line->start = level.SafeLookupVertex(LEX_Index(value), static_cast<size_t>(line - level.linedefs[0]));
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, level.udmf_sidedef.size());
   }
 
-  if (key == "v2")
+  for (auto &u_sidedef : level.udmf_sidedef)
   {
-    line->end = level.SafeLookupVertex(LEX_Index(value), static_cast<size_t>(line - level.linedefs[0]));
-  }
+    auto side = level.NewSidedef();
 
-  if (key == "special")
-  {
-    line->special = LEX_Int(value);
-  }
+    side->offset_x = u_sidedef.offsetx;
+    side->offset_y = u_sidedef.offsety;
+    memcpy(side->tex_upper, u_sidedef.texturetop, 8);
+    memcpy(side->tex_lower, u_sidedef.texturebottom, 8);
+    memcpy(side->tex_middle, u_sidedef.texturemiddle, 8);
+    side->sector = level.SafeLookupSector(u_sidedef.sector_id, side->index);
 
-  if (key == "twosided")
-  {
-    if (LEX_Boolean(value))
-    {
-      line->effects |= FX_TwoSided;
-    };
-  }
-
-  if (key == "sidefront")
-  {
-    size_t num = LEX_Index(value);
-
-    if (num >= level.sidedefs.size())
-    {
-      line->right = nullptr;
-    }
-    else
-    {
-      line->right = level.sidedefs[num];
-    }
-  }
-
-  if (key == "sideback")
-  {
-    size_t num = LEX_Index(value);
-
-    if (num >= level.sidedefs.size())
-    {
-      line->left = nullptr;
-    }
-    else
-    {
-      line->left = level.sidedefs[num];
-    }
+    CStringToUpper(side->tex_upper);
+    CStringToUpper(side->tex_lower);
+    CStringToUpper(side->tex_middle);
   }
 }
 
-static void ParseUDMF_Block(Level &level, lexer_c &lex, int cur_type)
+
+void GetLinedefs_UDMF(Level &level)
 {
-  Vertex *vertex = nullptr;
-  Mobj *thing = nullptr;
-  Sector *sector = nullptr;
-  Sidedef *side = nullptr;
-  Linedef *line = nullptr;
+  level.linedefs.reserve(level.udmf_linedef.size());
 
-  switch (cur_type)
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-  case UDMF_VERTEX:
-    vertex = level.NewVertex();
-    break;
-  case UDMF_THING:
-    thing = level.NewThing();
-    break;
-  case UDMF_SECTOR:
-    sector = level.NewSector();
-    break;
-  case UDMF_SIDEDEF:
-    side = level.NewSidedef();
-    break;
-  case UDMF_LINEDEF:
-    line = level.NewLinedef();
-    break;
-  default:
-    break;
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, level.udmf_linedef.size());
   }
 
-  for (;;)
+  for (auto &u_linedef : level.udmf_linedef)
   {
-    if (lex.Match("}"))
+    auto l = level.NewLinedef();
+    l->start = level.SafeLookupVertex(u_linedef.v1_id, l->index);
+    l->end = level.SafeLookupVertex(u_linedef.v2_id, l->index);
+    l->right = level.SafeLookupSidedef(u_linedef.sidefront);
+    l->left = level.SafeLookupSidedef(u_linedef.sideback);
+    l->special = u_linedef.special;
+    l->id = u_linedef.id;
+
+    l->start->is_used = true;
+    l->end->is_used = true;
+
+    if (HAS_BIT(u_linedef.flags, ULF_TwoSided))
     {
-      break;
+      l->effects |= FX_TwoSided;
     }
 
-    std::string key;
-    std::string value;
-
-    token_kind_e tok = lex.Next(key);
-
-    if (tok == TOK_EOF)
-    {
-      throw RuntimeException("Malformed TEXTMAP lump: unclosed block");
-    }
-
-    if (tok != TOK_Ident)
-    {
-      throw RuntimeException("Malformed TEXTMAP lump: missing key");
-    }
-
-    if (!lex.Match("="))
-    {
-      throw RuntimeException("Malformed TEXTMAP lump: missing '='");
-    }
-
-    tok = lex.Next(value);
-
-    if (tok == TOK_EOF || tok == TOK_ERROR || value == "}")
-    {
-      throw RuntimeException("Malformed TEXTMAP lump: missing value");
-    }
-
-    if (!lex.Match(";"))
-    {
-      throw RuntimeException("Malformed TEXTMAP lump: missing ';'");
-    }
-
-    switch (cur_type)
-    {
-    case UDMF_VERTEX:
-      ParseVertexField(vertex, key, tok, value);
-      break;
-    case UDMF_THING:
-      ParseThingField(thing, key, tok, value);
-      break;
-    case UDMF_SECTOR:
-      ParseSectorField(sector, key, tok, value);
-      break;
-    case UDMF_SIDEDEF:
-      ParseSidedefField(level, side, key, tok, value);
-      break;
-    case UDMF_LINEDEF:
-      ParseLinedefField(level, line, key, tok, value);
-      break;
-
-    default: /* just skip it */
-      break;
-    }
-  }
-
-  // validate stuff
-
-  if (line != nullptr)
-  {
-    if (line->start == nullptr || line->end == nullptr)
-    {
-      throw RuntimeException("Linedef {} is missing a vertex!", line->index);
-    }
-
-    ValidateLinedef(level, line);
+    ValidateLinedef(level, l);
   }
 }
 
-static void ParseUDMF_Pass(Level &level, const std::string &data, int pass)
+void GetThings_UDMF(Level &level)
 {
-  // pass = 1 : vertices, sectors, things
-  // pass = 2 : sidedefs
-  // pass = 3 : linedefs
+  level.things.reserve(level.udmf_thing.size());
 
-  lexer_c lex(data);
-
-  for (;;)
+  if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
-    std::string section;
-    token_kind_e tok = lex.Next(section);
-
-    if (tok == TOK_EOF)
-    {
-      return;
-    }
-
-    if (tok != TOK_Ident)
-    {
-      throw RuntimeException("Malformed TEXTMAP lump.");
-      return;
-    }
-
-    // ignore top-level assignments
-    if (lex.Match("="))
-    {
-      lex.Next(section);
-      if (!lex.Match(";"))
-      {
-        throw RuntimeException("Malformed TEXTMAP lump: missing ';'");
-      }
-      continue;
-    }
-
-    if (!lex.Match("{"))
-    {
-      throw RuntimeException("Malformed TEXTMAP lump: missing '{{'"); // std::format doesn't use \ for escaping
-    }
-
-    int cur_type = 0;
-
-    if (section == "thing")
-    {
-      if (pass == 1)
-      {
-        cur_type = UDMF_THING;
-      }
-    }
-    else if (section == "vertex")
-    {
-      if (pass == 1)
-      {
-        cur_type = UDMF_VERTEX;
-      }
-    }
-    else if (section == "sector")
-    {
-      if (pass == 1)
-      {
-        cur_type = UDMF_SECTOR;
-      }
-    }
-    else if (section == "sidedef")
-    {
-      if (pass == 2)
-      {
-        cur_type = UDMF_SIDEDEF;
-      }
-    }
-    else if (section == "linedef")
-    {
-      if (pass == 3)
-      {
-        cur_type = UDMF_LINEDEF;
-      }
-    }
-
-    // process the block
-    ParseUDMF_Block(level, lex, cur_type);
+    PrintLine(Log::DEBUG, "[{}] num = {}", __func__, level.udmf_thing.size());
   }
-}
 
-void ParseUDMF(WadIO &io, Level &level)
-{
-  auto lump = io.ReadLevelLump<char>(level.lump, "TEXTMAP");
-
-  // load the lump into this string
-  auto data = std::string(lump.begin(), lump.end());
-
-  // now parse it...
-
-  // the UDMF spec does not require objects to be in a dependency order.
-  // for example: sidedefs may occur *after* the linedefs which refer to
-  // them.  hence we perform multiple passes over the TEXTMAP data.
-  ParseUDMF_Pass(level, data, 1);
-  ParseUDMF_Pass(level, data, 2);
-  ParseUDMF_Pass(level, data, 3);
-
-  level.num_old_vert = level.vertices.size();
+  for (auto &u_thing : level.udmf_thing)
+  {
+    auto t = level.NewThing();
+    t->x = u_thing.x;
+    t->y = u_thing.y;
+    t->type = static_cast<DoomEdNum>(u_thing.type);
+  }
 }
 
 /* ----- writing routines ------------------------------ */
@@ -915,6 +691,7 @@ void LoadLevel(WadIO &io, Level &level)
   level.num_new_vert = 0;
   level.num_real_lines = 0;
 
+  // Ordering is important
   switch (level.map_format)
   {
   case MapFormat::Doom:
@@ -943,6 +720,11 @@ void LoadLevel(WadIO &io, Level &level)
     break;
   case MapFormat::UDMF:
     ParseUDMF(io, level);
+    GetVertices_UDMF(level);
+    GetSectors_UDMF(level);
+    GetSidedefs_UDMF(level);
+    GetLinedefs_UDMF(level);
+    GetThings_UDMF(level);
     break;
   case MapFormat::Invalid:
     throw RuntimeException("[{}] Unknown level format on level {}", __func__, LEV);

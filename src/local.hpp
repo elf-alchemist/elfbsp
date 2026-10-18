@@ -140,7 +140,7 @@ struct Linedef
   Sidedef *left;  // left sidedef, or nullptr if none
 
   int32_t special; //
-  uint16_t tag;    //
+  int32_t id;      //
 
   uint32_t effects = FX_Nothing;
   SegmentRotation angle = FX_DoNotRotate;
@@ -353,8 +353,6 @@ struct BlockList
   std::vector<size_t> lines;
 };
 
-// Note: ZDoom format support based on code (C) 2002,2003 Marisa "Randi" Heit
-
 struct Level
 {
   MapFormat map_format = MapFormat::Invalid;
@@ -394,9 +392,15 @@ struct Level
   double block_compression;
   BlockmapFormat bmap_format = BlockmapFormat::DoomBSP;
 
+  std::vector<struct UVertexMinimal> udmf_vertex;
+  std::vector<struct ULinedefMinimal> udmf_linedef;
+  std::vector<struct USidedefMinimal> udmf_sidedef;
+  std::vector<struct USectorMinimal> udmf_sector;
+  std::vector<struct UThingMinimal> udmf_thing;
+
   Vertex *SafeLookupVertex(size_t num, size_t num_line) const;
   Sector *SafeLookupSector(size_t num, size_t num_side) const;
-  Sidedef *SafeLookupSidedef(uint16_t num) const;
+  Sidedef *SafeLookupSidedef(int32_t num) const;
 
   Vertex *NewVertex(void);
   Linedef *NewLinedef(void);
@@ -422,6 +426,8 @@ struct Level
   void FreeWallTips(void);
   void FreeIntersections(void);
 };
+
+void ParseUDMF(WadIO &io, Level &level);
 
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures

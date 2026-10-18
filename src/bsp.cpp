@@ -77,17 +77,17 @@ static inline short_angle_t VanillaSegAngle(const Segment *seg)
   {
   case FX_RotateRelativeDegrees:
     result = ComputeAngle_BAM(dx, dy);
-    result += DegreesToShortBAM(seg->linedef->tag);
+    result += DegreesToShortBAM(seg->linedef->id);
     break;
   case FX_RotateAbsoluteDegrees:
-    result = DegreesToShortBAM(seg->linedef->tag);
+    result = DegreesToShortBAM(seg->linedef->id);
     break;
   case FX_RotateRelativeBAM:
     result = ComputeAngle_BAM(dx, dy);
-    result += static_cast<short_angle_t>(seg->linedef->tag);
+    result += static_cast<short_angle_t>(seg->linedef->id);
     break;
   case FX_RotateAbsoluteBAM:
-    result = static_cast<short_angle_t>(seg->linedef->tag);
+    result = static_cast<short_angle_t>(seg->linedef->id);
     break;
   case FX_DoNotRotate:
     result = ComputeAngle_BAM(dx, dy);
