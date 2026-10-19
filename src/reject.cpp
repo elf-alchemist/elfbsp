@@ -155,6 +155,8 @@ struct SightPoint
 {
   double x;
   double y;
+  uint32_t touchStart = 0; // First entry in the touching-wall table
+  uint32_t touchCount = 0; // Number of solid walls this point lies on
 };
 
 // Ray endpoints for one sector, built once and reused for every pair it's in.
@@ -163,6 +165,7 @@ struct SectorPoints
   std::vector<SightPoint> verts;      // Every unique linedef endpoint
   std::vector<SightPoint> firstVerts; // Unique first endpoints only
   std::vector<SightPoint> openMids;   // Midpoints of non-solid lines
+  std::vector<SightPoint> openSplit;  // Points along non-solid lines, split into equal parts
   std::vector<SightPoint> allMids;    // Midpoints of every line
 };
 
@@ -189,9 +192,25 @@ static void SortUnique(std::vector<SightPoint>& v)
   }), v.end());
 }
 
+// Portal-to-portal rays normally use the midpoint of each open (non-solid) line. On small,
+// dense maps that can miss narrow sight windows through stairs, doorways and windows, so
+// there each open line is cut into 4 equal parts instead when below the split ray budget.
+// The extra points only add rays, so they can turn a blind pair visible but never the reverse for safety.
+// The finer split doubles the work, which matters on big maps, so it is only used
+// while the estimated cost of its extra rays stays under this budget. Larger maps keep the
+// midpoint-only sampling and behave exactly as before. The estimate counts every sector pair
+// that still needs rays, so it grows with both map size and portal density.
+// Doom E1M1 comes in at about +460,000, it gets higher accuracy testing since build times are still very low.
+// Sunder Map01 comes in at about +100,000,000, it gets the original accuracy testing to avoid doubling build times for no gain.
+// Current Default Budget is 50,000,000, which seems to be a good balance between adding accuracy for
+// small, dense maps without wasting CPU time on large, open maps that don't benefit anyway.
+// The result is even better accuracy for small to medium sized maps since the longer compile is not as noticeable to the map maker.
+// Large, open maps also benefit by not wasting time trying to overkill the accuracy for literally no gain.
+static constexpr uint64_t OPEN_SPLIT_RAY_BUDGET = 50000000;
+
 // This extracts and groups unique locations (corners, open door frames, etc.) exactly once.
 // This will shift heavy allocation and duplication entirely out of the inner loops.
-static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines)
+static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines, int32_t split)
 {
   SectorPoints pts;
 
@@ -211,6 +230,12 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines)
     if (!s.solid)
     {
       pts.openMids.push_back(mid);
+
+      for (int32_t k = 1; k < split; ++k)
+      {
+        const double t = static_cast<double>(k) / static_cast<double>(split);
+        pts.openSplit.push_back({s.x1 + (s.x2 - s.x1) * t, s.y1 + (s.y2 - s.y1) * t});
+      }
     }
   }
 
@@ -218,6 +243,7 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines)
   SortUnique(pts.verts);
   SortUnique(pts.firstVerts);
   SortUnique(pts.openMids);
+  SortUnique(pts.openSplit);
   SortUnique(pts.allMids);
 
   // The ray loops only ask whether any ray is clear, so the order of the points never
@@ -243,6 +269,7 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines)
     std::sort(pts.verts.begin(), pts.verts.end(), byAngle);
     std::sort(pts.firstVerts.begin(), pts.firstVerts.end(), byAngle);
     std::sort(pts.openMids.begin(), pts.openMids.end(), byAngle);
+    std::sort(pts.openSplit.begin(), pts.openSplit.end(), byAngle);
     std::sort(pts.allMids.begin(), pts.allMids.end(), byAngle);
   }
 
@@ -268,7 +295,7 @@ struct RayWalkSpace
   // It's ring cache time!
   static constexpr int RING_SIZE = 8;
 
-  std::vector<uint32_t> seen; // stamp of the last ray that tested each blocker
+  std::vector<uint32_t> seen; // Stamp of the last ray that tested each blocker
   uint32_t stamp = 0;
 
   // The blockers that most recently stopped a ray, newest first. Consecutive rays
@@ -418,8 +445,10 @@ inline bool TrueSegmentsIntersect(const SightSegment& s1, const SightSegment& s2
   // Each below can only succeed when its' cross product, which is
   // exactly d1 to d4 again, is smaller than DIST_EPSILON.
   // If none of them are, all four calls will fail and can be skipped.
-  if (std::abs(d1) >= DIST_EPSILON && std::abs(d2) >= DIST_EPSILON &&
-      std::abs(d3) >= DIST_EPSILON && std::abs(d4) >= DIST_EPSILON)
+  const bool s1Outside = (std::abs(d1) >= DIST_EPSILON) && (std::abs(d2) >= DIST_EPSILON);
+  const bool s2Outside = (std::abs(d3) >= DIST_EPSILON) && (std::abs(d4) >= DIST_EPSILON);
+
+  if (s1Outside && s2Outside)
   {
     return false;
   }
@@ -430,6 +459,27 @@ inline bool TrueSegmentsIntersect(const SightSegment& s1, const SightSegment& s2
   if (IsPointOnSegment(s1.x1, s1.y1, s1.x2, s1.y2, s2.x2, s2.y2)) return true;
 
   return false;
+}
+
+// Does this solid wall stop this ray? Shared by the grid walk, the ring and the
+// end-point pre-check so all three always agree.
+static inline bool SolidBlocksRay(const SightSegment& ray, const SightSegment& blocker)
+{
+  // AABB check, skip instantly if the blocker's bounding box does not overlap the ray's span.
+  if (blocker.maxX < ray.minX || blocker.minX > ray.maxX ||
+      blocker.maxY < ray.minY || blocker.minY > ray.maxY)
+  {
+    return false;
+  }
+
+  // Ignore intersection tests if the sight ray is touching the exact corner vertex.
+  if ((std::abs(ray.x1 - blocker.x1) < DIST_EPSILON && std::abs(ray.y1 - blocker.y1) < DIST_EPSILON) ||
+      (std::abs(ray.x1 - blocker.x2) < DIST_EPSILON && std::abs(ray.y1 - blocker.y2) < DIST_EPSILON))
+  {
+    return false;
+  }
+
+  return TrueSegmentsIntersect(ray, blocker);
 }
 
 // Is ray blocked by any solid walls?
@@ -452,21 +502,7 @@ static bool IsRayBlocked(const SightSegment& ray,
   // the recent-blocker ring or from the grid walk below.
   auto blocks = [&ray](const SightSegment& blocker) -> bool
   {
-    // AABB check, skip instantly if the blocker's bounding box does not overlap the ray's span.
-    if (blocker.maxX < ray.minX || blocker.minX > ray.maxX ||
-        blocker.maxY < ray.minY || blocker.minY > ray.maxY)
-    {
-      return false;
-    }
-
-    // Ignore intersection tests if the sight ray is touching the exact corner vertex.
-    if ((std::abs(ray.x1 - blocker.x1) < DIST_EPSILON && std::abs(ray.y1 - blocker.y1) < DIST_EPSILON) ||
-        (std::abs(ray.x1 - blocker.x2) < DIST_EPSILON && std::abs(ray.y1 - blocker.y2) < DIST_EPSILON))
-    {
-      return false;
-    }
-
-    return TrueSegmentsIntersect(ray, blocker);
+    return SolidBlocksRay(ray, blocker);
   };
 
   // Try the walls that stopped the previous rays first. This is only a reordering of
@@ -576,19 +612,35 @@ static bool DoVisibilityTest(const SectorPoints& A,
                              const SectorPoints& B,
                              const std::vector<SightSegment>& blockers,
                              const BlockerGrid& grid,
+                             const std::vector<uint32_t>& touchWalls,
                              RayWalkSpace& scratch,
                              double maxRayLengthSq)
 {
   auto clear = [&](const SightPoint& from, const SightPoint& to) -> bool
   {
-    return !IsRayBlocked({from.x, from.y, to.x, to.y}, blockers, grid, scratch, maxRayLengthSq);
+    const SightSegment ray(from.x, from.y, to.x, to.y);
+
+    // A ray that ends on a solid wall is blocked by it, unless that wall starts at the
+    // ray's own corner. Checking the few walls the end point lies on is much cheaper
+    // than a ring and grid walk, and gives the same result.
+    for (uint32_t k = 0; k < to.touchCount; ++k)
+    {
+      if (SolidBlocksRay(ray, blockers[touchWalls[to.touchStart + k]]))
+      {
+        return false;
+      }
+    }
+
+    return !IsRayBlocked(ray, blockers, grid, scratch, maxRayLengthSq);
   };
 
   // Portal midpoint to portal midpoint first is most likely to succeed,
   // so visible pairs usually exit early.
-  for (const auto& a : A.openMids)
+  // The split points (the midpoint plus the extra points along each open line) are used
+  // here, so narrow sight windows between the midpoints are not missed.
+  for (const auto& a : A.openSplit)
   {
-    for (const auto& b : B.openMids)
+    for (const auto& b : B.openSplit)
     {
       if (clear(a, b)) return true;
     }
@@ -660,6 +712,44 @@ static inline void RestorePriority()
   #else
     setpriority(PRIO_PROCESS, 0, 0);
   #endif
+}
+
+// Check if the geometric distance gap between two sector bounding boxes exceeds max span thresholds.
+static inline bool CheckGapTooWide(const SectorBBox& boxA, const SectorBBox& boxB, double maxSectorSpanSq)
+{
+  const double gapX = std::max({0.0, boxB.minX - boxA.maxX, boxA.minX - boxB.maxX});
+  const double gapY = std::max({0.0, boxB.minY - boxA.maxY, boxA.minY - boxB.maxY});
+  return (gapX * gapX) + (gapY * gapY) > maxSectorSpanSq;
+}
+
+// Maps a ray endpoint vertex to its corresponding cell index and logs any touching solid wall data.
+static inline void RecordTouchingWalls(std::vector<SightPoint>& list,
+                                       const std::vector<SightSegment>& solidBlockers,
+                                       const BlockerGrid& grid,
+                                       std::vector<uint32_t>& touchWalls,
+                                       double mapMinX,
+                                       double mapMinY,
+                                       size_t gridCols,
+                                       size_t gridRows,
+                                       double cellSize)
+{
+  for (auto& p : list)
+  {
+    const size_t cx = GetCellIndex(p.x, mapMinX, gridCols - 1, cellSize);
+    const size_t cy = GetCellIndex(p.y, mapMinY, gridRows - 1, cellSize);
+    const size_t cell = cy * gridCols + cx;
+
+    p.touchStart = static_cast<uint32_t>(touchWalls.size());
+    for (uint32_t k = grid.cellStart[cell]; k < grid.cellStart[cell + 1]; ++k)
+    {
+      const SightSegment& w = solidBlockers[grid.items[k]];
+      if (IsPointOnSegment(w.x1, w.y1, w.x2, w.y2, p.x, p.y))
+      {
+        touchWalls.push_back(grid.items[k]);
+      }
+    }
+    p.touchCount = static_cast<uint32_t>(touchWalls.size()) - p.touchStart;
+  }
 }
 
 // Main process now, handles everything!
@@ -796,14 +886,6 @@ static void Reject_ProcessSectors(Level &level)
     RestorePriority();
     return;
   }
-
-  // Build the per-sector ray endpoint lists once, reused for every pair.
-  std::vector<SectorPoints> sectorPoints(num_secs);
-  for (size_t i = 0; i < num_secs; ++i)
-  {
-    sectorPoints[i] = BuildSectorPoints(sectorLines[i]);
-  }
-
   // Calculate the max sector span across the map to scale ray bounds correctly.
   // This value caps our visibility ray checks on wide open fields without manual configuration.
   double maxSectorSpanSq = 4096.0 * 4096.0;
@@ -820,6 +902,46 @@ static void Reject_ProcessSectors(Level &level)
     }
   }
 
+  // Pick how finely open lines are sampled. The extra rays from the finer split land on
+  // sector pairs that still need rays, scaled by how many open lines each sector has.
+  std::vector<uint64_t> openCount(num_secs, 0);
+  for (size_t i = 0; i < num_secs; ++i)
+  {
+    for (const auto& line : sectorLines[i])
+    {
+      if (!line.solid) openCount[i]++;
+    }
+  }
+
+  uint64_t portalPairs = 0;
+  for (size_t view = 0; view < num_secs; ++view)
+  {
+    if (openCount[view] == 0) continue;
+
+    for (size_t target = 0; target < view; ++target)
+    {
+      if (openCount[target] == 0 || groupOf[view] != groupOf[target]) continue;
+
+      const size_t adjIdx = view * num_secs + target;
+      if ((adjacencyMatrix[adjIdx >> 3] & (1 << (adjIdx & 7))) != 0) continue;
+      if (CheckGapTooWide(sectorBoxes[view], sectorBoxes[target], maxSectorSpanSq)) continue;
+
+      portalPairs += openCount[view] * openCount[target];
+    }
+  }
+
+  // Cutting each open line into 4 parts instead of 2. Changes 1 portal ray per pair of open
+  // lines into 9, so the finer split adds 8 rays for every such pair.
+  const uint64_t extraRays = portalPairs * 8;
+  const int32_t portalSplit = (extraRays <= OPEN_SPLIT_RAY_BUDGET) ? 4 : 2;
+
+  // Build the per-sector ray endpoint lists once, reused for every pair.
+  std::vector<SectorPoints> sectorPoints(num_secs);
+  for (size_t i = 0; i < num_secs; ++i)
+  {
+    sectorPoints[i] = BuildSectorPoints(sectorLines[i], portalSplit);
+  }
+
   // Build the spatial grid as a flat CSR array.
   // Dense maps pack many walls into a few cells, so small cells keep each ray's candidate list short.
   constexpr double CELL_SIZE = 128.0;
@@ -834,6 +956,16 @@ static void Reject_ProcessSectors(Level &level)
   const BlockerGrid grid = BuildBlockerGrid(solidBlockers, mapMinX, mapMinY,
                                             gridCols, gridRows, CELL_SIZE, PADDING);
 
+  // For every ray end point, record which solid walls it lies on. Only the grid cell
+  // holding the point needs searching because walls are registered with padding.
+  std::vector<uint32_t> touchWalls;
+  for (auto& sp : sectorPoints)
+  {
+    RecordTouchingWalls(sp.verts, solidBlockers, grid, touchWalls, mapMinX, mapMinY, gridCols, gridRows, CELL_SIZE);
+    RecordTouchingWalls(sp.firstVerts, solidBlockers, grid, touchWalls, mapMinX, mapMinY, gridCols, gridRows, CELL_SIZE);
+    RecordTouchingWalls(sp.allMids, solidBlockers, grid, touchWalls, mapMinX, mapMinY, gridCols, gridRows, CELL_SIZE);
+  }
+
   // Maps only the sectors that physically possess line geometry.
   // This helps to stop wasting allocation overhead on dead void space control sectors.
   std::vector<size_t> activeSectors;
@@ -846,8 +978,7 @@ static void Reject_ProcessSectors(Level &level)
     }
   }
 
-  // Signed loop counter
-  // OpenMP 2.0 compilers (MSVC) require one.
+  // Signed loop counter: OpenMP 2.0 compilers (MSVC) require one.
   const ptrdiff_t activeCount = static_cast<ptrdiff_t>(activeSectors.size());
 
   // Parallelizes the loop across available CPU cores.
@@ -899,9 +1030,7 @@ static void Reject_ProcessSectors(Level &level)
         // Every ray endpoint lies inside its sector's bbox, so no ray can be shorter
         // than the gap between the boxes. IsRayBlocked rejects anything longer than
         // maxSectorSpanSq anyway, so such a pair is blind without casting a ray.
-        const double gapX = std::max({0.0, boxB.minX - boxA.maxX, boxA.minX - boxB.maxX});
-        const double gapY = std::max({0.0, boxB.minY - boxA.maxY, boxA.minY - boxB.maxY});
-        if ((gapX * gapX) + (gapY * gapY) > maxSectorSpanSq)
+        if (CheckGapTooWide(boxA, boxB, maxSectorSpanSq))
         {
           SetPairBitsAtomic(level, view, target, num_secs);
           continue;
@@ -909,7 +1038,7 @@ static void Reject_ProcessSectors(Level &level)
 
         // Each ray now walks the grid on its own inside IsRayBlocked via DDA steps.
         if (!DoVisibilityTest(sectorPoints[view], sectorPoints[target],
-                              solidBlockers, grid, scratch, maxSectorSpanSq))
+                              solidBlockers, grid, touchWalls, scratch, maxSectorSpanSq))
         {
           SetPairBitsAtomic(level, view, target, num_secs);
         }
