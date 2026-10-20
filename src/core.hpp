@@ -394,6 +394,15 @@ constexpr void UtilFree(T *data)
   free(data);
 }
 
+//
+// Zero init a chunk of memory
+//
+template <typename T, size_t TSize = sizeof(T)>
+constexpr void UtilZero(T *data)
+{
+  memset(data, 0, TSize);
+}
+
 //------------------------------------------------------------------------
 // STRINGS
 //------------------------------------------------------------------------
@@ -408,12 +417,50 @@ inline int32_t StringCaseCmp(const char *s1, const char *s2)
 }
 
 //
-// a case-insensitive compare
+// a case-sensitive compare
 //
-inline int32_t StringCaseCmpMax(const char *s1, const char *s2, size_t len)
+inline int32_t StringCmp(const char *s1, const char *s2)
 {
-  SYS_ASSERT(s1 && s2 && len);
-  return strncasecmp(s1, s2, len);
+  SYS_ASSERT(s1 && s2);
+  return strcmp(s1, s2) == 0;
+}
+
+inline void StringToLower(std::string &str)
+{
+  std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::tolower(c); });
+}
+
+inline void StringToUpper(std::string &str)
+{
+  std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::toupper(c); });
+}
+
+inline char CToUpper(const char c)
+{
+  return (c >= 'a' && c <= 'z') ? (c + 'A' - 'a') : c;
+}
+
+inline void CStringToUpper(char *str)
+{
+  while (*str)
+  {
+    *str = CToUpper(*str);
+    ++str;
+  }
+}
+
+inline char CToLower(const char c)
+{
+  return (c >= 'A' && c <= 'Z') ? (c - 'A' + 'a') : c;
+}
+
+inline void CStringToLower(char *str)
+{
+  while (*str)
+  {
+    *str = CToLower(*str);
+    ++str;
+  }
 }
 
 //------------------------------------------------------------------------
@@ -703,6 +750,59 @@ struct SectorDoom64
   uint16_t flags;     // reverb, damage, water, etc
 };
 
+struct UVertexMinimal
+{
+  double x;
+  double y;
+};
+
+struct UThingMinimal
+{
+  int32_t tid;
+  int32_t type;
+  double x;
+  double y;
+  double height;
+  int32_t angle;
+  int32_t special;
+  int32_t args[5];
+  uint32_t options;
+};
+
+struct ULinedefMinimal
+{
+  int32_t id;
+  size_t v1_id;
+  size_t v2_id;
+  int32_t special;
+  int32_t args[5];
+  int32_t sidefront;
+  int32_t sideback;
+  uint32_t flags;
+  uint32_t spac;
+};
+
+struct USidedefMinimal
+{
+  size_t sector_id;
+  char texturetop[9];
+  char texturemiddle[9];
+  char texturebottom[9];
+  int32_t offsetx;
+  int32_t offsety;
+};
+
+struct USectorMinimal
+{
+  int32_t tag;
+  int32_t heightfloor;
+  int32_t heightceiling;
+  char texturefloor[9];
+  char textureceiling[9];
+  int32_t lightlevel;
+  int32_t special;
+};
+
 //------------------------------------------------------------------------
 // BSP TREE STRUCTURES
 //------------------------------------------------------------------------
@@ -880,6 +980,25 @@ enum LineflagDoom64 : uint32_t
   MLF_DOOM64_MIRROR_VERT = BIT(31),
 };
 
+enum LineflagUniversal : uint32_t
+{
+  ULF_None = 0,
+  ULF_Blocking = BIT(1),
+  ULF_BlockMonsters = BIT(2),
+  ULF_TwoSided = BIT(3),
+  ULF_DontPegTop = BIT(4),
+  ULF_DontPegBottom = BIT(5),
+  ULF_Secret = BIT(6),
+  ULF_BlockSound = BIT(7),
+  ULF_DontDraw = BIT(8),
+  ULF_Mapped = BIT(9),
+
+  ULF_JumpOver = BIT(10),
+  ULF_BlockFloaters = BIT(11),
+  ULF_Translucent = BIT(12),
+  ULF_Transparent = BIT(13),
+};
+
 enum LineSpacHexen
 {
   SPAC_Cross = 0,   // when line is crossed (W1 / WR)
@@ -888,6 +1007,20 @@ enum LineSpacHexen
   SPAC_Impact = 3,  // when bullet/projectile hits line (G1 / GR)
   SPAC_Push = 4,    // when line is bumped (player is stopped)
   SPAC_PCross = 5,  // when projectile crosses the line
+};
+
+
+enum LineSpacUniversal : uint32_t
+{
+  ULS_PlayerCross = BIT(1),
+  ULS_PlayerUse = BIT(2),
+  ULS_MonsterCross = BIT(3),
+  ULS_MonsterUse = BIT(4),
+  ULS_Impact = BIT(5),
+  ULS_PlayerPush = BIT(6),
+  ULS_MonsterPush = BIT(7),
+  ULS_MissileCross = BIT(8),
+  ULS_RepeatSpecial = BIT(9),
 };
 
 enum LineSpecialDoom : int32_t
@@ -1031,6 +1164,31 @@ enum DoomEdNum : int16_t
   Hexen_PolyObj_Spawn = 3001,
   Hexen_PolyObj_SpawnCrush = 3002,
   Hexen_PolyObj_SpawnHurt = 3003, // does any port actually handle this?
+};
+
+enum ThingOptionsUniversal : uint32_t
+{
+  UTF_Skill1 = BIT(1),
+  UTF_Skill2 = BIT(2),
+  UTF_Skill3 = BIT(3),
+  UTF_Skill4 = BIT(4),
+  UTF_Skill5 = BIT(5),
+  UTF_Ambush = BIT(6),
+  UTF_Single = BIT(7),
+  UTF_DM = BIT(8),
+  UTF_Coop = BIT(9),
+
+  UTF_Friend = BIT(10),
+
+  UTF_Dormant = BIT(11),
+  UTF_Class1 = BIT(12),
+  UTF_Class2 = BIT(13),
+  UTF_Class3 = BIT(14),
+
+  UTF_Standing = BIT(15),
+  UTF_StrifeAlly = BIT(16),
+  UTF_Translucent = BIT(17),
+  UTF_Invisible = BIT(18),
 };
 
 //

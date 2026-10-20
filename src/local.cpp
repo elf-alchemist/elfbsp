@@ -47,15 +47,17 @@ Sector *Level::SafeLookupSector(size_t num, size_t num_side) const
   return sectors[num];
 }
 
-Sidedef *Level::SafeLookupSidedef(uint16_t num) const
+Sidedef *Level::SafeLookupSidedef(int32_t num) const
 {
   // silently ignore illegal sidedef numbers
-  if (num >= NO_INDEX_INT16 || num >= sidedefs.size())
+  auto num_as_index = static_cast<size_t>(num);
+
+  if (num < 0 || num >= NO_INDEX_INT16 || num_as_index >= sidedefs.size())
   {
     return nullptr;
   }
 
-  return sidedefs[num];
+  return sidedefs[num_as_index];
 }
 
 /* ----- allocation routines ---------------------------- */

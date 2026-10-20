@@ -73,6 +73,12 @@ set(ZLIB_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(library/zlib-ng EXCLUDE_FROM_ALL)
 
+add_library(scanner STATIC
+  library/scanner/scanner_support.h
+  library/scanner/scanner.h
+  library/scanner/scanner.cpp
+)
+
 add_executable(${PROJECT_NAME}
   src/blockmap.cpp
   src/bsp.cpp
@@ -82,10 +88,14 @@ add_executable(${PROJECT_NAME}
   src/main.cpp
   src/misc.cpp
   src/node.cpp
-  src/parse.cpp
   src/polyobj.cpp
   src/reject.cpp
+  src/udmf.cpp
   src/wad.cpp
+)
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+  library/scanner
 )
 
 string(TOUPPER "${PROJECT_NAME}" PROJECT_TITLE)
@@ -183,6 +193,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
+  scanner
   zlibstatic
 )
 
