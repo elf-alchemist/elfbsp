@@ -861,7 +861,7 @@ static inline void RecordTouchingWalls(std::vector<SightPoint>& list,
 // This is the graph idea from ZokumBSP.
 // Cut point data is skipped for maps where it would need more than this many entries
 // (cut points x sectors), which keeps the memory use bounded on enormous maps.
-static constexpr size_t CUT_POINT_MEMORY_CAP = 8000000;
+static constexpr size_t CUT_POINT_MEMORY_CAP = 512000000; // Increased to 1024 MB from 16 MB as safety limit
 static constexpr uint16_t NO_PIECE = 0xFFFF;
 
 struct CutPoints
