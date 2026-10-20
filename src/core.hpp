@@ -706,6 +706,8 @@ struct MapThingHexen
 // -Elf- Doom64 definitions
 // Some are shared with PSX Doom's and PSX Final Doom's formats
 // but we don't support those
+//
+// ... yet.
 
 struct MapThingDoom64
 {
@@ -717,7 +719,7 @@ struct MapThingDoom64
   uint16_t options; // when appears, deaf, etc..
 } PACKEDATTR;
 
-struct LinedefDoom64
+struct MapLinedefDoom64
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
@@ -728,7 +730,7 @@ struct LinedefDoom64
   uint16_t left;    // left sidedef (only if this line adjoins 2 sectors)
 } PACKEDATTR;
 
-struct SidedefDoom64
+struct MapSidedefDoom64
 {
   int16_t x_offset;   // X offset for texture
   int16_t y_offset;   // Y offset for texture
@@ -738,7 +740,7 @@ struct SidedefDoom64
   uint16_t sector;    // adjacent sector
 } PACKEDATTR;
 
-struct SectorDoom64
+struct MapSectorDoom64
 {
   int16_t floorh;     // floor height
   int16_t ceilh;      // ceiling height
@@ -748,7 +750,7 @@ struct SectorDoom64
   uint16_t special;   // special type
   uint16_t tag;       // tag number
   uint16_t flags;     // reverb, damage, water, etc
-};
+} PACKEDATTR;
 
 struct UVertexMinimal
 {
@@ -889,9 +891,9 @@ static_size(MapThingDoom, 10);
 static_size(MapLinedefHexen, 16);
 static_size(MapThingHexen, 20);
 static_size(MapThingDoom64, 12);
-static_size(LinedefDoom64, 16);
-static_size(SidedefDoom64, 12);
-static_size(SectorDoom64, 24);
+static_size(MapLinedefDoom64, 16);
+static_size(MapSidedefDoom64, 12);
+static_size(MapSectorDoom64, 24);
 static_size(MapBoundBox, 8);
 static_size(MapBlockmapHeader, 8);
 static_size(MapBlockmapHeaderXBM1, 16);
@@ -1008,7 +1010,6 @@ enum LineSpacHexen
   SPAC_Push = 4,    // when line is bumped (player is stopped)
   SPAC_PCross = 5,  // when projectile crosses the line
 };
-
 
 enum LineSpacUniversal : uint32_t
 {

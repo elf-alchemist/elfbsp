@@ -404,7 +404,7 @@ static void GetLinedefs_Hexen(WadIO &io, Level &level)
 
 static void GetSectors_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<SectorDoom64>(level.lump, "SECTORS");
+  auto lump = io.ReadLevelLump<MapSectorDoom64>(level.lump, "SECTORS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -426,7 +426,7 @@ static void GetSectors_Doom64(WadIO &io, Level &level)
 
 static void GetSidedefs_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<SidedefDoom64>(level.lump, "SIDEDEFS");
+  auto lump = io.ReadLevelLump<MapSidedefDoom64>(level.lump, "SIDEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -446,7 +446,7 @@ static void GetSidedefs_Doom64(WadIO &io, Level &level)
 
 static void GetLinedefs_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<LinedefDoom64>(level.lump, "LINEDEFS");
+  auto lump = io.ReadLevelLump<MapLinedefDoom64>(level.lump, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
