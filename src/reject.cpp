@@ -20,6 +20,11 @@
 //  GNU General Public License for more details.
 //
 //------------------------------------------------------------------------------
+#ifdef _WIN32
+  #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+  #endif
+#endif
 
 #include "core.hpp"
 #include "local.hpp"
@@ -271,7 +276,7 @@ struct BlockerGrid
 {
   double originX = 0.0;
   double originY = 0.0;
-  double cellSize = 512.0;
+  double cellSize = 128.0;
   ptrdiff_t cols = 0;
   ptrdiff_t rows = 0;
   std::vector<uint32_t> cellStart; // cols * rows + 1 offsets into 'items'
@@ -859,67 +864,136 @@ static inline void RecordTouchingWalls(std::vector<SightPoint>& list,
 // from one piece to another has to pass through S. So when sector A cannot see S, it cannot see
 // anything on the far side of S either, and those pairs are blind without casting a single ray.
 // This is the graph idea from ZokumBSP.
-// Cut point data is skipped for maps where it would need more than this many entries
-// (cut points x sectors), which keeps the memory use bounded on enormous maps.
-static constexpr size_t CUT_POINT_MEMORY_CAP = 512000000; // Increased to 1024 MB from 16 MB as safety limit
-static constexpr uint16_t NO_PIECE = 0xFFFF;
+//
+// To find which cut points stand between two sectors without trying every cut point, the map is
+// stored as a block and cut point tree. A block is a group of sectors that stay connected even
+// when any single one of them is taken away. Each block hangs off the sector above it, and each
+// sector hangs off its' block. The cut points between two sectors are then exactly the sectors
+// passed on the way between them through the tree. That is usually a short walk, and the memory
+// used only grows with the number of sectors.
+static constexpr uint32_t NO_NODE = 0xFFFFFFFFu;
 
 struct CutPoints
 {
-  std::vector<uint8_t> isCut;                  // 1 when the sector is a cut point
-  std::vector<size_t> list;                    // Every cut point sector
-  std::vector<std::vector<uint16_t>> pieceOf;  // Per cut point: the piece each sector falls in once it is removed
+  std::vector<uint8_t> isCut;   // 1 when the sector is a cut point
+  std::vector<size_t> list;     // Every cut point sector
+  std::vector<uint32_t> parent; // Tree: parent of each node. Nodes below num_secs are sectors, the rest are blocks
+  std::vector<uint32_t> depth;  // Tree: steps from the top of the tree to each node
+  std::vector<uint32_t> compOf; // Which connected part of the map each sector is in
 };
 
-// Find the sectors that split the neighbor graph apart when taken away.
+// Find the sectors that split the neighbor graph apart when taken away,
+// and the tree that tells which of them stand between two sectors.
 static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbors, size_t num_secs)
 {
   CutPoints cuts;
   cuts.isCut.assign(num_secs, 0);
+  cuts.parent.assign(num_secs, NO_NODE);
+  cuts.compOf.assign(num_secs, NO_NODE);
 
-  std::vector<uint16_t> piece;
-  std::vector<uint32_t> queue;
+  std::vector<uint32_t> order(num_secs, 0);     // Order the depth first walk reached each sector in
+  std::vector<uint32_t> lowest(num_secs, 0);    // Earliest reached sector this one can get back to
+  std::vector<uint32_t> nextEdge(num_secs, 0);  // Next neighbour to look at, per sector
+  std::vector<uint32_t> blockCount(num_secs, 0);
+  std::vector<uint32_t> sectorStack;
+  std::vector<uint32_t> callStack; // Use own stack instead of recursion, a corridor of sectors could be very deep
 
+  uint32_t clock = 0;
+  uint32_t parts = 0;
+
+  for (size_t first = 0; first < num_secs; ++first)
+  {
+    if (order[first] != 0) continue;
+
+    order[first] = lowest[first] = ++clock;
+    cuts.compOf[first] = parts;
+    sectorStack.push_back(static_cast<uint32_t>(first));
+    callStack.push_back(static_cast<uint32_t>(first));
+
+    while (!callStack.empty())
+    {
+      const uint32_t v = callStack.back();
+
+      if (static_cast<size_t>(nextEdge[v]) < neighbors[v].size())
+      {
+        const uint32_t w = neighbors[v][nextEdge[v]++];
+
+        if (order[w] == 0)
+        {
+          order[w] = lowest[w] = ++clock;
+          cuts.compOf[w] = parts;
+          sectorStack.push_back(w);
+          callStack.push_back(w);
+        }
+        else
+        {
+          lowest[v] = std::min(lowest[v], order[w]);
+        }
+        continue;
+      }
+
+      // All neighbours of v are done. Send the result to the sector it was reached from.
+      callStack.pop_back();
+      if (callStack.empty()) break;
+
+      const uint32_t above = callStack.back();
+      lowest[above] = std::min(lowest[above], lowest[v]);
+
+      // v cannot get back past 'above', so v and everything stacked after it
+      // form one block, joined to the rest of the map only through 'above'.
+      if (lowest[v] >= order[above])
+      {
+        const uint32_t block = static_cast<uint32_t>(cuts.parent.size());
+        cuts.parent.push_back(above);
+        blockCount[above]++;
+
+        uint32_t u;
+        do
+        {
+          u = sectorStack.back();
+          sectorStack.pop_back();
+          cuts.parent[u] = block;
+          blockCount[u]++;
+        } while (u != v);
+      }
+    }
+
+    sectorStack.clear();
+    ++parts;
+  }
+
+  // A sector that sits in two or more blocks is a cut point.
   for (size_t s = 0; s < num_secs; ++s)
   {
-    if (neighbors[s].size() < 2) continue;
-
-    // Flood out from each neighbour of S without crossing S. Neighbours that end up
-    // in different pieces are only connected to each other through S.
-    piece.assign(num_secs, NO_PIECE);
-    size_t pieces = 0;
-
-    for (uint32_t first : neighbors[s])
+    if (blockCount[s] >= 2)
     {
-      if (piece[first] != NO_PIECE) continue;
-      if (pieces >= static_cast<size_t>(NO_PIECE) - 1) break;
+      cuts.isCut[s] = 1;
+      cuts.list.push_back(s);
+    }
+  }
 
-      piece[first] = static_cast<uint16_t>(pieces);
-      queue.assign(1, first);
-      for (size_t head = 0; head < queue.size(); ++head)
-      {
-        for (uint32_t v : neighbors[queue[head]])
-        {
-          if (v != s && piece[v] == NO_PIECE)
-          {
-            piece[v] = static_cast<uint16_t>(pieces);
-            queue.push_back(v);
-          }
-        }
-      }
-      ++pieces;
+  // How deep each node is, two sectors can be walked up to where their paths meet.
+  const size_t numNodes = cuts.parent.size();
+  cuts.depth.assign(numNodes, NO_NODE);
+
+  std::vector<uint32_t> chain;
+  for (size_t n = 0; n < numNodes; ++n)
+  {
+    if (cuts.depth[n] != NO_NODE) continue;
+
+    chain.clear();
+    uint32_t m = static_cast<uint32_t>(n);
+    while (m != NO_NODE && cuts.depth[m] == NO_NODE)
+    {
+      chain.push_back(m);
+      m = cuts.parent[m];
     }
 
-    if (pieces < 2) continue;
-
-    if ((cuts.list.size() + 1) * num_secs > CUT_POINT_MEMORY_CAP)
+    uint32_t d = (m == NO_NODE) ? 0 : cuts.depth[m] + 1;
+    for (size_t i = chain.size(); i-- > 0;)
     {
-      return CutPoints(); // Too big. Fall back to testing every pair.
+      cuts.depth[chain[i]] = d++;
     }
-
-    cuts.isCut[s] = 1;
-    cuts.list.push_back(s);
-    cuts.pieceOf.push_back(piece);
   }
 
   return cuts;
@@ -1063,12 +1137,14 @@ static void Reject_ProcessSectors(Level &level)
 
     const Sector* sRight = line->right ? line->right->sector : nullptr;
     const Sector* sLeft  = line->left  ? line->left->sector  : nullptr;
+
     const bool isSolid   = !sRight || !sLeft;
 
     // The flag is only used to prune rays that are always blocked.
     // Require length > 1 so a degenerate line never gets pruned.
     const double ldx = seg.x2 - seg.x1;
     const double ldy = seg.y2 - seg.y1;
+
     seg.solid = isSolid && (ldx * ldx + ldy * ldy) > 1.0;
 
     if (isSolid)
@@ -1222,31 +1298,42 @@ static void Reject_ProcessSectors(Level &level)
 
   // Find the cut points, and line up the pairs that involve one (FindCutPoints).
   CutPoints cuts;
-  //if (USE_CUT_POINT_PRUNING) // Before and after benchmark testing
-  //{
-    cuts = FindCutPoints(neighbors, num_secs);
-  //}
+  cuts = FindCutPoints(neighbors, num_secs);
+
   const bool prune = !cuts.list.empty();
 
   std::vector<std::vector<std::pair<uint32_t, uint32_t>>> cutLevels;
-  std::vector<uint8_t> blindSnap; // Copy of the matrix as it stood after the last finished level
+
+  // Copy of the matrix as it stood after the last finished level
+  std::vector<uint8_t> blindSnap;
+
   if (prune)
   {
     cutLevels = BuildCutLevels(cuts, neighbors, num_secs, activeSectors);
+
     blindSnap.resize(level.reject_size);
     memcpy(blindSnap.data(), level.reject_matrix, level.reject_size);
   }
 
   // Is this pair blind because a cut point stands between the two sectors
   // and one of them cannot see that cut point?
+  // Also, walk up the tree from both sectors until the two paths meet. Every sector passed
+  // on the way is a cut point standing between them, other than themselves.
   auto inferredBlind = [&](size_t a, size_t b) -> bool
   {
-    for (size_t k = 0; k < cuts.list.size(); ++k)
-    {
-      const std::vector<uint16_t>& pieceOf = cuts.pieceOf[k];
-      if (pieceOf[a] == NO_PIECE || pieceOf[b] == NO_PIECE || pieceOf[a] == pieceOf[b]) continue;
+    if (cuts.compOf[a] != cuts.compOf[b]) return false;
 
-      const size_t cut = cuts.list[k];
+    uint32_t x = static_cast<uint32_t>(a);
+    uint32_t y = static_cast<uint32_t>(b);
+
+    while (x != y)
+    {
+      uint32_t& mover = (cuts.depth[x] >= cuts.depth[y]) ? x : y;
+      mover = cuts.parent[mover];
+
+      const size_t cut = mover;
+      if (cut >= num_secs || cut == a || cut == b) continue; // One of the two sectors
+
       const size_t p1 = a * num_secs + cut;
       const size_t p2 = b * num_secs + cut;
       if (((blindSnap[p1 >> 3] >> (p1 & 7)) & 1) || ((blindSnap[p2 >> 3] >> (p2 & 7)) & 1))
