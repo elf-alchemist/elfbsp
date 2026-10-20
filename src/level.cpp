@@ -167,9 +167,9 @@ static void GetVertices_Integral(WadIO &io, Level &level)
 
   for (auto &raw : lump)
   {
-    Vertex *vert = level.NewVertex();
-    vert->x = ShortToFloat(GetLittleEndian(raw.x));
-    vert->y = ShortToFloat(GetLittleEndian(raw.y));
+    auto v = level.NewVertex();
+    v->x = ShortToFloat(GetLittleEndian(raw.x));
+    v->y = ShortToFloat(GetLittleEndian(raw.y));
   }
 
   level.num_old_vert = level.vertices.size();
@@ -186,10 +186,10 @@ static void GetVertices_Fractional(WadIO &io, Level &level)
 
   for (auto &raw : lump)
   {
-    Vertex *vert = level.NewVertex();
+    auto v = level.NewVertex();
 
-    vert->x = static_cast<double>(GetLittleEndian(raw.x) / FRACFACTOR);
-    vert->y = static_cast<double>(GetLittleEndian(raw.y) / FRACFACTOR);
+    v->x = static_cast<double>(GetLittleEndian(raw.x) / FRACFACTOR);
+    v->y = static_cast<double>(GetLittleEndian(raw.y) / FRACFACTOR);
   }
 
   level.num_old_vert = level.vertices.size();
@@ -206,8 +206,8 @@ static void GetSectors_Doom(WadIO &io, Level &level)
 
   for (auto &_ : lump)
   {
-    Sector *sector = level.NewSector();
-    sector->effects = FX_Sector_None;
+    auto s = level.NewSector();
+    s->effects = FX_Sector_None;
   }
 }
 
@@ -222,11 +222,11 @@ static void GetThings_Doom(WadIO &io, Level &level)
 
   for (auto &raw : lump)
   {
-    Mobj *thing = level.NewThing();
+    auto t = level.NewThing();
 
-    thing->x = GetLittleEndian(raw.x);
-    thing->y = GetLittleEndian(raw.y);
-    thing->type = static_cast<DoomEdNum>(GetLittleEndian(raw.type));
+    t->x = GetLittleEndian(raw.x);
+    t->y = GetLittleEndian(raw.y);
+    t->type = static_cast<DoomEdNum>(GetLittleEndian(raw.type));
   }
 }
 
@@ -241,18 +241,18 @@ static void GetSidedefs_Doom(WadIO &io, Level &level)
 
   for (auto &raw : lump)
   {
-    Sidedef *side = level.NewSidedef();
+    auto s = level.NewSidedef();
 
-    side->offset_x = GetLittleEndian(raw.x_offset);
-    side->offset_y = GetLittleEndian(raw.y_offset);
-    side->sector = level.SafeLookupSector(GetLittleEndian(raw.sector), side->index);
+    s->offset_x = GetLittleEndian(raw.x_offset);
+    s->offset_y = GetLittleEndian(raw.y_offset);
+    s->sector = level.SafeLookupSector(GetLittleEndian(raw.sector), s->index);
 
-    memcpy(side->tex_upper, raw.upper_tex, 8);
-    memcpy(side->tex_lower, raw.lower_tex, 8);
-    memcpy(side->tex_middle, raw.mid_tex, 8);
-    CStringToUpper(side->tex_upper);
-    CStringToUpper(side->tex_lower);
-    CStringToUpper(side->tex_middle);
+    memcpy(s->tex_upper, raw.upper_tex, 8);
+    memcpy(s->tex_lower, raw.lower_tex, 8);
+    memcpy(s->tex_middle, raw.mid_tex, 8);
+    CStringToUpper(s->tex_upper);
+    CStringToUpper(s->tex_lower);
+    CStringToUpper(s->tex_middle);
   }
 }
 
@@ -267,69 +267,69 @@ static void GetLinedefs_Doom(WadIO &io, Level &level)
 
   for (auto &raw : lump)
   {
-    Linedef *line = level.NewLinedef();
+    auto l = level.NewLinedef();
 
-    line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), line->index);
-    line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), line->index);
-    line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
-    line->special = GetLittleEndian(raw.special);
-    line->id = GetLittleEndian(raw.tag);
+    l->start = level.SafeLookupVertex(GetLittleEndian(raw.start), l->index);
+    l->end = level.SafeLookupVertex(GetLittleEndian(raw.end), l->index);
+    l->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
+    l->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
+    l->special = GetLittleEndian(raw.special);
+    l->id = GetLittleEndian(raw.tag);
 
-    line->start->is_used = true;
-    line->end->is_used = true;
+    l->start->is_used = true;
+    l->end->is_used = true;
 
     if (HAS_BIT(GetLittleEndian(raw.flags), MLF_TWOSIDED))
     {
-      line->effects |= FX_TwoSided;
+      l->effects |= FX_TwoSided;
     }
 
-    ValidateLinedef(level, line);
+    ValidateLinedef(level, l);
 
     if (!config.effects) continue;
 
     // Line tags ( 900 <= x <=999 ) are considered "precious" and will, therefore, have a much higher seg split cost
-    switch (line->id)
+    switch (l->id)
     {
     case 900 ... 996:
-      line->effects |= FX_DoNotSplitSeg;
+      l->effects |= FX_DoNotSplitSeg;
       break;
     case Tag_NoReject:
-      line->effects |= FX_NoReject | FX_DoNotSplitSeg;
+      l->effects |= FX_NoReject | FX_DoNotSplitSeg;
       break;
     case Tag_DoNotRender:
-      line->effects |= FX_DoNotRenderFront | FX_DoNotRenderBack | FX_DoNotSplitSeg;
+      l->effects |= FX_DoNotRenderFront | FX_DoNotRenderBack | FX_DoNotSplitSeg;
       break;
     case Tag_NoBlockmap:
-      line->effects |= FX_NoBlockmap | FX_DoNotSplitSeg;
+      l->effects |= FX_NoBlockmap | FX_DoNotSplitSeg;
       break;
     }
 
-    switch (line->special)
+    switch (l->special)
     {
     case Special_RotateRelativeDegrees:
-      line->angle = FX_RotateRelativeDegrees;
+      l->angle = FX_RotateRelativeDegrees;
       break;
     case Special_RotateAbsoluteDegrees:
-      line->angle = FX_RotateAbsoluteDegrees;
+      l->angle = FX_RotateAbsoluteDegrees;
       break;
     case Special_RotateRelativeBAM:
-      line->angle = FX_RotateRelativeBAM;
+      l->angle = FX_RotateRelativeBAM;
       break;
     case Special_RotateAbsoluteBAM:
-      line->angle = FX_RotateAbsoluteBAM;
+      l->angle = FX_RotateAbsoluteBAM;
       break;
     case Special_DoNotRenderSegmentBack:
-      line->effects |= FX_DoNotRenderBack;
+      l->effects |= FX_DoNotRenderBack;
       break;
     case Special_DoNotRenderSegmentFront:
-      line->effects |= FX_DoNotRenderFront;
+      l->effects |= FX_DoNotRenderFront;
       break;
     case Special_DoNotRenderSegmentBoth:
-      line->effects |= FX_DoNotRenderFront | FX_DoNotRenderBack;
+      l->effects |= FX_DoNotRenderFront | FX_DoNotRenderBack;
       break;
     case Special_DoNotSplitSeg:
-      line->effects |= FX_DoNotSplitSeg;
+      l->effects |= FX_DoNotSplitSeg;
       break;
     default:
       break;
@@ -348,11 +348,11 @@ static void GetThings_Hexen(WadIO &io, Level &level)
 
   for (auto &raw : lump)
   {
-    Mobj *thing = level.NewThing();
+    auto t = level.NewThing();
 
-    thing->x = GetLittleEndian(raw.x);
-    thing->y = GetLittleEndian(raw.y);
-    thing->type = static_cast<DoomEdNum>(GetLittleEndian(raw.type));
+    t->x = GetLittleEndian(raw.x);
+    t->y = GetLittleEndian(raw.y);
+    t->type = static_cast<DoomEdNum>(GetLittleEndian(raw.type));
   }
 }
 
@@ -367,34 +367,34 @@ static void GetLinedefs_Hexen(WadIO &io, Level &level)
 
   for (auto &raw : lump)
   {
-    Linedef *line = level.NewLinedef();
+    auto l = level.NewLinedef();
 
-    line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), line->index);
-    line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), line->index);
-    line->special = raw.special;
-    line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
+    l->start = level.SafeLookupVertex(GetLittleEndian(raw.start), l->index);
+    l->end = level.SafeLookupVertex(GetLittleEndian(raw.end), l->index);
+    l->special = raw.special;
+    l->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
+    l->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
 
-    line->start->is_used = true;
-    line->end->is_used = true;
+    l->start->is_used = true;
+    l->end->is_used = true;
 
     if (HAS_BIT(GetLittleEndian(raw.flags), MLF_HEXEN_TWOSIDED))
     {
-      line->effects |= FX_TwoSided;
+      l->effects |= FX_TwoSided;
     }
 
-    ValidateLinedef(level, line);
+    ValidateLinedef(level, l);
 
     if (!config.effects) continue;
 
-    switch (line->special)
+    switch (l->special)
     {
     case BSP_SpecialEffects:
-      if (raw.args[0]) line->effects |= FX_NoBlockmap;
-      if (raw.args[1]) line->effects |= FX_DoNotSplitSeg;
-      if (raw.args[2]) line->effects |= FX_DoNotRenderBack;
-      if (raw.args[3]) line->effects |= FX_DoNotRenderFront;
-      if (raw.args[4]) line->effects |= FX_NoReject;
+      if (raw.args[0]) l->effects |= FX_NoBlockmap;
+      if (raw.args[1]) l->effects |= FX_DoNotSplitSeg;
+      if (raw.args[2]) l->effects |= FX_DoNotRenderBack;
+      if (raw.args[3]) l->effects |= FX_DoNotRenderFront;
+      if (raw.args[4]) l->effects |= FX_NoReject;
       break;
     default:
       break;
@@ -413,13 +413,13 @@ static void GetSectors_Doom64(WadIO &io, Level &level)
 
   for (auto &raw : lump)
   {
-    Sector *sector = level.NewSector();
+    auto s = level.NewSector();
 
     if (!config.effects) continue;
 
     if (GetLittleEndian(raw.special) == SS_Doom64_NoReject)
     {
-      sector->effects = FX_Sector_NoReject;
+      s->effects = FX_Sector_NoReject;
     }
   }
 }
@@ -435,12 +435,12 @@ static void GetSidedefs_Doom64(WadIO &io, Level &level)
 
   for (auto &raw : lump)
   {
-    Sidedef *side = level.NewSidedef();
+    auto s = level.NewSidedef();
 
-    side->offset_x = GetLittleEndian(raw.x_offset);
-    side->offset_y = GetLittleEndian(raw.y_offset);
+    s->offset_x = GetLittleEndian(raw.x_offset);
+    s->offset_y = GetLittleEndian(raw.y_offset);
     // We don't care about texture indexes here
-    side->sector = level.SafeLookupSector(GetLittleEndian(raw.sector), side->index);
+    s->sector = level.SafeLookupSector(GetLittleEndian(raw.sector), s->index);
   }
 }
 
@@ -455,36 +455,36 @@ static void GetLinedefs_Doom64(WadIO &io, Level &level)
 
   for (auto &raw : lump)
   {
-    Linedef *line = level.NewLinedef();
+    auto l = level.NewLinedef();
 
-    line->start = level.SafeLookupVertex(GetLittleEndian(raw.start), line->index);
-    line->end = level.SafeLookupVertex(GetLittleEndian(raw.end), line->index);
-    line->special = GetLittleEndian(raw.special);
-    line->id = GetLittleEndian(raw.tag);
-    line->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
-    line->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
+    l->start = level.SafeLookupVertex(GetLittleEndian(raw.start), l->index);
+    l->end = level.SafeLookupVertex(GetLittleEndian(raw.end), l->index);
+    l->special = GetLittleEndian(raw.special);
+    l->id = GetLittleEndian(raw.tag);
+    l->right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
+    l->left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
 
-    line->start->is_used = true;
-    line->end->is_used = true;
+    l->start->is_used = true;
+    l->end->is_used = true;
 
     auto flags = GetLittleEndian(raw.flags);
 
     if (HAS_BIT(flags, MLF_DOOM64_TWOSIDED))
     {
-      line->effects |= FX_TwoSided;
+      l->effects |= FX_TwoSided;
     }
 
-    ValidateLinedef(level, line);
+    ValidateLinedef(level, l);
 
     if (!config.effects) continue;
 
     if (HAS_BIT(flags, MLF_DOOM64_NO_BLOCKMAP))
     {
-      line->effects |= FX_NoBlockmap;
+      l->effects |= FX_NoBlockmap;
     }
     if (HAS_ALL(flags, MLF_DOOM64_AUTOMAP_SHOW | MLF_DOOM64_AUTOMAP_HIDE))
     {
-      line->effects |= FX_NoBlockmap;
+      l->effects |= FX_NoBlockmap;
     }
   }
 }
@@ -500,15 +500,15 @@ static void GetThings_Doom64(WadIO &io, Level &level)
 
   for (auto &raw : lump)
   {
-    Mobj *thing = level.NewThing();
+    auto t = level.NewThing();
 
-    thing->x = GetLittleEndian(raw.x);
-    thing->y = GetLittleEndian(raw.y);
-    thing->type = static_cast<DoomEdNum>(GetLittleEndian(raw.type));
+    t->x = GetLittleEndian(raw.x);
+    t->y = GetLittleEndian(raw.y);
+    t->type = static_cast<DoomEdNum>(GetLittleEndian(raw.type));
   }
 }
 
-void GetVertices_UDMF(Level &level)
+static void GetVertices_UDMF(Level &level)
 {
   level.num_old_vert = level.udmf_vertex.size();
   level.vertices.reserve(level.num_old_vert);
@@ -526,7 +526,7 @@ void GetVertices_UDMF(Level &level)
   }
 }
 
-void GetSectors_UDMF(Level &level)
+static void GetSectors_UDMF(Level &level)
 {
   level.sectors.reserve(level.udmf_sector.size());
 
@@ -542,7 +542,7 @@ void GetSectors_UDMF(Level &level)
   }
 }
 
-void GetSidedefs_UDMF(Level &level)
+static void GetSidedefs_UDMF(Level &level)
 {
   level.sidedefs.reserve(level.udmf_sidedef.size());
 
@@ -553,23 +553,23 @@ void GetSidedefs_UDMF(Level &level)
 
   for (auto &u_sidedef : level.udmf_sidedef)
   {
-    auto side = level.NewSidedef();
+    auto s = level.NewSidedef();
 
-    side->offset_x = u_sidedef.offsetx;
-    side->offset_y = u_sidedef.offsety;
-    memcpy(side->tex_upper, u_sidedef.texturetop, 8);
-    memcpy(side->tex_lower, u_sidedef.texturebottom, 8);
-    memcpy(side->tex_middle, u_sidedef.texturemiddle, 8);
-    side->sector = level.SafeLookupSector(u_sidedef.sector_id, side->index);
+    s->offset_x = u_sidedef.offsetx;
+    s->offset_y = u_sidedef.offsety;
+    memcpy(s->tex_upper, u_sidedef.texturetop, 8);
+    memcpy(s->tex_lower, u_sidedef.texturebottom, 8);
+    memcpy(s->tex_middle, u_sidedef.texturemiddle, 8);
+    s->sector = level.SafeLookupSector(u_sidedef.sector_id, s->index);
 
-    CStringToUpper(side->tex_upper);
-    CStringToUpper(side->tex_lower);
-    CStringToUpper(side->tex_middle);
+    CStringToUpper(s->tex_upper);
+    CStringToUpper(s->tex_lower);
+    CStringToUpper(s->tex_middle);
   }
 }
 
 
-void GetLinedefs_UDMF(Level &level)
+static void GetLinedefs_UDMF(Level &level)
 {
   level.linedefs.reserve(level.udmf_linedef.size());
 
@@ -600,7 +600,7 @@ void GetLinedefs_UDMF(Level &level)
   }
 }
 
-void GetThings_UDMF(Level &level)
+static void GetThings_UDMF(Level &level)
 {
   level.things.reserve(level.udmf_thing.size());
 
