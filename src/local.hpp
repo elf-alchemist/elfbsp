@@ -490,7 +490,7 @@ Quadtree *TreeFromSegList(Segment *list);
 // and '*N' is the new node (and '*S' is set to nullptr).  Normally
 // returns BUILD_OK.
 
-void BuildNodes(Level &level, Segment *seg_list, int depth, MapBoundBox *bounds, Node **N, Subsector **S, double split_cost,
+void BuildNodes(Level &level, Segment *seg_list, int depth, MapBoundBox &bounds, Node **N, Subsector **S, double split_cost,
                 bool fast, bool analysis);
 
 // compute the height of the bsp tree, starting at 'node'.

@@ -929,7 +929,7 @@ BuildResult BuildLevel(WadIO &io, Level &level, std::string_view filename)
     Segment *seg_list = CreateSegs(level);
     // recursive function T-T
     auto mark = Benchmarker("BuildNodes");
-    BuildNodes(level, seg_list, 0, &dummy, &level.root_node, &level.root_sub, config.split_cost, config.fast, false);
+    BuildNodes(level, seg_list, 0, dummy, &level.root_node, &level.root_sub, config.split_cost, config.fast, false);
   }
 
   if (config.verbose)

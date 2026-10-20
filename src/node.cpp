@@ -889,20 +889,20 @@ void SeparateSegs(Level &level, Quadtree *tree, Segment *part, Segment **left_li
 }
 
 // compute the boundary of the list of segs
-void FindLimits2(Segment *list, MapBoundBox *bbox)
+static void FindSegListLimits(Segment *list, MapBoundBox &bbox)
 {
   // empty list?
   if (list == nullptr)
   {
-    bbox->minx = 0;
-    bbox->miny = 0;
-    bbox->maxx = 4;
-    bbox->maxy = 4;
+    bbox.minx = 0;
+    bbox.miny = 0;
+    bbox.maxx = 4;
+    bbox.maxy = 4;
     return;
   }
 
-  bbox->minx = bbox->miny = SHRT_MAX;
-  bbox->maxx = bbox->maxy = SHRT_MIN;
+  bbox.minx = bbox.miny = Limits<int16_t>::max();
+  bbox.maxx = bbox.maxy = Limits<int16_t>::min();
 
   for (; list != nullptr; list = list->next)
   {
@@ -916,10 +916,10 @@ void FindLimits2(Segment *list, MapBoundBox *bbox)
     auto hx = FloatToShort(ceil(std::max(x1, x2) + 0.2));
     auto hy = FloatToShort(ceil(std::max(y1, y2) + 0.2));
 
-    if (lx < bbox->minx) bbox->minx = lx;
-    if (ly < bbox->miny) bbox->miny = ly;
-    if (hx > bbox->maxx) bbox->maxx = hx;
-    if (hy > bbox->maxy) bbox->maxy = hy;
+    if (lx < bbox.minx) bbox.minx = lx;
+    if (ly < bbox.miny) bbox.miny = ly;
+    if (hx > bbox.maxx) bbox.maxx = hx;
+    if (hy > bbox.maxy) bbox.maxy = hy;
   }
 }
 
@@ -1351,9 +1351,9 @@ Segment *CreateSegs(Level &level)
   return list;
 }
 
-Quadtree *TreeFromSegList(Segment *list, const MapBoundBox *bounds)
+Quadtree *TreeFromSegList(Segment *list, const MapBoundBox &bounds)
 {
-  Quadtree *tree = new Quadtree(bounds->minx, bounds->miny, bounds->maxx, bounds->maxy);
+  Quadtree *tree = new Quadtree(bounds.minx, bounds.miny, bounds.maxx, bounds.maxy);
   AddList(tree, list);
   return tree;
 }
@@ -1595,7 +1595,7 @@ Subsector *CreateSubsec(Level &level, Quadtree *tree)
   return sub;
 }
 
-void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox *bounds, Node **N, Subsector **S, double split_cost,
+void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Node **N, Subsector **S, double split_cost,
                 bool fast, bool analysis)
 {
   *N = nullptr;
@@ -1612,7 +1612,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox *bounds, Nod
   }
 
   // determine bounds of segs
-  FindLimits2(list, bounds);
+  FindSegListLimits(list, bounds);
 
   Quadtree *tree = TreeFromSegList(list, bounds);
 
@@ -1675,7 +1675,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox *bounds, Nod
   }
 
   // recursively build the left side
-  BuildNodes(level, lefts, depth + 1, &node->l.bounds, &node->l.node, &node->l.subsec, split_cost, fast, analysis);
+  BuildNodes(level, lefts, depth + 1, node->l.bounds, &node->l.node, &node->l.subsec, split_cost, fast, analysis);
 
   if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {
@@ -1683,7 +1683,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox *bounds, Nod
   }
 
   // recursively build the right side
-  BuildNodes(level, rights, depth + 1, &node->r.bounds, &node->r.node, &node->r.subsec, split_cost, fast, analysis);
+  BuildNodes(level, rights, depth + 1, node->r.bounds, &node->r.node, &node->r.subsec, split_cost, fast, analysis);
 
   if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {

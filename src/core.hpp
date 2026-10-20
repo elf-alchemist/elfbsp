@@ -39,6 +39,7 @@
 
 #include <bit>
 #include <chrono>
+#include <limits>
 
 #include "zlib-ng.h"
 
@@ -180,6 +181,8 @@ constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
 constexpr size_t WAD_LUMP_NAME = 8;
 
 constexpr size_t MSG_BUFFER_LENGTH = 1024;
+
+constexpr size_t OFF_BY_ONE = 1;
 
 // bitflags
 constexpr uint32_t BIT(const uint32_t x)
@@ -843,17 +846,22 @@ enum class BlockmapFormat : uint8_t
 // * Nodes and subsectors share the same index slot, distinguished only by the high bit
 // * No known additional limits exist for segments
 //
+// * These entries need OFF_BY_ONE, since std::vector's size() method is 1 indexed;
+//
 
-constexpr size_t LIMIT_VERT = UINT16_MAX;
-constexpr size_t LIMIT_LINE = UINT16_MAX - 1;
-constexpr size_t LIMIT_SIDE = UINT16_MAX - 1;
-constexpr size_t LIMIT_SECTOR = UINT16_MAX;
+template <typename T>
+using Limits = std::numeric_limits<T>;
 
-constexpr size_t LIMIT_NODE = INT16_MAX;
-constexpr size_t LIMIT_SUBSEC = INT16_MAX;
-constexpr size_t LIMIT_SEG = UINT16_MAX;
+constexpr size_t LIMIT_VERT = Limits<uint16_t>::max() + OFF_BY_ONE;
+constexpr size_t LIMIT_LINE = Limits<uint16_t>::max();
+constexpr size_t LIMIT_SIDE = Limits<uint16_t>::max();
+constexpr size_t LIMIT_SECTOR = Limits<uint16_t>::max() + OFF_BY_ONE;
 
-constexpr size_t LIMIT_BMAP_INDEX = UINT16_MAX;
+constexpr size_t LIMIT_NODE = Limits<int16_t>::max() + OFF_BY_ONE;
+constexpr size_t LIMIT_SUBSEC = Limits<int16_t>::max() + OFF_BY_ONE;
+constexpr size_t LIMIT_SEG = Limits<uint16_t>::max() + OFF_BY_ONE;
+
+constexpr size_t LIMIT_BMAP_INDEX = Limits<uint16_t>::max() + OFF_BY_ONE;
 
 //
 // Vanilla blockmap
