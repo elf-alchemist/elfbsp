@@ -197,10 +197,21 @@ static void SortUnique(std::vector<SightPoint>& v)
   }), v.end());
 }
 
-// Current Default Budget is 50,000,000, which seems to be a good balance between adding accuracy for
+// Number of parts each open line is cut into. A split of N gives N - 1 points per open line,
+// so a pair of open lines gets (N - 1) * (N - 1) portal rays.
+static constexpr int32_t SPLIT_SMALL_MAP = 18; // Maps within the ray budget
+static constexpr int32_t SPLIT_LARGE_MAP = 4;  // Maps over the ray budget
+
+// Yardstick for the budget check. The extra portal rays per pair of open lines when going
+// from a split of 2 to a split of 4.
+// It is not the real extra cost of SPLIT_SMALL_MAP, it only decides the budget line,
+// so always check which maps pass before changing it.
+static constexpr uint64_t BUDGET_RAYS_PER_PAIR = 8;
+
+// Default Budget is 50,000,000, which seems to be a good balance between adding accuracy for
 // small-medium, dense maps without wasting CPU time on large, open maps that don't benefit anyway.
 // The result is even better accuracy for small to medium sized maps since the longer compile can be absorbed by optimizations.
-// Large, open maps also gain accuracy but avoid the increased performance loss by unnecessary cuts.
+// Large, open maps also gain accuracy but avoid the increased compile time by unnecessary cuts.
 static constexpr uint64_t OPEN_SPLIT_RAY_BUDGET = 50000000;
 
 // This extracts and groups unique locations (corners, open door frames, etc.) exactly once.
@@ -242,7 +253,7 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines, in
   SortUnique(pts.allMids);
 
   // The ray loops only ask whether any ray is clear, so the order of the points never
-  // changes the result. Ordering them by angle around the sector's center puts neighbouring
+  // changes the result. Ordering them by angle around the sector's center puts neighboring
   // rays in similar directions, so the same wall usually stops several rays in a row.
   if (!pts.verts.empty())
   {
@@ -276,7 +287,7 @@ struct BlockerGrid
 {
   double originX = 0.0;
   double originY = 0.0;
-  double cellSize = 128.0;
+  double cellSize = 128.0; // BuildBlockerGrid overwrites with CELL_SIZE, safe default for an unset grid.
   ptrdiff_t cols = 0;
   ptrdiff_t rows = 0;
   std::vector<uint32_t> cellStart; // cols * rows + 1 offsets into 'items'
@@ -304,7 +315,7 @@ struct RayWalkSpace
   {
   }
 
-  // Start a new ray. Return to compare against 'seen'
+  // Start a new ray and return its stamp, to compare against ‘seen’.
   uint32_t Next()
   {
     if (++stamp == 0) // Wrapped around? Clear and restart.
@@ -423,6 +434,13 @@ static inline bool IsPointOnSegment(double ax, double ay, double bx, double by, 
   return std::abs((bx - ax) * (cy - ay) - (by - ay) * (cx - ax)) < DIST_EPSILON;
 }
 
+// How far from a line a point has to be before it counts as clearly on one side of it.
+static constexpr double SIDE_MARGIN = 1e-3;
+
+// The shadow shortcut uses twice that margin, so rounding can never make it accept a ray
+// that TrueSegmentsIntersect would not call blocked. Keep it derived from SIDE_MARGIN.
+static constexpr double SHADOW_MARGIN = SIDE_MARGIN * 2.0;
+
 // 2D intersection check between two line segments.
 inline bool TrueSegmentsIntersect(const SightSegment& s1, const SightSegment& s2)
 {
@@ -431,15 +449,14 @@ inline bool TrueSegmentsIntersect(const SightSegment& s1, const SightSegment& s2
   double d3 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x1, s2.y1);
   double d4 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x2, s2.y2);
 
-  if (((d1 > 1e-3 && d2 < -1e-3) || (d1 < -1e-3 && d2 > 1e-3)) &&
-      ((d3 > 1e-3 && d4 < -1e-3) || (d3 < -1e-3 && d4 > 1e-3)))
+  if (((d1 > SIDE_MARGIN && d2 < -SIDE_MARGIN) || (d1 < -SIDE_MARGIN && d2 > SIDE_MARGIN)) &&
+      ((d3 > SIDE_MARGIN && d4 < -SIDE_MARGIN) || (d3 < -SIDE_MARGIN && d4 > SIDE_MARGIN)))
   {
     return true;
   }
 
-  // Each below can only succeed when its' cross product, which is
-  // exactly d1 to d4 again, is smaller than DIST_EPSILON.
-  // If none of them are, all four calls will fail and can be skipped.
+  // Each check below can only succeed when its cross product, which is just d1 to d4 again,
+  // is smaller than DIST_EPSILON. If none of them are, all four calls would fail, so skip them.
   const bool s1Outside = (std::abs(d1) >= DIST_EPSILON) && (std::abs(d2) >= DIST_EPSILON);
   const bool s2Outside = (std::abs(d3) >= DIST_EPSILON) && (std::abs(d4) >= DIST_EPSILON);
 
@@ -554,7 +571,7 @@ static bool IsRayBlocked(const SightSegment& ray,
   }
 
   // Walk exactly this many steps. Counting steps will stop even if
-  // rounding picks a neighbouring cell at a corner.
+  // rounding picks a neighboring cell at a corner.
   ptrdiff_t remaining = std::abs(endCx - cx) + std::abs(endCy - cy);
   const uint32_t stamp = scratch.Next();
 
@@ -580,7 +597,7 @@ static bool IsRayBlocked(const SightSegment& ray,
     // Reached the end cell and nothing blocked the ray.
     if (remaining-- == 0) break;
 
-    // Step into the neighbouring cell whose border the ray reaches first.
+    // Step into the neighboring cell whose border the ray reaches first.
     // Once a row or column matches the end cell, only the other axis can move.
     bool stepInX;
     if (cx == endCx)      stepInX = false;
@@ -609,7 +626,7 @@ static inline int32_t BoxSideOfWall(const SightSegment& w, const SectorBBox& box
 {
   // Twice the margin TrueSegmentsIntersect uses, so rounding can never make this shortcut
   // accept a ray that the original test would not call blocked.
-  constexpr double MARGIN = 2e-3;
+  constexpr double MARGIN = SHADOW_MARGIN;
 
   const double s0 = SegmentSide(w.x1, w.y1, w.x2, w.y2, box.minX, box.minY);
   const double s1 = SegmentSide(w.x1, w.y1, w.x2, w.y2, box.maxX, box.minY);
@@ -630,8 +647,9 @@ static inline int32_t BoxSideOfWall(const SightSegment& w, const SectorBBox& box
 }
 
 // Does this one solid wall stop every ray from the point (px,py) to anywhere inside the box?
-// Because the math shifts in a straight, predictable line, the absolute lowest values across
-// the entire bounding box will always be found exactly at its four corners.
+// The side-of-ray test changes in a straight line across the box, so its smallest value is
+// always at one of the four corners. A wall that crosses the rays to all four corners
+// therefore crosses the rays to every point inside the box.
 // If the wall properly crosses the rays to all four corners, it crosses the rays to every point inside the box.
 // 'boxSide' is BoxSideOfWall, passed in because it does not depend on the start point.
 static inline bool WallShadowsBox(const SightSegment& w, int32_t boxSide, double px, double py, const SectorBBox& box)
@@ -696,10 +714,9 @@ static bool DoVisibilityTest(const SectorPoints& A,
   // Every point of B lies inside its sector's bounding box. When the wall that blocked the
   // most recent ray also blocks every ray from a start point to that whole box, none of the
   // rays from that start point can be clear, so they are skipped. A blocked ray never changes
-  // the result, so this saves time. Neighbouring start points are in similar directions,
+  // the result, so this saves time. Neighboring start points are in similar directions,
   // so the same wall usually shadows several of them in a row.
-  uint32_t shadowWall = std::numeric_limits<uint32_t>::max();
-
+  uint32_t shadowWall = NO_INDEX_INT32;
   int32_t shadowSide = 0;
 
   auto shadowed = [&](const SightPoint& from) -> bool
@@ -868,11 +885,9 @@ static inline void RecordTouchingWalls(std::vector<SightPoint>& list,
 // To find which cut points stand between two sectors without trying every cut point, the map is
 // stored as a block and cut point tree. A block is a group of sectors that stay connected even
 // when any single one of them is taken away. Each block hangs off the sector above it, and each
-// sector hangs off its' block. The cut points between two sectors are then exactly the sectors
+// sector hangs off its block. The cut points between two sectors are then exactly the sectors
 // passed on the way between them through the tree. That is usually a short walk, and the memory
 // used only grows with the number of sectors.
-static constexpr uint32_t NO_NODE = 0xFFFFFFFFu;
-
 struct CutPoints
 {
   std::vector<uint8_t> isCut;   // 1 when the sector is a cut point
@@ -888,15 +903,15 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbo
 {
   CutPoints cuts;
   cuts.isCut.assign(num_secs, 0);
-  cuts.parent.assign(num_secs, NO_NODE);
-  cuts.compOf.assign(num_secs, NO_NODE);
+  cuts.parent.assign(num_secs, NO_INDEX_INT32);
+  cuts.compOf.assign(num_secs, NO_INDEX_INT32);
 
   std::vector<uint32_t> order(num_secs, 0);     // Order the depth first walk reached each sector in
   std::vector<uint32_t> lowest(num_secs, 0);    // Earliest reached sector this one can get back to
-  std::vector<uint32_t> nextEdge(num_secs, 0);  // Next neighbour to look at, per sector
+  std::vector<uint32_t> nextEdge(num_secs, 0);  // Next neighbor to look at, per sector
   std::vector<uint32_t> blockCount(num_secs, 0);
   std::vector<uint32_t> sectorStack;
-  std::vector<uint32_t> callStack; // Use own stack instead of recursion, a corridor of sectors could be very deep
+  std::vector<uint32_t> callStack; // Uses its own stack instead of recursion, because a long corridor of sectors could be very deep.
 
   uint32_t clock = 0;
   uint32_t parts = 0;
@@ -932,7 +947,7 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbo
         continue;
       }
 
-      // All neighbours of v are done. Send the result to the sector it was reached from.
+      // All neighbors of v are done. Send the result to the sector it was reached from.
       callStack.pop_back();
       if (callStack.empty()) break;
 
@@ -972,24 +987,24 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbo
     }
   }
 
-  // How deep each node is, two sectors can be walked up to where their paths meet.
+  // Work out how deep each node is, so two sectors can be walked up to where their paths meet.
   const size_t numNodes = cuts.parent.size();
-  cuts.depth.assign(numNodes, NO_NODE);
+  cuts.depth.assign(numNodes, NO_INDEX_INT32);
 
   std::vector<uint32_t> chain;
   for (size_t n = 0; n < numNodes; ++n)
   {
-    if (cuts.depth[n] != NO_NODE) continue;
+    if (cuts.depth[n] != NO_INDEX_INT32) continue;
 
     chain.clear();
     uint32_t m = static_cast<uint32_t>(n);
-    while (m != NO_NODE && cuts.depth[m] == NO_NODE)
+    while (m != NO_INDEX_INT32 && cuts.depth[m] == NO_INDEX_INT32)
     {
       chain.push_back(m);
       m = cuts.parent[m];
     }
 
-    uint32_t d = (m == NO_NODE) ? 0 : cuts.depth[m] + 1;
+    uint32_t d = (m == NO_INDEX_INT32) ? 0 : cuts.depth[m] + 1;
     for (size_t i = chain.size(); i-- > 0;)
     {
       cuts.depth[chain[i]] = d++;
@@ -1200,9 +1215,13 @@ static void Reject_ProcessSectors(Level &level)
     RestorePriority();
     return;
   }
+
   // Calculate the max sector span across the map to scale ray bounds correctly.
   // This value caps our visibility ray checks on wide open fields without manual configuration.
-  double maxSectorSpanSq = 4096.0 * 4096.0;
+  constexpr double MIN_RAY_SPAN = 4096.0;  // Rays are never capped shorter than this, in map units
+  constexpr double RAY_SPAN_FACTOR = 2.0;  // A ray may be this many times the diagonal of the largest sector
+
+  double maxSectorSpanSq = MIN_RAY_SPAN * MIN_RAY_SPAN;
 
   for (size_t i = 0; i < num_secs; ++i)
   {
@@ -1211,7 +1230,7 @@ static void Reject_ProcessSectors(Level &level)
     {
       double sWidth = box.maxX - box.minX;
       double sHeight = box.maxY - box.minY;
-      double currentSpanSq = ((sWidth * sWidth) + (sHeight * sHeight)) * 4.0;
+      double currentSpanSq = ((sWidth * sWidth) + (sHeight * sHeight)) * (RAY_SPAN_FACTOR * RAY_SPAN_FACTOR);
       if (currentSpanSq > maxSectorSpanSq) maxSectorSpanSq = currentSpanSq;
     }
   }
@@ -1244,11 +1263,10 @@ static void Reject_ProcessSectors(Level &level)
     }
   }
 
-  // Cutting each open line into 4 parts instead of 2. Changes 1 portal ray per pair of open
-  // lines into 9, so the finer split adds 8 rays for every such pair.
-  // Increased accuracy cut to 4 (from 3) for large maps. The performance hit is easier to absorb.
-  const uint64_t extraRays = portalPairs * 8;
-  const int32_t portalSplit = (extraRays <= OPEN_SPLIT_RAY_BUDGET) ? 18 : 4;
+  // Maps within the ray budget cut each open line finely (SPLIT_SMALL_MAP) for the best accuracy.
+  // Larger maps use the SPLIT_LARGE_MAP, which keeps compile time manageable.
+  const uint64_t extraRays = portalPairs * BUDGET_RAYS_PER_PAIR;
+  const int32_t portalSplit = (extraRays <= OPEN_SPLIT_RAY_BUDGET) ? SPLIT_SMALL_MAP : SPLIT_LARGE_MAP;
 
   // Build the per-sector ray endpoint lists once, reused for every pair.
   std::vector<SectorPoints> sectorPoints(num_secs);
@@ -1317,8 +1335,8 @@ static void Reject_ProcessSectors(Level &level)
 
   // Is this pair blind because a cut point stands between the two sectors
   // and one of them cannot see that cut point?
-  // Also, walk up the tree from both sectors until the two paths meet. Every sector passed
-  // on the way is a cut point standing between them, other than themselves.
+  // Walk up the tree from both sectors until the two paths meet. Every sector passed on
+  // the way, other than the two themselves, is a cut point standing between them.
   auto inferredBlind = [&](size_t a, size_t b) -> bool
   {
     if (cuts.compOf[a] != cuts.compOf[b]) return false;
@@ -1332,7 +1350,7 @@ static void Reject_ProcessSectors(Level &level)
       mover = cuts.parent[mover];
 
       const size_t cut = mover;
-      if (cut >= num_secs || cut == a || cut == b) continue; // One of the two sectors
+      if (cut >= num_secs || cut == a || cut == b) continue; // A block or one of the two sectors themselves
 
       const size_t p1 = a * num_secs + cut;
       const size_t p2 = b * num_secs + cut;
@@ -1351,7 +1369,7 @@ static void Reject_ProcessSectors(Level &level)
     #pragma omp parallel
   #endif
   {
-    // Just one thread-private
+    // One ray scratch space per thread.
     RayWalkSpace scratch(solidBlockers.size());
 
     // Everything that decides one pair of sectors.
