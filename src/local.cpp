@@ -76,7 +76,7 @@ Sidedef *Level::SafeLookupSidedef(int32_t num) const
   // silently ignore illegal sidedef numbers
   auto num_as_index = static_cast<size_t>(num);
 
-  if (num < 0 || num >= NO_INDEX_INT16 || num_as_index >= sidedefs.size())
+  if (num < 0 || num_as_index >= sidedefs.size())
   {
     return nullptr;
   }
