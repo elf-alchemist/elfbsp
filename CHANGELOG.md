@@ -16,6 +16,7 @@ Features:
 * Restored support for compressed variants of ZDBSP formats (ZNOD, ZGLN, ZGL2, ZGL3)
   * ZGL3 is now the default for UDMF levels
   * The new `--compress` CLI flag will force the use of the compressed counterparts in the Doom & Hexen map formats
+* Added `--skip-bsp`, `--skip-bmap` and `--skip-reject` CLI options to skip building maps that are already compiled
 
 Bugfixes:
 * Restored `REJECT` builder's debug logging, i.e fix `--debug-reject` not working before
