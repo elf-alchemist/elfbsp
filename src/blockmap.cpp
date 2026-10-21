@@ -408,6 +408,12 @@ static void WriteBlockmap(WadIO &io, Level &level)
 
 void PutBlockmap(WadIO &io, Level &level)
 {
+  if (level.skip_bmap)
+  {
+    io.LevelCopyLump(level.lumps.label, "BLOCKMAP");
+    return;
+  }
+
   auto mark = Benchmarker(__func__);
   io.StartWritingLump("BLOCKMAP");
 

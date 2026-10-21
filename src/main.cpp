@@ -150,8 +150,7 @@ static void VisitFile(std::string_view filename)
       if (wad.IsLevel(current) && CheckMapInMapList(wad.LumpName(current)))
       {
         Level level;
-        level.lump = current;
-        level.map_format = wad.LevelFormat(current);
+        level.SetLumps(wad, current);
 
         levels_visited += 1;
         auto result = BuildLevel(wad, level, in_file);
@@ -487,6 +486,18 @@ static int32_t ParseLongArgument(std::string name, const int32_t argc, const cha
   else if (name == "--compress")
   {
     config.compress = true;
+  }
+  else if (name == "--skip-bsp")
+  {
+    config.skip_bsp = true;
+  }
+  else if (name == "--skip-bmap")
+  {
+    config.skip_bmap = true;
+  }
+  else if (name == "--skip-reject")
+  {
+    config.skip_rej = true;
   }
   else if (name == "--map" || name == "--maps")
   {

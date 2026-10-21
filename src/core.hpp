@@ -1229,6 +1229,10 @@ struct BuildInfo
   bool verbose = false;  // this affects how some messages are shown
   bool effects = true;   // disable special effects
   bool compress = false; // compress lumps using zlib
+
+  bool skip_bsp = false;  // Just copy over the lumps, don't build anything ...
+  bool skip_bmap = false; // ... if, and only if, the lymp already exists ...
+  bool skip_rej = false;  // ... for if the lump does not exist, it will be built.
 };
 
 extern BuildInfo config;
