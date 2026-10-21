@@ -169,6 +169,12 @@ static void Reject_DebugGroups(Level &level)
 //
 void PutReject(WadIO &io, Level &level)
 {
+  if (level.skip_rej)
+  {
+    io.LevelCopyLump(level.lumps.label, "REJECT");
+    return;
+  }
+
   auto mark = Benchmarker(__func__);
   io.StartWritingLump("REJECT");
 

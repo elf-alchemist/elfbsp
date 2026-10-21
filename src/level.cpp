@@ -158,7 +158,7 @@ static void ValidateLinedef(Level &level, Linedef *line)
 
 static void GetVertices_Integral(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapVertexIntegral>(level.lump, "VERTEXES");
+  auto lump = io.ReadLevelLump<MapVertexIntegral>(level.lumps.label, "VERTEXES");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -177,7 +177,7 @@ static void GetVertices_Integral(WadIO &io, Level &level)
 
 static void GetVertices_Fractional(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapVertexFractional>(level.lump, "VERTEXES");
+  auto lump = io.ReadLevelLump<MapVertexFractional>(level.lumps.label, "VERTEXES");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -197,7 +197,7 @@ static void GetVertices_Fractional(WadIO &io, Level &level)
 
 static void GetSectors_Doom(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapSectorDoom>(level.lump, "SECTORS");
+  auto lump = io.ReadLevelLump<MapSectorDoom>(level.lumps.label, "SECTORS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -213,7 +213,7 @@ static void GetSectors_Doom(WadIO &io, Level &level)
 
 static void GetThings_Doom(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapThingDoom>(level.lump, "THINGS");
+  auto lump = io.ReadLevelLump<MapThingDoom>(level.lumps.label, "THINGS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -232,7 +232,7 @@ static void GetThings_Doom(WadIO &io, Level &level)
 
 static void GetSidedefs_Doom(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapSidedefDoom>(level.lump, "SIDEDEFS");
+  auto lump = io.ReadLevelLump<MapSidedefDoom>(level.lumps.label, "SIDEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -258,7 +258,7 @@ static void GetSidedefs_Doom(WadIO &io, Level &level)
 
 static void GetLinedefs_Doom(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapLinedefDoom>(level.lump, "LINEDEFS");
+  auto lump = io.ReadLevelLump<MapLinedefDoom>(level.lumps.label, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -339,7 +339,7 @@ static void GetLinedefs_Doom(WadIO &io, Level &level)
 
 static void GetThings_Hexen(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapThingHexen>(level.lump, "THINGS");
+  auto lump = io.ReadLevelLump<MapThingHexen>(level.lumps.label, "THINGS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -358,7 +358,7 @@ static void GetThings_Hexen(WadIO &io, Level &level)
 
 static void GetLinedefs_Hexen(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapLinedefHexen>(level.lump, "LINEDEFS");
+  auto lump = io.ReadLevelLump<MapLinedefHexen>(level.lumps.label, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -404,7 +404,7 @@ static void GetLinedefs_Hexen(WadIO &io, Level &level)
 
 static void GetSectors_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapSectorDoom64>(level.lump, "SECTORS");
+  auto lump = io.ReadLevelLump<MapSectorDoom64>(level.lumps.label, "SECTORS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -426,7 +426,7 @@ static void GetSectors_Doom64(WadIO &io, Level &level)
 
 static void GetSidedefs_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapSidedefDoom64>(level.lump, "SIDEDEFS");
+  auto lump = io.ReadLevelLump<MapSidedefDoom64>(level.lumps.label, "SIDEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -446,7 +446,7 @@ static void GetSidedefs_Doom64(WadIO &io, Level &level)
 
 static void GetLinedefs_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapLinedefDoom64>(level.lump, "LINEDEFS");
+  auto lump = io.ReadLevelLump<MapLinedefDoom64>(level.lumps.label, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -491,7 +491,7 @@ static void GetLinedefs_Doom64(WadIO &io, Level &level)
 
 static void GetThings_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapThingDoom64>(level.lump, "LINEDEFS");
+  auto lump = io.ReadLevelLump<MapThingDoom64>(level.lumps.label, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
@@ -567,7 +567,6 @@ static void GetSidedefs_UDMF(Level &level)
     CStringToUpper(s->tex_middle);
   }
 }
-
 
 static void GetLinedefs_UDMF(Level &level)
 {
@@ -682,7 +681,7 @@ static BspFormat CheckFormatBSP(BuildInfo &ctx, Level &level)
 void LoadLevel(WadIO &io, Level &level)
 {
   auto mark = Benchmarker(__func__);
-  auto LEV = io.LumpName(level.lump);
+  auto LEV = io.LumpName(level.lumps.label);
 
   level.overflows = false;
 
@@ -758,36 +757,26 @@ void LoadLevel(WadIO &io, Level &level)
 // Writing stuff
 //------------------------------------------------------------------------
 
-BuildResult SaveLevelBinary(WadIO &io, Level &level)
+static void HandleBinaryMapBSP(WadIO &io, Level &level, BspFormat bsp_format)
 {
-  auto mark = Benchmarker(__func__);
-
-  // Normal binary format limits
-  CheckBinaryFormatLimits(level);
+  // Option to skip
+  if (level.skip_bsp)
+  {
+    io.LevelCopyLump(level.lumps.label, "VERTEXES");
+    io.LevelCopyLump(level.lumps.label, "SEGS");
+    io.LevelCopyLump(level.lumps.label, "SSECTORS");
+    io.LevelCopyLump(level.lumps.label, "NODES");
+    return;
+  }
 
   // Use fractional VERTEXES lump in some map formats
   bool do_fractional = level.map_format == MapFormat::Doom64;
-
-  // Generate LEAFS lump
-  bool do_leafs = level.map_format == MapFormat::Doom64;
-
-  // On BSP overflow, bump to DeePBSPV4 from DoomBSP
-  BspFormat bsp_format = CheckFormatBSP(config, level);
 
   // Only include BSP-generated vertices in non-ZDBSP lump format
   bool do_new_vert = bsp_format == BspFormat::DoomBSP || bsp_format == BspFormat::DeePBSPV4;
 
   // Use Zlib-compressed version of ZDBSP lump formats
   bool zdbsp_compress = config.compress;
-
-  // Copy marker wholesale
-  size_t lump = level.lump;
-  io.CopyLump(lump);
-
-  // Correct order is paramount
-  io.LevelCopyLump(lump, "THINGS");
-  io.LevelCopyLump(lump, "LINEDEFS");
-  io.LevelCopyLump(lump, "SIDEDEFS");
 
   // Do the four BSP lumps, before promptly doing the other normal lumps
   if (bsp_format == BspFormat::DoomBSP)
@@ -828,6 +817,51 @@ BuildResult SaveLevelBinary(WadIO &io, Level &level)
     PutTree_ZDBSP(io, level, "SSECTORS", bsp_format, zdbsp_compress);
     io.CreateEmptyLump("NODES");
   }
+}
+
+static void HandleBinaryMapLeafs(WadIO &io, Level &level, BspFormat bsp_format)
+{
+  // Part of Doom 64
+  if (level.map_format != MapFormat::Doom64) return;
+
+  // Option to skip
+  if (level.skip_bsp)
+  {
+    io.LevelCopyLump(level.lumps.label, "LEAFS");
+    return;
+  }
+
+  // Generate LEAFS lump
+  if (bsp_format == BspFormat::DoomBSP)
+  {
+    PutLeafs_DoomBSP(io, level);
+  }
+  else if (bsp_format == BspFormat::DeePBSPV4)
+  {
+    PutLeafs_DeePBSPV4(io, level);
+  }
+}
+
+static BuildResult SaveLevelBinary(WadIO &io, Level &level)
+{
+  auto mark = Benchmarker(__func__);
+
+  // Normal binary format limits
+  CheckBinaryFormatLimits(level);
+
+  // On BSP overflow, bump to DeePBSPV4 from DoomBSP
+  BspFormat bsp_format = CheckFormatBSP(config, level);
+
+  // Copy marker wholesale
+  size_t lump = level.lumps.label;
+  io.CopyLump(lump);
+
+  // Correct order is paramount
+  io.LevelCopyLump(lump, "THINGS");
+  io.LevelCopyLump(lump, "LINEDEFS");
+  io.LevelCopyLump(lump, "SIDEDEFS");
+
+  HandleBinaryMapBSP(io, level, bsp_format);
 
   // Why is SECTORS right here? T_T
   io.LevelCopyLump(lump, "SECTORS");
@@ -836,15 +870,7 @@ BuildResult SaveLevelBinary(WadIO &io, Level &level)
   PutReject(io, level);
   PutBlockmap(io, level);
 
-  // The better? convex subsector option
-  if (do_leafs && bsp_format == BspFormat::DoomBSP)
-  {
-    PutLeafs_DoomBSP(io, level);
-  }
-  else if (do_leafs && bsp_format == BspFormat::DeePBSPV4)
-  {
-    PutLeafs_DeePBSPV4(io, level);
-  }
+  HandleBinaryMapLeafs(io, level, bsp_format);
 
   // Level scripts and stuff
   if (level.map_format == MapFormat::Hexen)
@@ -862,19 +888,27 @@ BuildResult SaveLevelBinary(WadIO &io, Level &level)
   return level.overflows ? BuildResult::Overflow : BuildResult::Ok;
 }
 
-BuildResult SaveLevelTextMap(WadIO &io, Level &level)
+static BuildResult SaveLevelTextMap(WadIO &io, Level &level)
 {
   auto mark = Benchmarker(__func__);
 
   // Copy marker wholesale
-  size_t lump = level.lump;
+  size_t lump = level.lumps.label;
   io.CopyLump(lump);
 
   // duh.
   io.LevelCopyLump(lump, "TEXTMAP");
 
-  // Always use ZGL3 for UDMF maps
-  PutTree_ZDBSP(io, level, "ZNODES", BspFormat::XGL3, true);
+  if (!level.skip_bsp)
+  {
+    // Always use ZGL3 for UDMF maps
+    PutTree_ZDBSP(io, level, "ZNODES", BspFormat::XGL3, true);
+  }
+  else
+  {
+    io.LevelCopyLump(lump, "ZNODES");
+  }
+
   PutReject(io, level);
   PutBlockmap(io, level);
 
@@ -894,6 +928,33 @@ BuildResult SaveLevelTextMap(WadIO &io, Level &level)
 //------------------------------------------------------------------------
 // MAIN STUFF
 //------------------------------------------------------------------------
+
+static void SkipBuild(WadIO &io, Level &level)
+{
+  auto l = level.lumps;
+
+  bool has_rej = l.reject != NO_INDEX;
+  bool has_bmap = l.blockmap != NO_INDEX;
+  bool has_bsp = (l.znodes != NO_INDEX) || (l.nodes != NO_INDEX && l.ssectors != NO_INDEX && l.segs != NO_INDEX);
+
+  if (config.skip_bsp && has_bsp)
+  {
+    level.skip_bsp = true;
+    PrintLine(Log::NORMAL, "[{}] Skip building BSP lump for {}.", __func__, io.LumpName(l.label));
+  }
+
+  if (config.skip_bmap && has_bmap)
+  {
+    level.skip_bmap = true;
+    PrintLine(Log::NORMAL, "[{}] Skip building BLOCKMAP lump for {}.", __func__, io.LumpName(l.label));
+  }
+
+  if (config.skip_rej && has_rej)
+  {
+    level.skip_rej = true;
+    PrintLine(Log::NORMAL, "[{}] Skip building REJECT lump for {}.", __func__, io.LumpName(l.label));
+  }
+}
 
 size_t ComputeBspHeight(const Node *node)
 {
@@ -916,11 +977,13 @@ BuildResult BuildLevel(WadIO &io, Level &level, std::string_view filename)
 
   InitBlockmap(level);
 
-  if (level.num_real_lines > 0)
+  SkipBuild(io, level);
+
+  if (level.num_real_lines > 0 && !level.skip_bsp)
   {
     if (config.analysis)
     {
-      PrintLine(Log::NORMAL, "[{}] Starting analysis loop for {}", __func__, io.LumpName(level.lump));
+      PrintLine(Log::NORMAL, "[{}] Starting analysis loop for {}", __func__, io.LumpName(level.lumps.label));
       GenerateAnalysis(io, level, filename);
     }
 
@@ -944,7 +1007,10 @@ BuildResult BuildLevel(WadIO &io, Level &level, std::string_view filename)
               ComputeBspHeight(level.root_node->r.node));
   }
 
-  ClockwiseBspTree(level);
+  if (!level.skip_bsp)
+  {
+     ClockwiseBspTree(level);
+  }
 
   auto ret = BuildResult::Ok;
   switch (level.map_format)

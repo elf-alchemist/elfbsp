@@ -353,13 +353,36 @@ struct BlockList
   std::vector<size_t> lines;
 };
 
+struct MapLumps
+{
+  size_t label = NO_INDEX;
+
+  size_t textmap = NO_INDEX;
+  size_t things = NO_INDEX;
+  size_t linedefs = NO_INDEX;
+  size_t sidedefs = NO_INDEX;
+  size_t vertexes = NO_INDEX;
+  size_t sectors = NO_INDEX;
+  size_t lights = NO_INDEX;
+
+  size_t znodes = NO_INDEX;
+  size_t nodes = NO_INDEX;
+  size_t ssectors = NO_INDEX;
+  size_t segs = NO_INDEX;
+  size_t leafs = NO_INDEX;
+  size_t reject = NO_INDEX;
+  size_t blockmap = NO_INDEX;
+  size_t behavior = NO_INDEX;
+  size_t macros = NO_INDEX;
+  size_t scripts = NO_INDEX;
+};
+
 struct Level
 {
   MapFormat map_format = MapFormat::Invalid;
   size_t num_old_vert = 0;
   size_t num_new_vert = 0;
   size_t num_real_lines = 0;
-  size_t lump = NO_INDEX;
   bool overflows = false;
 
   std::vector<Vertex *> vertices;
@@ -392,11 +415,19 @@ struct Level
   double block_compression;
   BlockmapFormat bmap_format = BlockmapFormat::DoomBSP;
 
-  std::vector<struct UVertexMinimal> udmf_vertex;
-  std::vector<struct ULinedefMinimal> udmf_linedef;
-  std::vector<struct USidedefMinimal> udmf_sidedef;
-  std::vector<struct USectorMinimal> udmf_sector;
-  std::vector<struct UThingMinimal> udmf_thing;
+  std::vector<UVertexMinimal> udmf_vertex;
+  std::vector<ULinedefMinimal> udmf_linedef;
+  std::vector<USidedefMinimal> udmf_sidedef;
+  std::vector<USectorMinimal> udmf_sector;
+  std::vector<UThingMinimal> udmf_thing;
+
+  MapLumps lumps;
+
+  bool skip_bsp = false;  // Just copy over the lumps, don't build anything ...
+  bool skip_bmap = false; // ... if, and only if, the lump already exists ...
+  bool skip_rej = false;  // ... for if the lump does not exist, it will be built.
+
+  void SetLumps(WadIO &io, size_t label_index);
 
   Vertex *SafeLookupVertex(size_t num, size_t num_line) const;
   Sector *SafeLookupSector(size_t num, size_t num_side) const;
