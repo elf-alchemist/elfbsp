@@ -23,6 +23,7 @@
 
 #include "core.hpp"
 #include "local.hpp"
+#include <algorithm>
 
 /*
  * Important bullshit to note:
