@@ -181,31 +181,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   zlibstatic
 )
 
-if(ENABLE_WERROR)
-  _checked_add_compile_option(-Werror)
-endif()
-
-if(ENABLE_ASAN)
-  _checked_add_compile_option(-fsanitize=address)
-  _checked_add_compile_option(-fno-omit-frame-pointer)
-  _checked_add_link_option(-fsanitize=address)
-endif()
-
-if(ENABLE_UBSAN)
-  _checked_add_compile_option(-fsanitize=undefined)
-  _checked_add_link_option(-fsanitize=undefined)
-endif()
-
-if(ENABLE_TSAN)
-  _checked_add_compile_option(-fsanitize=thread)
-  _checked_add_link_option(-fsanitize=thread)
-endif()
-
-if(ENABLE_HARDENING)
-  _checked_add_compile_option(-fstack-protector-strong)
-  _checked_add_link_option(-Wl,-z,relro -Wl,-z,now)
-endif()
-
 if(CONFIG MATCHES "Release" OR "RelWithDebInfo")
   _checked_add_compile_option(-O3)
 elseif(CONFIG MATCHES "Debug")
