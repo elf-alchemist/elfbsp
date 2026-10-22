@@ -310,8 +310,15 @@ struct RayWalkSpace
   uint32_t ring[RING_SIZE] = {};
   int32_t ringCount = 0;
 
-  explicit RayWalkSpace(size_t blockerCount)
-      : seen(blockerCount, 0)
+  // Counters for the analysis stats. Each thread has its own set, so they are plain
+  // additions, and they are added together once the threads are finished.
+  uint64_t rayCasts = 0;            // Rays tested
+  uint64_t cellSteps = 0;           // Grid cells walked by those rays
+  std::vector<uint64_t> sectorRays; // Rays tested for each sector, both sectors of a pair get the rays
+
+  RayWalkSpace(size_t blockerCount, size_t sectorCount)
+      : seen(blockerCount, 0),
+        sectorRays(sectorCount, 0)
   {
   }
 
@@ -577,6 +584,8 @@ static bool IsRayBlocked(const SightSegment& ray,
 
   for (;;)
   {
+    ++scratch.cellSteps; // Analysis Counter
+
     const size_t cell = static_cast<size_t>(cy * grid.cols + cx);
 
     for (uint32_t k = grid.cellStart[cell]; k < grid.cellStart[cell + 1]; ++k)
@@ -735,6 +744,8 @@ static bool DoVisibilityTest(const SectorPoints& A,
 
   auto clear = [&](const SightPoint& from, const SightPoint& to) -> bool
   {
+    ++scratch.rayCasts; // Analysis Counter
+
     const SightSegment ray(from.x, from.y, to.x, to.y);
 
     // A ray that ends on a solid wall is blocked by it, unless that wall starts at the
@@ -1096,6 +1107,128 @@ static std::vector<std::vector<std::pair<uint32_t, uint32_t>>> BuildCutLevels(
   return levels;
 }
 
+// Everything the analysis stats report. Filled in once the reject build is finished.
+struct RejectStats
+{
+  uint64_t blockerLines = 0;  // Solid (one-sided) lines the rays can be stopped by
+  uint64_t portalLines = 0;   // Two-sided lines, which never stop a ray
+  uint64_t rayCasts = 0;      // Rays tested in total
+  uint64_t totalCells = 0;    // Cells in the blocker grid
+  uint64_t cellSteps = 0;     // Grid cells walked by all the rays together
+
+  // One entry per sector that has line geometry (the same sectors that are tested)
+  std::vector<uint64_t> portalsPerSector;  // Two-sided lines touching the sector
+  std::vector<uint64_t> blockersPerSector; // One-sided lines of the sector
+  std::vector<uint64_t> raysPerSector;     // Rays tested with the sector at either end
+
+  // One entry per cell of the blocker grid, row by row
+  std::vector<uint64_t> linesPerCell; // Blocker lines registered in the cell
+  uint64_t gridCols = 0;
+};
+
+// Mean, median and mode of a list of counts.
+struct CountSummary
+{
+  size_t count = 0;
+  double mean = 0.0;
+  double median = 0.0;
+  uint64_t mode = 0;     // Most common value, the smallest one if several tie
+  uint64_t modeFreq = 0; // How many entries have that value
+  uint64_t min = 0;
+  uint64_t max = 0;
+};
+
+static CountSummary SummarizeCounts(std::vector<uint64_t> values)
+{
+  CountSummary s;
+  if (values.empty()) return s;
+
+  std::sort(values.begin(), values.end());
+
+  s.count = values.size();
+  s.min = values.front();
+  s.max = values.back();
+
+  uint64_t sum = 0;
+  for (uint64_t v : values)
+  {
+    sum += v;
+  }
+
+  const double totalSum   = static_cast<double>(sum);
+  const double totalCount = static_cast<double>(s.count);
+
+  s.mean = totalSum / totalCount;
+
+  const size_t mid = s.count / 2;
+  s.median = (s.count % 2 == 1)
+                 ? static_cast<double>(values[mid])
+                 : (static_cast<double>(values[mid - 1]) + static_cast<double>(values[mid])) * 0.5;
+
+  // The list is sorted, so equal values sit together. Only a longer run replaces the mode,
+  // which keeps the smallest value when two runs are the same length.
+  for (size_t i = 0; i < values.size();)
+  {
+    size_t j = i;
+    while (j < values.size() && values[j] == values[i]) ++j;
+
+    if (static_cast<uint64_t>(j - i) > s.modeFreq)
+    {
+      s.mode = values[i];
+      s.modeFreq = static_cast<uint64_t>(j - i);
+    }
+    i = j;
+  }
+
+  return s;
+}
+
+// Two decimals, built manually so it does not depend on what format options PrintLine accepts.
+static std::string FormatTwoDecimals(double v)
+{
+  const uint64_t hundredths = static_cast<uint64_t>(v * 100.0 + 0.5);
+  std::string fraction = std::to_string(hundredths % 100);
+  if (fraction.size() < 2) fraction.insert(0, "0");
+  return std::to_string(hundredths / 100) + "." + fraction;
+}
+
+static void PrintCountSummary(const char* tag, const char* label, const std::vector<uint64_t>& values)
+{
+  const CountSummary s = SummarizeCounts(values);
+
+  PrintLine(Log::NORMAL, "[{}]   {}: mean {}  median {}  mode {} (x{})  min {}  max {}",
+            tag, label, FormatTwoDecimals(s.mean), FormatTwoDecimals(s.median),
+            s.mode, s.modeFreq, s.min, s.max);
+}
+
+static void RejectAnalysis(const RejectStats& stats)
+{
+  const char* tag = __func__;
+
+  PrintLine(Log::NORMAL, "[{}] Blocker lines: {}", tag, stats.blockerLines);
+  PrintLine(Log::NORMAL, "[{}] Portal lines: {}", tag, stats.portalLines);
+  PrintLine(Log::NORMAL, "[{}] Ray casts: {}", tag, stats.rayCasts);
+  PrintLine(Log::NORMAL, "[{}] Total cells: {}", tag, stats.totalCells);
+  PrintLine(Log::NORMAL, "[{}] Total cell traversal: {}", tag, stats.cellSteps);
+
+  PrintLine(Log::NORMAL, "[{}] Per sector, {} sectors with lines:", tag, stats.portalsPerSector.size());
+  PrintCountSummary(tag, "Portals per sector", stats.portalsPerSector);
+  PrintCountSummary(tag, "Blockers per sector", stats.blockersPerSector);
+  PrintCountSummary(tag, "Ray casts per sector", stats.raysPerSector);
+
+  PrintLine(Log::NORMAL, "[{}] Per cell, {} cells:", tag, stats.linesPerCell.size());
+  PrintCountSummary(tag, "Linedefs per cell", stats.linesPerCell);
+
+  // The amount of linedefs in every single cell is long, so it is left for the reject debug output.
+  if (HAS_NONE(config.debug, DEBUG_REJECT)) return;
+
+  for (size_t i = 0; i < stats.linesPerCell.size(); ++i)
+  {
+    PrintLine(Log::DEBUG, "[{}] Cell {},{}  Linedefs {}", tag,
+              i % stats.gridCols, i / stats.gridCols, stats.linesPerCell[i]);
+  }
+}
+
 // Main process now, handles everything!
 static void Reject_ProcessSectors(Level &level)
 {
@@ -1156,6 +1289,11 @@ static void Reject_ProcessSectors(Level &level)
   // The same connections as a list per sector, used to find the cut points.
   std::vector<std::vector<uint32_t>> neighbors(num_secs);
 
+  // Line counts for the analysis stats.
+  std::vector<uint64_t> portalsPerSector(num_secs, 0);
+  std::vector<uint64_t> blockersPerSector(num_secs, 0);
+  uint64_t portalLines = 0;
+
   // Tracking limits for the entire map canvas initialized using maximum bounds
   double mapMinX = std::numeric_limits<double>::max();
   double mapMaxX = std::numeric_limits<double>::lowest();
@@ -1176,6 +1314,7 @@ static void Reject_ProcessSectors(Level &level)
 
     mapMinX = std::min({mapMinX, seg.x1, seg.x2});
     mapMaxX = std::max({mapMaxX, seg.x1, seg.x2});
+
     mapMinY = std::min({mapMinY, seg.y1, seg.y2});
     mapMaxY = std::max({mapMaxY, seg.y1, seg.y2});
 
@@ -1183,6 +1322,11 @@ static void Reject_ProcessSectors(Level &level)
     const Sector* sLeft  = line->left  ? line->left->sector  : nullptr;
 
     const bool isSolid   = !sRight || !sLeft;
+
+    if (!isSolid)
+    {
+      portalLines++; // Analysis Counter
+    }
 
     // The flag is only used to prune rays that are always blocked.
     // Require length > 1 so a degenerate line never gets pruned.
@@ -1219,17 +1363,38 @@ static void Reject_ProcessSectors(Level &level)
 
       sectorLines[rIdx].push_back(seg);
 
+      // Analysis Counter
+      if (isSolid)
+      {
+        blockersPerSector[rIdx]++;
+      }
+      else
+      {
+        portalsPerSector[rIdx]++;
+      }
+
       box.minX = std::min({box.minX, seg.x1, seg.x2});
       box.maxX = std::max({box.maxX, seg.x1, seg.x2});
       box.minY = std::min({box.minY, seg.y1, seg.y2});
       box.maxY = std::max({box.maxY, seg.y1, seg.y2});
     }
+
     if (sLeft && sLeft != sRight)
     {
       const size_t lIdx = sLeft->index;
       auto& box = sectorBoxes[lIdx];
 
       sectorLines[lIdx].push_back(seg);
+
+      // Analysis Counter
+      if (isSolid)
+      {
+        blockersPerSector[lIdx]++;
+      }
+      else
+      {
+        portalsPerSector[lIdx]++;
+      }
 
       box.minX = std::min({box.minX, seg.x1, seg.x2});
       box.maxX = std::max({box.maxX, seg.x1, seg.x2});
@@ -1392,6 +1557,11 @@ static void Reject_ProcessSectors(Level &level)
     return false;
   };
 
+  // Ray counts of all the threads together, for the analysis stats.
+  uint64_t totalRayCasts = 0;
+  uint64_t totalCellSteps = 0;
+  std::vector<uint64_t> totalSectorRays(num_secs, 0);
+
   // Parallelizes the loop across available CPU cores.
   // Dynamic scheduling lets each idle core pick up the next sector immediately,
   // because some sectors take far longer than others.
@@ -1400,7 +1570,7 @@ static void Reject_ProcessSectors(Level &level)
   #endif
   {
     // One ray scratch space per thread.
-    RayWalkSpace scratch(solidBlockers.size());
+    RayWalkSpace scratch(solidBlockers.size(), num_secs);
 
     // Everything that decides one pair of sectors.
     auto testPair = [&](size_t view, size_t target)
@@ -1440,9 +1610,17 @@ static void Reject_ProcessSectors(Level &level)
       }
 
       // Each ray now walks the grid on its own inside IsRayBlocked via DDA steps.
-      if (!DoVisibilityTest(sectorPoints[view], sectorPoints[target],
-                            solidBlockers, grid, touchWalls, boxB, scratch, maxSectorSpanSq,
-                            withinBudget))
+      const uint64_t raysBefore = scratch.rayCasts;
+
+      const bool visible = DoVisibilityTest(sectorPoints[view], sectorPoints[target],
+                                            solidBlockers, grid, touchWalls, boxB, scratch, maxSectorSpanSq,
+                                            withinBudget);
+
+      const uint64_t raysUsed = scratch.rayCasts - raysBefore;
+      scratch.sectorRays[view] += raysUsed;
+      scratch.sectorRays[target] += raysUsed;
+
+      if (!visible)
       {
         SetPairBitsAtomic(level, view, target, num_secs);
       }
@@ -1498,10 +1676,54 @@ static void Reject_ProcessSectors(Level &level)
         testPair(view, target);
       }
     }
+
+    // Add this thread's counters to the totals, one thread at a time.
+    #ifdef _OPENMP
+      #pragma omp critical(reject_stats)
+    #endif
+    {
+      totalRayCasts += scratch.rayCasts;
+      totalCellSteps += scratch.cellSteps;
+
+      for (size_t i = 0; i < num_secs; ++i)
+      {
+        totalSectorRays[i] += scratch.sectorRays[i];
+      }
+    }
   }
 
   // Restore process priority back to normal once the heavy CPU work finishes
   RestorePriority();
+
+  // Print the numbers collected while building. The condition is the only place that decides
+  // when this is shown, so a new command line option can take over from config.verbose here.
+  if (config.verbose)
+  {
+    RejectStats stats;
+    stats.blockerLines = solidBlockers.size();
+    stats.portalLines = portalLines;
+    stats.rayCasts = totalRayCasts;
+    stats.totalCells = static_cast<uint64_t>(gridCols) * static_cast<uint64_t>(gridRows);
+    stats.cellSteps = totalCellSteps;
+    stats.gridCols = static_cast<uint64_t>(gridCols);
+
+    // Sectors without any line are left out so they do not pull the averages down.
+    for (size_t s : activeSectors)
+    {
+      stats.portalsPerSector.push_back(portalsPerSector[s]);
+      stats.blockersPerSector.push_back(blockersPerSector[s]);
+      stats.raysPerSector.push_back(totalSectorRays[s]);
+    }
+
+    const size_t cellCount = gridCols * gridRows;
+    stats.linesPerCell.resize(cellCount);
+    for (size_t c = 0; c < cellCount; ++c)
+    {
+      stats.linesPerCell[c] = grid.cellStart[c + 1] - grid.cellStart[c];
+    }
+
+    RejectAnalysis(stats);
+  }
 }
 
 // Note: this routine is destructive to the group numbers
