@@ -74,7 +74,7 @@ static void Reject_GroupSectors(Level &level)
 {
   for (auto line : level.linedefs)
   {
-    // Must be valid two-sided line
+    // must be valid two-sided line
     if (!line->right || !line->left)
     {
       continue;
@@ -199,8 +199,8 @@ static void SortUnique(std::vector<SightPoint>& v)
 
 // Number of parts each open line is cut into. A split of N gives N - 1 points per open line,
 // so a pair of open lines gets (N - 1) * (N - 1) portal rays.
-static constexpr int32_t SPLIT_SMALL_MAP = 18; // Maps within the ray budget
-static constexpr int32_t SPLIT_LARGE_MAP = 4;  // Maps over the ray budget
+static constexpr int32_t SPLIT_SMALL_MAP = 8; // Maps within the ray budget
+static constexpr int32_t SPLIT_LARGE_MAP = 4; // Maps over the ray budget
 
 // Yardstick for the budget check. The extra portal rays per pair of open lines when going
 // from a split of 2 to a split of 4.
@@ -552,9 +552,9 @@ static bool IsRayBlocked(const SightSegment& ray,
   // and how much t advances per whole cell. An axis with no movement never advances.
   constexpr double kInf = std::numeric_limits<double>::infinity();
 
-  double tMaxX = kInf;
+  double tMaxX   = kInf;
   double tDeltaX = kInf;
-  double tMaxY = kInf;
+  double tMaxY   = kInf;
   double tDeltaY = kInf;
 
   if (stepX != 0)
@@ -709,7 +709,8 @@ static bool DoVisibilityTest(const SectorPoints& A,
                              const std::vector<uint32_t>& touchWalls,
                              const SectorBBox& boxB,
                              RayWalkSpace& scratch,
-                             double maxRayLengthSq)
+                             double maxRayLengthSq,
+                             bool vertexRays)
 {
   // Every point of B lies inside its sector's bounding box. When the wall that blocked the
   // most recent ray also blocks every ray from a start point to that whole box, none of the
@@ -761,6 +762,34 @@ static bool DoVisibilityTest(const SectorPoints& A,
     for (const auto& b : B.openSplit)
     {
       if (clear(a, b)) return true;
+    }
+  }
+
+  // Split point to corner. A narrow sight window between two wall corners is often widest at
+  // the far end of an open line, which the split points alone can step over. Casting from the
+  // split points of A to every corner of B, and from every corner of A to the split points of B,
+  // catches those windows at a much lower split value.
+  // Only used for maps within the ray budget.
+  if (vertexRays)
+  {
+    for (const auto& a : A.openSplit)
+    {
+      if (shadowed(a)) continue;
+
+      for (const auto& b : B.verts)
+      {
+        if (clear(a, b)) return true;
+      }
+    }
+
+    for (const auto& a : A.verts)
+    {
+      if (shadowed(a)) continue;
+
+      for (const auto& b : B.openSplit)
+      {
+        if (clear(a, b)) return true;
+      }
     }
   }
 
@@ -1266,7 +1295,8 @@ static void Reject_ProcessSectors(Level &level)
   // Maps within the ray budget cut each open line finely (SPLIT_SMALL_MAP) for the best accuracy.
   // Larger maps use the SPLIT_LARGE_MAP, which keeps compile time manageable.
   const uint64_t extraRays = portalPairs * BUDGET_RAYS_PER_PAIR;
-  const int32_t portalSplit = (extraRays <= OPEN_SPLIT_RAY_BUDGET) ? SPLIT_SMALL_MAP : SPLIT_LARGE_MAP;
+  const bool withinBudget = (extraRays <= OPEN_SPLIT_RAY_BUDGET);
+  const int32_t portalSplit = withinBudget ? SPLIT_SMALL_MAP : SPLIT_LARGE_MAP;
 
   // Build the per-sector ray endpoint lists once, reused for every pair.
   std::vector<SectorPoints> sectorPoints(num_secs);
@@ -1411,7 +1441,8 @@ static void Reject_ProcessSectors(Level &level)
 
       // Each ray now walks the grid on its own inside IsRayBlocked via DDA steps.
       if (!DoVisibilityTest(sectorPoints[view], sectorPoints[target],
-                            solidBlockers, grid, touchWalls, boxB, scratch, maxSectorSpanSq))
+                            solidBlockers, grid, touchWalls, boxB, scratch, maxSectorSpanSq,
+                            withinBudget))
       {
         SetPairBitsAtomic(level, view, target, num_secs);
       }
