@@ -1,8 +1,7 @@
 ---
-Checks:          'clang-diagnostic-*,clang-analyzer-*'
+Checks: 'clang-diagnostic-*,clang-analyzer-*'
 WarningsAsErrors: ''
 HeaderFileExtensions:
-  - ''
   - h
   - hh
   - hpp
@@ -14,8 +13,8 @@ ImplementationFileExtensions:
   - cxx
 HeaderFilterRegex: ''
 ExcludeHeaderFilterRegex: ''
-FormatStyle:     none
-User:            alchemist
-CheckOptions:    {}
-SystemHeaders:   false
+FormatStyle: none
+User: alchemist
+CheckOptions: {}
+SystemHeaders: false
 ...

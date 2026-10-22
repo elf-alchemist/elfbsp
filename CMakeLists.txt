@@ -9,7 +9,6 @@ project(elfbsp
 
 include(CheckIncludeFile)
 
-set(CMAKE_INSTALL_DO_STRIP TRUE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # Set a default build type if none was specified
