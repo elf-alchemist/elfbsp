@@ -49,7 +49,12 @@ static void Reject_Init(Level &level)
   level.reject_size = (level.sectors.size() * level.sectors.size() + 7) / 8;
 
   level.reject_matrix = new uint8_t[level.reject_size];
-  UtilZero(level.reject_matrix);
+
+  // UtilZero clears one object, so clear the matrix until done.
+  for (size_t i = 0; i < level.reject_size; ++i)
+  {
+    UtilZero(&level.reject_matrix[i]);
+  }
 
   for (auto sec : level.sectors)
   {
@@ -184,17 +189,17 @@ struct SectorBBox
 };
 
 // Removes coordinate duplicates and sort points along the X-axis.
-static void SortUnique(std::vector<SightPoint>& v)
+static void SortUnique(std::vector<SightPoint>& points)
 {
-  std::sort(v.begin(), v.end(), [](const SightPoint& a, const SightPoint& b)
+  std::sort(points.begin(), points.end(), [](const SightPoint& a, const SightPoint& b)
   {
     return a.x < b.x || (a.x == b.x && a.y < b.y);
   });
 
-  v.erase(std::unique(v.begin(), v.end(), [](const SightPoint& a, const SightPoint& b)
+  points.erase(std::unique(points.begin(), points.end(), [](const SightPoint& a, const SightPoint& b)
   {
     return a.x == b.x && a.y == b.y;
-  }), v.end());
+  }), points.end());
 }
 
 // Number of parts each open line is cut into. A split of N gives N - 1 points per open line,
@@ -218,68 +223,68 @@ static constexpr uint64_t OPEN_SPLIT_RAY_BUDGET = 50000000;
 // This will shift heavy allocation and duplication entirely out of the inner loops.
 static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines, int32_t split)
 {
-  SectorPoints pts;
+  SectorPoints points;
 
-  for (const auto& s : lines)
+  for (const auto& line : lines)
   {
     // Log absolute raw corner coordinates.
-    pts.verts.push_back({s.x1, s.y1});
-    pts.verts.push_back({s.x2, s.y2});
-    pts.firstVerts.push_back({s.x1, s.y1});
+    points.verts.push_back({line.x1, line.y1});
+    points.verts.push_back({line.x2, line.y2});
+    points.firstVerts.push_back({line.x1, line.y1});
 
     // Do structural midpoints once
-    const SightPoint mid = {(s.x1 + s.x2) * 0.5, (s.y1 + s.y2) * 0.5};
-    pts.allMids.push_back(mid);
+    const SightPoint mid = {(line.x1 + line.x2) * 0.5, (line.y1 + line.y2) * 0.5};
+    points.allMids.push_back(mid);
 
     // Non-solid structural lines can be open portals or windows.
     // These are the most likely to have a clear sightline.
-    if (!s.solid)
+    if (!line.solid)
     {
-      pts.openMids.push_back(mid);
+      points.openMids.push_back(mid);
 
       for (int32_t k = 1; k < split; ++k)
       {
         const double t = static_cast<double>(k) / static_cast<double>(split);
-        pts.openSplit.push_back({s.x1 + (s.x2 - s.x1) * t, s.y1 + (s.y2 - s.y1) * t});
+        points.openSplit.push_back({line.x1 + (line.x2 - line.x1) * t, line.y1 + (line.y2 - line.y1) * t});
       }
     }
   }
 
   // Strip out layout redundancies.
-  SortUnique(pts.verts);
-  SortUnique(pts.firstVerts);
-  SortUnique(pts.openMids);
-  SortUnique(pts.openSplit);
-  SortUnique(pts.allMids);
+  SortUnique(points.verts);
+  SortUnique(points.firstVerts);
+  SortUnique(points.openMids);
+  SortUnique(points.openSplit);
+  SortUnique(points.allMids);
 
   // The ray loops only ask whether any ray is clear, so the order of the points never
   // changes the result. Ordering them by angle around the sector's center puts neighboring
   // rays in similar directions, so the same wall usually stops several rays in a row.
-  if (!pts.verts.empty())
+  if (!points.verts.empty())
   {
     double cx = 0.0;
     double cy = 0.0;
-    for (const auto& v : pts.verts)
+    for (const auto& v : points.verts)
     {
       cx += v.x;
       cy += v.y;
     }
-    cx /= static_cast<double>(pts.verts.size());
-    cy /= static_cast<double>(pts.verts.size());
+    cx /= static_cast<double>(points.verts.size());
+    cy /= static_cast<double>(points.verts.size());
 
     auto byAngle = [cx, cy](const SightPoint& a, const SightPoint& b)
     {
       return std::atan2(a.y - cy, a.x - cx) < std::atan2(b.y - cy, b.x - cx);
     };
 
-    std::sort(pts.verts.begin(), pts.verts.end(), byAngle);
-    std::sort(pts.firstVerts.begin(), pts.firstVerts.end(), byAngle);
-    std::sort(pts.openMids.begin(), pts.openMids.end(), byAngle);
-    std::sort(pts.openSplit.begin(), pts.openSplit.end(), byAngle);
-    std::sort(pts.allMids.begin(), pts.allMids.end(), byAngle);
+    std::sort(points.verts.begin(), points.verts.end(), byAngle);
+    std::sort(points.firstVerts.begin(), points.firstVerts.end(), byAngle);
+    std::sort(points.openMids.begin(), points.openMids.end(), byAngle);
+    std::sort(points.openSplit.begin(), points.openSplit.end(), byAngle);
+    std::sort(points.allMids.begin(), points.allMids.end(), byAngle);
   }
 
-  return pts;
+  return points;
 }
 
 // Uniform grid of solid blockers in CSR form. One flat array instead of a vector per cell.
@@ -372,13 +377,13 @@ static BlockerGrid BuildBlockerGrid(const std::vector<SightSegment>& blockers,
                                     size_t cols, size_t rows,
                                     double cellSize, double padding)
 {
-  BlockerGrid g;
-  g.originX = originX;
-  g.originY = originY;
-  g.cellSize = cellSize;
-  g.cols = static_cast<ptrdiff_t>(cols);
-  g.rows = static_cast<ptrdiff_t>(rows);
-  g.cellStart.assign(cols * rows + 1, 0);
+  BlockerGrid grid;
+  grid.originX = originX;
+  grid.originY = originY;
+  grid.cellSize = cellSize;
+  grid.cols = static_cast<ptrdiff_t>(cols);
+  grid.rows = static_cast<ptrdiff_t>(rows);
+  grid.cellStart.assign(cols * rows + 1, 0);
 
   // Calls (cellIndex) for every cell the blocker's padded bbox covers.
   auto forEachCell = [&](const SightSegment& s, auto&& fn)
@@ -400,28 +405,28 @@ static BlockerGrid BuildBlockerGrid(const std::vector<SightSegment>& blockers,
   // Count entries per cell.
   for (const auto& b : blockers)
   {
-    forEachCell(b, [&](size_t cell) { g.cellStart[cell + 1]++; });
+    forEachCell(b, [&](size_t cell) { grid.cellStart[cell + 1]++; });
   }
 
   // Prefix sum turns the counts into start offsets.
   for (size_t i = 0; i < cols * rows; ++i)
   {
-    g.cellStart[i + 1] += g.cellStart[i];
+    grid.cellStart[i + 1] += grid.cellStart[i];
   }
 
   // Fill the flat item array.
-  g.items.resize(g.cellStart.back());
-  std::vector<uint32_t> fillPos(g.cellStart.begin(), g.cellStart.end() - 1);
+  grid.items.resize(grid.cellStart.back());
+  std::vector<uint32_t> fillPos(grid.cellStart.begin(), grid.cellStart.end() - 1);
 
   for (size_t i = 0; i < blockers.size(); ++i)
   {
     forEachCell(blockers[i], [&](size_t cell)
     {
-      g.items[fillPos[cell]++] = static_cast<uint32_t>(i);
+      grid.items[fillPos[cell]++] = static_cast<uint32_t>(i);
     });
   }
 
-  return g;
+  return grid;
 }
 
 // Classify which side of a linedef split plane a vertex falls on.
@@ -631,16 +636,16 @@ static bool IsRayBlocked(const SightSegment& ray,
 // Which side of a wall do all four corners of a box fall on?
 // Returns 1 when every corner is clearly on the positive side, -1 when every corner is clearly
 // on the negative side, and 0 when the wall does not cleanly separate the box.
-static inline int32_t BoxSideOfWall(const SightSegment& w, const SectorBBox& box)
+static inline int32_t BoxSideOfWall(const SightSegment& wall, const SectorBBox& box)
 {
   // Twice the margin TrueSegmentsIntersect uses, so rounding can never make this shortcut
   // accept a ray that the original test would not call blocked.
   constexpr double MARGIN = SHADOW_MARGIN;
 
-  const double s0 = SegmentSide(w.x1, w.y1, w.x2, w.y2, box.minX, box.minY);
-  const double s1 = SegmentSide(w.x1, w.y1, w.x2, w.y2, box.maxX, box.minY);
-  const double s2 = SegmentSide(w.x1, w.y1, w.x2, w.y2, box.minX, box.maxY);
-  const double s3 = SegmentSide(w.x1, w.y1, w.x2, w.y2, box.maxX, box.maxY);
+  const double s0 = SegmentSide(wall.x1, wall.y1, wall.x2, wall.y2, box.minX, box.minY);
+  const double s1 = SegmentSide(wall.x1, wall.y1, wall.x2, wall.y2, box.maxX, box.minY);
+  const double s2 = SegmentSide(wall.x1, wall.y1, wall.x2, wall.y2, box.minX, box.maxY);
+  const double s3 = SegmentSide(wall.x1, wall.y1, wall.x2, wall.y2, box.maxX, box.maxY);
 
   if (s0 > MARGIN && s1 > MARGIN && s2 > MARGIN && s3 > MARGIN)
   {
@@ -661,7 +666,7 @@ static inline int32_t BoxSideOfWall(const SightSegment& w, const SectorBBox& box
 // therefore crosses the rays to every point inside the box.
 // If the wall properly crosses the rays to all four corners, it crosses the rays to every point inside the box.
 // 'boxSide' is BoxSideOfWall, passed in because it does not depend on the start point.
-static inline bool WallShadowsBox(const SightSegment& w, int32_t boxSide, double px, double py, const SectorBBox& box)
+static inline bool WallShadowsBox(const SightSegment& wall, int32_t boxSide, double px, double py, const SectorBBox& box)
 {
   constexpr double MARGIN = 2e-3; // Same reasoning as in BoxSideOfWall
 
@@ -671,14 +676,14 @@ static inline bool WallShadowsBox(const SightSegment& w, int32_t boxSide, double
   }
 
   // A ray starting on the wall's own end point is ignored by that wall.
-  if ((std::abs(px - w.x1) < DIST_EPSILON && std::abs(py - w.y1) < DIST_EPSILON) ||
-      (std::abs(px - w.x2) < DIST_EPSILON && std::abs(py - w.y2) < DIST_EPSILON))
+  if ((std::abs(px - wall.x1) < DIST_EPSILON && std::abs(py - wall.y1) < DIST_EPSILON) ||
+      (std::abs(px - wall.x2) < DIST_EPSILON && std::abs(py - wall.y2) < DIST_EPSILON))
   {
     return false;
   }
 
   // The start point has to be clearly on the opposite side of the wall from the box.
-  const double d1 = SegmentSide(w.x1, w.y1, w.x2, w.y2, px, py);
+  const double d1 = SegmentSide(wall.x1, wall.y1, wall.x2, wall.y2, px, py);
   if (boxSide > 0 ? !(d1 < -MARGIN) : !(d1 > MARGIN))
   {
     return false;
@@ -687,10 +692,10 @@ static inline bool WallShadowsBox(const SightSegment& w, int32_t boxSide, double
   // The wall's two end points have to be on opposite sides of the ray to every corner.
   const double cornerX[4] = {box.minX, box.maxX, box.minX, box.maxX};
   const double cornerY[4] = {box.minY, box.minY, box.maxY, box.maxY};
-  const double u1x = w.x1 - px;
-  const double u1y = w.y1 - py;
-  const double u2x = w.x2 - px;
-  const double u2y = w.y2 - py;
+  const double u1x = wall.x1 - px;
+  const double u1y = wall.y1 - py;
+  const double u2x = wall.x2 - px;
+  const double u2y = wall.y2 - py;
 
   bool posNeg = true;
   bool negPos = true;
@@ -897,22 +902,22 @@ static inline void RecordTouchingWalls(std::vector<SightPoint>& list,
                                        size_t gridRows,
                                        double cellSize)
 {
-  for (auto& p : list)
+  for (auto& point : list)
   {
-    const size_t cx = GetCellIndex(p.x, mapMinX, gridCols - 1, cellSize);
-    const size_t cy = GetCellIndex(p.y, mapMinY, gridRows - 1, cellSize);
+    const size_t cx = GetCellIndex(point.x, mapMinX, gridCols - 1, cellSize);
+    const size_t cy = GetCellIndex(point.y, mapMinY, gridRows - 1, cellSize);
     const size_t cell = cy * gridCols + cx;
 
-    p.touchStart = static_cast<uint32_t>(touchWalls.size());
+    point.touchStart = static_cast<uint32_t>(touchWalls.size());
     for (uint32_t k = grid.cellStart[cell]; k < grid.cellStart[cell + 1]; ++k)
     {
-      const SightSegment& w = solidBlockers[grid.items[k]];
-      if (IsPointOnSegment(w.x1, w.y1, w.x2, w.y2, p.x, p.y))
+      const SightSegment& wall = solidBlockers[grid.items[k]];
+      if (IsPointOnSegment(wall.x1, wall.y1, wall.x2, wall.y2, point.x, point.y))
       {
         touchWalls.push_back(grid.items[k]);
       }
     }
-    p.touchCount = static_cast<uint32_t>(touchWalls.size()) - p.touchStart;
+    point.touchCount = static_cast<uint32_t>(touchWalls.size()) - point.touchStart;
   }
 }
 
@@ -931,10 +936,10 @@ static inline void RecordTouchingWalls(std::vector<SightPoint>& list,
 struct CutPoints
 {
   std::vector<uint8_t> isCut;   // 1 when the sector is a cut point
-  std::vector<size_t> list;     // Every cut point sector
-  std::vector<uint32_t> parent; // Tree: parent of each node. Nodes below num_secs are sectors, the rest are blocks
-  std::vector<uint32_t> depth;  // Tree: steps from the top of the tree to each node
-  std::vector<uint32_t> compOf; // Which connected part of the map each sector is in
+  std::vector<size_t> cutList;     // Every cut point sector
+  std::vector<uint32_t> cutParent; // Tree: parent of each node. Nodes below num_secs are sectors, the rest are blocks
+  std::vector<uint32_t> cutDepth;  // Tree: steps from the top of the tree to each node
+  std::vector<uint32_t> cutMap; // Which connected part of the map each sector is in
 };
 
 // Find the sectors that split the neighbor graph apart when taken away,
@@ -943,8 +948,8 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbo
 {
   CutPoints cuts;
   cuts.isCut.assign(num_secs, 0);
-  cuts.parent.assign(num_secs, NO_INDEX_INT32);
-  cuts.compOf.assign(num_secs, NO_INDEX_INT32);
+  cuts.cutParent.assign(num_secs, NO_INDEX_INT32);
+  cuts.cutMap.assign(num_secs, NO_INDEX_INT32);
 
   std::vector<uint32_t> order(num_secs, 0);     // Order the depth first walk reached each sector in
   std::vector<uint32_t> lowest(num_secs, 0);    // Earliest reached sector this one can get back to
@@ -961,7 +966,7 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbo
     if (order[first] != 0) continue;
 
     order[first] = lowest[first] = ++clock;
-    cuts.compOf[first] = parts;
+    cuts.cutMap[first] = parts;
     sectorStack.push_back(static_cast<uint32_t>(first));
     callStack.push_back(static_cast<uint32_t>(first));
 
@@ -976,7 +981,7 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbo
         if (order[w] == 0)
         {
           order[w] = lowest[w] = ++clock;
-          cuts.compOf[w] = parts;
+          cuts.cutMap[w] = parts;
           sectorStack.push_back(w);
           callStack.push_back(w);
         }
@@ -998,8 +1003,8 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbo
       // form one block, joined to the rest of the map only through 'above'.
       if (lowest[v] >= order[above])
       {
-        const uint32_t block = static_cast<uint32_t>(cuts.parent.size());
-        cuts.parent.push_back(above);
+        const uint32_t block = static_cast<uint32_t>(cuts.cutParent.size());
+        cuts.cutParent.push_back(above);
         blockCount[above]++;
 
         uint32_t u;
@@ -1007,7 +1012,7 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbo
         {
           u = sectorStack.back();
           sectorStack.pop_back();
-          cuts.parent[u] = block;
+          cuts.cutParent[u] = block;
           blockCount[u]++;
         } while (u != v);
       }
@@ -1023,31 +1028,31 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbo
     if (blockCount[s] >= 2)
     {
       cuts.isCut[s] = 1;
-      cuts.list.push_back(s);
+      cuts.cutList.push_back(s);
     }
   }
 
   // Work out how deep each node is, so two sectors can be walked up to where their paths meet.
-  const size_t numNodes = cuts.parent.size();
-  cuts.depth.assign(numNodes, NO_INDEX_INT32);
+  const size_t numNodes = cuts.cutParent.size();
+  cuts.cutDepth.assign(numNodes, NO_INDEX_INT32);
 
   std::vector<uint32_t> chain;
-  for (size_t n = 0; n < numNodes; ++n)
+  for (size_t node = 0; node < numNodes; ++node)
   {
-    if (cuts.depth[n] != NO_INDEX_INT32) continue;
+    if (cuts.cutDepth[node] != NO_INDEX_INT32) continue;
 
     chain.clear();
-    uint32_t m = static_cast<uint32_t>(n);
-    while (m != NO_INDEX_INT32 && cuts.depth[m] == NO_INDEX_INT32)
+    uint32_t ancestor = static_cast<uint32_t>(node);
+    while (ancestor != NO_INDEX_INT32 && cuts.cutDepth[ancestor] == NO_INDEX_INT32)
     {
-      chain.push_back(m);
-      m = cuts.parent[m];
+      chain.push_back(ancestor);
+      ancestor = cuts.cutParent[ancestor];
     }
 
-    uint32_t d = (m == NO_INDEX_INT32) ? 0 : cuts.depth[m] + 1;
-    for (size_t i = chain.size(); i-- > 0;)
+    uint32_t nodeDepth = (ancestor == NO_INDEX_INT32) ? 0 : cuts.cutDepth[ancestor] + 1;
+    for (size_t step = chain.size(); step-- > 0;)
     {
-      cuts.depth[chain[i]] = d++;
+      cuts.cutDepth[chain[step]] = nodeDepth++;
     }
   }
 
@@ -1064,22 +1069,22 @@ static std::vector<std::vector<std::pair<uint32_t, uint32_t>>> BuildCutLevels(
     const std::vector<size_t>& activeSectors)
 {
   std::vector<uint8_t> isActive(num_secs, 0);
-  for (size_t s : activeSectors)
+  for (size_t cutSector : activeSectors)
   {
-    isActive[s] = 1;
+    isActive[cutSector] = 1;
   }
 
   std::vector<std::vector<std::pair<uint32_t, uint32_t>>> levels;
   std::vector<int32_t> dist(num_secs);
   std::vector<uint32_t> queue;
 
-  for (size_t s : cuts.list)
+  for (size_t cutSector : cuts.cutList)
   {
-    if (!isActive[s]) continue;
+    if (!isActive[cutSector]) continue;
 
     std::fill(dist.begin(), dist.end(), -1);
-    dist[s] = 0;
-    queue.assign(1, static_cast<uint32_t>(s));
+    dist[cutSector] = 0;
+    queue.assign(1, static_cast<uint32_t>(cutSector));
     for (size_t head = 0; head < queue.size(); ++head)
     {
       for (uint32_t v : neighbors[queue[head]])
@@ -1092,15 +1097,15 @@ static std::vector<std::vector<std::pair<uint32_t, uint32_t>>> BuildCutLevels(
       }
     }
 
-    for (uint32_t x : queue)
+    for (uint32_t other : queue)
     {
-      if (x == s || !isActive[x]) continue;
-      if (cuts.isCut[x] && x < s) continue; // A pair of two cut points is only listed once
+      if (other == cutSector || !isActive[other]) continue;
+      if (cuts.isCut[other] && other < cutSector) continue; // A pair of two cut points is only listed once
 
-      const size_t d = static_cast<size_t>(dist[x]);
-      if (levels.size() <= d) levels.resize(d + 1);
-      levels[d].push_back({static_cast<uint32_t>(std::max<size_t>(x, s)),
-                           static_cast<uint32_t>(std::min<size_t>(x, s))});
+      const size_t distance = static_cast<size_t>(dist[other]);
+      if (levels.size() <= distance) levels.resize(distance + 1);
+      levels[distance].push_back({static_cast<uint32_t>(std::max<size_t>(other, cutSector)),
+                           static_cast<uint32_t>(std::min<size_t>(other, cutSector))});
     }
   }
 
@@ -1140,14 +1145,14 @@ struct CountSummary
 
 static CountSummary SummarizeCounts(std::vector<uint64_t> values)
 {
-  CountSummary s;
-  if (values.empty()) return s;
+  CountSummary summary;
+  if (values.empty()) return summary;
 
   std::sort(values.begin(), values.end());
 
-  s.count = values.size();
-  s.min = values.front();
-  s.max = values.back();
+  summary.count = values.size();
+  summary.min = values.front();
+  summary.max = values.back();
 
   uint64_t sum = 0;
   for (uint64_t v : values)
@@ -1156,37 +1161,37 @@ static CountSummary SummarizeCounts(std::vector<uint64_t> values)
   }
 
   const double totalSum   = static_cast<double>(sum);
-  const double totalCount = static_cast<double>(s.count);
+  const double totalCount = static_cast<double>(summary.count);
 
-  s.mean = totalSum / totalCount;
+  summary.mean = totalSum / totalCount;
 
-  const size_t mid = s.count / 2;
-  s.median = (s.count % 2 == 1)
+  const size_t mid = summary.count / 2;
+  summary.median = (summary.count % 2 == 1)
                  ? static_cast<double>(values[mid])
                  : (static_cast<double>(values[mid - 1]) + static_cast<double>(values[mid])) * 0.5;
 
   // The list is sorted, so equal values sit together. Only a longer run replaces the mode,
   // which keeps the smallest value when two runs are the same length.
-  for (size_t i = 0; i < values.size();)
+  for (size_t runStart = 0; runStart < values.size();)
   {
-    size_t j = i;
-    while (j < values.size() && values[j] == values[i]) ++j;
+    size_t runEnd = runStart;
+    while (runEnd < values.size() && values[runEnd] == values[runStart]) ++runEnd;
 
-    if (static_cast<uint64_t>(j - i) > s.modeFreq)
+    if (static_cast<uint64_t>(runEnd - runStart) > summary.modeFreq)
     {
-      s.mode = values[i];
-      s.modeFreq = static_cast<uint64_t>(j - i);
+      summary.mode = values[runStart];
+      summary.modeFreq = static_cast<uint64_t>(runEnd - runStart);
     }
-    i = j;
+    runStart = runEnd;
   }
 
-  return s;
+  return summary;
 }
 
 // Two decimals, built manually so it does not depend on what format options PrintLine accepts.
-static std::string FormatTwoDecimals(double v)
+static std::string FormatTwoDecimals(double value)
 {
-  const uint64_t hundredths = static_cast<uint64_t>(v * 100.0 + 0.5);
+  const uint64_t hundredths = static_cast<uint64_t>(value * 100.0 + 0.5);
   std::string fraction = std::to_string(hundredths % 100);
   if (fraction.size() < 2) fraction.insert(0, "0");
   return std::to_string(hundredths / 100) + "." + fraction;
@@ -1194,11 +1199,11 @@ static std::string FormatTwoDecimals(double v)
 
 static void PrintCountSummary(const char* tag, const char* label, const std::vector<uint64_t>& values)
 {
-  const CountSummary s = SummarizeCounts(values);
+  const CountSummary summary = SummarizeCounts(values);
 
   PrintLine(Log::NORMAL, "[{}]   {}: mean {}  median {}  mode {} (x{})  min {}  max {}",
-            tag, label, FormatTwoDecimals(s.mean), FormatTwoDecimals(s.median),
-            s.mode, s.modeFreq, s.min, s.max);
+            tag, label, FormatTwoDecimals(summary.mean), FormatTwoDecimals(summary.median),
+            summary.mode, summary.modeFreq, summary.min, summary.max);
 }
 
 static void RejectAnalysis(const RejectStats& stats)
@@ -1513,7 +1518,7 @@ static void Reject_ProcessSectors(Level &level)
   CutPoints cuts;
   cuts = FindCutPoints(neighbors, num_secs);
 
-  const bool prune = !cuts.list.empty();
+  const bool prune = !cuts.cutList.empty();
 
   std::vector<std::vector<std::pair<uint32_t, uint32_t>>> cutLevels;
 
@@ -1532,23 +1537,23 @@ static void Reject_ProcessSectors(Level &level)
   // and one of them cannot see that cut point?
   // Walk up the tree from both sectors until the two paths meet. Every sector passed on
   // the way, other than the two themselves, is a cut point standing between them.
-  auto inferredBlind = [&](size_t a, size_t b) -> bool
+  auto inferredBlind = [&](size_t sectorA, size_t sectorB) -> bool
   {
-    if (cuts.compOf[a] != cuts.compOf[b]) return false;
+    if (cuts.cutMap[sectorA] != cuts.cutMap[sectorB]) return false;
 
-    uint32_t x = static_cast<uint32_t>(a);
-    uint32_t y = static_cast<uint32_t>(b);
+    uint32_t nodeA = static_cast<uint32_t>(sectorA);
+    uint32_t nodeB = static_cast<uint32_t>(sectorB);
 
-    while (x != y)
+    while (nodeA != nodeB)
     {
-      uint32_t& mover = (cuts.depth[x] >= cuts.depth[y]) ? x : y;
-      mover = cuts.parent[mover];
+      uint32_t& mover = (cuts.cutDepth[nodeA] >= cuts.cutDepth[nodeB]) ? nodeA : nodeB;
+      mover = cuts.cutParent[mover];
 
       const size_t cut = mover;
-      if (cut >= num_secs || cut == a || cut == b) continue; // A block or one of the two sectors themselves
+      if (cut >= num_secs || cut == sectorA || cut == sectorB) continue; // A block or one of the two sectors themselves
 
-      const size_t p1 = a * num_secs + cut;
-      const size_t p2 = b * num_secs + cut;
+      const size_t p1 = sectorA * num_secs + cut;
+      const size_t p2 = sectorB * num_secs + cut;
       if (((blindSnap[p1 >> 3] >> (p1 & 7)) & 1) || ((blindSnap[p2 >> 3] >> (p2 & 7)) & 1))
       {
         return true;
@@ -1657,15 +1662,15 @@ static void Reject_ProcessSectors(Level &level)
       // Walk from the last active sector down.
       // Row 'a' tests 'a' targets, so the biggest rows go first
       // and no long row is left as a straggler.
-      const size_t a = static_cast<size_t>(activeCount - 1 - i);
+      const size_t from = static_cast<size_t>(activeCount - 1 - i);
 
       // Map our active iterator index back to the real sector index
-      const size_t view = activeSectors[a];
+      const size_t view = activeSectors[from];
 
-      for (size_t b = 0; b < a; b++)
+      for (size_t to = 0; to < from; to++)
       {
         // Map our active target iterator index back to the real sector index
-        const size_t target = activeSectors[b];
+        const size_t target = activeSectors[to];
 
         // Pairs with a cut point were already done above.
         if (prune && (cuts.isCut[view] || cuts.isCut[target]))
@@ -1708,18 +1713,18 @@ static void Reject_ProcessSectors(Level &level)
     stats.gridCols = static_cast<uint64_t>(gridCols);
 
     // Sectors without any line are left out so they do not pull the averages down.
-    for (size_t s : activeSectors)
+    for (size_t sector : activeSectors)
     {
-      stats.portalsPerSector.push_back(portalsPerSector[s]);
-      stats.blockersPerSector.push_back(blockersPerSector[s]);
-      stats.raysPerSector.push_back(totalSectorRays[s]);
+      stats.portalsPerSector.push_back(portalsPerSector[sector]);
+      stats.blockersPerSector.push_back(blockersPerSector[sector]);
+      stats.raysPerSector.push_back(totalSectorRays[sector]);
     }
 
     const size_t cellCount = gridCols * gridRows;
     stats.linesPerCell.resize(cellCount);
-    for (size_t c = 0; c < cellCount; ++c)
+    for (size_t cell = 0; cell < cellCount; ++cell)
     {
-      stats.linesPerCell[c] = grid.cellStart[c + 1] - grid.cellStart[c];
+      stats.linesPerCell[cell] = grid.cellStart[cell + 1] - grid.cellStart[cell];
     }
 
     RejectAnalysis(stats);
