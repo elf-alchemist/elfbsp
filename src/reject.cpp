@@ -49,7 +49,7 @@ static void Reject_Init(Level &level)
   level.reject_size = (level.sectors.size() * level.sectors.size() + 7) / 8;
 
   level.reject_matrix = new uint8_t[level.reject_size];
-  memset(level.reject_matrix, 0, level.reject_size);
+  UtilZero(level.reject_matrix);
 
   for (auto sec : level.sectors)
   {
