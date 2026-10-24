@@ -144,7 +144,7 @@ void GenerateAnalysis(WadIO &io, Level &level, std::string_view filename)
 
     MapBoundBox dummy = {0, 0, 0, 0};
     analysis_seg = CreateSegs(level);
-    BuildNodes(level, analysis_seg, 0, &dummy, &analysis_node, &analysis_sub, static_cast<double>(split_cost), is_fast, true);
+    BuildNodes(level, analysis_seg, 0, dummy, &analysis_node, &analysis_sub, static_cast<double>(split_cost), is_fast, true);
 
     data.vertex = level.num_old_vert;
     data.lines = level.linedefs.size();
@@ -181,10 +181,11 @@ void GenerateAnalysis(WadIO &io, Level &level, std::string_view filename)
     data.worst_case_ratio = min_epl / max_epl;
     data.tree_quality = ((min_epl / total_depth_sum) - data.worst_case_ratio) / (1 - data.worst_case_ratio);
 
-    std::string line = std::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}", io.LumpName(level.lump), is_fast,
-                                   split_cost, data.vertex, data.lines, data.sides, data.sectors, data.bsp_vertex, data.nodes,
-                                   data.subsecs, data.segs, data.splits, data.left_depth, data.right_depth, data.average_depth,
-                                   data.optimal_depth, data.tree_balance, data.worst_case_ratio, data.tree_quality);
+    std::string line =
+        std::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}", io.LumpName(level.lumps.label), is_fast,
+                    split_cost, data.vertex, data.lines, data.sides, data.sectors, data.bsp_vertex, data.nodes, data.subsecs,
+                    data.segs, data.splits, data.left_depth, data.right_depth, data.average_depth, data.optimal_depth,
+                    data.tree_balance, data.worst_case_ratio, data.tree_quality);
     analysis_csv.push_back(line);
 
     level.FreeNodes();
@@ -201,7 +202,7 @@ void GenerateAnalysis(WadIO &io, Level &level, std::string_view filename)
     for (size_t split_cost = 1; split_cost <= 32; split_cost++)
     {
       generate_analysis_data(io, level, is_fast != 0, split_cost);
-      PrintLine(Log::NORMAL, "[{}] Analyzed {}, {} mode, split cost factor of {}", __func__, io.LumpName(level.lump),
+      PrintLine(Log::NORMAL, "[{}] Analyzed {}, {} mode, split cost factor of {}", __func__, io.LumpName(level.lumps.label),
                 is_fast ? "fast" : "normal", split_cost);
     }
   }

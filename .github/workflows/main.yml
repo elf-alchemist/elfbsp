@@ -120,6 +120,19 @@ jobs:
           -DCPACK_PACKAGE_VERSION=nightly
           ${{ matrix.config.configure }}
 
+      - name: Run Clang-Tidy
+        uses: cpp-linter/cpp-linter-action@v2
+        id: cpp-linter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          version: 21
+          step-summary: true
+          files-changed-only: true
+          style: file
+          tidy-checks: ''
+          database: 'build'
+
       - name: Build
         run: cmake --build build
 

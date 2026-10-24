@@ -23,6 +23,30 @@
 
 #include "local.hpp"
 
+void Level::SetLumps(WadIO &io, size_t label_index)
+{
+  this->lumps.label = label_index;
+  this->map_format = io.LevelFormat(this->lumps.label);
+
+  this->lumps.textmap = io.LevelLookupLump(this->lumps.label, "TEXTMAP");
+  this->lumps.things = io.LevelLookupLump(this->lumps.label, "THINGS");
+  this->lumps.linedefs = io.LevelLookupLump(this->lumps.label, "LINEDEFS");
+  this->lumps.sidedefs = io.LevelLookupLump(this->lumps.label, "SIDEDEFS");
+  this->lumps.vertexes = io.LevelLookupLump(this->lumps.label, "VERTEXES");
+  this->lumps.sectors = io.LevelLookupLump(this->lumps.label, "SECTORS");
+  this->lumps.lights = io.LevelLookupLump(this->lumps.label, "LIGHTS");
+  this->lumps.znodes = io.LevelLookupLump(this->lumps.label, "ZNODES");
+  this->lumps.nodes = io.LevelLookupLump(this->lumps.label, "NODES");
+  this->lumps.ssectors = io.LevelLookupLump(this->lumps.label, "SSECTORS");
+  this->lumps.segs = io.LevelLookupLump(this->lumps.label, "SEGS");
+  this->lumps.leafs = io.LevelLookupLump(this->lumps.label, "LEAFS");
+  this->lumps.reject = io.LevelLookupLump(this->lumps.label, "REJECT");
+  this->lumps.blockmap = io.LevelLookupLump(this->lumps.label, "BLOCKMAP");
+  this->lumps.behavior = io.LevelLookupLump(this->lumps.label, "BEHAVIOR");
+  this->lumps.macros = io.LevelLookupLump(this->lumps.label, "MACROS");
+  this->lumps.scripts = io.LevelLookupLump(this->lumps.label, "SCRIPTS");
+}
+
 Vertex *Level::SafeLookupVertex(size_t num, size_t num_line) const
 {
   if (num >= vertices.size())
@@ -47,15 +71,17 @@ Sector *Level::SafeLookupSector(size_t num, size_t num_side) const
   return sectors[num];
 }
 
-Sidedef *Level::SafeLookupSidedef(uint16_t num) const
+Sidedef *Level::SafeLookupSidedef(int32_t num) const
 {
   // silently ignore illegal sidedef numbers
-  if (num >= NO_INDEX_INT16 || num >= sidedefs.size())
+  auto num_as_index = static_cast<size_t>(num);
+
+  if (num < 0 || num_as_index >= sidedefs.size())
   {
     return nullptr;
   }
 
-  return sidedefs[num];
+  return sidedefs[num_as_index];
 }
 
 /* ----- allocation routines ---------------------------- */

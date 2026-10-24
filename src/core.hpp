@@ -39,6 +39,7 @@
 
 #include <bit>
 #include <chrono>
+#include <limits>
 
 #include "zlib-ng.h"
 
@@ -180,6 +181,8 @@ constexpr uint32_t NO_INDEX_INT32 = static_cast<uint32_t>(-1);
 constexpr size_t WAD_LUMP_NAME = 8;
 
 constexpr size_t MSG_BUFFER_LENGTH = 1024;
+
+constexpr size_t OFF_BY_ONE = 1;
 
 // bitflags
 constexpr uint32_t BIT(const uint32_t x)
@@ -394,6 +397,15 @@ constexpr void UtilFree(T *data)
   free(data);
 }
 
+//
+// Zero init a chunk of memory
+//
+template <typename T, size_t TSize = sizeof(T)>
+constexpr void UtilZero(T *data)
+{
+  memset(data, 0, TSize);
+}
+
 //------------------------------------------------------------------------
 // STRINGS
 //------------------------------------------------------------------------
@@ -408,12 +420,50 @@ inline int32_t StringCaseCmp(const char *s1, const char *s2)
 }
 
 //
-// a case-insensitive compare
+// a case-sensitive compare
 //
-inline int32_t StringCaseCmpMax(const char *s1, const char *s2, size_t len)
+inline int32_t StringCmp(const char *s1, const char *s2)
 {
-  SYS_ASSERT(s1 && s2 && len);
-  return strncasecmp(s1, s2, len);
+  SYS_ASSERT(s1 && s2);
+  return strcmp(s1, s2) == 0;
+}
+
+inline void StringToLower(std::string &str)
+{
+  std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::tolower(c); });
+}
+
+inline void StringToUpper(std::string &str)
+{
+  std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::toupper(c); });
+}
+
+inline char CToUpper(const char c)
+{
+  return (c >= 'a' && c <= 'z') ? (c + 'A' - 'a') : c;
+}
+
+inline void CStringToUpper(char *str)
+{
+  while (*str)
+  {
+    *str = CToUpper(*str);
+    ++str;
+  }
+}
+
+inline char CToLower(const char c)
+{
+  return (c >= 'A' && c <= 'Z') ? (c - 'A' + 'a') : c;
+}
+
+inline void CStringToLower(char *str)
+{
+  while (*str)
+  {
+    *str = CToLower(*str);
+    ++str;
+  }
 }
 
 //------------------------------------------------------------------------
@@ -659,6 +709,8 @@ struct MapThingHexen
 // -Elf- Doom64 definitions
 // Some are shared with PSX Doom's and PSX Final Doom's formats
 // but we don't support those
+//
+// ... yet.
 
 struct MapThingDoom64
 {
@@ -670,7 +722,7 @@ struct MapThingDoom64
   uint16_t options; // when appears, deaf, etc..
 } PACKEDATTR;
 
-struct LinedefDoom64
+struct MapLinedefDoom64
 {
   uint16_t start;   // from this vertex...
   uint16_t end;     // ... to this vertex
@@ -681,7 +733,7 @@ struct LinedefDoom64
   uint16_t left;    // left sidedef (only if this line adjoins 2 sectors)
 } PACKEDATTR;
 
-struct SidedefDoom64
+struct MapSidedefDoom64
 {
   int16_t x_offset;   // X offset for texture
   int16_t y_offset;   // Y offset for texture
@@ -691,7 +743,7 @@ struct SidedefDoom64
   uint16_t sector;    // adjacent sector
 } PACKEDATTR;
 
-struct SectorDoom64
+struct MapSectorDoom64
 {
   int16_t floorh;     // floor height
   int16_t ceilh;      // ceiling height
@@ -701,6 +753,59 @@ struct SectorDoom64
   uint16_t special;   // special type
   uint16_t tag;       // tag number
   uint16_t flags;     // reverb, damage, water, etc
+} PACKEDATTR;
+
+struct UVertexMinimal
+{
+  double x;
+  double y;
+};
+
+struct UThingMinimal
+{
+  int32_t tid;
+  int32_t type;
+  double x;
+  double y;
+  double height;
+  int32_t angle;
+  int32_t special;
+  int32_t args[5];
+  uint32_t options;
+};
+
+struct ULinedefMinimal
+{
+  int32_t id;
+  size_t v1_id;
+  size_t v2_id;
+  int32_t special;
+  int32_t args[5];
+  int32_t sidefront;
+  int32_t sideback;
+  uint32_t flags;
+  uint32_t spac;
+};
+
+struct USidedefMinimal
+{
+  size_t sector_id;
+  char texturetop[9];
+  char texturemiddle[9];
+  char texturebottom[9];
+  int32_t offsetx;
+  int32_t offsety;
+};
+
+struct USectorMinimal
+{
+  int32_t tag;
+  int32_t heightfloor;
+  int32_t heightceiling;
+  char texturefloor[9];
+  char textureceiling[9];
+  int32_t lightlevel;
+  int32_t special;
 };
 
 //------------------------------------------------------------------------
@@ -741,17 +846,22 @@ enum class BlockmapFormat : uint8_t
 // * Nodes and subsectors share the same index slot, distinguished only by the high bit
 // * No known additional limits exist for segments
 //
+// * These entries need OFF_BY_ONE, since std::vector's size() method is 1 indexed;
+//
 
-constexpr size_t LIMIT_VERT = UINT16_MAX;
-constexpr size_t LIMIT_LINE = UINT16_MAX - 1;
-constexpr size_t LIMIT_SIDE = UINT16_MAX - 1;
-constexpr size_t LIMIT_SECTOR = UINT16_MAX;
+template <typename T>
+using Limits = std::numeric_limits<T>;
 
-constexpr size_t LIMIT_NODE = INT16_MAX;
-constexpr size_t LIMIT_SUBSEC = INT16_MAX;
-constexpr size_t LIMIT_SEG = UINT16_MAX;
+constexpr size_t LIMIT_VERT = Limits<uint16_t>::max() + OFF_BY_ONE;
+constexpr size_t LIMIT_LINE = Limits<uint16_t>::max();
+constexpr size_t LIMIT_SIDE = Limits<uint16_t>::max();
+constexpr size_t LIMIT_SECTOR = Limits<uint16_t>::max() + OFF_BY_ONE;
 
-constexpr size_t LIMIT_BMAP_INDEX = UINT16_MAX;
+constexpr size_t LIMIT_NODE = Limits<int16_t>::max() + OFF_BY_ONE;
+constexpr size_t LIMIT_SUBSEC = Limits<int16_t>::max() + OFF_BY_ONE;
+constexpr size_t LIMIT_SEG = Limits<uint16_t>::max() + OFF_BY_ONE;
+
+constexpr size_t LIMIT_BMAP_INDEX = Limits<uint16_t>::max() + OFF_BY_ONE;
 
 //
 // Vanilla blockmap
@@ -789,9 +899,9 @@ static_size(MapThingDoom, 10);
 static_size(MapLinedefHexen, 16);
 static_size(MapThingHexen, 20);
 static_size(MapThingDoom64, 12);
-static_size(LinedefDoom64, 16);
-static_size(SidedefDoom64, 12);
-static_size(SectorDoom64, 24);
+static_size(MapLinedefDoom64, 16);
+static_size(MapSidedefDoom64, 12);
+static_size(MapSectorDoom64, 24);
 static_size(MapBoundBox, 8);
 static_size(MapBlockmapHeader, 8);
 static_size(MapBlockmapHeaderXBM1, 16);
@@ -880,6 +990,25 @@ enum LineflagDoom64 : uint32_t
   MLF_DOOM64_MIRROR_VERT = BIT(31),
 };
 
+enum LineflagUniversal : uint32_t
+{
+  ULF_None = 0,
+  ULF_Blocking = BIT(1),
+  ULF_BlockMonsters = BIT(2),
+  ULF_TwoSided = BIT(3),
+  ULF_DontPegTop = BIT(4),
+  ULF_DontPegBottom = BIT(5),
+  ULF_Secret = BIT(6),
+  ULF_BlockSound = BIT(7),
+  ULF_DontDraw = BIT(8),
+  ULF_Mapped = BIT(9),
+
+  ULF_JumpOver = BIT(10),
+  ULF_BlockFloaters = BIT(11),
+  ULF_Translucent = BIT(12),
+  ULF_Transparent = BIT(13),
+};
+
 enum LineSpacHexen
 {
   SPAC_Cross = 0,   // when line is crossed (W1 / WR)
@@ -888,6 +1017,19 @@ enum LineSpacHexen
   SPAC_Impact = 3,  // when bullet/projectile hits line (G1 / GR)
   SPAC_Push = 4,    // when line is bumped (player is stopped)
   SPAC_PCross = 5,  // when projectile crosses the line
+};
+
+enum LineSpacUniversal : uint32_t
+{
+  ULS_PlayerCross = BIT(1),
+  ULS_PlayerUse = BIT(2),
+  ULS_MonsterCross = BIT(3),
+  ULS_MonsterUse = BIT(4),
+  ULS_Impact = BIT(5),
+  ULS_PlayerPush = BIT(6),
+  ULS_MonsterPush = BIT(7),
+  ULS_MissileCross = BIT(8),
+  ULS_RepeatSpecial = BIT(9),
 };
 
 enum LineSpecialDoom : int32_t
@@ -1033,6 +1175,31 @@ enum DoomEdNum : int16_t
   Hexen_PolyObj_SpawnHurt = 3003, // does any port actually handle this?
 };
 
+enum ThingOptionsUniversal : uint32_t
+{
+  UTF_Skill1 = BIT(1),
+  UTF_Skill2 = BIT(2),
+  UTF_Skill3 = BIT(3),
+  UTF_Skill4 = BIT(4),
+  UTF_Skill5 = BIT(5),
+  UTF_Ambush = BIT(6),
+  UTF_Single = BIT(7),
+  UTF_DM = BIT(8),
+  UTF_Coop = BIT(9),
+
+  UTF_Friend = BIT(10),
+
+  UTF_Dormant = BIT(11),
+  UTF_Class1 = BIT(12),
+  UTF_Class2 = BIT(13),
+  UTF_Class3 = BIT(14),
+
+  UTF_Standing = BIT(15),
+  UTF_StrifeAlly = BIT(16),
+  UTF_Translucent = BIT(17),
+  UTF_Invisible = BIT(18),
+};
+
 //
 // Node Build Information Structure
 //
@@ -1062,6 +1229,10 @@ struct BuildInfo
   bool verbose = false;  // this affects how some messages are shown
   bool effects = true;   // disable special effects
   bool compress = false; // compress lumps using zlib
+
+  bool skip_bsp = false;  // Just copy over the lumps, don't build anything ...
+  bool skip_bmap = false; // ... if, and only if, the lymp already exists ...
+  bool skip_rej = false;  // ... for if the lump does not exist, it will be built.
 };
 
 extern BuildInfo config;
@@ -1097,6 +1268,9 @@ constexpr const char PRINT_HELP[] = "\n"
                                     "    -f --fast          Faster partition selection\n"
                                     "    -m --map   XXXX    Control which map(s) are built\n"
                                     "    -c --cost  ##      Cost assigned to seg splits (1-32)\n"
+                                    "    -t --type  #       Select targeted node/BSP tree format\n"
+                                    "                       0=Vanilla, 1=DeePBSPV4, 2=XNOD, 3=XGLN, 4=XGL2, 5=XGL3\n"
+                                    "       --compress      Compress ZDBSP nodes\n"
                                     "\n"
                                     "Short options may be mixed, for example: -fbv\n"
                                     "Long options must always begin with a double hyphen\n"

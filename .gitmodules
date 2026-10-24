@@ -1,3 +1,6 @@
 [submodule "library/zlib-ng"]
 	path = library/zlib-ng
 	url = https://github.com/zlib-ng/zlib-ng/
+[submodule "library/scanner"]
+	path = library/scanner
+	url = https://github.com/elf-alchemist/libscanner.git
