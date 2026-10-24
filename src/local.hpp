@@ -347,10 +347,13 @@ struct Intersection
   bool open_after;
 };
 
-struct BlockList
+struct LineList
 {
-  size_t hash;
-  std::vector<size_t> lines;
+  Vec<size_t> lines;
+  FNV1a<size_t> sum;
+  size_t block_index = NO_INDEX;
+  size_t flat_list_index = NO_INDEX;
+  bool duplicate = false;
 };
 
 struct MapLumps
@@ -408,9 +411,9 @@ struct Level
   size_t block_w, block_h;
   size_t block_count;
 
-  std::vector<BlockList> block_lines;
-  std::vector<size_t> block_indexes;
-  std::vector<size_t> block_duplicates;
+  std::vector<LineList> block_lists;
+  std::vector<size_t> block_flat_list;
+  size_t block_flat_list_uncompressed_size;
 
   double block_compression;
   BlockmapFormat bmap_format = BlockmapFormat::DoomBSP;

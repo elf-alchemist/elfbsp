@@ -487,6 +487,10 @@ static int32_t ParseLongArgument(std::string name, const int32_t argc, const cha
   {
     config.compress = true;
   }
+  else if (name == "--blockmap-skip-zero")
+  {
+    config.skip_bmap_zero = true;
+  }
   else if (name == "--skip-bsp")
   {
     config.skip_bsp = true;

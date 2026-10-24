@@ -24,37 +24,26 @@
 #include "core.hpp"
 #include "local.hpp"
 
-/*
- * Important bullshit to note:
- *  1. The original DoomBSP code wrote an erroneous 0-value at the start of every block list.
- *  2. TeamTNT, in their infinite Boom-designing wisdom, choose to always skip the erroneous
- *     value, where vanilla does not.
- *  3. ZokumBSP provides an option to not write down the cludge zero, this was used in BTSX
- *     due to vanilla EXE limits.
- *
- */
+static constexpr auto VanillaHeaderSize = sizeof(MapBlockmapHeader);
+static constexpr auto XBM1HeaderSize = sizeof(MapBlockmapHeaderXBM1);
 
-static constexpr size_t LIST_ZERO = 1;
-static constexpr size_t LIST_END = 1;
-static constexpr size_t EXTRA_LINES = LIST_ZERO + LIST_END;
+static constexpr auto XBM1Prefix = "XBM1\0\0\0\0";
+static constexpr auto XBM1PrefixSize = sizeof(XBM1Prefix);
 
-static constexpr size_t m_zero = ZERO_INDEX;
-static constexpr size_t m_neg1 = NO_INDEX;
-
-static constexpr size_t HeaderIndexSize = 4;
-static constexpr size_t NullBlockIndexSize = 2;
+static constexpr auto INT16 = sizeof(uint16_t);
+static constexpr auto INT32 = sizeof(uint32_t);
 
 /* ----- create blockmap ------------------------------------ */
 
-static void FindBlockmapLimits(Level &level, MapBoundBox *bbox)
+static void Blockmap_FindLimits(Level &level, MapBoundBox *bbox)
 {
   double mid_x = 0;
   double mid_y = 0;
   int16_t block_mid_x = 0;
   int16_t block_mid_y = 0;
 
-  bbox->minx = bbox->miny = SHRT_MAX;
-  bbox->maxx = bbox->maxy = SHRT_MIN;
+  bbox->minx = bbox->miny = Limits<int16_t>::max();
+  bbox->maxx = bbox->maxy = Limits<int16_t>::min();
 
   for (auto L : level.linedefs)
   {
@@ -95,12 +84,12 @@ static void FindBlockmapLimits(Level &level, MapBoundBox *bbox)
   }
 }
 
-void InitBlockmap(Level &level)
+void Blockmap_Init(Level &level)
 {
   MapBoundBox map_bbox;
 
   // find limits of linedefs, and store as map limits
-  FindBlockmapLimits(level, &map_bbox);
+  Blockmap_FindLimits(level, &map_bbox);
 
   if (config.verbose)
   {
@@ -117,19 +106,17 @@ void InitBlockmap(Level &level)
   level.block_count = level.block_w * level.block_h;
 }
 
-static void FreeBlockmap(Level &level)
+static void Blockmap_Free(Level &level)
 {
-  for (size_t i = 0; i < level.block_count; i++)
+  for (auto list : level.block_lists)
   {
-    level.block_lines[i].lines.clear();
+    list.lines.clear();
   }
 
-  level.block_lines.clear();
-  level.block_indexes.clear();
-  level.block_duplicates.clear();
+  level.block_lists.clear();
 }
 
-static void BlockAdd(Level &level, size_t blk_num, size_t line_index)
+static void Block_Add(Level &level, size_t blk_num, size_t line_index)
 {
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
@@ -138,18 +125,17 @@ static void BlockAdd(Level &level, size_t blk_num, size_t line_index)
 
   if (blk_num >= level.block_count)
   {
-    throw RuntimeException("BlockAdd: bad block number {}", blk_num);
+    throw RuntimeException("[{}]: bad block number {}", __func__, blk_num);
   }
 
-  auto &blk = level.block_lines[blk_num];
+  auto &list = level.block_lists[blk_num];
 
   // compute new checksum
-  blk.hash = std::rotl(blk.hash, 4) ^ line_index;
-
-  blk.lines.push_back(line_index);
+  list.sum.hash = list.sum.Compute(line_index);
+  list.lines.push_back(line_index);
 }
 
-static void BlockAddLine(Level &level, const Linedef *L)
+static void Block_AddLine(Level &level, const Linedef *L)
 {
   auto x1 = FloatToShort(L->start->x);
   auto y1 = FloatToShort(L->start->y);
@@ -168,7 +154,6 @@ static void BlockAddLine(Level &level, const Linedef *L)
   auto bx2_temp = (std::max(x1, x2) - level.block_x) / 128;
   auto by2_temp = (std::max(y1, y2) - level.block_y) / 128;
 
-  // handle truncated blockmaps
   size_t bx1 = static_cast<size_t>(std::max(bx1_temp, 0));
   size_t by1 = static_cast<size_t>(std::max(by1_temp, 0));
   size_t bx2 = static_cast<size_t>(std::min(bx2_temp, static_cast<int32_t>(level.block_w - 1)));
@@ -185,7 +170,7 @@ static void BlockAddLine(Level &level, const Linedef *L)
     for (size_t bx = bx1; bx <= bx2; bx++)
     {
       size_t blk_num = by1 * level.block_w + bx;
-      BlockAdd(level, blk_num, line_index);
+      Block_Add(level, blk_num, line_index);
     }
     return;
   }
@@ -196,7 +181,7 @@ static void BlockAddLine(Level &level, const Linedef *L)
     for (size_t by = by1; by <= by2; by++)
     {
       size_t blk_num = by * level.block_w + bx1;
-      BlockAdd(level, blk_num, line_index);
+      Block_Add(level, blk_num, line_index);
     }
     return;
   }
@@ -216,7 +201,7 @@ static void BlockAddLine(Level &level, const Linedef *L)
 
       if (CheckLinedefInsideBox(minx, miny, maxx, maxy, x1, y1, x2, y2))
       {
-        BlockAdd(level, blk_num, line_index);
+        Block_Add(level, blk_num, line_index);
       }
     }
   }
@@ -224,18 +209,46 @@ static void BlockAddLine(Level &level, const Linedef *L)
 
 // initial phase: create internal blockmap containing the index of
 // all lines in each block.
-static void CreateBlockmap(Level &level)
+static void Blockmap_Create(Level &level)
 {
-  level.block_lines.assign(level.block_count, BlockList{.hash = 0x1234123412341234, .lines = {}});
+  level.block_lists.assign(level.block_count, LineList());
 
-  for (auto L : level.linedefs)
+  for (auto i : Iota(level.block_lists.size()))
   {
+    level.block_lists[i].block_index = i;
+  }
+
+  /**
+   **  Important bullshit to note:
+   **  1. The original DoomBSP code wrote an extra 0-value at the start of every block list.
+   **  2. TeamTNT, in their infinite Boom-designing wisdom, choose to always skip the erroneous value, where vanilla does not.
+   **  3. We provide an option to not write down the zero, this was used in BTSX (with ZOkumBSP) due to vanilla EXE limits.
+   **  4. Due to item number 2, we are forced to include the zero header by default, lest Boom-based ports shit the bed.
+   **  5. In MBF21 ports, there exists a smart check to decide to skip or not, this only matters if an user wants to play a
+   **     header-less map in MBF21 demo compatibility mode. See BTSX MAP20.
+   **  6. If we do have a zero header, skip needlessly adding a second zero to any blocks, by starting the loop at line 1.
+   **/
+  size_t line_start = 0;
+
+  if (!config.skip_bmap_zero)
+  {
+    line_start = 1;
+    for (auto blk_num : Iota(level.block_count))
+    {
+      Block_Add(level, blk_num, 0);
+    }
+  }
+
+  for (auto i : Iota(line_start, level.linedefs.size()))
+  {
+    auto L = level.linedefs[i];
+
     if (HAS_BIT(L->effects, FX_NoBlockmap | FX_ZeroLength))
     {
       continue;
     }
 
-    BlockAddLine(level, L);
+    Block_AddLine(level, L);
   }
 
   // Force extended format
@@ -247,119 +260,151 @@ static void CreateBlockmap(Level &level)
   }
 }
 
-// -AJA- second phase: compress the blockmap.  We do this by sorting
-//       the blocks, which is a typical way to detect duplicates in
-//       a large list.  This also detects BLOCKMAP overflow.
-static void CompressBlockmap(Level &level)
+// -Elf-
+// Run through all duplicates by hash, and use an index to keep track of the values for offset list.
+// Non-duplicate blocks get their normal index value, duplicates get the index of the first found instance.
+static void Blockmap_Deduplication(Level &level)
 {
-  size_t current_index = 0;
-  size_t original_size = 0;
-  size_t new_size = 0;
   size_t duplicate_count = 0;
 
-  level.block_indexes.reserve(level.block_count);
-  level.block_duplicates.reserve(level.block_count);
+  IndexMap<Vec<size_t>> block_hash;
+  block_hash.reserve(level.block_count);
 
-  // sort duplicate-detecting array.  After the sort, all duplicates
-  // will be next to each other.  The duplicate array gives the order
-  // of the blocklists in the BLOCKMAP lump.
-  for (size_t i = 0; i < level.block_count; i++)
+  for (auto blk_num : Iota(level.block_count))
   {
-    level.block_duplicates[i] = i;
+    auto key = level.block_lists[blk_num].sum.hash;
+    block_hash[key].push_back(blk_num);
   }
 
-  // Sorting for compression
-  auto PredicateCompare_BlockLists = [&level](const size_t &blk_num1, const size_t &blk_num2) -> int
+  for (auto [_, dupes] : block_hash)
   {
-    const auto &A = level.block_lines[blk_num1];
-    const auto &B = level.block_lines[blk_num2];
-
-    if (A.lines.size() != B.lines.size()) return A.lines.size() < B.lines.size() ? -1 : 1;
-    if (A.hash != B.hash) return A.hash < B.hash ? -1 : 1;
-    if (A.lines == B.lines) return 0;
-
-    return A.lines < B.lines ? -1 : 1;
-  };
-  std::sort(level.block_duplicates.begin(), level.block_duplicates.end(), PredicateCompare_BlockLists);
-
-  current_index = level.block_count + HeaderIndexSize + NullBlockIndexSize;
-  original_size = level.block_count + HeaderIndexSize;
-  new_size = current_index;
-  duplicate_count = 0;
-
-  for (size_t i = 0; i < level.block_count; i++)
-  {
-    size_t blk_num = level.block_duplicates[i];
-
-    // empty block ?
-    if (level.block_lines[blk_num].lines.empty())
+    // No duplicates, skip
+    if (dupes.size() < 2)
     {
-      level.block_indexes[blk_num] = level.block_count + HeaderIndexSize;
-      level.block_duplicates[i] = NO_INDEX;
-
-      original_size += EXTRA_LINES;
       continue;
     }
 
-    size_t count = level.block_lines[blk_num].lines.size() + EXTRA_LINES;
-
-    // duplicate ?  Only the very last one of a sequence of duplicates
-    // will update the current index value.
-    if (i + 1 < level.block_count && PredicateCompare_BlockLists(level.block_duplicates[i], level.block_duplicates[i + 1]) == 0)
+    // Duplicates, must check
+    for (auto i : Iota(dupes.size()))
     {
-      level.block_indexes[blk_num] = current_index;
-      level.block_duplicates[i] = NO_INDEX;
+      auto &list1 = level.block_lists[dupes[i]];
 
-      // free the memory of the duplicated block
-      level.block_lines[blk_num].lines.clear();
-      duplicate_count++;
-      original_size += count;
-      continue;
+      // Already marked?
+      if (list1.duplicate)
+      {
+        continue;
+      }
+
+      for (auto j : Iota(i + 1, dupes.size()))
+      {
+        auto &list2 = level.block_lists[dupes[j]];
+
+        // Already marked?
+        if (list2.duplicate)
+        {
+          continue;
+        }
+
+        // Confirmed duplicates?
+        if (list1.lines == list2.lines)
+        {
+          // Mark the latter as duplicated so we write only the former
+          list2.duplicate = true;
+          list2.block_index = i;
+          duplicate_count++;
+        }
+      }
     }
-
-    // OK, this block is either the last of a series of duplicates, or
-    // just a singleton.
-    level.block_indexes[blk_num] = current_index;
-    current_index += count;
-    original_size += count;
-    new_size += count;
   }
 
-  if (level.bmap_format < BlockmapFormat::XBM1 && current_index > LIMIT_BMAP_INDEX)
+  if (config.verbose)
   {
+    auto final = level.block_count - duplicate_count;
+    PrintLine(Log::DEBUG, "[{}] Total = {}, duplicates = {}, final = {}", __func__, level.block_count, duplicate_count, final);
+  }
+}
+
+void Blockmap_FlattenList(Level &level)
+{
+  // handle each block list
+  for (auto list : level.block_lists)
+  {
+    list.flat_list_index = level.block_flat_list.size();
+
+    // keep track of uncompressed size for comparison's sake
+    for (auto _ : list.lines)
+    {
+      level.block_flat_list_uncompressed_size += 1;
+    }
+    level.block_flat_list_uncompressed_size += 1;
+
+    // ignore duplicate blocks for real output
+    if (list.duplicate) continue;
+
+    for (auto line : list.lines)
+    {
+      level.block_flat_list.push_back(line);
+    }
+    level.block_flat_list.push_back(NO_INDEX);
+  }
+}
+
+void Blockmap_CheckOverflow(Level &level)
+{
+  auto OffsetList = level.block_lists.size();
+  auto BlockFlatListCompressed = level.block_flat_list.size();
+  auto BlockFlatListUncompressed = level.block_flat_list_uncompressed_size;
+
+  auto LastFlatListIndex = level.block_lists.back().flat_list_index;
+  auto VanillaOverflowCheck = VanillaHeaderSize + (OffsetList * INT16) + (LastFlatListIndex * INT16);
+
+  auto CompressedVanilla = VanillaHeaderSize + (OffsetList * INT16) + (BlockFlatListCompressed * INT16);
+  auto UncompressedVanilla = VanillaHeaderSize + (OffsetList * INT16) + (BlockFlatListUncompressed * INT16);
+
+  auto CompressedXBM1 = XBM1PrefixSize + XBM1HeaderSize + (OffsetList * INT32) + (BlockFlatListCompressed * INT32);
+  auto UncompressedXBM1 = XBM1PrefixSize + XBM1HeaderSize + (OffsetList * INT32) + (BlockFlatListUncompressed * INT32);
+
+  if (level.bmap_format < BlockmapFormat::XBM1 && VanillaOverflowCheck > LIMIT_BMAP_INDEX)
+  {
+    level.block_compression = static_cast<double>(UncompressedXBM1 - CompressedXBM1) / static_cast<double>(UncompressedXBM1);
     // Overflowed?
     PrintLine(Log::WARN, "[{}] Blockmap overflow. Forcing XBM1 format.", __func__);
     config.total_warnings++;
     RaiseValue(level.bmap_format, BlockmapFormat::XBM1);
   }
+  else
+  {
+    level.block_compression =
+        static_cast<double>(UncompressedVanilla - CompressedVanilla) / static_cast<double>(UncompressedVanilla);
+  }
 
   if (config.verbose)
   {
-    PrintLine(Log::DEBUG, "[{}] Last ptr = {}  duplicates = {}", __func__, current_index, duplicate_count);
+    PrintLine(Log::DEBUG, "[{}] Uncompressed vanilla size: {}, Compressed vanilla size: {}, Vanilla ratio: {:.2}%", __func__,
+              UncompressedVanilla, CompressedVanilla, level.block_compression * 100);
+    PrintLine(Log::DEBUG, "[{}] Uncompressed XBM1 size: {}, Compressed XBM1 size: {}, XBM1 ratio: {:.2}%", __func__,
+              UncompressedXBM1, CompressedXBM1, level.block_compression * 100);
   }
-
-  level.block_compression =
-      (static_cast<double>(original_size) - static_cast<double>(new_size)) / static_cast<double>(original_size);
-
-  // there's a tiny chance of new_size > orig_size
-  level.block_compression = std::max(0.0, level.block_compression);
 }
 
 template <BlockmapFormat format, typename NumType>
-static void WriteBlockmap(WadIO &io, Level &level)
+static void Blockmap_Write(WadIO &io, Level &level)
 {
   constexpr size_t NumSize = sizeof(NumType);
+  size_t lump_offset_size = 0;
 
   if constexpr (format == BlockmapFormat::XBM1)
   {
-    io.AddToLump("XBM1\0\0\0\0", 8);
+    io.AddToLump(XBM1Prefix, XBM1PrefixSize);
+    lump_offset_size += XBM1PrefixSize;
 
     MapBlockmapHeaderXBM1 xbm1_header;
     xbm1_header.x_origin = GetLittleEndian(IntToFixed(level.block_x));
     xbm1_header.y_origin = GetLittleEndian(IntToFixed(level.block_y));
     xbm1_header.x_blocks = GetLittleEndian(IndexToInt(level.block_w));
     xbm1_header.y_blocks = GetLittleEndian(IndexToInt(level.block_h));
-    io.AddToLump(&xbm1_header, sizeof(xbm1_header));
+    io.AddToLump(&xbm1_header, XBM1HeaderSize);
+    lump_offset_size += XBM1HeaderSize;
   }
   else
   {
@@ -368,41 +413,29 @@ static void WriteBlockmap(WadIO &io, Level &level)
     header.y_origin = GetLittleEndian(level.block_y);
     header.x_blocks = GetLittleEndian(IndexToShort(level.block_w));
     header.y_blocks = GetLittleEndian(IndexToShort(level.block_h));
-    io.AddToLump(&header, sizeof(header));
+    io.AddToLump(&header, VanillaHeaderSize);
+    lump_offset_size += VanillaHeaderSize;
   }
+
+  lump_offset_size += (level.block_lists.size() * NumSize);
 
   // handle pointers
-  for (size_t i = 0; i < level.block_count; i++)
+  for (auto cell : level.block_lists)
   {
-    NumType ptr = GetLittleEndian(static_cast<NumType>(level.block_indexes[i]));
-    if (ptr == 0)
+    auto list = level.block_lists[cell.block_index];
+    auto lump_index = lump_offset_size + (list.flat_list_index * NumSize);
+
+    NumType offset = GetLittleEndian(static_cast<NumType>(lump_index));
+    if (offset == 0 or offset == static_cast<NumType>(NO_INDEX))
     {
-      throw RuntimeException("WriteBlockmap: offset {} not set.", i);
+      throw RuntimeException("[{}]: offset {} not set.", __func__, list.block_index);
     }
-    io.AddToLump(&ptr, NumSize);
+    io.AddToLump(&offset, NumSize);
   }
 
-  // add the null block which *all* empty blocks will use
-  io.AddToLump(&m_zero, NumSize);
-  io.AddToLump(&m_neg1, NumSize);
-
-  // handle each block list
-  for (size_t i = 0; i < level.block_count; i++)
+  for (auto value : level.block_flat_list)
   {
-    size_t blk_num = level.block_duplicates[i];
-
-    // ignore duplicate or empty blocks
-    if (blk_num == NO_INDEX) continue;
-
-    const auto &blk = level.block_lines[blk_num];
-
-    io.AddToLump(&m_zero, NumSize);
-    for (size_t line : blk.lines)
-    {
-      NumType le_line = GetLittleEndian(static_cast<NumType>(line));
-      io.AddToLump(&le_line, NumSize);
-    }
-    io.AddToLump(&m_neg1, NumSize);
+    io.AddToLump(&value, NumSize);
   }
 }
 
@@ -425,16 +458,18 @@ void PutBlockmap(WadIO &io, Level &level)
 
   RaiseValue(level.bmap_format, config.bmap_format);
 
-  CreateBlockmap(level);
-  CompressBlockmap(level);
+  Blockmap_Create(level);
+  // Blockmap_Deduplication(level);
+  Blockmap_FlattenList(level);
+  Blockmap_CheckOverflow(level);
 
   switch (level.bmap_format)
   {
   case BlockmapFormat::DoomBSP:
-    WriteBlockmap<BlockmapFormat::DoomBSP, uint16_t>(io, level);
+    Blockmap_Write<BlockmapFormat::DoomBSP, uint16_t>(io, level);
     break;
   case BlockmapFormat::XBM1:
-    WriteBlockmap<BlockmapFormat::XBM1, uint32_t>(io, level);
+    Blockmap_Write<BlockmapFormat::XBM1, uint32_t>(io, level);
     break;
   default:
     // how did we get here
@@ -446,8 +481,8 @@ void PutBlockmap(WadIO &io, Level &level)
 
   if (config.verbose)
   {
-    PrintLine(Log::NORMAL, "[{}] Blockmap size: {}x{} (compression: {}%)", __func__, level.block_w, level.block_h,
+    PrintLine(Log::NORMAL, "[{}] Blockmap size: {}x{} ", __func__, level.block_w, level.block_h,
               static_cast<int32_t>(level.block_compression * 100));
   }
-  FreeBlockmap(level);
+  Blockmap_Free(level);
 }

@@ -186,7 +186,7 @@ void NormaliseBspTree(Level &level);
 void RoundOffBspTree(Level &level);
 
 // both BLOCKAMP and REJECT exist as single lumps on all supported map formats
-void InitBlockmap(Level &level);
+void Blockmap_Init(Level &level);
 void PutBlockmap(WadIO &io, Level &level);
 void PutReject(WadIO &io, Level &level);
 
