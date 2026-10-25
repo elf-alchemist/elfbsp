@@ -975,8 +975,6 @@ BuildResult BuildLevel(WadIO &io, Level &level, std::string_view filename)
 {
   LoadLevel(io, level);
 
-  InitBlockmap(level);
-
   SkipBuild(io, level);
 
   if (level.num_real_lines > 0 && !level.skip_bsp)

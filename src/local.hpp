@@ -349,8 +349,66 @@ struct Intersection
 
 struct BlockList
 {
-  size_t hash;
-  std::vector<size_t> lines;
+  size_t blk_num = NO_INDEX;   // self-index, always valid after being created, even if sorted after
+  size_t dup_index = NO_INDEX; // if not NO_INDEX, then is pointing to another BlockList as canon
+  FNV1a<size_t> sum;           // to check against other blocks for duplicates detection
+  std::vector<size_t> lines;   // actual line index list
+};
+
+struct BlockMap
+{
+  BlockmapFormat format = BlockmapFormat::DoomBSP;
+
+  // North-west corner point
+  int16_t origin_x = 0;
+  int16_t origin_y = 0;
+
+  // Negative offset from origin, for vanilla optimization data analysis
+  // NOT IMPLEMENTED YET
+  int16_t offset_x = 0;
+  int16_t offset_y = 0;
+  int16_t step_x = 0;
+  int16_t step_y = 0;
+
+  // Weighted AABB cardinality, for vanilla optimization data analysis
+  // NOT IMPLEMENTED YET
+  enum class CardinalWeight {
+    NorthEast,
+    NorthWest,
+    SouthWest,
+    SouthEast,
+
+    EastEither,
+    NorthEither,
+    SouthEither,
+    WestEither,
+
+    Any
+  } cardinal_weight;
+
+  // Actual blockmap size, from origin
+  size_t rows = 0;
+  size_t columns = 0;
+
+  // Uncompressed data
+  std::vector<size_t> unpacked_offsets;
+  std::vector<size_t> unpacked_blocks;
+
+  // Data after compression
+  std::vector<size_t> offsets;
+  std::vector<size_t> blocks;
+
+  // Can be safely sorted, as each block list contains its own original block index
+  std::vector<BlockList> cells;
+
+  // Logged metric
+  double block_compression = 0.0;
+
+  [[nodiscard]]
+  size_t BlockCount(void) const
+  {
+    return this->columns * this->rows;
+  }
 };
 
 struct MapLumps
@@ -403,17 +461,6 @@ struct Level
 
   uint8_t *reject_matrix;
   size_t reject_size;
-
-  int16_t block_x, block_y;
-  size_t block_w, block_h;
-  size_t block_count;
-
-  std::vector<BlockList> block_lines;
-  std::vector<size_t> block_indexes;
-  std::vector<size_t> block_duplicates;
-
-  double block_compression;
-  BlockmapFormat bmap_format = BlockmapFormat::DoomBSP;
 
   std::vector<UVertexMinimal> udmf_vertex;
   std::vector<ULinedefMinimal> udmf_linedef;
