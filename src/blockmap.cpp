@@ -340,10 +340,14 @@ void Blockmap_FlattenDeduplicated(BlockMap &bmap)
 
   for (auto cell : bmap.cells)
   {
-    // Does this actually do what i think it does?
-    auto actual_offset = (cell.dup_index != NO_INDEX) ? bmap.deduped_offsets[cell.dup_index] : offset;
+    if (cell.dup_index != NO_INDEX)
+    {
+      auto duped_offset = bmap.deduped_offsets[cell.dup_index];
+      bmap.deduped_offsets.push_back(duped_offset);
+      continue;
+    }
 
-    bmap.deduped_offsets.push_back(actual_offset);
+    bmap.deduped_offsets.push_back(offset);
 
     for (auto line : cell.lines)
     {
