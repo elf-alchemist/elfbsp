@@ -349,10 +349,11 @@ struct Intersection
 
 struct BlockList
 {
-  size_t blk_num = NO_INDEX;   // self-index, always valid after being created, even if sorted after
-  size_t dup_index = NO_INDEX; // if not NO_INDEX, then is pointing to another BlockList as canon
-  FNV1a<size_t> sum;           // to check against other blocks for duplicates detection
-  std::vector<size_t> lines;   // actual line index list
+  size_t self_index = NO_INDEX; // self-index, always valid after being created, even if sorted after
+  size_t dup_index = NO_INDEX;  // if not NO_INDEX, then is pointing to another BlockList as canon
+  size_t dup_count = 0;         // How many other BlockLists were removed because of this one
+  FNV1a<size_t> sum;            // to check against other blocks for duplicates detection
+  std::vector<size_t> lines;    // actual line index list
 };
 
 struct BlockMap
@@ -372,7 +373,8 @@ struct BlockMap
 
   // Weighted AABB cardinality, for vanilla optimization data analysis
   // NOT IMPLEMENTED YET
-  enum class CardinalWeight {
+  enum class CardinalWeight
+  {
     NorthEast,
     NorthWest,
     SouthWest,
@@ -390,13 +392,13 @@ struct BlockMap
   size_t rows = 0;
   size_t columns = 0;
 
-  // Uncompressed data
+  // Uncompressed, as raw as possible
   std::vector<size_t> unpacked_offsets;
-  std::vector<size_t> unpacked_blocks;
+  std::vector<size_t> unpacked_list;
 
-  // Data after compression
-  std::vector<size_t> offsets;
-  std::vector<size_t> blocks;
+  // Post deduplication
+  std::vector<size_t> deduped_offsets;
+  std::vector<size_t> deduped_list;
 
   // Can be safely sorted, as each block list contains its own original block index
   std::vector<BlockList> cells;

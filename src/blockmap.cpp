@@ -23,12 +23,11 @@
 
 #include "core.hpp"
 #include "local.hpp"
-#include <source_location>
+#include <map>
 #include <vector>
 
-static constexpr size_t BlockMapGrid_BitShift = 7;
 static constexpr auto BlockMap_GridSize = 128;
-static constexpr auto BlockMap_GridMask = 127;
+static constexpr auto BlockMap_GridMask = BlockMap_GridSize - static_cast<int32_t>(OFF_BY_ONE);
 
 /* ----- create blockmap ------------------------------------ */
 
@@ -95,17 +94,18 @@ void Blockmap_Init(Level &level, BlockMap &bmap)
   bmap.origin_x = bbox.minx - (bbox.minx & 0x7);
   bmap.origin_y = bbox.miny - (bbox.miny & 0x7);
 
-  bmap.columns = static_cast<size_t>((bbox.maxx - bmap.origin_x) >> BlockMapGrid_BitShift) + OFF_BY_ONE;
-  bmap.rows = static_cast<size_t>((bbox.maxy - bmap.origin_y) >> BlockMapGrid_BitShift) + OFF_BY_ONE;
+  bmap.columns = static_cast<size_t>(bbox.maxx - bmap.origin_x) / BlockMap_GridSize + OFF_BY_ONE;
+  bmap.rows = static_cast<size_t>(bbox.maxy - bmap.origin_y) / BlockMap_GridSize + OFF_BY_ONE;
 
+  // trivially copyable, eh?
   bmap.cells.assign(bmap.BlockCount(), BlockList());
 
   for (auto i : Iota(bmap.BlockCount()))
   {
-    bmap.cells[i].blk_num = i;
+    bmap.cells[i].self_index = i;
   }
 
-  bmap.offsets.reserve(bmap.BlockCount());
+  bmap.deduped_offsets.reserve(bmap.BlockCount());
   bmap.unpacked_offsets.reserve(bmap.BlockCount());
 
   if (config.verbose)
@@ -125,10 +125,12 @@ static void Blockmap_Free(BlockMap &bmap)
   }
 
   bmap.cells.clear();
-  bmap.blocks.clear();
-  bmap.offsets.clear();
-  bmap.unpacked_blocks.clear();
+
+  bmap.unpacked_list.clear();
   bmap.unpacked_offsets.clear();
+
+  bmap.deduped_list.clear();
+  bmap.deduped_offsets.clear();
 }
 
 static void Block_Add(BlockMap &bmap, size_t blk_num, size_t line_index)
@@ -165,10 +167,10 @@ static void Block_AddLine(BlockMap &bmap, const Linedef *L)
   }
 
   // TODO, this really isn't needed, we don't support truncated blockmaps anymore
-  auto bx1_temp = (std::min(x1, x2) - bmap.origin_x) >> BlockMapGrid_BitShift;
-  auto by1_temp = (std::min(y1, y2) - bmap.origin_y) >> BlockMapGrid_BitShift;
-  auto bx2_temp = (std::max(x1, x2) - bmap.origin_x) >> BlockMapGrid_BitShift;
-  auto by2_temp = (std::max(y1, y2) - bmap.origin_y) >> BlockMapGrid_BitShift;
+  auto bx1_temp = (std::min(x1, x2) - bmap.origin_x) / BlockMap_GridSize;
+  auto by1_temp = (std::min(y1, y2) - bmap.origin_y) / BlockMap_GridSize;
+  auto bx2_temp = (std::max(x1, x2) - bmap.origin_x) / BlockMap_GridSize;
+  auto by2_temp = (std::max(y1, y2) - bmap.origin_y) / BlockMap_GridSize;
 
   size_t bx1 = static_cast<size_t>(std::max(bx1_temp, 0));
   size_t by1 = static_cast<size_t>(std::max(by1_temp, 0));
@@ -264,17 +266,70 @@ static void Blockmap_FlattenUncompressed(BlockMap &bmap)
     bmap.unpacked_offsets.push_back(offset);
     for (auto line : cell.lines)
     {
-      bmap.unpacked_blocks.push_back(line);
+      bmap.unpacked_list.push_back(line);
     }
-    bmap.unpacked_blocks.push_back(NO_INDEX);
+    bmap.unpacked_list.push_back(NO_INDEX);
     offset += cell.lines.size() + OFF_BY_ONE;
   }
+
   PrintLine(Log::NORMAL, "[{}] Offsets ending at {}", __func__, offset);
 }
 
 void Blockmap_Deduplicate(BlockMap &bmap)
 {
-  // TODO
+  size_t total_dupes = 0;
+
+  // Sort every block by size, inserting on a list of all blk_nums with same size
+  // This lets us cut down on comparisons between duplicate blocks
+  std::map<size_t, std::vector<size_t>> SizeMatcher;
+
+  for (auto cell : bmap.cells)
+  {
+    SizeMatcher[cell.lines.size()].push_back(cell.self_index);
+  }
+
+  for (auto [size, dupes] : SizeMatcher)
+  {
+    // No actual duplicates? skip
+    if (dupes.size() < 2)
+    {
+      PrintLine(Log::NORMAL, "[{}] Found ", __func__);
+      continue;
+    }
+
+    for (auto i : Iota(dupes.size()))
+    {
+      auto &cell1 = bmap.cells[dupes[i]];
+
+      // Already marked?
+      if (cell1.dup_index != NO_INDEX) continue;
+
+      for (auto j : Iota(i + 1, dupes.size()))
+      {
+        auto &cell2 = bmap.cells[dupes[j]];
+
+        // Already marked?
+        if (cell2.dup_index != NO_INDEX) continue;
+
+        // Differing sizes can't posisbly be dupes, duh
+        if (cell1.lines.size() != cell2.lines.size()) continue;
+
+        // Quick out with a hash!
+        if (cell1.sum.hash != cell2.sum.hash) continue;
+
+        // Hash matched or collided, now check manually
+        if (cell1.lines == cell2.lines)
+        {
+          cell2.dup_index = cell1.self_index;
+          cell1.dup_count++;
+          total_dupes++;
+        }
+      }
+    }
+  }
+
+  PrintLine(Log::NORMAL, "[{}] Found and marked {} duplicate blocks", __func__, total_dupes);
+  PrintLine(Log::NORMAL, "[{}] Leaving a total of {} non-duplicate blocks", __func__, bmap.BlockCount());
 }
 
 void Blockmap_FlattenDeduplicated(BlockMap &bmap)
@@ -285,17 +340,16 @@ void Blockmap_FlattenDeduplicated(BlockMap &bmap)
 
   for (auto cell : bmap.cells)
   {
-    bmap.offsets.push_back(offset);
+    // Does this actually do what i think it does?
+    auto actual_offset = (cell.dup_index != NO_INDEX) ? bmap.deduped_offsets[cell.dup_index] : offset;
 
-    // Must be sorted, with duplicates marked
-    // TODO: make this not need sorting of any kind, just use dup_index
-    if (cell.dup_index != NO_INDEX) continue;
+    bmap.deduped_offsets.push_back(actual_offset);
 
     for (auto line : cell.lines)
     {
-      bmap.blocks.push_back(line);
+      bmap.deduped_list.push_back(line);
     }
-    bmap.blocks.push_back(NO_INDEX);
+    bmap.deduped_list.push_back(NO_INDEX);
     offset += cell.lines.size() + OFF_BY_ONE;
   }
   PrintLine(Log::NORMAL, "[{}] Offsets ending at {}", __func__, offset);
@@ -328,14 +382,14 @@ static void Blockmap_Write(WadIO &io, BlockMap &bmap)
   }
 
   std::vector<NumType> lump_data;
-  lump_data.reserve(bmap.offsets.size() + bmap.blocks.size());
+  lump_data.reserve(bmap.deduped_offsets.size() + bmap.deduped_list.size());
 
-  for (auto offset : bmap.offsets)
+  for (auto offset : bmap.deduped_offsets)
   {
     lump_data.push_back(GetLittleEndian(static_cast<NumType>(offset)));
   }
 
-  for (auto block : bmap.blocks)
+  for (auto block : bmap.deduped_list)
   {
     lump_data.push_back(GetLittleEndian(static_cast<NumType>(block)));
   }
