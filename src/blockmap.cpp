@@ -112,8 +112,8 @@ void Blockmap_Init(Level &level, BlockMap &bmap)
   {
     PrintLine(Log::NORMAL, "[{}] Map limits: ({},{}) to ({},{})", __func__, bbox.minx, bbox.miny, bbox.maxx, bbox.maxy);
     PrintLine(Log::NORMAL, "[{}] Origins are at ({},{})", __func__, bmap.origin_x, bmap.origin_y);
-    PrintLine(Log::NORMAL, "[{}] There are {} columns and {} rows", __func__, bmap.columns, bmap.rows);
-    PrintLine(Log::NORMAL, "[{}] Totalling {} blocks", __func__, bmap.BlockCount());
+    PrintLine(Log::NORMAL, "[{}] There are {} columns and {} rows, totalling {} cells", __func__, bmap.columns, bmap.rows,
+              bmap.BlockCount());
   }
 }
 
@@ -273,8 +273,11 @@ static void Blockmap_FlattenUncompressed(BlockMap &bmap)
     offset += cell.lines.size() + OFF_BY_ONE;
   }
 
-  auto p = LargestElement(bmap.unpacked_offsets);
-  PrintLine(Log::NORMAL, "[{}] Largest blocklist has offset {}", __func__, p.second);
+  if (config.verbose)
+  {
+    auto p = LargestElement(bmap.unpacked_offsets);
+    PrintLine(Log::NORMAL, "[{}] Largest blocklist has offset {}", __func__, p.second);
+  }
 }
 
 void Blockmap_Deduplicate(BlockMap &bmap)
@@ -326,8 +329,11 @@ void Blockmap_Deduplicate(BlockMap &bmap)
     }
   }
 
-  PrintLine(Log::NORMAL, "[{}] Found and marked {} duplicate blocks", __func__, total_dupes);
-  PrintLine(Log::NORMAL, "[{}] Leaving {} unique blocks", __func__, bmap.BlockCount() - total_dupes);
+  if (config.verbose)
+  {
+    PrintLine(Log::NORMAL, "[{}] Found and marked {} duplicate blocks", __func__, total_dupes);
+    PrintLine(Log::NORMAL, "[{}] Leaving {} unique blocks", __func__, bmap.BlockCount() - total_dupes);
+  }
 }
 
 void Blockmap_FlattenDeduplicated(BlockMap &bmap)
@@ -353,8 +359,11 @@ void Blockmap_FlattenDeduplicated(BlockMap &bmap)
     offset += cell.lines.size() + OFF_BY_ONE;
   }
 
-  auto p = LargestElement(bmap.deduped_offsets);
-  PrintLine(Log::NORMAL, "[{}] Largest blocklist has offset {}", __func__, p.second);
+  if (config.verbose)
+  {
+    auto p = LargestElement(bmap.deduped_offsets);
+    PrintLine(Log::NORMAL, "[{}] Largest blocklist has offset {}", __func__, p.second);
+  }
 }
 
 //
@@ -410,8 +419,11 @@ void Blockmap_FlattenSorted(BlockMap &bmap)
     offset += cell.lines.size() + OFF_BY_ONE;
   }
 
-  auto p = LargestElement(bmap.sorted_offsets);
-  PrintLine(Log::NORMAL, "[{}] Largest blocklist has offset {}", __func__, p.second);
+  if (config.verbose)
+  {
+    auto p = LargestElement(bmap.sorted_offsets);
+    PrintLine(Log::NORMAL, "[{}] Largest blocklist has offset {}", __func__, p.second);
+  }
 }
 
 template <BlockmapFormat format, typename NumType>
@@ -454,6 +466,30 @@ static void Blockmap_Write(WadIO &io, BlockMap &bmap)
   }
 
   io.AddToLump(lump_data.data(), NumSize * lump_data.size());
+}
+
+template <size_t NumSize, size_t ExtraBytes>
+void PrintStuff1(std::vector<BlockList> &c, std::string_view f)
+{
+  size_t HeaderSize = 4 * NumSize;
+  size_t OffsetListSize = c.size() * NumSize;
+  size_t TotalSize = ExtraBytes + HeaderSize + OffsetListSize;
+
+  PrintLine(Log::NORMAL, "[{}]   Header and offset list take up {} bytes", f, TotalSize);
+}
+
+template <size_t NumSize, size_t ExtraBytes>
+void PrintStuff2(std::vector<BlockList> &c, std::vector<size_t> &l, std::string_view f, std::string_view n)
+{
+  size_t HeaderSize = 4 * NumSize;
+  size_t OffsetListSize = c.size() * NumSize;
+  size_t HeaderAndOffsetListSize = ExtraBytes + HeaderSize + OffsetListSize;
+
+  size_t BlockListSize = l.size() * NumSize;
+  size_t TotalSize = HeaderAndOffsetListSize + BlockListSize;
+
+  PrintLine(Log::NORMAL, "[{}]   The {} blockmap takes up ({} + {}) {} total bytes", f, n, HeaderAndOffsetListSize,
+            BlockListSize, TotalSize);
 }
 
 void PutBlockmap(WadIO &io, Level &level)
@@ -505,8 +541,20 @@ void PutBlockmap(WadIO &io, Level &level)
 
   if (config.verbose)
   {
-    PrintLine(Log::NORMAL, "[{}] Blockmap size: {}x{} (compression: {}%)", __func__, bmap.columns, bmap.rows,
-              static_cast<int32_t>(bmap.block_compression * 100));
+    PrintLine(Log::NORMAL, "[{}] Total cells count: {}", __func__, bmap.cells.size());
+
+    PrintLine(Log::NORMAL, "[{}] On the DoomBSP format:", __func__);
+    PrintStuff1<sizeof(uint16_t), 0>(bmap.cells, __func__);
+    PrintStuff2<sizeof(uint16_t), 0>(bmap.cells, bmap.unpacked_list, __func__, "unpacked");
+    PrintStuff2<sizeof(uint16_t), 0>(bmap.cells, bmap.deduped_list, __func__, "deduped");
+    PrintStuff2<sizeof(uint16_t), 0>(bmap.cells, bmap.sorted_list, __func__, "sorted");
+
+    PrintLine(Log::NORMAL, "[{}] On the XBM1 format:", __func__);
+    constexpr size_t PrefixSize = sizeof("XBM1\0\0\0\0") - OFF_BY_ONE;
+    PrintStuff1<sizeof(uint32_t), PrefixSize>(bmap.cells, __func__);
+    PrintStuff2<sizeof(uint32_t), PrefixSize>(bmap.cells, bmap.unpacked_list, __func__, "unpacked");
+    PrintStuff2<sizeof(uint32_t), PrefixSize>(bmap.cells, bmap.deduped_list, __func__, "deduped");
+    PrintStuff2<sizeof(uint32_t), PrefixSize>(bmap.cells, bmap.sorted_list, __func__, "sorted");
   }
   Blockmap_Free(bmap);
 }
