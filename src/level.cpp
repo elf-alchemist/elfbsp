@@ -1004,7 +1004,7 @@ BuildResult BuildLevel(WadIO &io, Level &level, std::string_view filename)
   if (config.verbose)
   {
     PrintLine(Log::NORMAL, "[{}] Built {} NODES, {} SSECTORS, {} SEGS, {} VERTEXES", __func__, level.nodes.size(),
-              level.subsecs.size(), level.segs.size(), level.vertices.size());
+              level.subsecs.size(), level.segs.size(), level.num_new_vert);
   }
 
   if (config.verbose && level.root_node != nullptr)
