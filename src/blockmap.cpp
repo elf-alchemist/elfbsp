@@ -232,13 +232,30 @@ static void Block_AddLine(BlockMap &bmap, const Linedef *L)
 // all lines in each block.
 static void Blockmap_Create(Level &level, BlockMap &bmap)
 {
-  for (auto blk_num : Iota(bmap.BlockCount()))
+  /**
+   **  Important bullshit to note:
+   **  1. The original DoomBSP code wrote an extra 0-value at the start of every block list.
+   **  2. TeamTNT, in their infinite Boom-designing wisdom, choose to always skip the erroneous value, where vanilla does not.
+   **  3. We provide an option to not write down the zero, this was used in BTSX (with ZOkumBSP) due to vanilla EXE limits.
+   **  4. Due to item number 2, we are forced to include the zero header by default, lest Boom-based ports shit the bed.
+   **  5. In MBF21 ports, there exists a smart check to decide to skip or not, this only matters if an user wants to play a
+   **     header-less map in MBF21 demo compatibility mode. See BTSX MAP20.
+   **  6. If we do have a zero header, skip needlessly adding a second zero to any blocks, by starting the loop at line 1.
+   **/
+  size_t line_start = 0;
+
+  if (!config.skip_bmap_zero)
   {
-    Block_Add(bmap, blk_num, 0);
+    line_start = 1;
+    for (auto blk_num : Iota(bmap.BlockCount()))
+    {
+      Block_Add(bmap, blk_num, 0);
+    }
   }
 
-  for (auto L : level.linedefs)
+  for (auto i : Iota(line_start, level.linedefs.size()))
   {
+    auto L = level.linedefs[i];
     if (HAS_BIT(L->effects, FX_NoBlockmap))
     {
       continue;

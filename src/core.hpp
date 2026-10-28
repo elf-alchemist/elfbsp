@@ -1234,6 +1234,8 @@ struct BuildInfo
   bool skip_bsp = false;  // Just copy over the lumps, don't build anything ...
   bool skip_bmap = false; // ... if, and only if, the lymp already exists ...
   bool skip_rej = false;  // ... for if the lump does not exist, it will be built.
+
+  bool skip_bmap_zero = false; // Skip "zero index" header on vanilla blockmap lump
 };
 
 extern BuildInfo config;
