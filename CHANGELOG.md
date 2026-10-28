@@ -12,7 +12,7 @@ Features:
   * Added automatic removal of non-special self-referencing linedefs from the blockmap
   * Revised "identical blocklist deduplication" algorithm, now cuts down a few more blocks
   * Added "Blocklist size sorting" to squeeze out smaller offsets
-  * Add `--blockmap-skip-zero-header` for vanilla-optimized blockmaps
+  * Added `--blockmap-skip-zero-header` CLI flag for vanilla-optimized blockmaps
 * Added support for the Doom 64 binary map format, and its `LEAFS` lump
   * Includes the DeePBSPV4 BSP tree lump format for large maps exceeding the vanilla limits
   * Includes the XBM1 blockmap lump format for large maps exceeding the vanilla limits
@@ -20,8 +20,12 @@ Features:
   * Sector special of 999 is blocked from the reject grouping algorithm, makes enemies within it "blind"
   * Lines containing the "Do not add to blockmap" linedef flag will be excluded from the blockmap
   * Lines containing _both_ the "Show on automap" AND "Hide from automap" linedef flags will be excluded the blockmap
+* Added UDMF namespace awareness for polyobjects, DoomEdNums are now inferred automticaly from the namespace
+  * Hexen polyobject editor numbers for the `Hexen` and `DelphiHexen` namespaces
+  * ZDoom polyobject editor numbers for all other namespaces
+  * The `--polyobj` CLI flag is now ignored for UDMF maps
 * Added simple performance profiler on CLI output, benchmarking the time taken by certain parts of the builder to work
-* Added `--skip-bsp`, `--skip-bmap` and `--skip-reject` CLI options to skip building maps that are already compiled
+* Added `--skip-bsp`, `--skip-bmap` and `--skip-reject` CLI flags to skip building maps that are already compiled
 
 Bugfixes:
 * Restored `REJECT` builder's debug logging, i.e fix `--debug-reject` not working before

@@ -978,6 +978,9 @@ size_t ComputeBspHeight(const Node *node)
 
 BuildResult BuildLevel(WadIO &io, Level &level, std::string_view filename)
 {
+  // Get default
+  level.po = config.po;
+
   LoadLevel(io, level);
 
   SkipBuild(io, level);

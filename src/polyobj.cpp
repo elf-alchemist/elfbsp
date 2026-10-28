@@ -218,7 +218,7 @@ void DetectPolyobjSectors(BuildInfo &ctx, Level &level)
   if (HAS_BIT(ctx.debug, DEBUG_POLYOBJ))
   {
     PrintLine(Log::DEBUG, "[{}] Detected {} style polyobj things", __func__,
-              (ctx.polyobj.anchor == ZDoom_PolyObj_Anchor) ? "ZDOOM" : "HEXEN");
+              (level.po.anchor == ZDoom_PolyObj_Anchor) ? "ZDOOM" : "HEXEN");
   }
 
   for (auto T : level.things)
@@ -228,7 +228,7 @@ void DetectPolyobjSectors(BuildInfo &ctx, Level &level)
     DoomEdNum t = T->type;
 
     // ignore everything except polyobj start spots
-    if (t != ctx.polyobj.anchor && t != ctx.polyobj.spawn && t != ctx.polyobj.spawn_crush && t != ctx.polyobj.spawn_hurt)
+    if (t != level.po.anchor && t != level.po.spawn && t != level.po.spawn_crush && t != level.po.spawn_hurt)
     {
       continue;
     }
