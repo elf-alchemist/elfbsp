@@ -861,7 +861,8 @@ constexpr size_t LIMIT_NODE = Limits<int16_t>::max() + OFF_BY_ONE;
 constexpr size_t LIMIT_SUBSEC = Limits<int16_t>::max() + OFF_BY_ONE;
 constexpr size_t LIMIT_SEG = Limits<uint16_t>::max() + OFF_BY_ONE;
 
-constexpr size_t LIMIT_BMAP_INDEX = Limits<uint16_t>::max() + OFF_BY_ONE;
+constexpr int16_t LIMIT_BMAP_INDEX_VANILLA = Limits<int16_t>::max();
+constexpr uint16_t LIMIT_BMAP_INDEX = Limits<uint16_t>::max();
 
 //
 // Vanilla blockmap
@@ -1233,6 +1234,8 @@ struct BuildInfo
   bool skip_bsp = false;  // Just copy over the lumps, don't build anything ...
   bool skip_bmap = false; // ... if, and only if, the lymp already exists ...
   bool skip_rej = false;  // ... for if the lump does not exist, it will be built.
+
+  bool skip_bmap_zero = false; // Skip "zero index" header on vanilla blockmap lump
 };
 
 extern BuildInfo config;
@@ -1305,3 +1308,111 @@ struct Benchmarker
     PrintLine(Log::NORMAL, "[Benchmarker] '{}' runtime: {:.2f} ms", name.data(), time.count());
   };
 };
+
+//
+// FNV-1a
+//
+
+template <typename Hash_Type>
+struct FNV1a
+{
+  static constexpr size_t Hash_size = sizeof(Hash_Type);
+
+  static_assert(std::is_unsigned<Hash_Type>(), "FNV1a hash type must be an unsigned integral.");
+  static_assert(Hash_size == 4 || Hash_size == 8, "FNV1a only supports 32-bit or 64-bit hash types.");
+
+  static constexpr uint32_t FNV1a_Basis32 = 0x811c9dc5;
+  static constexpr uint32_t FNV1a_Prime32 = 0x01000193;
+  static constexpr uint64_t FNV1a_Basis64 = 0xcbf29ce484222325;
+  static constexpr uint64_t FNV1a_Prime64 = 0x00000100000001b3;
+
+  static constexpr Hash_Type Basis = (Hash_size == 4) ? FNV1a_Basis32 : FNV1a_Basis64;
+  static constexpr Hash_Type Prime = (Hash_size == 4) ? FNV1a_Prime32 : FNV1a_Prime64;
+
+  Hash_Type hash = Basis;
+
+  Hash_Type ComputeSingleByte(byte value)
+  {
+    this->hash ^= value;
+    this->hash *= this->Prime;
+    return this->hash;
+  }
+
+  template <typename Value_Type>
+  Hash_Type Compute(Value_Type val)
+  {
+    constexpr size_t Value_Size = sizeof(Value_Type);
+
+    auto data = std::bit_cast<std::array<byte, Value_Size>>(val);
+
+    for (size_t index = 0; index < Value_Size; index++)
+    {
+      this->ComputeSingleByte(data[index]);
+    }
+
+    return this->hash;
+  }
+};
+
+//
+// Simple iota, from Rum-And-Raisin
+//
+
+template <typename T>
+struct Iota
+{
+  struct Iterator
+  {
+    T val;
+
+    constexpr T operator*() noexcept
+    {
+      return val;
+    }
+
+    constexpr bool operator!=(const Iterator &rhs)
+    {
+      return val != rhs.val;
+    }
+
+    constexpr Iterator &operator++()
+    {
+      ++val;
+      return *this;
+    }
+  };
+
+  constexpr Iota(T e)
+  {
+    _begin = {0};
+    _end = {e};
+  }
+
+  constexpr Iota(T b, T e)
+  {
+    _begin = {b};
+    _end = {e};
+  }
+
+  constexpr Iterator begin() noexcept
+  {
+    return _begin;
+  }
+
+  constexpr Iterator end() noexcept
+  {
+    return _end;
+  }
+
+  Iterator _begin;
+  Iterator _end;
+};
+
+template<typename T>
+std::pair<size_t, T> LargestElement(std::vector<T> input)
+{
+  static_assert(std::is_integral_v<T>, "LargestElement: integral required");
+  auto value = std::max_element(input.begin(), input.end());
+  auto index = std::distance(input.begin(), value);
+  return std::pair<size_t, T>(index, *value);
+}
