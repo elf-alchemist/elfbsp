@@ -426,6 +426,26 @@ void Blockmap_FlattenSorted(BlockMap &bmap)
   }
 }
 
+void CheckFormatBlockMap(BlockMap &bmap)
+{
+  // TODO: get verbose overflow output on all build steps
+  auto final_offset = LargestElement(bmap.sorted_offsets).second;
+
+  if (bmap.format == BlockmapFormat::DoomBSP && final_offset > LIMIT_BMAP_INDEX_VANILLA)
+  {
+    // Vanilla overflow?
+    PrintLine(Log::WARN, "[{}] Blockmap vanilla overflow. Map will not run on vanilla EXE.", __func__);
+  }
+
+  if (bmap.format < BlockmapFormat::XBM1 && final_offset > LIMIT_BMAP_INDEX)
+  {
+    // Limit-removing overflow?
+    PrintLine(Log::WARN, "[{}] Blockmap limit-removing overflow. Forcing XBM1 format.", __func__);
+    config.total_warnings++;
+    RaiseValue(bmap.format, BlockmapFormat::XBM1);
+  }
+}
+
 template <BlockmapFormat format, typename NumType>
 static void Blockmap_Write(WadIO &io, BlockMap &bmap)
 {
@@ -522,6 +542,8 @@ void PutBlockmap(WadIO &io, Level &level)
   Blockmap_FlattenSorted(bmap);
   // TODO: Blockmap_SubBlock(bmap);
   // TODO: Blockmap_FlattenSubBlock(bmap);
+
+  CheckFormatBlockMap(bmap);
 
   switch (bmap.format)
   {

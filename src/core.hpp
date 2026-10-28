@@ -861,7 +861,8 @@ constexpr size_t LIMIT_NODE = Limits<int16_t>::max() + OFF_BY_ONE;
 constexpr size_t LIMIT_SUBSEC = Limits<int16_t>::max() + OFF_BY_ONE;
 constexpr size_t LIMIT_SEG = Limits<uint16_t>::max() + OFF_BY_ONE;
 
-constexpr size_t LIMIT_BMAP_INDEX = Limits<uint16_t>::max() + OFF_BY_ONE;
+constexpr int16_t LIMIT_BMAP_INDEX_VANILLA = Limits<int16_t>::max();
+constexpr uint16_t LIMIT_BMAP_INDEX = Limits<uint16_t>::max();
 
 //
 // Vanilla blockmap
