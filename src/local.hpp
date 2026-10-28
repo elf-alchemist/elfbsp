@@ -457,6 +457,8 @@ struct Level
   size_t num_real_lines = 0;
   bool overflows = false;
 
+  PolyObject po;
+
   std::vector<Vertex *> vertices;
   std::vector<Linedef *> linedefs;
   std::vector<Sidedef *> sidedefs;

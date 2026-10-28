@@ -126,7 +126,7 @@ static inline void UScanSkip(Scanner &s)
 
 //-----------------------------------------------------------------------------
 
-void ParseUNamespace(Scanner &s)
+void ParseUNamespace(Scanner &s, Level &level)
 {
   s.MustGetToken('=');
   s.MustGetToken(TK_StringConst);
@@ -193,6 +193,23 @@ void ParseUNamespace(Scanner &s)
   else if (!strcmp(prop, "killingtime"))
   {
     udmf_namespace = UNamespace::KillingTime;
+  }
+
+  switch (udmf_namespace)
+  {
+  case UNamespace::Hexen:
+  case UNamespace::DelphiHexen:
+    level.po.anchor = Hexen_PolyObj_Anchor;
+    level.po.spawn = Hexen_PolyObj_Spawn;
+    level.po.spawn_crush = Hexen_PolyObj_SpawnCrush;
+    level.po.spawn_hurt = Hexen_PolyObj_SpawnHurt;
+    break;
+  default:
+    level.po.anchor = Hexen_PolyObj_Anchor;
+    level.po.spawn = Hexen_PolyObj_Spawn;
+    level.po.spawn_crush = Hexen_PolyObj_SpawnCrush;
+    level.po.spawn_hurt = Hexen_PolyObj_SpawnHurt;
+    break;
   }
 
   s.MustGetToken(';');
@@ -618,7 +635,7 @@ void ParseTextMap(WadIO &io, Level &level, std::vector<char> &lump)
 
     if (!strcmp(prop, "namespace"))
     {
-      ParseUNamespace(s);
+      ParseUNamespace(s, level);
     }
     else if (!strcmp(prop, "vertex"))
     {

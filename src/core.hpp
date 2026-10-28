@@ -1209,15 +1209,17 @@ constexpr double SPLIT_COST_MIN = 1.0;
 constexpr double SPLIT_COST_DEFAULT = 11.0;
 constexpr double SPLIT_COST_MAX = 32.0;
 
+struct PolyObject
+{
+  DoomEdNum anchor = ZDoom_PolyObj_Anchor;
+  DoomEdNum spawn = ZDoom_PolyObj_Spawn;
+  DoomEdNum spawn_crush = ZDoom_PolyObj_SpawnCrush;
+  DoomEdNum spawn_hurt = ZDoom_PolyObj_SpawnHurt;
+};
+
 struct BuildInfo
 {
-  struct
-  {
-    DoomEdNum anchor = ZDoom_PolyObj_Anchor;
-    DoomEdNum spawn = ZDoom_PolyObj_Spawn;
-    DoomEdNum spawn_crush = ZDoom_PolyObj_SpawnCrush;
-    DoomEdNum spawn_hurt = ZDoom_PolyObj_SpawnHurt;
-  } polyobj;
+  PolyObject po;
 
   double split_cost = SPLIT_COST_DEFAULT;
   size_t total_warnings = 0;
@@ -1408,7 +1410,7 @@ struct Iota
   Iterator _end;
 };
 
-template<typename T>
+template <typename T>
 std::pair<size_t, T> LargestElement(std::vector<T> input)
 {
   static_assert(std::is_integral_v<T>, "LargestElement: integral required");

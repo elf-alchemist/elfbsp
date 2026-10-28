@@ -567,10 +567,10 @@ static int32_t ParseLongArgument(std::string name, const int32_t argc, const cha
   }
   else if (name == "--polyobj")
   {
-    config.polyobj.anchor = Hexen_PolyObj_Anchor;
-    config.polyobj.spawn = Hexen_PolyObj_Spawn;
-    config.polyobj.spawn_crush = Hexen_PolyObj_SpawnCrush;
-    config.polyobj.spawn_hurt = Hexen_PolyObj_SpawnHurt;
+    config.po.anchor = Hexen_PolyObj_Anchor;
+    config.po.spawn = Hexen_PolyObj_Spawn;
+    config.po.spawn_crush = Hexen_PolyObj_SpawnCrush;
+    config.po.spawn_hurt = Hexen_PolyObj_SpawnHurt;
   }
   else if (name == "--output")
   {
