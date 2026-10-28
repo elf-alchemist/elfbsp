@@ -121,6 +121,11 @@ static void ValidateLinedef(Level &level, Linedef *line)
     {
       PrintLine(Log::NORMAL, "[{}] Linedef #{} is self-referencing", __func__, line->index);
     }
+
+    if (!line->special)
+    {
+      line->effects |= FX_NoBlockmap;
+    }
   }
 
   if (config.effects                                   // Effects enabled ...
@@ -145,7 +150,7 @@ static void ValidateLinedef(Level &level, Linedef *line)
   // check for extremely short lines
   if ((fabs(deltax) < DIST_EPSILON) && (fabs(deltay) < DIST_EPSILON))
   {
-    line->effects |= FX_ZeroLength;
+    line->effects |= FX_ZeroLength | FX_NoBlockmap;
   }
 
   // check for extremely long lines
@@ -301,7 +306,7 @@ static void GetLinedefs_Doom(WadIO &io, Level &level)
       l->effects |= FX_DoNotRenderFront | FX_DoNotRenderBack | FX_DoNotSplitSeg;
       break;
     case Tag_NoBlockmap:
-      l->effects |= FX_NoBlockmap | FX_DoNotSplitSeg;
+      l->effects |= FX_DoNotSplitSeg | FX_NoBlockmap;
       break;
     }
 

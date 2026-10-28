@@ -1404,3 +1404,12 @@ struct Iota
   Iterator _begin;
   Iterator _end;
 };
+
+template<typename T>
+std::pair<size_t, T> LargestElement(std::vector<T> input)
+{
+  static_assert(std::is_integral_v<T>, "LargestElement: integral required");
+  auto value = std::max_element(input.begin(), input.end());
+  auto index = std::distance(input.begin(), value);
+  return std::pair<size_t, T>(index, *value);
+}

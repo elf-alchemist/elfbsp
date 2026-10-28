@@ -23,6 +23,7 @@
 
 #include "core.hpp"
 #include "local.hpp"
+#include <algorithm>
 #include <map>
 #include <vector>
 
@@ -43,7 +44,7 @@ static void Blockmap_FindLimits(Level &level, MapBoundBox &bbox)
 
   for (auto L : level.linedefs)
   {
-    if (HAS_BIT(L->effects, FX_NoBlockmap | FX_ZeroLength))
+    if (HAS_BIT(L->effects, FX_NoBlockmap))
     {
       continue;
     }
@@ -97,16 +98,15 @@ void Blockmap_Init(Level &level, BlockMap &bmap)
   bmap.columns = static_cast<size_t>(bbox.maxx - bmap.origin_x) / BlockMap_GridSize + OFF_BY_ONE;
   bmap.rows = static_cast<size_t>(bbox.maxy - bmap.origin_y) / BlockMap_GridSize + OFF_BY_ONE;
 
-  // trivially copyable, eh?
-  bmap.cells.assign(bmap.BlockCount(), BlockList());
-
+  bmap.cells.reserve(bmap.BlockCount());
   for (auto i : Iota(bmap.BlockCount()))
   {
-    bmap.cells[i].self_index = i;
+    bmap.cells.push_back(BlockList(i));
   }
 
   bmap.deduped_offsets.reserve(bmap.BlockCount());
   bmap.unpacked_offsets.reserve(bmap.BlockCount());
+  bmap.sorted_offsets.reserve(bmap.BlockCount());
 
   if (config.verbose)
   {
@@ -131,6 +131,9 @@ static void Blockmap_Free(BlockMap &bmap)
 
   bmap.deduped_list.clear();
   bmap.deduped_offsets.clear();
+
+  bmap.sorted_list.clear();
+  bmap.sorted_offsets.clear();
 }
 
 static void Block_Add(BlockMap &bmap, size_t blk_num, size_t line_index)
@@ -236,7 +239,7 @@ static void Blockmap_Create(Level &level, BlockMap &bmap)
 
   for (auto L : level.linedefs)
   {
-    if (HAS_BIT(L->effects, FX_NoBlockmap | FX_ZeroLength))
+    if (HAS_BIT(L->effects, FX_NoBlockmap))
     {
       continue;
     }
@@ -259,8 +262,6 @@ static void Blockmap_FlattenUncompressed(BlockMap &bmap)
   // Skip header and offsets list
   size_t offset = 4 + bmap.BlockCount();
 
-  PrintLine(Log::NORMAL, "[{}] Offsets starting at {}", __func__, offset);
-
   for (auto cell : bmap.cells)
   {
     bmap.unpacked_offsets.push_back(offset);
@@ -272,7 +273,8 @@ static void Blockmap_FlattenUncompressed(BlockMap &bmap)
     offset += cell.lines.size() + OFF_BY_ONE;
   }
 
-  PrintLine(Log::NORMAL, "[{}] Offsets ending at {}", __func__, offset);
+  auto p = LargestElement(bmap.unpacked_offsets);
+  PrintLine(Log::NORMAL, "[{}] Largest blocklist has offset {}", __func__, p.second);
 }
 
 void Blockmap_Deduplicate(BlockMap &bmap)
@@ -291,11 +293,7 @@ void Blockmap_Deduplicate(BlockMap &bmap)
   for (auto [size, dupes] : SizeMatcher)
   {
     // No actual duplicates? skip
-    if (dupes.size() < 2)
-    {
-      PrintLine(Log::NORMAL, "[{}] Found ", __func__);
-      continue;
-    }
+    if (dupes.size() < 2) continue;
 
     for (auto i : Iota(dupes.size()))
     {
@@ -329,14 +327,12 @@ void Blockmap_Deduplicate(BlockMap &bmap)
   }
 
   PrintLine(Log::NORMAL, "[{}] Found and marked {} duplicate blocks", __func__, total_dupes);
-  PrintLine(Log::NORMAL, "[{}] Leaving a total of {} non-duplicate blocks", __func__, bmap.BlockCount());
+  PrintLine(Log::NORMAL, "[{}] Leaving {} unique blocks", __func__, bmap.BlockCount() - total_dupes);
 }
 
 void Blockmap_FlattenDeduplicated(BlockMap &bmap)
 {
   size_t offset = 4 + bmap.BlockCount();
-
-  PrintLine(Log::NORMAL, "[{}] Offsets starting at {}", __func__, offset);
 
   for (auto cell : bmap.cells)
   {
@@ -356,7 +352,66 @@ void Blockmap_FlattenDeduplicated(BlockMap &bmap)
     bmap.deduped_list.push_back(NO_INDEX);
     offset += cell.lines.size() + OFF_BY_ONE;
   }
-  PrintLine(Log::NORMAL, "[{}] Offsets ending at {}", __func__, offset);
+
+  auto p = LargestElement(bmap.deduped_offsets);
+  PrintLine(Log::NORMAL, "[{}] Largest blocklist has offset {}", __func__, p.second);
+}
+
+//
+// Vanilla doesn't actually care about the size of the lump,
+// just that the last offset is within bounds, there can be
+// a trailing tail on the end.
+//
+void Blockmap_SortCells(BlockMap &bmap)
+{
+  auto by_size = [](BlockList &a, BlockList &b) -> auto
+  {
+    auto size_a = a.lines.size();
+    auto size_b = b.lines.size();
+
+    if (size_a != size_b)
+    {
+      return size_a < size_b;
+    }
+
+    return a.self_index < b.self_index;
+  };
+
+  std::sort(bmap.cells.begin(), bmap.cells.end(), by_size);
+}
+
+void Blockmap_FlattenSorted(BlockMap &bmap)
+{
+  size_t offset = 4 + bmap.BlockCount();
+
+  // Using .reserve() is not enough, since we write the offsets out-of-order,
+  // we have to run .resize() to creat empty "slots" to shove the offsets
+  // in manually.
+  bmap.sorted_offsets.resize(bmap.BlockCount());
+
+  // Blocks are sorted by size, so now we need to use .self_index to insert
+  // offsets in the proper places
+  for (auto cell : bmap.cells)
+  {
+    if (cell.dup_index != NO_INDEX)
+    {
+      auto duped_offset = bmap.sorted_offsets[cell.dup_index];
+      bmap.sorted_offsets[cell.self_index] = duped_offset;
+      continue;
+    }
+
+    bmap.sorted_offsets[cell.self_index] = offset;
+
+    for (auto line : cell.lines)
+    {
+      bmap.sorted_list.push_back(line);
+    }
+    bmap.sorted_list.push_back(NO_INDEX);
+    offset += cell.lines.size() + OFF_BY_ONE;
+  }
+
+  auto p = LargestElement(bmap.sorted_offsets);
+  PrintLine(Log::NORMAL, "[{}] Largest blocklist has offset {}", __func__, p.second);
 }
 
 template <BlockmapFormat format, typename NumType>
@@ -386,14 +441,14 @@ static void Blockmap_Write(WadIO &io, BlockMap &bmap)
   }
 
   std::vector<NumType> lump_data;
-  lump_data.reserve(bmap.deduped_offsets.size() + bmap.deduped_list.size());
+  lump_data.reserve(bmap.sorted_offsets.size() + bmap.sorted_list.size());
 
-  for (auto offset : bmap.deduped_offsets)
+  for (auto offset : bmap.sorted_offsets)
   {
     lump_data.push_back(GetLittleEndian(static_cast<NumType>(offset)));
   }
 
-  for (auto block : bmap.deduped_list)
+  for (auto block : bmap.sorted_list)
   {
     lump_data.push_back(GetLittleEndian(static_cast<NumType>(block)));
   }
@@ -427,6 +482,8 @@ void PutBlockmap(WadIO &io, Level &level)
   Blockmap_FlattenUncompressed(bmap);
   Blockmap_Deduplicate(bmap);
   Blockmap_FlattenDeduplicated(bmap);
+  Blockmap_SortCells(bmap);
+  Blockmap_FlattenSorted(bmap);
   // TODO: Blockmap_SubBlock(bmap);
   // TODO: Blockmap_FlattenSubBlock(bmap);
 

@@ -354,6 +354,10 @@ struct BlockList
   size_t dup_count = 0;         // How many other BlockLists were removed because of this one
   FNV1a<size_t> sum;            // to check against other blocks for duplicates detection
   std::vector<size_t> lines;    // actual line index list
+
+  BlockList(size_t self_index) : self_index(self_index)
+  {
+  }
 };
 
 struct BlockMap
@@ -392,13 +396,21 @@ struct BlockMap
   size_t rows = 0;
   size_t columns = 0;
 
-  // Uncompressed, as raw as possible
+  // Step 0: Raw 1-to-1 cell-to-blocklist system, in order of placement.
   std::vector<size_t> unpacked_offsets;
   std::vector<size_t> unpacked_list;
 
-  // Post deduplication
+  // Step 1: Deuplicate identical blocklists by making each dupe cell's offset
+  // point to the first, already-existing blocklist. Simplest and biggest cut down on size.
   std::vector<size_t> deduped_offsets;
   std::vector<size_t> deduped_list;
+
+  // Step 2: Sort blocklists from shortest to longest, stably, to push potentially
+  // large blocklists to the end of the lump, and thus giving more chances for trailing
+  // tails beyond the offset limit. As vanilla doesn't actually have a lump size limit,
+  // as much as it has an offset limit.
+  std::vector<size_t> sorted_offsets;
+  std::vector<size_t> sorted_list;
 
   // Can be safely sorted, as each block list contains its own original block index
   std::vector<BlockList> cells;
