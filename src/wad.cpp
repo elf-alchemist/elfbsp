@@ -316,7 +316,7 @@ void WadIO::CreateEmptyLump(std::string_view name)
 {
   WadLump lump;
   strncpy(lump.name, name.data(), 8);
-  lump.pos = GetLittleEndian(static_cast<uint32_t>(ftell(this->write_file)));
+  lump.pos = GetLittleEndian(ftell(this->write_file));
   lump.size = 0;
   this->write_directory.push_back(lump);
 }
@@ -325,7 +325,7 @@ void WadIO::WriteLump(std::string_view name, const void *data, size_t size)
 {
   WadLump lump;
   strncpy(lump.name, name.data(), 8);
-  lump.pos = GetLittleEndian(static_cast<uint32_t>(ftell(this->write_file)));
+  lump.pos = GetLittleEndian(ftell(this->write_file));
   lump.size = IndexToInt(size);
   this->write_directory.push_back(lump);
   this->SafeWrite(data, size);
