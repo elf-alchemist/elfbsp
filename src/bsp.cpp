@@ -277,7 +277,7 @@ void PutLeafs_DoomBSP(WadIO &io, Level &level)
     {
       // Do not remove minisegs from tree before
       // we are able to write all this
-      raw_leaf_doombsp_t raw;
+      MapLeafRefDoomBSP raw;
       Vertex *vert = seg->start;
 
       raw.vertex = GetLittleEndian(IndexToShort(vert->index));
@@ -459,7 +459,7 @@ void PutLeafs_DeePBSPV4(WadIO &io, Level &level)
     {
       // Do not remove minisegs from tree before
       // we are able to write all this
-      raw_leaf_deepbspv4_t raw;
+      MapLeafRefDeePBSPV4 raw;
       Vertex *vert = seg->start;
 
       raw.vertex = GetLittleEndian(IndexToInt(vert->index));

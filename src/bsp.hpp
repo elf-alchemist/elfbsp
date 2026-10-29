@@ -53,7 +53,7 @@ struct MapSegmentDoomBSP
   int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
-struct raw_leaf_doombsp_t
+struct MapLeafRefDoomBSP
 {
   uint16_t vertex;
   uint16_t seg;
@@ -87,7 +87,7 @@ struct MapSegmentDeePBSPV4
   int16_t dist;     // distance from starting point
 } PACKEDATTR;
 
-struct raw_leaf_deepbspv4_t
+struct MapLeafRefDeePBSPV4
 {
   uint32_t vertex;
   uint32_t seg;
