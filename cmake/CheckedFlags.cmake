@@ -1,6 +1,6 @@
 # Lexi Mayfield (C) 2020
 
-include(CheckCCompilerFlag)
+include(CheckCXXCompilerFlag)
 include(CheckLinkerFlag)
 
 # Add compiler option if compiler supports it.
@@ -9,7 +9,7 @@ function(_checked_add_compile_option FLAG)
   string(REGEX REPLACE "-(.*)" "CFLAG_\\1" FLAG_FOUND ${FLAG})
   string(REGEX REPLACE "[,=-]+" "_" FLAG_FOUND "${FLAG_FOUND}")
 
-  check_c_compiler_flag(${FLAG} ${FLAG_FOUND})
+  check_cxx_compiler_flag(${FLAG} ${FLAG_FOUND})
   if(${FLAG_FOUND})
     set(COMMON_COMPILE_OPTIONS ${COMMON_COMPILE_OPTIONS} ${FLAG} PARENT_SCOPE)
   endif()
@@ -20,7 +20,7 @@ function(_checked_add_link_option FLAG)
   string(REGEX REPLACE "-(.*)" "LDFLAG_\\1" FLAG_FOUND ${FLAG})
   string(REGEX REPLACE "[,=-]+" "_" FLAG_FOUND "${FLAG_FOUND}")
 
-  check_linker_flag(C "${FLAG}" ${FLAG_FOUND})
+  check_linker_flag(CXX "${FLAG}" ${FLAG_FOUND})
   if(${FLAG_FOUND})
     set(COMMON_LINK_OPTIONS ${COMMON_LINK_OPTIONS} ${FLAG} PARENT_SCOPE)
   endif()

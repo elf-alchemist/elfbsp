@@ -83,7 +83,7 @@ WadIO::WadIO(std::string in_file, std::string out_file)
     throw RuntimeException("Could not read wad directory");
   }
 
-  this->read_directory.resize(num_entries);
+  this->read_directory.resize(static_cast<size_t>(num_entries));
   this->SafeRead(this->read_directory.data(), this->NumLumps() * sizeof(WadLump));
 
   for (size_t i = 0; i < this->NumLumps(); ++i)
@@ -116,8 +116,8 @@ WadIO::~WadIO(void)
   this->read_directory.clear();
 
   // Output stuff
-  uint32_t num_entries = GetLittleEndian(IndexToInt(this->write_directory.size()));
-  uint32_t dir_start = GetLittleEndian(static_cast<uint32_t>(ftell(this->write_file)));
+  auto num_entries = GetLittleEndian(IndexToUInt(this->write_directory.size()));
+  auto dir_start = GetLittleEndian(ftell(this->write_file));
 
   this->SafeWrite(this->write_directory.data(), sizeof(WadLump) * this->write_directory.size());
 
@@ -315,8 +315,8 @@ void WadIO::SafeWrite(const void *buffer, size_t size)
 void WadIO::CreateEmptyLump(std::string_view name)
 {
   WadLump lump;
-  strncpy(lump.name, name.data(), 8);
-  lump.pos = GetLittleEndian(ftell(this->write_file));
+  CopyLumpCString(lump.name, name.data());
+  lump.pos = static_cast<int32_t>(GetLittleEndian(ftell(this->write_file)));
   lump.size = 0;
   this->write_directory.push_back(lump);
 }
@@ -324,8 +324,8 @@ void WadIO::CreateEmptyLump(std::string_view name)
 void WadIO::WriteLump(std::string_view name, const void *data, size_t size)
 {
   WadLump lump;
-  strncpy(lump.name, name.data(), 8);
-  lump.pos = GetLittleEndian(ftell(this->write_file));
+  CopyLumpCString(lump.name, name.data());
+  lump.pos = static_cast<int32_t>(GetLittleEndian(ftell(this->write_file)));
   lump.size = IndexToInt(size);
   this->write_directory.push_back(lump);
   this->SafeWrite(data, size);
@@ -424,7 +424,7 @@ void WadIO::AddToLumpZ(const void *data, size_t length)
   SYS_ASSERT(length > 0);
 
   this->zout_stream.next_in = static_cast<const byte *>(data);
-  this->zout_stream.avail_in = IndexToInt(length);
+  this->zout_stream.avail_in = IndexToUInt(length);
 
   while (this->zout_stream.avail_in > 0)
   {

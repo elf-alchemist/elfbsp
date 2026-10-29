@@ -252,9 +252,14 @@ constexpr uint16_t IndexToShort(size_t x)
   return static_cast<uint16_t>(x);
 }
 
-constexpr uint32_t IndexToInt(size_t x)
+constexpr uint32_t IndexToUInt(size_t x)
 {
   return static_cast<uint32_t>(x);
+}
+
+constexpr int32_t IndexToInt(size_t x)
+{
+  return static_cast<int32_t>(x);
 }
 
 // binary angular measurement, BAM!
@@ -334,7 +339,7 @@ void PrintLine(const Log level, std::format_string<Args...> fmt, Args... args)
 // Awh, dangit.
 //
 template <typename... Args>
-std::runtime_error RuntimeException(std::format_string<Args...> fmt, Args ...args)
+std::runtime_error RuntimeException(std::format_string<Args...> fmt, Args... args)
 {
   std::string str = "ERROR: " + std::format(fmt, std::forward<Args>(args)...);
   return std::runtime_error(str);
@@ -464,6 +469,18 @@ inline void CStringToLower(char *str)
   {
     *str = CToLower(*str);
     ++str;
+  }
+}
+
+// Copies characters until either 8 characters are copied or a null terminator
+// is found.
+
+inline void CopyLumpCString(char *dest, const char *src)
+{
+  for (size_t index = 0; index < 8; index++)
+  {
+    dest[index] = src[index];
+    if (src[index] == '\0') break;
   }
 }
 

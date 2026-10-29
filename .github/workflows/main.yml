@@ -41,7 +41,23 @@ jobs:
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
-              -DELFBSP_STATIC=ON \
+              -DENABLE_STATIC=ON \
+              -DENABLE_HARDENING=ON \
+              -DENABLE_LTO=ON
+
+          - name: Linux GCC x86_64
+            os: ubuntu-latest
+            shell: bash
+            package_name: linux_x86_64
+            artifact_path: build/*.zip
+            install: |
+              sudo apt-get update
+              sudo apt-get install -y ninja-build
+            configure: |
+              -G Ninja \
+              -DCMAKE_C_COMPILER=gcc \
+              -DCMAKE_CXX_COMPILER=g++ \
+              -DENABLE_STATIC=ON \
               -DENABLE_HARDENING=ON \
               -DENABLE_LTO=ON
 
@@ -58,7 +74,7 @@ jobs:
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
               -DCMAKE_OSX_ARCHITECTURES="arm64" \
-              -DELFBSP_STATIC=ON \
+              -DENABLE_STATIC=ON \
               -DENABLE_HARDENING=ON \
               -DENABLE_LTO=ON
 
@@ -80,7 +96,7 @@ jobs:
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
-              -DELFBSP_STATIC=ON \
+              -DENABLE_STATIC=ON \
               -DENABLE_HARDENING=ON \
               -DENABLE_LTO=ON
 

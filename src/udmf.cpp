@@ -78,13 +78,7 @@ inline static void UScanLumpName(Scanner &s, char *x)
 {
   s.MustGetToken('=');
   s.MustGetToken(TK_StringConst);
-
-  for (size_t index = 0; index < 8; index++)
-  {
-    x[index] = s->str[index];
-    if (s->str[index] == '\0') break;
-  }
-
+  CopyLumpCString(x, s->str.data());
   s.MustGetToken(';');
 }
 

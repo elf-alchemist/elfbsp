@@ -31,6 +31,7 @@ option(ENABLE_UBSAN "Enable UBSan" OFF)
 option(ENABLE_TSAN "Enable TSan" OFF)
 option(ENABLE_HARDENING "Enable hardening flags" OFF)
 option(ENABLE_LTO "Enable link time Optimization" OFF)
+option(ENABLE_STATIC "Enable static builds" OFF)
 
 # Grabs the git hash and branch a few different ways.
 include(GetGitBranch)
@@ -150,22 +151,20 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 include(CheckedFlags)
 
-if(NOT APPLE)
+if(NOT APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   _checked_add_compile_option(-stdlib=libc++)
-  _checked_add_link_option(-stdlib=libc++ "-fuse-ld=lld")
-  if (CONFIG MATCHES "Release" OR "RelWithDebInfo")
-    _checked_add_compile_option(-ffunction-sections)
-    _checked_add_compile_option(-fdata-sections)
-    _checked_add_link_option(-Wl,--gc-sections)
-  endif()
+  _checked_add_link_option(-stdlib=libc++)
+  _checked_add_link_option(-fuse-ld=lld)
 endif()
 
-if(ELFBSP_STATIC AND NOT APPLE)
-  if(WIN32)
-    _checked_add_link_option(-static)
-  else()
-    _checked_add_link_option("-Wl,-Bstatic,-lc++,-lc++abi,-Bdynamic")
-  endif()
+if (CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo")
+  _checked_add_compile_option(-ffunction-sections)
+  _checked_add_compile_option(-fdata-sections)
+  _checked_add_link_option(-Wl,--gc-sections)
+endif()
+
+if(ENABLE_STATIC AND NOT APPLE)
+  target_link_options(${PROJECT_NAME} PRIVATE -static)
 endif()
 
 _checked_add_compile_option(-Wextra)
@@ -182,13 +181,17 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   zlibstatic
 )
 
-if(CONFIG MATCHES "Release" OR "RelWithDebInfo")
+if(CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo")
   _checked_add_compile_option(-O3)
-elseif(CONFIG MATCHES "Debug")
+elseif(CMAKE_BUILD_TYPE MATCHES "Debug")
   _checked_add_compile_option(-O0)
-elseif(CONFIG MATCHES "MinSizeRel")
+elseif(CMAKE_BUILD_TYPE MATCHES "MinSizeRel")
   _checked_add_compile_option(-Os)
 endif()
+
+# Actually apply the collected COMMON_COMPILE_OPTIONS / COMMON_LINK_OPTIONS.
+# Must come after every _checked_add_* call and after the targets exist.
+target_settings(${PROJECT_NAME} scanner)
 
 if(ENABLE_LTO)
   include(CheckIPOSupported)

@@ -355,7 +355,7 @@ struct BlockList
   FNV1a<size_t> sum;            // to check against other blocks for duplicates detection
   std::vector<size_t> lines;    // actual line index list
 
-  BlockList(size_t self_index) : self_index(self_index)
+  BlockList(size_t _self_index) : self_index(_self_index)
   {
   }
 };
