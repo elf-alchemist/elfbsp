@@ -1,7 +1,11 @@
 name: Continuous Integration
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 on:
   push:
@@ -27,7 +31,7 @@ jobs:
           - name: Linux Clang x86_64
             os: ubuntu-latest
             shell: bash
-            package_name: linux_x86_64
+            package_name: linux_clang_x86_64
             artifact_path: build/*.zip
             install: |
               sudo apt-get update
@@ -48,7 +52,7 @@ jobs:
           - name: Linux GCC x86_64
             os: ubuntu-latest
             shell: bash
-            package_name: linux_x86_64
+            package_name: linux_gcc_x86_64
             artifact_path: build/*.zip
             install: |
               sudo apt-get update
@@ -64,17 +68,15 @@ jobs:
           - name: MacOS Clang ARM64
             os: macos-latest
             shell: bash
-            package_name: macos_arm64
+            package_name: macos_clang_arm64
             artifact_path: build/*.zip
             install: |
-              brew update
               brew install ninja
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
               -DCMAKE_OSX_ARCHITECTURES="arm64" \
-              -DENABLE_STATIC=ON \
               -DENABLE_HARDENING=ON \
               -DENABLE_LTO=ON
 
@@ -82,16 +84,14 @@ jobs:
             os: windows-latest
             shell: "msys2 {0}"
             msystem: clang64
-            package_name: windows_x86_64
+            package_name: windows_clang_x86_64
             artifact_path: build/*.zip
-            install: |
-              pacman -Syu --noconfirm
-              pacman -S --noconfirm \
-                mingw-w64-clang-x86_64-clang \
-                mingw-w64-clang-x86_64-lld \
-                mingw-w64-clang-x86_64-cmake \
-                mingw-w64-clang-x86_64-ninja \
-                mingw-w64-clang-x86_64-git
+            msys2_packages: >-
+              mingw-w64-clang-x86_64-clang
+              mingw-w64-clang-x86_64-lld
+              mingw-w64-clang-x86_64-cmake
+              mingw-w64-clang-x86_64-ninja
+              mingw-w64-clang-x86_64-git
             configure: |
               -G Ninja \
               -DCMAKE_C_COMPILER=clang \
@@ -102,11 +102,12 @@ jobs:
 
     steps:
       - name: Setup MSYS2
-        if: matrix.config.shell == 'msys2 {0}'
+        if: ${{ matrix.config.shell == 'msys2 {0}' }}
         uses: msys2/setup-msys2@v2
         with:
           msystem: ${{ matrix.config.msystem }}
           update: true
+          install: ${{ matrix.config.msys2_packages }}
 
       - uses: actions/checkout@v7
         with:
@@ -114,10 +115,11 @@ jobs:
           fetch-depth: 0   # Required so we can move and push tags
 
       - name: Install dependencies
+        if: ${{ matrix.config.install }}
         run: ${{ matrix.config.install }}
 
       - name: Configure (Release)
-        if: ${{ contains(github.ref, 'tags') }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: >-
           cmake
           -S .
@@ -126,7 +128,7 @@ jobs:
           ${{ matrix.config.configure }}
 
       - name: Configure (Nightly)
-        if: ${{ !contains(github.ref, 'tags') }}
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         run: >-
           cmake
           -S .
@@ -136,6 +138,7 @@ jobs:
           ${{ matrix.config.configure }}
 
       - name: Run Clang-Tidy
+        if: ${{ matrix.config.package_name == 'linux_clang_x86_64' }}
         uses: cpp-linter/cpp-linter-action@v2
         id: cpp-linter
         env:
@@ -151,18 +154,25 @@ jobs:
       - name: Build
         run: cmake --build build
 
-      - name: Install
+      - name: Check static linking
+        if: ${{ runner.os == 'Linux' }}
+        run: file build/elfbsp | grep -Eq 'statically linked|static-pie linked'
+
+      - name: Smoke test
+        run: build/elfbsp --help > /dev/null
+
+      - name: Package
         run: |
           cd build
           cpack
 
       - name: Extract Version Number (Release)
-        if: contains(github.ref, 'tags')
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
         shell: bash
         run: echo "VERSION=${GITHUB_REF##*_}" >> $GITHUB_ENV
 
       - name: Extract Version Number (Development)
-        if: "!contains(github.ref, 'tags')"
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         shell: bash
         run: echo "VERSION=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
@@ -172,17 +182,35 @@ jobs:
           name: elfbsp_${{ env.VERSION }}_${{ matrix.config.package_name }}
           path: ${{ matrix.config.artifact_path }}
 
+  release:
+    name: Publish
+    needs: build
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: elfbsp_*
+          merge-multiple: true
+          path: dist
+
       - name: Release
-        if: ${{ contains(github.ref, 'tags') }}
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: ncipollo/release-action@v1
         with:
-          name: ELFBSP ${{ env.VERSION }}
+          name: ELFBSP ${{ github.ref_name }}
           bodyFile: CHANGELOG.md
           allowUpdates: true
-          artifacts: ${{ matrix.config.artifact_path }}
+          artifacts: dist/*.zip
 
       - name: Update Nightly Tag
-        if: ${{ !contains(github.ref, 'tags') && github.ref == 'refs/heads/main' }}
+        if: ${{ !startsWith(github.ref, 'refs/tags/') && github.ref == 'refs/heads/main' }}
         run: |
           git tag -d nightly || true
           git push origin :refs/tags/nightly || true
@@ -190,13 +218,13 @@ jobs:
           git push origin nightly
 
       - name: Nightly Pre-Release
-        if: ${{ !contains(github.ref, 'tags') && github.ref == 'refs/heads/main' }}
+        if: ${{ !startsWith(github.ref, 'refs/tags/') && github.ref == 'refs/heads/main' }}
         uses: ncipollo/release-action@v1
         with:
-          name: "[Nightly] ELFBSP ${{ env.VERSION }}"
+          name: "[Nightly] ELFBSP ${{ github.sha }}"
           bodyFile: CHANGELOG.md
           tag: nightly
           commit: main
           prerelease: true
           allowUpdates: true
-          artifacts: ${{ matrix.config.artifact_path }}
+          artifacts: dist/*.zip

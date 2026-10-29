@@ -35,3 +35,6 @@ Bugfixes:
 
 Build:
 * Removed support for Intel MacOS, only ARM MacOS (Apple Silicon) is now supported
+* Fixed builds not being static, should now run on UDB Flatpak just fine
+* Windows builds now use MSYS2 Clang instead of MSYS2 MinGW
+* Added Linux GCC to CI pipeline
