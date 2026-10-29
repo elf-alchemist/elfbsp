@@ -40,6 +40,7 @@
 #include <bit>
 #include <chrono>
 #include <limits>
+#include <vector>
 
 #include "zlib-ng.h"
 
