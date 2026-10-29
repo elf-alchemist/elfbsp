@@ -20,17 +20,15 @@
 //  GNU General Public License for more details.
 //
 //------------------------------------------------------------------------------
-#ifdef _WIN32
-  #ifndef WIN32_LEAN_AND_MEAN
-    #define WIN32_LEAN_AND_MEAN
-  #endif
-#endif
+
+#include <algorithm>
 
 #include "core.hpp"
 #include "local.hpp"
 
 // Native platform headers required for low-level process priority
 #ifdef _WIN32
+  #define WIN32_LEAN_AND_MEAN
   #include <windows.h>
 #else
   #include <unistd.h>
