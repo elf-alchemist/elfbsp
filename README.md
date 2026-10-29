@@ -20,7 +20,7 @@ The code is based on Andrew Apted's AJBSP, itself based on the Eureka level edit
 
 Check our documentation for:
 * Usage via the [command line](https://github.com/elf-alchemist/elfbsp/blob/main/docs/command_line.md) interface
-* Format [support](https://github.com/elf-alchemist/elfbsp/blob/main/docs/support.md)
+* Format [support](https://github.com/elf-alchemist/elfbsp/blob/main/docs/format_support.md)
 * Node building [special effects](https://github.com/elf-alchemist/elfbsp/blob/main/docs/special_effects.md)
 * Historical [changelog](https://github.com/elf-alchemist/elfbsp/blob/main/docs/changelog.md)
 * Instructions for local [compilation](https://github.com/elf-alchemist/elfbsp/blob/main/docs/compiling_locally.md)
