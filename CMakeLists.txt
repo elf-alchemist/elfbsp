@@ -115,7 +115,7 @@ if(WIN32)
 elseif(APPLE)
   configure_file("res/${PROJECT_INFO_PLIST}.in" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_INFO_PLIST}" @ONLY)
   set_target_properties(${PROJECT_NAME} PROPERTIES
-    MACOSX_BUNDLE FALSE # Temporary, GUI coming later
+    MACOSX_BUNDLE FALSE # TODO: GUI
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_INFO_PLIST}"
   )
 elseif(UNIX)
@@ -237,7 +237,7 @@ endif()
 if(WIN32)
   set(CPACK_SYSTEM_NAME "windows_x86_64")
 elseif(APPLE)
-  set(CPACK_SYSTEM_NAME "macos_universal")
+  set(CPACK_SYSTEM_NAME "macos_arm64")
 elseif(UNIX)
   set(CPACK_SYSTEM_NAME "linux_x86_64")
 endif()

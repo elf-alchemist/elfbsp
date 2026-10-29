@@ -45,10 +45,10 @@ jobs:
               -DENABLE_HARDENING=ON \
               -DENABLE_LTO=ON
 
-          - name: MacOS Clang Universal
+          - name: MacOS Clang ARM64
             os: macos-latest
             shell: bash
-            package_name: macos_universal
+            package_name: macos_arm64
             artifact_path: build/*.zip
             install: |
               brew update

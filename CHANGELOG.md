@@ -32,3 +32,6 @@ Bugfixes:
 * Fixed critical UDMF reading issues
   * Fixed map format detection loading UDMF levels as Hexen map format levels
   * Fixed long-standing borked UDMF lump parsing
+
+Build:
+* Removed support for Intel MacOS, only ARM MacOS (Apple Silicon) is now supported
