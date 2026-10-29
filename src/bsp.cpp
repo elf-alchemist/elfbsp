@@ -835,13 +835,13 @@ static uint32_t CalcChecksumGLBSP(WadIO &io, Level &level)
 {
   uint32_t crc = 1;
 
-  auto vertexes = io.ReadLevelLump<byte>(level.lump, "VERTEXES");
+  auto vertexes = io.ReadLevelLump<byte>(level.lumps.label, "VERTEXES");
   if (vertexes.size() > 0)
   {
     crc = zng_adler32(crc, vertexes.data(), IndexToInt(vertexes.size()));
   }
 
-  auto linedefs = io.ReadLevelLump<byte>(level.lump, "LINEDEFS");
+  auto linedefs = io.ReadLevelLump<byte>(level.lumps.label, "LINEDEFS");
   if (linedefs.size() > 0)
   {
     crc = zng_adler32(crc, linedefs.data(), IndexToInt(linedefs.size()));
@@ -854,8 +854,8 @@ void WriteGLMarker(WadIO &io, Level &level)
 {
   std::string marker;
   uint32_t crc = CalcChecksumGLBSP(io, level);
-  auto name = io.LumpName(level.lump);
-  auto gl_name = io.GlBspHeaderName(level.lump);
+  auto name = io.LumpName(level.lumps.label);
+  auto gl_name = io.GlBspHeaderName(level.lumps.label);
 
   io.StartWritingLump(gl_name);
   if (gl_name == "GL_LEVEL")

@@ -168,7 +168,7 @@ static void VisitFile(std::string_view filename)
         current = wad.LevelLastLump(current) + 1;
 
         // Skip GlBsp lumps
-        if (wad.LumpName(current) == wad.GlBspHeaderName(level.lump))
+        if (wad.LumpName(current) == wad.GlBspHeaderName(level.lumps.label))
         {
           current = wad.GlBspLastLump(current) + 1;
         }
