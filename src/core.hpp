@@ -321,7 +321,7 @@ inline int32_t PRINTF_ATTR(2, 0) M_vsnprintf(char *buf, const char *s, va_list a
 //  show a message
 //
 template <typename... Args>
-void PrintLine(const Log level, std::format_string<Args...> fmt, Args &&...args)
+void PrintLine(const Log level, std::format_string<Args...> fmt, Args... args)
 {
   FILE *const stream = (level == Log::NORMAL) ? stdout : stderr;
   std::string str = std::format(fmt, std::forward<Args>(args)...);
@@ -334,7 +334,7 @@ void PrintLine(const Log level, std::format_string<Args...> fmt, Args &&...args)
 // Awh, dangit.
 //
 template <typename... Args>
-std::runtime_error RuntimeException(std::format_string<Args...> fmt, Args &&...args)
+std::runtime_error RuntimeException(std::format_string<Args...> fmt, Args ...args)
 {
   std::string str = "ERROR: " + std::format(fmt, std::forward<Args>(args)...);
   return std::runtime_error(str);
