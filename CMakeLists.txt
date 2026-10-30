@@ -151,12 +151,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 include(CheckedFlags)
 
-if(NOT APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  _checked_add_compile_option(-stdlib=libc++)
-  _checked_add_link_option(-stdlib=libc++)
-  _checked_add_link_option(-fuse-ld=lld)
-endif()
-
 if (CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo")
   _checked_add_compile_option(-ffunction-sections)
   _checked_add_compile_option(-fdata-sections)
