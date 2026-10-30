@@ -12,7 +12,7 @@ Features:
   * Added automatic removal of non-special self-referencing linedefs from the blockmap
   * Revised "identical blocklist deduplication" algorithm, now cuts down a few more blocks
   * Added "Blocklist size sorting" to squeeze out smaller offsets
-  * Added `--blockmap-skip-zero-header` CLI flag for vanilla-optimized blockmaps
+  * Added `--bmap-zero` CLI flag for vanilla-optimized blockmaps
 * Added support for the Doom 64 binary map format, and its `LEAFS` lump
   * Includes the DeePBSPV4 BSP tree lump format for large maps exceeding the vanilla limits
   * Includes the XBM1 blockmap lump format for large maps exceeding the vanilla limits

@@ -35,13 +35,16 @@ elfbsp example.wad --map MAP04,MAP22-MAP25 # or you may combine both
 
 ## Documentation
 
+### General options
+
 #### `-v --verbose`
 Produces more verbose output to the terminal.
 Some warnings which are normally hidden (except for a final tally) will be shown when enabled.
 
 #### `-f --fast`
-Enables a faster method for selecting partition lines.
+For BSP building, enables a faster method for selecting partition lines.
 On large maps this can be significantly faster, however the BSP tree may not be as good.
+For REJECT building, skips visibility checks altogether, and simply uses sector island grouping.
 
 #### `-m --map  NAME(s)`
 Specifies one or more maps to process. All other maps will be skipped (not touched at all).
@@ -52,6 +55,27 @@ A range of maps can be specified using a hyphen, such as "MAP04-MAP07".
 Several map names and/or ranges can be given, using commas to separate them, such as "MAP01,MAP03,MAP05".
 
 NOTE: spaces cannot be used to separate map names.
+
+#### `--no-effects`
+Prevents the application of built time [special effects](./special_effects.md), causing them to be ignored.
+
+#### `-o --output  FILE`
+This option is provided *only* for compatibility with existing node builders.
+It causes the input file to be copied to the specified file, and that file is the one processed.
+This option *cannot* be used with multiple input files.
+
+#### `-h --help`
+Displays a brief help screen, then exits.
+
+#### `--version`
+Displays the version of ELFBSP, then exits.
+
+#### `--debug-blockmap` `--debug-reject` `--debug-load` `--debug-bsp` `--debug-walltips` `--debug-polyobj` `--debug-overlaps` `--debug-picknode` `--debug-split` `--debug-cutlist` `--debug-builder` `--debug-sorter` `--debug-subsec` `--debug-wad`
+Debugging utilities to display runtime information.
+Any permutation of the above list is valid, though the output will become hard and harder to read.
+It is recommended to use as few as needed at once.
+
+### BSP building options
 
 #### `-t --type <0...5>`
 Forces a specific BSP tree lump format at build time for the Doom & Hexen map formats.
@@ -66,16 +90,6 @@ Supported formats are as follows:
 * 3 -> XGLN
 * 4 -> XGL2
 * 5 -> XGL3
-
-#### `--bmap <0...1>`
-Forces the use of a specific blockmap lump at build time, for all supported map formats.
-In case of overflow from the DoomBSP format, ELFBSP will automatically promote to XBM1.
-The default is 0, using the vanilla format.
-* 0 -> DoomBSP (default)
-* 1 -> XBM1
-
-#### `--no-effects`
-Prevents the application of built time [special effects](./special_effects.md), causing them to be ignored.
 
 #### `--compress`
 Forces all relevant lump formats to use their compressed variants, instead of the normal uncompressed ones.
@@ -94,21 +108,27 @@ NOTE: this option has little effect when the --fast option is enabled.
 Generates CSV files containing multiple builds of the input maps, used for data visualization purposes.
 "Multiple builds" refers to re-building each map across every valid "split cost" value, from 1 to 32.
 
-#### `-o --output  FILE`
-This option is provided *only* for compatibility with existing node builders.
-It causes the input file to be copied to the specified file, and that file is the one processed.
-This option *cannot* be used with multiple input files.
+#### `--skip-bsp`
+Skips building the BSP tree lumps altogether if it is already present on the map.
 
-#### `-h --help`
-Displays a brief help screen, then exits.
+### BLOCKMAP building options
 
-#### `-d --doc`
-Displays this documentation screen, then exits.
+#### `--bmap <0...1>`
+Forces the use of a specific blockmap lump at build time, for all supported map formats.
+In case of overflow from the DoomBSP format, ELFBSP will automatically promote to XBM1.
+The default is 0, using the vanilla format.
+* 0 -> DoomBSP (default)
+* 1 -> XBM1
 
-#### `--version`
-Displays the version of ELFBSP, then exits.
+#### `--bmap-zero`
+Skips adding the zero line index to all block lists on the blockmap.
+This helps save on space for vanilla maps, is thus useless on MBF21 projects.
+It is actively harmful on Boom & MBF compatibility settings, as those two are instructed to skip the first element on a blocklist, being in assumption that it is always a zero.
 
-#### `--debug-blockmap` `--debug-reject` `--debug-load` `--debug-bsp` `--debug-walltips` `--debug-polyobj` `--debug-overlaps` `--debug-picknode` `--debug-split` `--debug-cutlist` `--debug-builder` `--debug-sorter` `--debug-subsec` `--debug-wad`
-Debugging utilities to display runtime information.
-Any permutation of the above list is valid, though the output will become hard and harder to read.
-It is recommended to use as few as needed at once.
+#### `--skip-bmap`
+Skips building the BLOCKMAP lump altogether if it is already present on the map.
+
+### REJECT building options
+
+#### `--skip-reject`
+Skips building the REJECT lump altogether if it is already present on the map.
