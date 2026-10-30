@@ -2,9 +2,9 @@
 
 * `1998-05-03` — Lee Killough defines the first attempt at an internal blockmap builder during Boom's development [^boom-blockmap-part1]
 * `1998-10-06` — James Flynn disables Killough's first attempt, in favor a new and improved algorithm [^boom-blockmap-part2]
-* `1998-10` —  Lee Killough creates yet another blockmap rebuilding algorithm in MBF [^mbf-blockmap]
-* `1999-09` — Andrew Apted starts working on glBSP and designing the earliest spec for GL nodes
-* `2000-06` — Andrew Apted releases EDGE, with support for GL nodes, rebuilding with internal builder if not present
+* `1998-10-??` — Lee Killough creates yet another blockmap rebuilding algorithm in MBF [^mbf-blockmap]
+* `1999-09-??` — Andrew Apted starts working on glBSP and designing the earliest spec for GL nodes
+* `2000-06-??` — Andrew Apted releases EDGE, with support for GL nodes, rebuilding with internal builder if not present
 * `2000-09-04` — Earliest SVN revision of glBSP, already contains V1 and V2 GL nodes [^glbsp-v1-v2]
 * `2003-09-24` — ZDoom adds support for ZNOD (from Marisa Heit's devlog)
 * `2003-09-27` — ZDoom adds support for ZGLN (from Marisa Heit's devlog)
@@ -12,7 +12,7 @@
 * `2004-07-13` — glBSP adds GL V3 nodes [^glbsp-glv3]
 * `2004-10-09` — DeePsea 11.92f (quietly) releases with DeePBSPV4 and GL V4 nodes support [^deepbspv4-release]
 * `2004-11-04` — Colin Phipps creates the original PrBoom reject padding implementation, without overflow emulation [^prboom-reject-padding]
-* `2004-11-24` — Graf Zahl  points out concerns over the limitations of the GL V3 spec, prompting the sharing of the GL V4 spec, and the later development of GL V5 [^glv3-concern]
+* `2004-11-24` — Graf Zahl points out concerns over the limitations of the GL V3 spec, prompting the sharing of the GL V4 spec, and the later development of GL V5 [^glv3-concern]
 * `2005-04-19` — Andrew Apted starts a discussion on the development of GL V5 nodes [^glv5-origin]
 * `2005-05-20` — Andrew Apted adds GL V5 nodes to glBSP [^glbsp-glv5]
 * `2005-05-20` — Andrew Apted adds ZNOD support to glBSP [^glbsp-znod]
@@ -49,7 +49,7 @@
 * `2025-12-08` — Immorpher forks Diema's DMA-BSP64, starting BSP64-Enhanced and adding even more special effects and improving sidedef compression [^d64bsp-enhanced]
 * `2026-04-01` — Elf-Alchemist adds all the remaining node formats, and extended vanilla blockmap support, to Crispy Doom, Heretic, Hexen and Strife [^crispy-full-extnodes-blockmap]
 * `2026-04-14` — Elf-Alchemist adds XBM1 blockmap lump support to ELFBSP [^elfbsp-xbm1]
-* `2026-04-14` — Elf-Alchemist adds Doom64 LEAFS format support to ELFBSP, with vanilla and DeePBSPV4 lump support [^elfbsp-leafs]
+* `2026-04-15` — Elf-Alchemist adds Doom64 LEAFS format support to ELFBSP, with vanilla and DeePBSPV4 lump support [^elfbsp-leafs]
 * `2026-04-16` — Elf-Alchemist adds XBM1 blockmap lump support to Woof! [^woof-xbm1]
 
 [^boom-blockmap-part1]: https://github.com/doom-cross-port-collab/boom/blob/2a11d37040be9ac40a61f4c7b7f4541bef2411bf/src/p_setup.c#L921-L923
