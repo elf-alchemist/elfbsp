@@ -15,8 +15,10 @@ New features:
 * Added support for the Doom 64 binary map format, and its `LEAFS` lump
   * Includes the DeePBSPV4 BSP tree lump format for large maps exceeding the vanilla limits
   * Includes the XBM1 blockmap lump format for large maps exceeding the vanilla limits
-* Added support for new special effects in Doom 64 map format levels
-  * Sector special of 999 is blocked from the reject grouping algorithm, makes enemies within it "blind"
+* Added support for proper `REJECT` building algorithm with visibility checks (thanks @KnightMB)
+  * Using `--fast` makes the builder skip the visibility algorithm, and uses only the sector grouping algorithm
+* Added support for special effects in Doom 64 map format levels
+  * Sector special of 999 is blocked from the `REJECT` grouping algorithm, makes enemies within it "blind"
   * Lines containing the "Do not add to blockmap" linedef flag will be excluded from the blockmap
   * Lines containing _both_ the "Show on automap" AND "Hide from automap" linedef flags will be excluded the blockmap
 * Added UDMF namespace awareness for polyobjects, DoomEdNums are now inferred automticaly from the namespace
