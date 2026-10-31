@@ -117,7 +117,7 @@ WadIO::~WadIO(void)
 
   // Output stuff
   auto num_entries = GetLittleEndian(IndexToUInt(this->write_directory.size()));
-  auto dir_start = GetLittleEndian(ftell(this->write_file));
+  auto dir_start = GetLittleEndian(static_cast<uint32_t>(ftell(this->write_file)));
 
   this->SafeWrite(this->write_directory.data(), sizeof(WadLump) * this->write_directory.size());
 
