@@ -315,8 +315,8 @@ void PutSegs_DeePBSPV4(WadIO &io, Level &level)
   {
     MapSegmentDeePBSPV4 raw;
 
-    raw.start = GetLittleEndian(IndexToInt(seg->start->index));
-    raw.end = GetLittleEndian(IndexToInt(seg->end->index));
+    raw.start = GetLittleEndian(IndexToUInt(seg->start->index));
+    raw.end = GetLittleEndian(IndexToUInt(seg->end->index));
     raw.angle = GetLittleEndian(VanillaSegAngle(seg));
     raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
     raw.flip = GetLittleEndian(seg->side);
@@ -342,7 +342,7 @@ void PutSubsecs_DeePBSPV4(WadIO &io, Level &level)
   {
     MapSubsectorDeePBSPV4 raw;
 
-    raw.first = GetLittleEndian(IndexToInt(sub->seg_list->index));
+    raw.first = GetLittleEndian(IndexToUInt(sub->seg_list->index));
     raw.num = GetLittleEndian(IndexToShort(sub->seg_count));
 
     io.AddToLump(&raw, sizeof(raw));
@@ -388,11 +388,11 @@ static void PutOneNode_DeePBSPV4(WadIO &io, Node *node, size_t &node_cur_index)
 
   if (node->r.node)
   {
-    raw.right = GetLittleEndian(IndexToInt(node->r.node->index));
+    raw.right = GetLittleEndian(IndexToUInt(node->r.node->index));
   }
   else if (node->r.subsec)
   {
-    raw.right = GetLittleEndian(IndexToInt(node->r.subsec->index | NF_SUBSECTOR));
+    raw.right = GetLittleEndian(IndexToUInt(node->r.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -401,11 +401,11 @@ static void PutOneNode_DeePBSPV4(WadIO &io, Node *node, size_t &node_cur_index)
 
   if (node->l.node)
   {
-    raw.left = GetLittleEndian(IndexToInt(node->l.node->index));
+    raw.left = GetLittleEndian(IndexToUInt(node->l.node->index));
   }
   else if (node->l.subsec)
   {
-    raw.left = GetLittleEndian(IndexToInt(node->l.subsec->index | NF_SUBSECTOR));
+    raw.left = GetLittleEndian(IndexToUInt(node->l.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -446,7 +446,7 @@ void PutLeafs_DeePBSPV4(WadIO &io, Level &level)
   for (auto subsec : level.subsecs)
   {
     Segment *seg = subsec->seg_list;
-    uint32_t seg_count = IndexToInt(subsec->seg_count);
+    uint32_t seg_count = IndexToUInt(subsec->seg_count);
 
     io.AddToLump(&seg_count, sizeof(seg_count));
 
@@ -462,7 +462,7 @@ void PutLeafs_DeePBSPV4(WadIO &io, Level &level)
       MapLeafRefDeePBSPV4 raw;
       Vertex *vert = seg->start;
 
-      raw.vertex = GetLittleEndian(IndexToInt(vert->index));
+      raw.vertex = GetLittleEndian(IndexToUInt(vert->index));
       if (seg->linedef)
       {
         raw.seg = GetLittleEndian(actual_seg_index);
@@ -491,8 +491,8 @@ void PutLeafs_DeePBSPV4(WadIO &io, Level &level)
 
 static void PutVertices_XNOD(WadIO &io, Level &level)
 {
-  uint32_t orgverts = GetLittleEndian(IndexToInt(level.num_old_vert));
-  uint32_t newverts = GetLittleEndian(IndexToInt(level.num_new_vert));
+  uint32_t orgverts = GetLittleEndian(IndexToUInt(level.num_old_vert));
+  uint32_t newverts = GetLittleEndian(IndexToUInt(level.num_new_vert));
 
   io.AddToLumpZ(&orgverts, sizeof(orgverts));
   io.AddToLumpZ(&newverts, sizeof(newverts));
@@ -523,14 +523,14 @@ static void PutVertices_XNOD(WadIO &io, Level &level)
 
 static void PutSubsecs_XNOD(WadIO &io, Level &level)
 {
-  uint32_t raw_num = GetLittleEndian(IndexToInt(level.subsecs.size()));
+  uint32_t raw_num = GetLittleEndian(IndexToUInt(level.subsecs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   size_t cur_seg_index = 0;
   for (auto sub : level.subsecs)
   {
     MapSubsectorXNOD raw;
-    raw.segnum = GetLittleEndian(IndexToInt(sub->seg_count));
+    raw.segnum = GetLittleEndian(IndexToUInt(sub->seg_count));
     io.AddToLumpZ(&raw, sizeof(raw));
 
     // sanity check the seg index values
@@ -559,15 +559,15 @@ static void PutSubsecs_XNOD(WadIO &io, Level &level)
 
 static void PutSegs_XNOD(WadIO &io, Level &level)
 {
-  uint32_t raw_num = GetLittleEndian(IndexToInt(level.segs.size()));
+  uint32_t raw_num = GetLittleEndian(IndexToUInt(level.segs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   for (auto seg : level.segs)
   {
     MapSegmentXNOD raw;
 
-    raw.start = GetLittleEndian(IndexToInt(seg->start->index));
-    raw.end = GetLittleEndian(IndexToInt(seg->end->index));
+    raw.start = GetLittleEndian(IndexToUInt(seg->start->index));
+    raw.end = GetLittleEndian(IndexToUInt(seg->end->index));
     raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
     raw.side = seg->side;
 
@@ -615,11 +615,11 @@ static void PutOneNode_XNOD(WadIO &io, Node *node, size_t &node_cur_index)
 
   if (node->r.node)
   {
-    raw.right = GetLittleEndian(IndexToInt(node->r.node->index));
+    raw.right = GetLittleEndian(IndexToUInt(node->r.node->index));
   }
   else if (node->r.subsec)
   {
-    raw.right = GetLittleEndian(IndexToInt(node->r.subsec->index | NF_SUBSECTOR));
+    raw.right = GetLittleEndian(IndexToUInt(node->r.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -628,11 +628,11 @@ static void PutOneNode_XNOD(WadIO &io, Node *node, size_t &node_cur_index)
 
   if (node->l.node)
   {
-    raw.left = GetLittleEndian(IndexToInt(node->l.node->index));
+    raw.left = GetLittleEndian(IndexToUInt(node->l.node->index));
   }
   else if (node->l.subsec)
   {
-    raw.left = GetLittleEndian(IndexToInt(node->l.subsec->index | NF_SUBSECTOR));
+    raw.left = GetLittleEndian(IndexToUInt(node->l.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -651,7 +651,7 @@ static void PutOneNode_XNOD(WadIO &io, Node *node, size_t &node_cur_index)
 static void PutNodes_XNOD(WadIO &io, Level &level)
 {
   size_t node_cur_index = 0;
-  uint32_t raw_num = GetLittleEndian(IndexToInt(level.nodes.size()));
+  uint32_t raw_num = GetLittleEndian(IndexToUInt(level.nodes.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   if (level.root_node)
@@ -667,15 +667,15 @@ static void PutNodes_XNOD(WadIO &io, Level &level)
 
 static void PutSegs_XGLN(WadIO &io, Level &level)
 {
-  uint32_t raw_num = GetLittleEndian(IndexToInt(level.segs.size()));
+  uint32_t raw_num = GetLittleEndian(IndexToUInt(level.segs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   for (auto seg : level.segs)
   {
     MapSegmentXGLN raw;
 
-    raw.vertex = GetLittleEndian(IndexToInt(seg->start->index));
-    raw.partner = GetLittleEndian(IndexToInt(seg->partner ? seg->partner->index : NO_INDEX));
+    raw.vertex = GetLittleEndian(IndexToUInt(seg->start->index));
+    raw.partner = GetLittleEndian(IndexToUInt(seg->partner ? seg->partner->index : NO_INDEX));
     raw.linedef = GetLittleEndian(IndexToShort(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
@@ -692,16 +692,16 @@ static void PutSegs_XGLN(WadIO &io, Level &level)
 
 static void PutSegs_XGL2(WadIO &io, Level &level)
 {
-  uint32_t raw_num = GetLittleEndian(IndexToInt(level.segs.size()));
+  uint32_t raw_num = GetLittleEndian(IndexToUInt(level.segs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   for (auto seg : level.segs)
   {
     MapSegmentXGL2 raw;
 
-    raw.vertex = GetLittleEndian(IndexToInt(seg->start->index));
-    raw.partner = GetLittleEndian(IndexToInt(seg->partner ? seg->partner->index : NO_INDEX));
-    raw.linedef = GetLittleEndian(IndexToInt(seg->linedef ? seg->linedef->index : NO_INDEX));
+    raw.vertex = GetLittleEndian(IndexToUInt(seg->start->index));
+    raw.partner = GetLittleEndian(IndexToUInt(seg->partner ? seg->partner->index : NO_INDEX));
+    raw.linedef = GetLittleEndian(IndexToUInt(seg->linedef ? seg->linedef->index : NO_INDEX));
     raw.side = seg->side;
 
     io.AddToLumpZ(&raw, sizeof(raw));
@@ -748,11 +748,11 @@ static void PutOneNode_XGL3(WadIO &io, Node *node, size_t &node_cur_index)
 
   if (node->r.node)
   {
-    raw.right = GetLittleEndian(IndexToInt(node->r.node->index));
+    raw.right = GetLittleEndian(IndexToUInt(node->r.node->index));
   }
   else if (node->r.subsec)
   {
-    raw.right = GetLittleEndian(IndexToInt(node->r.subsec->index | NF_SUBSECTOR));
+    raw.right = GetLittleEndian(IndexToUInt(node->r.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -761,11 +761,11 @@ static void PutOneNode_XGL3(WadIO &io, Node *node, size_t &node_cur_index)
 
   if (node->l.node)
   {
-    raw.left = GetLittleEndian(IndexToInt(node->l.node->index));
+    raw.left = GetLittleEndian(IndexToUInt(node->l.node->index));
   }
   else if (node->l.subsec)
   {
-    raw.left = GetLittleEndian(IndexToInt(node->l.subsec->index | NF_SUBSECTOR));
+    raw.left = GetLittleEndian(IndexToUInt(node->l.subsec->index | NF_SUBSECTOR));
   }
   else
   {
@@ -784,7 +784,7 @@ static void PutOneNode_XGL3(WadIO &io, Node *node, size_t &node_cur_index)
 static void PutNodes_XGL3(WadIO &io, Level &level)
 {
   size_t node_cur_index = 0;
-  uint32_t raw_num = GetLittleEndian(IndexToInt(level.nodes.size()));
+  uint32_t raw_num = GetLittleEndian(IndexToUInt(level.nodes.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   if (level.root_node)

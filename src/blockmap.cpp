@@ -475,8 +475,8 @@ static void Blockmap_Write(WadIO &io, BlockMap &bmap)
     MapBlockmapHeaderXBM1 xbm1_header;
     xbm1_header.x_origin = GetLittleEndian(IntToFixed(bmap.origin_x));
     xbm1_header.y_origin = GetLittleEndian(IntToFixed(bmap.origin_y));
-    xbm1_header.x_blocks = GetLittleEndian(IndexToInt(bmap.columns));
-    xbm1_header.y_blocks = GetLittleEndian(IndexToInt(bmap.rows));
+    xbm1_header.x_blocks = GetLittleEndian(IndexToUInt(bmap.columns));
+    xbm1_header.y_blocks = GetLittleEndian(IndexToUInt(bmap.rows));
     io.AddToLump(&xbm1_header, sizeof(xbm1_header));
   }
   else

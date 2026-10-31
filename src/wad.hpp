@@ -33,15 +33,15 @@
 struct WadHeader
 {
   char ident[4];
-  uint32_t num_entries;
-  uint32_t dir_start;
+  int32_t num_entries;
+  int32_t dir_start;
 } PACKEDATTR;
 
 // directory entry
 struct WadLump
 {
-  uint32_t pos;
-  uint32_t size;
+  int32_t pos;
+  int32_t size;
   char name[8];
 } PACKEDATTR;
 

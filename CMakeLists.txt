@@ -1,8 +1,13 @@
 # ELFBSP CMake Script
 cmake_minimum_required(VERSION 3.15)
+
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
+include(CheckIncludeFile)
+
 project(elfbsp
         VERSION "1.3.0"
-        LANGUAGES C CXX
+        LANGUAGES CXX
         HOMEPAGE_URL "https://elf-alchemist.github.io/elfbsp"
         # SPDX_LICENSE "GPL-2.0+" doesn't work?
         DESCRIPTION "Modern BSP tree builder for idTech1 games and source ports.")
@@ -26,38 +31,9 @@ option(ENABLE_UBSAN "Enable UBSan" OFF)
 option(ENABLE_TSAN "Enable TSan" OFF)
 option(ENABLE_HARDENING "Enable hardening flags" OFF)
 option(ENABLE_LTO "Enable link time Optimization" OFF)
-
-set(SAN_COUNT 0)
-foreach(san ENABLE_ASAN ENABLE_UBSAN ENABLE_TSAN)
-  if(${san})
-    math(EXPR SAN_COUNT "${SAN_COUNT} + 1")
-  endif()
-endforeach()
-
-if(ENABLE_LTO AND SAN_COUNT GREATER 0)
-  message(FATAL_ERROR "LTO cannot be enabled together with sanitizers.")
-endif()
-
-if(SAN_COUNT GREATER 0)
-  if(NOT CMAKE_BUILD_TYPE MATCHES "Debug|RelWithDebInfo")
-    message(FATAL_ERROR
-                "Sanitizers require Debug or RelWithDebInfo build type "
-                "(current: ${CMAKE_BUILD_TYPE}).")
-  endif()
-endif()
-
-if(USE_LTO)
-  include(CheckIPOSupported)
-  check_ipo_supported(RESULT HAS_LTO OUTPUT HAS_LTO_ERROR)
-  if(HAS_LTO)
-    message(STATUS "Link Time Optimization: ON")
-  else()
-    message(STATUS "Link Time Optimization: OFF")
-  endif()
-endif()
+option(ENABLE_STATIC "Enable static builds" OFF)
 
 # Grabs the git hash and branch a few different ways.
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 include(GetGitBranch)
 include(GetGitRevisionDescription)
 include(GetGitRevisionNumber)
@@ -69,6 +45,7 @@ string(REGEX REPLACE "^(heads\/|tags\/)(.+)(-0-g)([0-9a-f]+)" "\\4" GIT_SHORT_HA
 
 # Setup Zlib-ng
 set(ZLIB_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(library/zlib-ng EXCLUDE_FROM_ALL)
 
@@ -139,7 +116,10 @@ if(WIN32)
   target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_MANIFEST}" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_RESOURSE_RC}")
 elseif(APPLE)
   configure_file("res/${PROJECT_INFO_PLIST}.in" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_INFO_PLIST}" @ONLY)
-  set_target_properties(${PROJECT_NAME} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_INFO_PLIST}")
+  set_target_properties(${PROJECT_NAME} PROPERTIES
+    MACOSX_BUNDLE FALSE # TODO: GUI
+    MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_INFO_PLIST}"
+  )
 elseif(UNIX)
   configure_file("res/${PROJECT_DESKTOP}.in" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_DESKTOP}"  @ONLY)
   configure_file("res/${PROJECT_METAINFO}.in" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_METAINFO}" @ONLY)
@@ -166,59 +146,46 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-  C_STANDARD 23
   CXX_STANDARD 20
 )
 
-target_compile_options(${PROJECT_NAME} PRIVATE
-  -Wall
-  -Wextra
-  -Wshadow
-  -Wconversion
-  -Wsign-conversion
-  -Wno-unused-parameter
-)
+include(CheckedFlags)
 
-target_compile_options(${PROJECT_NAME} PRIVATE
-  $<$<CONFIG:Release>:-O3>
-  $<$<CONFIG:RelWithDebInfo>:-O3>
-  $<$<CONFIG:Debug>:-O0>
-  $<$<CONFIG:MinSizeRel>:-Os>
-)
+if (CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo")
+  _checked_add_compile_option(-ffunction-sections)
+  _checked_add_compile_option(-fdata-sections)
+  _checked_add_link_option(-Wl,--gc-sections)
+endif()
 
-target_compile_options(${PROJECT_NAME} PRIVATE
-  $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
-  $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
-)
+if(ENABLE_STATIC AND NOT APPLE)
+  target_link_options(${PROJECT_NAME} PRIVATE -static)
+endif()
+
+_checked_add_compile_option(-Wextra)
+_checked_add_compile_option(-Wshadow)
+_checked_add_compile_option(-Wconversion)
+_checked_add_compile_option(-Wsign-conversion)
+_checked_add_compile_option(-Wno-unused-parameter)
+
+_checked_add_compile_option(-fno-rtti)
+_checked_add_compile_option(-Wold-style-cast)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
   scanner
   zlibstatic
 )
 
-if(ENABLE_WERROR)
-  target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
+if(CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo")
+  _checked_add_compile_option(-O3)
+elseif(CMAKE_BUILD_TYPE MATCHES "Debug")
+  _checked_add_compile_option(-O0)
+elseif(CMAKE_BUILD_TYPE MATCHES "MinSizeRel")
+  _checked_add_compile_option(-Os)
 endif()
 
-if(ENABLE_ASAN)
-  target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
-  target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address)
-endif()
-
-if(ENABLE_UBSAN)
-  target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=undefined)
-  target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=undefined)
-endif()
-
-if(ENABLE_TSAN)
-  target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=thread)
-  target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=thread)
-endif()
-
-if(ENABLE_HARDENING)
-  target_compile_options(${PROJECT_NAME} PRIVATE -fstack-protector-strong)
-  target_link_options(${PROJECT_NAME} PRIVATE -Wl,-z,relro -Wl,-z,now)
-endif()
+# Actually apply the collected COMMON_COMPILE_OPTIONS / COMMON_LINK_OPTIONS.
+# Must come after every _checked_add_* call and after the targets exist.
+target_settings(${PROJECT_NAME} scanner)
 
 if(ENABLE_LTO)
   include(CheckIPOSupported)
@@ -268,7 +235,7 @@ endif()
 if(WIN32)
   set(CPACK_SYSTEM_NAME "windows_x86_64")
 elseif(APPLE)
-  set(CPACK_SYSTEM_NAME "macos_universal")
+  set(CPACK_SYSTEM_NAME "macos_arm64")
 elseif(UNIX)
   set(CPACK_SYSTEM_NAME "linux_x86_64")
 endif()
