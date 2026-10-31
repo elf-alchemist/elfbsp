@@ -31,7 +31,7 @@ jobs:
           - name: Linux Clang x86_64
             os: ubuntu-latest
             shell: bash
-            package_name: linux_clang_x86_64
+            package_name: linux_x86_64
             artifact_path: build/*.zip
             install: |
               sudo apt-get update
@@ -52,7 +52,7 @@ jobs:
           - name: Linux GCC x86_64
             os: ubuntu-latest
             shell: bash
-            package_name: linux_gcc_x86_64
+            # package_name: linux_gcc_x86_64
             artifact_path: build/*.zip
             install: |
               sudo apt-get update
@@ -177,6 +177,7 @@ jobs:
         run: echo "VERSION=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: Upload Artifacts
+        if: ${{ matrix.config.package_name }}
         uses: actions/upload-artifact@v7
         with:
           name: elfbsp_${{ env.VERSION }}_${{ matrix.config.package_name }}
