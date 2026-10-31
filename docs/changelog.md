@@ -1,3 +1,8 @@
+# ELFBSP 1.3.1
+
+Bugfixes:
+* [Linux/MacOS] Fix WAD header writing causing corruption of first lump's data
+
 # ELFBSP 1.3
 
 New features:

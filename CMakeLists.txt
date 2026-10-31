@@ -6,7 +6,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 include(CheckIncludeFile)
 
 project(elfbsp
-        VERSION "1.3.0"
+        VERSION "1.3.1"
         LANGUAGES CXX
         HOMEPAGE_URL "https://elf-alchemist.github.io/elfbsp"
         # SPDX_LICENSE "GPL-2.0+" doesn't work?
