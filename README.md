@@ -16,6 +16,11 @@ ELFBSP is a general purpose nodes builder for modern DOOM source ports.
 It supports a wide variety of map formats, and compiled data formats.
 The code is based on Andrew Apted's AJBSP, itself based on the Eureka level editor's internal BSP code.
 
+## Installation
+
+- The latest release can be downloaded [here](../../releases/latest)
+- On Fedora Linux, ELFBSP is also available from the [electricbrass/doom](https://copr.fedorainfracloud.org/coprs/electricbrass/doom/) Copr repo
+
 ## Documentation
 
 Check our documentation for:
