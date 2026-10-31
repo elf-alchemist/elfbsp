@@ -1,7 +1,7 @@
 Changes since ELFBSP 1.2
 ========================
 
-Features:
+New features:
 * Added support for the new XBM1 32-bit blockmap lump format
   * Instead of outputting empty BLOCKMAP lumps when the vanilla format overflows, it will output XBM1 lumps
 * Changed default BSP tree lump format in Doom & Hexen map formats to XNOD, this will help massively reduce slime trails
@@ -33,7 +33,7 @@ Bugfixes:
   * Fixed map format detection loading UDMF levels as Hexen map format levels
   * Fixed long-standing borked UDMF lump parsing
 
-Build:
+Meta:
 * Removed support for Intel MacOS, only ARM MacOS (Apple Silicon) is now supported
 * Fixed builds not being static, should now run on UDB Flatpak just fine
 * Windows builds now use MSYS2 Clang instead of MSYS2 MinGW
