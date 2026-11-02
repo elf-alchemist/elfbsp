@@ -22,6 +22,10 @@
 //------------------------------------------------------------------------------
 
 #include <algorithm>
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 
 #include "core.hpp"
 #include "local.hpp"
@@ -299,7 +303,9 @@ struct BlockerGrid
 
 // Per-thread space for the ray walk. A blocker that spans several cells
 // would otherwise be tested once per cell; the stamp makes it once per ray.
-struct RayWalkSpace
+// Alignas(64) keeps this on cache lines of its own. The thread changes these counters
+// on every ray, so sharing a line with another thread's data would slow both down (false sharing).
+struct alignas(64) RayWalkSpace
 {
   // It's ring cache time!
   static constexpr int RING_SIZE = 8;
@@ -861,14 +867,11 @@ static inline void SetPairBitsAtomic(Level &level, size_t view, size_t target, s
   const size_t p2 = target * num_secs + view;
   const uint8_t bit1 = static_cast<uint8_t>(1u << (p1 & 7));
   const uint8_t bit2 = static_cast<uint8_t>(1u << (p2 & 7));
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  level.reject_matrix[p1 >> 3] |= bit1;
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  level.reject_matrix[p2 >> 3] |= bit2;
+
+  // Several threads can touch the same byte, so each bit is set with an atomic OR.
+  // GCC and Clang have this built in, no library is needed. :)
+  __atomic_fetch_or(&level.reject_matrix[p1 >> 3], bit1, __ATOMIC_RELAXED);
+  __atomic_fetch_or(&level.reject_matrix[p2 >> 3], bit2, __ATOMIC_RELAXED);
 }
 
 // Restore process priority back to default.
@@ -1232,6 +1235,101 @@ static void RejectAnalysis(const RejectStats& stats)
   }
 }
 
+// How many threads to use; hardware_concurrency can return 0 when it does not know.
+static size_t ChooseThreadCount()
+{
+  return std::max<size_t>(1, std::thread::hardware_concurrency());
+}
+
+// The threads of a team all run the same function once and stay alive until it ends,
+// the same way an OpenMP parallel region works. Each thread keeps its own scratch space on
+// its own stack and the team meets at a barrier between steps instead of being started again.
+class TeamSync
+{
+public:
+  explicit TeamSync(size_t threadCount) : threadCount_(threadCount) {}
+
+  // Every thread of the team must call this. It returns once all of them have finished.
+  void Wait()
+  {
+    std::unique_lock<std::mutex> lock(mutex_);
+    const size_t myGeneration = generation_;
+
+    if (++arrived_ == threadCount_)
+    {
+      arrived_ = 0;
+      ++generation_;
+      wakeUp_.notify_all();
+    }
+    else
+    {
+      wakeUp_.wait(lock, [&] { return generation_ != myGeneration; });
+    }
+  }
+
+  // Every thread of the team must call this with the same count. Each index from 0 to count - 1
+  // is handed to one thread, to whichever thread is free (like OpenMP's dynamic scheduler).
+  // It returns once every thread has finished.
+  template <typename Body>
+  void For(size_t threadIndex, size_t count, Body&& body)
+  {
+    if (threadIndex == 0)
+    {
+      next_.value.store(0, std::memory_order_relaxed);
+    }
+    Wait(); // The counter is back at zero for everybody
+
+    for (;;)
+    {
+      const size_t index = next_.value.fetch_add(1, std::memory_order_relaxed);
+      if (index >= count) break;
+
+      body(index);
+    }
+
+    Wait(); // Everybody is finished
+  }
+
+private:
+  // The counter gets a cache line of its own, because every thread changes it.
+  struct alignas(64) PaddedCounter
+  {
+    std::atomic<size_t> value{0};
+  };
+
+  size_t threadCount_;
+  std::mutex mutex_;
+  std::condition_variable wakeUp_;
+  size_t arrived_ = 0;
+  size_t generation_ = 0;
+  PaddedCounter next_;
+};
+
+// Runs body(threadIndex, team) once on every thread of the team. This thread is one of them.
+template <typename Body>
+static void RunTeam(size_t threadCount, Body&& body)
+{
+  TeamSync team(threadCount);
+
+  std::vector<std::thread> threads;
+  threads.reserve(threadCount - 1);
+
+  for (size_t threadIndex = 1; threadIndex < threadCount; ++threadIndex)
+  {
+    threads.emplace_back([&body, &team, threadIndex]()
+    {
+      body(threadIndex, team);
+    });
+  }
+
+  body(static_cast<size_t>(0), team);
+
+  for (auto& thread : threads)
+  {
+    thread.join();
+  }
+}
+
 // Main process now, handles everything!
 static void Reject_ProcessSectors(Level &level)
 {
@@ -1509,8 +1607,7 @@ static void Reject_ProcessSectors(Level &level)
     }
   }
 
-  // Signed loop counter: OpenMP 2.0 compilers (MSVC) require one.
-  const ptrdiff_t activeCount = static_cast<ptrdiff_t>(activeSectors.size());
+  const size_t activeCount = activeSectors.size();
 
   // Find the cut points, and line up the pairs that involve one (FindCutPoints).
   CutPoints cuts;
@@ -1565,14 +1662,16 @@ static void Reject_ProcessSectors(Level &level)
   uint64_t totalCellSteps = 0;
   std::vector<uint64_t> totalSectorRays(num_secs, 0);
 
-  // Parallelizes the loop across available CPU cores.
-  // Dynamic scheduling lets each idle core pick up the next sector immediately,
+  // Spreads the work across the available CPU cores with standard C++ threads, no OpenMP needed.
+  // The team hands the next sector to whichever thread is free,
   // because some sectors take far longer than others.
-  #ifdef _OPENMP
-    #pragma omp parallel
-  #endif
+  const size_t threadCount = ChooseThreadCount();
+
+  std::mutex totalsMutex;
+
+  RunTeam(threadCount, [&](size_t threadIndex, TeamSync& team)
   {
-    // One ray scratch space per thread.
+    // One ray scratch space per thread, made by the thread that uses it.
     RayWalkSpace scratch(solidBlockers.size(), num_secs);
 
     // Everything that decides one pair of sectors.
@@ -1633,34 +1732,26 @@ static void Reject_ProcessSectors(Level &level)
     // before the next one starts, so the results it relies on are all in place.
     for (size_t lv = 0; lv < cutLevels.size(); ++lv)
     {
-      const ptrdiff_t levelCount = static_cast<ptrdiff_t>(cutLevels[lv].size());
-
-      #ifdef _OPENMP
-        #pragma omp for schedule(dynamic)
-      #endif
-      for (ptrdiff_t k = 0; k < levelCount; k++)
+      team.For(threadIndex, cutLevels[lv].size(), [&](size_t pairIndex)
       {
-        const auto& cutPair = cutLevels[lv][static_cast<size_t>(k)];
+        const auto& cutPair = cutLevels[lv][pairIndex];
         testPair(cutPair.first, cutPair.second);
-      }
+      });
 
-      #ifdef _OPENMP
-        #pragma omp single
-      #endif
+      // Every thread is finished at this point. The others wait
+      // until this thread gets there, so the snapshot is safe to take.
+      if (threadIndex == 0)
       {
         memcpy(blindSnap.data(), level.reject_matrix, level.reject_size);
       }
     }
 
-    #ifdef _OPENMP
-      #pragma omp for schedule(dynamic)
-    #endif
-    for (ptrdiff_t i = 0; i < activeCount; i++)
+    team.For(threadIndex, activeCount, [&](size_t rowIndex)
     {
       // Walk from the last active sector down.
       // Row 'a' tests 'a' targets, so the biggest rows go first
       // and no long row is left as a straggler.
-      const size_t from = static_cast<size_t>(activeCount - 1 - i);
+      const size_t from = activeCount - 1 - rowIndex;
 
       // Map our active iterator index back to the real sector index
       const size_t view = activeSectors[from];
@@ -1678,13 +1769,12 @@ static void Reject_ProcessSectors(Level &level)
 
         testPair(view, target);
       }
-    }
+    });
 
     // Add this thread's counters to the totals, one thread at a time.
-    #ifdef _OPENMP
-      #pragma omp critical(reject_stats)
-    #endif
     {
+      std::lock_guard<std::mutex> lock(totalsMutex);
+
       totalRayCasts += scratch.rayCasts;
       totalCellSteps += scratch.cellSteps;
 
@@ -1693,7 +1783,7 @@ static void Reject_ProcessSectors(Level &level)
         totalSectorRays[i] += scratch.sectorRays[i];
       }
     }
-  }
+  });
 
   // Restore process priority back to normal once the heavy CPU work finishes
   RestorePriority();
