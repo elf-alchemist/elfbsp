@@ -66,6 +66,7 @@ add_executable(${PROJECT_NAME}
   src/node.cpp
   src/polyobj.cpp
   src/reject.cpp
+  src/thread.cpp
   src/udmf.cpp
   src/wad.cpp
 )
@@ -170,9 +171,13 @@ _checked_add_compile_option(-Wno-unused-parameter)
 _checked_add_compile_option(-fno-rtti)
 _checked_add_compile_option(-Wold-style-cast)
 
+# The reject builder uses standard C++ threads, which some platforms need a flag for.
+find_package(Threads REQUIRED)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
   scanner
   zlibstatic
+  Threads::Threads
 )
 
 if(CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo")
