@@ -4,7 +4,6 @@
 //
 //------------------------------------------------------------------------------
 //
-//  Copyright 2026 Michael Brown
 //  Copyright 2025-2026 Guilherme Miranda
 //  Copyright 2000-2018 Andrew Apted, et al
 //  Copyright 1994-1998 Colin Reed
@@ -23,11 +22,13 @@
 //------------------------------------------------------------------------------
 
 #include <algorithm>
+#include <atomic>
+#include <condition_variable>
 #include <mutex>
+#include <thread>
 
 #include "core.hpp"
 #include "local.hpp"
-#include "thread.hpp"
 
 // Native platform headers required for low-level process priority
 #ifdef _WIN32
@@ -207,12 +208,6 @@ static void SortUnique(std::vector<SightPoint>& points)
 // so a pair of open lines gets (N - 1) * (N - 1) portal rays.
 static constexpr int32_t SPLIT_SMALL_MAP = 8; // Maps within the ray budget
 static constexpr int32_t SPLIT_LARGE_MAP = 4; // Maps over the ray budget
-
-// A sector with this many open lines or fewer sees the map through a narrow window, so the
-// thin sight cones past its edges are easy to miss. It always uses the finer split, even on
-// maps over the ray budget. Very few sectors qualify, so the extra rays cost almost nothing.
-static constexpr uint64_t NARROW_SECTOR_MAX_OPEN = 1;
-static constexpr int32_t SPLIT_NARROW_SECTOR = 16; // Split used by qualifying sectors
 
 // Yardstick for the budget check. The extra portal rays per pair of open lines when going
 // from a split of 2 to a split of 4.
@@ -890,11 +885,11 @@ static inline void RestorePriority()
 }
 
 // Check if the geometric distance gap between two sector bounding boxes exceeds max span thresholds.
-static inline bool CheckGapTooWide(const SectorBBox& boxA, const SectorBBox& boxB, double maxMapSpanSq)
+static inline bool CheckGapTooWide(const SectorBBox& boxA, const SectorBBox& boxB, double maxSectorSpanSq)
 {
   const double gapX = std::max({0.0, boxB.minX - boxA.maxX, boxA.minX - boxB.maxX});
   const double gapY = std::max({0.0, boxB.minY - boxA.maxY, boxA.minY - boxB.maxY});
-  return (gapX * gapX) + (gapY * gapY) > maxMapSpanSq;
+  return (gapX * gapX) + (gapY * gapY) > maxSectorSpanSq;
 }
 
 // Maps a ray endpoint vertex to its corresponding cell index and logs any touching solid wall data.
@@ -1240,6 +1235,101 @@ static void RejectAnalysis(const RejectStats& stats)
   }
 }
 
+// How many threads to use; hardware_concurrency can return 0 when it does not know.
+static size_t ChooseThreadCount()
+{
+  return std::max<size_t>(1, std::thread::hardware_concurrency());
+}
+
+// The threads of a team all run the same function once and stay alive until it ends,
+// the same way an OpenMP parallel region works. Each thread keeps its own scratch space on
+// its own stack and the team meets at a barrier between steps instead of being started again.
+class TeamSync
+{
+public:
+  explicit TeamSync(size_t threadCount) : threadCount_(threadCount) {}
+
+  // Every thread of the team must call this. It returns once all of them have finished.
+  void Wait()
+  {
+    std::unique_lock<std::mutex> lock(mutex_);
+    const size_t myGeneration = generation_;
+
+    if (++arrived_ == threadCount_)
+    {
+      arrived_ = 0;
+      ++generation_;
+      wakeUp_.notify_all();
+    }
+    else
+    {
+      wakeUp_.wait(lock, [&] { return generation_ != myGeneration; });
+    }
+  }
+
+  // Every thread of the team must call this with the same count. Each index from 0 to count - 1
+  // is handed to one thread, to whichever thread is free (like OpenMP's dynamic scheduler).
+  // It returns once every thread has finished.
+  template <typename Body>
+  void For(size_t threadIndex, size_t count, Body&& body)
+  {
+    if (threadIndex == 0)
+    {
+      next_.value.store(0, std::memory_order_relaxed);
+    }
+    Wait(); // The counter is back at zero for everybody
+
+    for (;;)
+    {
+      const size_t index = next_.value.fetch_add(1, std::memory_order_relaxed);
+      if (index >= count) break;
+
+      body(index);
+    }
+
+    Wait(); // Everybody is finished
+  }
+
+private:
+  // The counter gets a cache line of its own, because every thread changes it.
+  struct alignas(64) PaddedCounter
+  {
+    std::atomic<size_t> value{0};
+  };
+
+  size_t threadCount_;
+  std::mutex mutex_;
+  std::condition_variable wakeUp_;
+  size_t arrived_ = 0;
+  size_t generation_ = 0;
+  PaddedCounter next_;
+};
+
+// Runs body(threadIndex, team) once on every thread of the team. This thread is one of them.
+template <typename Body>
+static void RunTeam(size_t threadCount, Body&& body)
+{
+  TeamSync team(threadCount);
+
+  std::vector<std::thread> threads;
+  threads.reserve(threadCount - 1);
+
+  for (size_t threadIndex = 1; threadIndex < threadCount; ++threadIndex)
+  {
+    threads.emplace_back([&body, &team, threadIndex]()
+    {
+      body(threadIndex, team);
+    });
+  }
+
+  body(static_cast<size_t>(0), team);
+
+  for (auto& thread : threads)
+  {
+    thread.join();
+  }
+}
+
 // Main process now, handles everything!
 static void Reject_ProcessSectors(Level &level)
 {
@@ -1421,12 +1511,24 @@ static void Reject_ProcessSectors(Level &level)
     return;
   }
 
-  // The longest ray that can exist is the diagonal of the whole map, so that is the limit.
-  // A limit based on the largest sector would cut short a map built from many small sectors,
-  // marking far apart sectors blind without ever casting a ray between them.
-  const double mapWidth = mapMaxX - mapMinX;
-  const double mapHeight = mapMaxY - mapMinY;
-  const double maxMapSpanSq = (mapWidth * mapWidth) + (mapHeight * mapHeight);
+  // Calculate the max sector span across the map to scale ray bounds correctly.
+  // This value caps our visibility ray checks on wide open fields without manual configuration.
+  constexpr double MIN_RAY_SPAN = 4096.0;  // Rays are never capped shorter than this, in map units
+  constexpr double RAY_SPAN_FACTOR = 2.0;  // A ray may be this many times the diagonal of the largest sector
+
+  double maxSectorSpanSq = MIN_RAY_SPAN * MIN_RAY_SPAN;
+
+  for (size_t i = 0; i < num_secs; ++i)
+  {
+    const auto& box = sectorBoxes[i];
+    if (box.maxX > box.minX && box.maxY > box.minY)
+    {
+      double sWidth = box.maxX - box.minX;
+      double sHeight = box.maxY - box.minY;
+      double currentSpanSq = ((sWidth * sWidth) + (sHeight * sHeight)) * (RAY_SPAN_FACTOR * RAY_SPAN_FACTOR);
+      if (currentSpanSq > maxSectorSpanSq) maxSectorSpanSq = currentSpanSq;
+    }
+  }
 
   // Pick how finely open lines are sampled. The extra rays from the finer split land on
   // sector pairs that still need rays, scaled by how many open lines each sector has.
@@ -1450,7 +1552,7 @@ static void Reject_ProcessSectors(Level &level)
 
       const size_t adjIdx = view * num_secs + target;
       if ((adjacencyMatrix[adjIdx >> 3] & (1 << (adjIdx & 7))) != 0) continue;
-      if (CheckGapTooWide(sectorBoxes[view], sectorBoxes[target], maxMapSpanSq)) continue;
+      if (CheckGapTooWide(sectorBoxes[view], sectorBoxes[target], maxSectorSpanSq)) continue;
 
       portalPairs += openCount[view] * openCount[target];
     }
@@ -1466,8 +1568,7 @@ static void Reject_ProcessSectors(Level &level)
   std::vector<SectorPoints> sectorPoints(num_secs);
   for (size_t i = 0; i < num_secs; ++i)
   {
-    const int32_t split = (openCount[i] <= NARROW_SECTOR_MAX_OPEN) ? SPLIT_NARROW_SECTOR : portalSplit;
-    sectorPoints[i] = BuildSectorPoints(sectorLines[i], split);
+    sectorPoints[i] = BuildSectorPoints(sectorLines[i], portalSplit);
   }
 
   // Build the spatial grid as a flat CSR array.
@@ -1596,8 +1697,8 @@ static void Reject_ProcessSectors(Level &level)
 
       // Every ray endpoint lies inside its sector's bbox, so no ray can be shorter
       // than the gap between the boxes. IsRayBlocked rejects anything longer than
-      // maxMapSpanSq anyway, so such a pair is blind without casting a ray.
-      if (CheckGapTooWide(boxA, boxB, maxMapSpanSq))
+      // maxSectorSpanSq anyway, so such a pair is blind without casting a ray.
+      if (CheckGapTooWide(boxA, boxB, maxSectorSpanSq))
       {
         SetPairBitsAtomic(level, view, target, num_secs);
         return;
@@ -1614,7 +1715,7 @@ static void Reject_ProcessSectors(Level &level)
       const uint64_t raysBefore = scratch.rayCasts;
 
       const bool visible = DoVisibilityTest(sectorPoints[view], sectorPoints[target],
-                                            solidBlockers, grid, touchWalls, boxB, scratch, maxMapSpanSq,
+                                            solidBlockers, grid, touchWalls, boxB, scratch, maxSectorSpanSq,
                                             withinBudget);
 
       const uint64_t raysUsed = scratch.rayCasts - raysBefore;
