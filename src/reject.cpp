@@ -23,7 +23,6 @@
 //------------------------------------------------------------------------------
 
 #include <algorithm>
-#include <mutex>
 
 #include "core.hpp"
 #include "local.hpp"
@@ -209,15 +208,14 @@ static constexpr int32_t SPLIT_SMALL_MAP = 8; // Maps within the ray budget
 static constexpr int32_t SPLIT_LARGE_MAP = 4; // Maps over the ray budget
 
 // A sector with this many open lines or fewer sees the map through a narrow window, so the
-// thin sight cones past its edges are easy to miss. It always uses the finer split, even on
+// thin sight cones past its edges are easy to miss. It will always use the finer split, even with
 // maps over the ray budget. Very few sectors qualify, so the extra rays cost almost nothing.
 static constexpr uint64_t NARROW_SECTOR_MAX_OPEN = 1;
-static constexpr int32_t SPLIT_NARROW_SECTOR = 16; // Split used by qualifying sectors
+static constexpr int32_t SPLIT_NARROW_SECTOR = 16; // Finer split used by qualifying sectors
 
 // Yardstick for the budget check. The extra portal rays per pair of open lines when going
-// from a split of 2 to a split of 4.
-// It is not the real extra cost of SPLIT_SMALL_MAP, it only decides the budget line,
-// so always check which maps pass before changing it.
+// from a split of 4 to a split of 8.
+// It is not the real extra cost of SPLIT_SMALL_MAP, it only decides the budget line.
 static constexpr uint64_t BUDGET_RAYS_PER_PAIR = 8;
 
 // Default Budget is 50,000,000, which seems to be a good balance between adding accuracy for
@@ -527,7 +525,7 @@ static bool IsRayBlocked(const SightSegment& ray,
   const double dx = ray.x2 - ray.x1;
   const double dy = ray.y2 - ray.y1;
 
-  // Instantly skip rays that exceed the dynamically calculated max sector span.
+  // Instantly skip rays that exceed the dynamically calculated max map span.
   // Using squared distances avoids slow calculations in our heaviest inner loop.
   if ((dx * dx) + (dy * dy) > maxRayLengthSq) return true;
 
@@ -978,49 +976,49 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbo
 
     while (!callStack.empty())
     {
-      const uint32_t v = callStack.back();
+      const uint32_t current = callStack.back();
 
-      if (static_cast<size_t>(nextEdge[v]) < neighbors[v].size())
+      if (static_cast<size_t>(nextEdge[current]) < neighbors[current].size())
       {
-        const uint32_t w = neighbors[v][nextEdge[v]++];
+        const uint32_t neighbor = neighbors[current][nextEdge[current]++];
 
-        if (order[w] == 0)
+        if (order[neighbor] == 0)
         {
-          order[w] = lowest[w] = ++clock;
-          cuts.cutMap[w] = parts;
-          sectorStack.push_back(w);
-          callStack.push_back(w);
+          order[neighbor] = lowest[neighbor] = ++clock;
+          cuts.cutMap[neighbor] = parts;
+          sectorStack.push_back(neighbor);
+          callStack.push_back(neighbor);
         }
         else
         {
-          lowest[v] = std::min(lowest[v], order[w]);
+          lowest[current] = std::min(lowest[current], order[neighbor]);
         }
         continue;
       }
 
-      // All neighbors of v are done. Send the result to the sector it was reached from.
+      // All neighbors of current are done. Send the result to the sector it was reached from.
       callStack.pop_back();
       if (callStack.empty()) break;
 
       const uint32_t above = callStack.back();
-      lowest[above] = std::min(lowest[above], lowest[v]);
+      lowest[above] = std::min(lowest[above], lowest[current]);
 
-      // v cannot get back past 'above', so v and everything stacked after it
+      // current cannot get back past 'above', so current and everything stacked after it
       // form one block, joined to the rest of the map only through 'above'.
-      if (lowest[v] >= order[above])
+      if (lowest[current] >= order[above])
       {
         const uint32_t block = static_cast<uint32_t>(cuts.cutParent.size());
         cuts.cutParent.push_back(above);
         blockCount[above]++;
 
-        uint32_t u;
+        uint32_t member;
         do
         {
-          u = sectorStack.back();
+          member = sectorStack.back();
           sectorStack.pop_back();
-          cuts.cutParent[u] = block;
-          blockCount[u]++;
-        } while (u != v);
+          cuts.cutParent[member] = block;
+          blockCount[member]++;
+        } while (member != current);
       }
     }
 
@@ -1516,7 +1514,7 @@ static void Reject_ProcessSectors(Level &level)
 
   std::vector<std::vector<std::pair<uint32_t, uint32_t>>> cutLevels;
 
-  // Copy of the matrix as it stood after the last finished level
+  // Copy of the matrix as it was after the last finished level
   std::vector<uint8_t> blindSnap;
 
   if (prune)
