@@ -121,11 +121,6 @@ static void ValidateLinedef(Level &level, Linedef *line)
     {
       PrintLine(Log::NORMAL, "[{}] Linedef #{} is self-referencing", __func__, line->index);
     }
-
-    if (!line->special)
-    {
-      line->effects |= FX_NoBlockmap;
-    }
   }
 
   if (config.effects                                   // Effects enabled ...
