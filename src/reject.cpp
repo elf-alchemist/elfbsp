@@ -4,6 +4,7 @@
 //
 //------------------------------------------------------------------------------
 //
+//  Copyright 2026 Michael Brown
 //  Copyright 2025-2026 Guilherme Miranda
 //  Copyright 2000-2018 Andrew Apted, et al
 //  Copyright 1994-1998 Colin Reed
@@ -25,6 +26,7 @@
 
 #include "core.hpp"
 #include "local.hpp"
+#include "thread.hpp"
 
 // Native platform headers required for low-level process priority
 #ifdef _WIN32
@@ -205,10 +207,15 @@ static void SortUnique(std::vector<SightPoint>& points)
 static constexpr int32_t SPLIT_SMALL_MAP = 8; // Maps within the ray budget
 static constexpr int32_t SPLIT_LARGE_MAP = 4; // Maps over the ray budget
 
+// A sector with this many open lines or fewer sees the map through a narrow window, so the
+// thin sight cones past its edges are easy to miss. It will always use the finer split, even with
+// maps over the ray budget. Very few sectors qualify, so the extra rays cost almost nothing.
+static constexpr uint64_t NARROW_SECTOR_MAX_OPEN = 1;
+static constexpr int32_t SPLIT_NARROW_SECTOR = 16; // Finer split used by qualifying sectors
+
 // Yardstick for the budget check. The extra portal rays per pair of open lines when going
-// from a split of 2 to a split of 4.
-// It is not the real extra cost of SPLIT_SMALL_MAP, it only decides the budget line,
-// so always check which maps pass before changing it.
+// from a split of 4 to a split of 8.
+// It is not the real extra cost of SPLIT_SMALL_MAP, it only decides the budget line.
 static constexpr uint64_t BUDGET_RAYS_PER_PAIR = 8;
 
 // Default Budget is 50,000,000, which seems to be a good balance between adding accuracy for
@@ -299,7 +306,9 @@ struct BlockerGrid
 
 // Per-thread space for the ray walk. A blocker that spans several cells
 // would otherwise be tested once per cell; the stamp makes it once per ray.
-struct RayWalkSpace
+// Alignas(64) keeps this on cache lines of its own. The thread changes these counters
+// on every ray, so sharing a line with another thread's data would slow both down (false sharing).
+struct alignas(64) RayWalkSpace
 {
   // It's ring cache time!
   static constexpr int RING_SIZE = 8;
@@ -516,7 +525,7 @@ static bool IsRayBlocked(const SightSegment& ray,
   const double dx = ray.x2 - ray.x1;
   const double dy = ray.y2 - ray.y1;
 
-  // Instantly skip rays that exceed the dynamically calculated max sector span.
+  // Instantly skip rays that exceed the dynamically calculated max map span.
   // Using squared distances avoids slow calculations in our heaviest inner loop.
   if ((dx * dx) + (dy * dy) > maxRayLengthSq) return true;
 
@@ -861,14 +870,11 @@ static inline void SetPairBitsAtomic(Level &level, size_t view, size_t target, s
   const size_t p2 = target * num_secs + view;
   const uint8_t bit1 = static_cast<uint8_t>(1u << (p1 & 7));
   const uint8_t bit2 = static_cast<uint8_t>(1u << (p2 & 7));
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  level.reject_matrix[p1 >> 3] |= bit1;
-  #ifdef _OPENMP
-    #pragma omp atomic
-  #endif
-  level.reject_matrix[p2 >> 3] |= bit2;
+
+  // Several threads can touch the same byte, so each bit is set with an atomic OR.
+  // GCC and Clang have this built in, no library is needed. :)
+  __atomic_fetch_or(&level.reject_matrix[p1 >> 3], bit1, __ATOMIC_RELAXED);
+  __atomic_fetch_or(&level.reject_matrix[p2 >> 3], bit2, __ATOMIC_RELAXED);
 }
 
 // Restore process priority back to default.
@@ -882,11 +888,11 @@ static inline void RestorePriority()
 }
 
 // Check if the geometric distance gap between two sector bounding boxes exceeds max span thresholds.
-static inline bool CheckGapTooWide(const SectorBBox& boxA, const SectorBBox& boxB, double maxSectorSpanSq)
+static inline bool CheckGapTooWide(const SectorBBox& boxA, const SectorBBox& boxB, double maxMapSpanSq)
 {
   const double gapX = std::max({0.0, boxB.minX - boxA.maxX, boxA.minX - boxB.maxX});
   const double gapY = std::max({0.0, boxB.minY - boxA.maxY, boxA.minY - boxB.maxY});
-  return (gapX * gapX) + (gapY * gapY) > maxSectorSpanSq;
+  return (gapX * gapX) + (gapY * gapY) > maxMapSpanSq;
 }
 
 // Maps a ray endpoint vertex to its corresponding cell index and logs any touching solid wall data.
@@ -970,49 +976,49 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbo
 
     while (!callStack.empty())
     {
-      const uint32_t v = callStack.back();
+      const uint32_t current = callStack.back();
 
-      if (static_cast<size_t>(nextEdge[v]) < neighbors[v].size())
+      if (static_cast<size_t>(nextEdge[current]) < neighbors[current].size())
       {
-        const uint32_t w = neighbors[v][nextEdge[v]++];
+        const uint32_t neighbor = neighbors[current][nextEdge[current]++];
 
-        if (order[w] == 0)
+        if (order[neighbor] == 0)
         {
-          order[w] = lowest[w] = ++clock;
-          cuts.cutMap[w] = parts;
-          sectorStack.push_back(w);
-          callStack.push_back(w);
+          order[neighbor] = lowest[neighbor] = ++clock;
+          cuts.cutMap[neighbor] = parts;
+          sectorStack.push_back(neighbor);
+          callStack.push_back(neighbor);
         }
         else
         {
-          lowest[v] = std::min(lowest[v], order[w]);
+          lowest[current] = std::min(lowest[current], order[neighbor]);
         }
         continue;
       }
 
-      // All neighbors of v are done. Send the result to the sector it was reached from.
+      // All neighbors of current are done. Send the result to the sector it was reached from.
       callStack.pop_back();
       if (callStack.empty()) break;
 
       const uint32_t above = callStack.back();
-      lowest[above] = std::min(lowest[above], lowest[v]);
+      lowest[above] = std::min(lowest[above], lowest[current]);
 
-      // v cannot get back past 'above', so v and everything stacked after it
+      // current cannot get back past 'above', so current and everything stacked after it
       // form one block, joined to the rest of the map only through 'above'.
-      if (lowest[v] >= order[above])
+      if (lowest[current] >= order[above])
       {
         const uint32_t block = static_cast<uint32_t>(cuts.cutParent.size());
         cuts.cutParent.push_back(above);
         blockCount[above]++;
 
-        uint32_t u;
+        uint32_t member;
         do
         {
-          u = sectorStack.back();
+          member = sectorStack.back();
           sectorStack.pop_back();
-          cuts.cutParent[u] = block;
-          blockCount[u]++;
-        } while (u != v);
+          cuts.cutParent[member] = block;
+          blockCount[member]++;
+        } while (member != current);
       }
     }
 
@@ -1413,24 +1419,12 @@ static void Reject_ProcessSectors(Level &level)
     return;
   }
 
-  // Calculate the max sector span across the map to scale ray bounds correctly.
-  // This value caps our visibility ray checks on wide open fields without manual configuration.
-  constexpr double MIN_RAY_SPAN = 4096.0;  // Rays are never capped shorter than this, in map units
-  constexpr double RAY_SPAN_FACTOR = 2.0;  // A ray may be this many times the diagonal of the largest sector
-
-  double maxSectorSpanSq = MIN_RAY_SPAN * MIN_RAY_SPAN;
-
-  for (size_t i = 0; i < num_secs; ++i)
-  {
-    const auto& box = sectorBoxes[i];
-    if (box.maxX > box.minX && box.maxY > box.minY)
-    {
-      double sWidth = box.maxX - box.minX;
-      double sHeight = box.maxY - box.minY;
-      double currentSpanSq = ((sWidth * sWidth) + (sHeight * sHeight)) * (RAY_SPAN_FACTOR * RAY_SPAN_FACTOR);
-      if (currentSpanSq > maxSectorSpanSq) maxSectorSpanSq = currentSpanSq;
-    }
-  }
+  // The longest ray that can exist is the diagonal of the whole map, so that is the limit.
+  // A limit based on the largest sector would cut short a map built from many small sectors,
+  // marking far apart sectors blind without ever casting a ray between them.
+  const double mapWidth = mapMaxX - mapMinX;
+  const double mapHeight = mapMaxY - mapMinY;
+  const double maxMapSpanSq = (mapWidth * mapWidth) + (mapHeight * mapHeight);
 
   // Pick how finely open lines are sampled. The extra rays from the finer split land on
   // sector pairs that still need rays, scaled by how many open lines each sector has.
@@ -1454,7 +1448,7 @@ static void Reject_ProcessSectors(Level &level)
 
       const size_t adjIdx = view * num_secs + target;
       if ((adjacencyMatrix[adjIdx >> 3] & (1 << (adjIdx & 7))) != 0) continue;
-      if (CheckGapTooWide(sectorBoxes[view], sectorBoxes[target], maxSectorSpanSq)) continue;
+      if (CheckGapTooWide(sectorBoxes[view], sectorBoxes[target], maxMapSpanSq)) continue;
 
       portalPairs += openCount[view] * openCount[target];
     }
@@ -1470,7 +1464,8 @@ static void Reject_ProcessSectors(Level &level)
   std::vector<SectorPoints> sectorPoints(num_secs);
   for (size_t i = 0; i < num_secs; ++i)
   {
-    sectorPoints[i] = BuildSectorPoints(sectorLines[i], portalSplit);
+    const int32_t split = (openCount[i] <= NARROW_SECTOR_MAX_OPEN) ? SPLIT_NARROW_SECTOR : portalSplit;
+    sectorPoints[i] = BuildSectorPoints(sectorLines[i], split);
   }
 
   // Build the spatial grid as a flat CSR array.
@@ -1509,8 +1504,7 @@ static void Reject_ProcessSectors(Level &level)
     }
   }
 
-  // Signed loop counter: OpenMP 2.0 compilers (MSVC) require one.
-  const ptrdiff_t activeCount = static_cast<ptrdiff_t>(activeSectors.size());
+  const size_t activeCount = activeSectors.size();
 
   // Find the cut points, and line up the pairs that involve one (FindCutPoints).
   CutPoints cuts;
@@ -1520,7 +1514,7 @@ static void Reject_ProcessSectors(Level &level)
 
   std::vector<std::vector<std::pair<uint32_t, uint32_t>>> cutLevels;
 
-  // Copy of the matrix as it stood after the last finished level
+  // Copy of the matrix as it was after the last finished level
   std::vector<uint8_t> blindSnap;
 
   if (prune)
@@ -1565,14 +1559,16 @@ static void Reject_ProcessSectors(Level &level)
   uint64_t totalCellSteps = 0;
   std::vector<uint64_t> totalSectorRays(num_secs, 0);
 
-  // Parallelizes the loop across available CPU cores.
-  // Dynamic scheduling lets each idle core pick up the next sector immediately,
+  // Spreads the work across the available CPU cores with standard C++ threads, no OpenMP needed.
+  // The team hands the next sector to whichever thread is free,
   // because some sectors take far longer than others.
-  #ifdef _OPENMP
-    #pragma omp parallel
-  #endif
+  const size_t threadCount = ChooseThreadCount();
+
+  std::mutex totalsMutex;
+
+  RunTeam(threadCount, [&](size_t threadIndex, TeamSync& team)
   {
-    // One ray scratch space per thread.
+    // One ray scratch space per thread, made by the thread that uses it.
     RayWalkSpace scratch(solidBlockers.size(), num_secs);
 
     // Everything that decides one pair of sectors.
@@ -1598,8 +1594,8 @@ static void Reject_ProcessSectors(Level &level)
 
       // Every ray endpoint lies inside its sector's bbox, so no ray can be shorter
       // than the gap between the boxes. IsRayBlocked rejects anything longer than
-      // maxSectorSpanSq anyway, so such a pair is blind without casting a ray.
-      if (CheckGapTooWide(boxA, boxB, maxSectorSpanSq))
+      // maxMapSpanSq anyway, so such a pair is blind without casting a ray.
+      if (CheckGapTooWide(boxA, boxB, maxMapSpanSq))
       {
         SetPairBitsAtomic(level, view, target, num_secs);
         return;
@@ -1616,7 +1612,7 @@ static void Reject_ProcessSectors(Level &level)
       const uint64_t raysBefore = scratch.rayCasts;
 
       const bool visible = DoVisibilityTest(sectorPoints[view], sectorPoints[target],
-                                            solidBlockers, grid, touchWalls, boxB, scratch, maxSectorSpanSq,
+                                            solidBlockers, grid, touchWalls, boxB, scratch, maxMapSpanSq,
                                             withinBudget);
 
       const uint64_t raysUsed = scratch.rayCasts - raysBefore;
@@ -1633,34 +1629,26 @@ static void Reject_ProcessSectors(Level &level)
     // before the next one starts, so the results it relies on are all in place.
     for (size_t lv = 0; lv < cutLevels.size(); ++lv)
     {
-      const ptrdiff_t levelCount = static_cast<ptrdiff_t>(cutLevels[lv].size());
-
-      #ifdef _OPENMP
-        #pragma omp for schedule(dynamic)
-      #endif
-      for (ptrdiff_t k = 0; k < levelCount; k++)
+      team.For(threadIndex, cutLevels[lv].size(), [&](size_t pairIndex)
       {
-        const auto& cutPair = cutLevels[lv][static_cast<size_t>(k)];
+        const auto& cutPair = cutLevels[lv][pairIndex];
         testPair(cutPair.first, cutPair.second);
-      }
+      });
 
-      #ifdef _OPENMP
-        #pragma omp single
-      #endif
+      // Every thread is finished at this point. The others wait
+      // until this thread gets there, so the snapshot is safe to take.
+      if (threadIndex == 0)
       {
         memcpy(blindSnap.data(), level.reject_matrix, level.reject_size);
       }
     }
 
-    #ifdef _OPENMP
-      #pragma omp for schedule(dynamic)
-    #endif
-    for (ptrdiff_t i = 0; i < activeCount; i++)
+    team.For(threadIndex, activeCount, [&](size_t rowIndex)
     {
       // Walk from the last active sector down.
       // Row 'a' tests 'a' targets, so the biggest rows go first
       // and no long row is left as a straggler.
-      const size_t from = static_cast<size_t>(activeCount - 1 - i);
+      const size_t from = activeCount - 1 - rowIndex;
 
       // Map our active iterator index back to the real sector index
       const size_t view = activeSectors[from];
@@ -1678,13 +1666,12 @@ static void Reject_ProcessSectors(Level &level)
 
         testPair(view, target);
       }
-    }
+    });
 
     // Add this thread's counters to the totals, one thread at a time.
-    #ifdef _OPENMP
-      #pragma omp critical(reject_stats)
-    #endif
     {
+      std::lock_guard<std::mutex> lock(totalsMutex);
+
       totalRayCasts += scratch.rayCasts;
       totalCellSteps += scratch.cellSteps;
 
@@ -1693,7 +1680,7 @@ static void Reject_ProcessSectors(Level &level)
         totalSectorRays[i] += scratch.sectorRays[i];
       }
     }
-  }
+  });
 
   // Restore process priority back to normal once the heavy CPU work finishes
   RestorePriority();
