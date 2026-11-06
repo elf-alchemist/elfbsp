@@ -12,8 +12,6 @@ project(elfbsp
         # SPDX_LICENSE "GPL-2.0+" doesn't work?
         DESCRIPTION "Modern BSP tree builder for idTech1 games and source ports.")
 
-include(CheckIncludeFile)
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # Set a default build type if none was specified
