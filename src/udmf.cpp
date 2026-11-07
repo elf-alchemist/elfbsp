@@ -5,7 +5,7 @@
 #include "wad.hpp"
 
 #include "scanner.h"
-#include <cctype>
+import std.compat;
 
 //-----------------------------------------------------------------------------
 

@@ -26,11 +26,7 @@
 #include "local.hpp"
 #include "wad.hpp"
 
-#include <cstring>
-#include <filesystem>
-#include <string>
-#include <string_view>
-#include <vector>
+import std.compat;
 
 static bool opt_help = false;
 static bool opt_version = false;

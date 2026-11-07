@@ -20,12 +20,7 @@
 
 #pragma once
 
-#include <atomic>
-#include <barrier>
-#include <cstddef>
-#include <mutex>
-#include <thread>
-#include <vector>
+import std.compat;
 
 // How many threads to use; hardware_concurrency can return 0 when it does not know.
 size_t ChooseThreadCount();

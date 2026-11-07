@@ -28,24 +28,12 @@
  *  Standard headers
  */
 
-#include <cassert>
-#include <cctype>
-#include <climits>
-#include <cmath>
-#include <cstdarg>
-#include <cstdint>
 #include <cstdio>
 #include <cstring>
 
-#include <algorithm>
-#include <bit>
-#include <chrono>
-#include <limits>
-#include <numbers>
-#include <source_location>
-#include <vector>
-
 #include <zlib-ng.h>
+
+import std.compat;
 
 //
 //  OS support

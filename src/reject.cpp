@@ -22,9 +22,6 @@
 //
 //------------------------------------------------------------------------------
 
-#include <algorithm>
-#include <atomic>
-
 #include "core.hpp"
 #include "local.hpp"
 #include "thread.hpp"
@@ -37,6 +34,8 @@
   #include <sys/resource.h>
   #include <unistd.h>
 #endif
+
+import std.compat;
 
 //------------------------------------------------------------------------
 // REJECT : Generate the reject table

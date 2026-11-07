@@ -18,12 +18,10 @@
 //
 //------------------------------------------------------------------------------
 
-#include <filesystem>
-#include <format>
-#include <fstream>
-
 #include "core.hpp"
 #include "local.hpp"
+
+import std.compat;
 
 static std::vector<std::string> analysis_csv;
 

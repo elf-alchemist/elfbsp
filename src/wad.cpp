@@ -22,7 +22,7 @@
 #include "wad.hpp"
 #include "core.hpp"
 
-#include <cstdio>
+import std.compat;
 
 //------------------------------------------------------------------------
 //  Utilities

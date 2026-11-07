@@ -24,7 +24,7 @@
 #include "core.hpp"
 #include "local.hpp"
 
-#include <algorithm>
+import std.compat;
 
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures

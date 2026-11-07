@@ -66,20 +66,24 @@ add_library(scanner STATIC
   library/scanner/scanner.cpp
 )
 
-add_executable(${PROJECT_NAME}
-  src/blockmap.cpp
-  src/bsp.cpp
-  src/info.cpp
-  src/level.cpp
-  src/local.cpp
-  src/main.cpp
-  src/misc.cpp
-  src/node.cpp
-  src/polyobj.cpp
-  src/reject.cpp
-  src/thread.cpp
-  src/udmf.cpp
-  src/wad.cpp
+add_executable(${PROJECT_NAME})
+
+target_sources(${PROJECT_NAME}
+  PRIVATE
+    src/blockmap.cpp
+    src/bsp.cpp
+    src/info.cpp
+    src/level.cpp
+    src/local.cpp
+    src/main.cpp
+    src/misc.cpp
+    src/node.cpp
+    src/polyobj.cpp
+    src/reject.cpp
+    src/thread.cpp
+    src/udmf.cpp
+    src/wad.cpp
+  PRIVATE FILE_SET CXX_MODULES FILES
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
