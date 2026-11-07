@@ -23,6 +23,7 @@
 //------------------------------------------------------------------------------
 
 #include <algorithm>
+#include <atomic>
 
 #include "core.hpp"
 #include "local.hpp"
@@ -840,9 +841,8 @@ static inline void SetPairBitsAtomic(Level &level, size_t view, size_t target, s
   const uint8_t bit2 = static_cast<uint8_t>(1u << (p2 & 7));
 
   // Several threads can touch the same byte, so each bit is set with an atomic OR.
-  // GCC and Clang have this built in, no library is needed. :)
-  __atomic_fetch_or(&level.reject_matrix[p1 >> 3], bit1, __ATOMIC_RELAXED);
-  __atomic_fetch_or(&level.reject_matrix[p2 >> 3], bit2, __ATOMIC_RELAXED);
+  std::atomic_ref<uint8_t>(level.reject_matrix[p1 >> 3]).fetch_or(bit1, std::memory_order_relaxed);
+  std::atomic_ref<uint8_t>(level.reject_matrix[p2 >> 3]).fetch_or(bit2, std::memory_order_relaxed);
 }
 
 // Restore process priority back to default.
