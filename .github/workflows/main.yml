@@ -24,6 +24,8 @@ jobs:
     defaults:
       run:
         shell: ${{ matrix.config.shell }}
+    env:
+      CMAKE_GENERATOR: Ninja
     strategy:
       fail-fast: false
       matrix:
@@ -41,7 +43,6 @@ jobs:
                 libc++-dev \
                 libc++abi-dev
             configure: |
-              -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
               -DENABLE_STATIC=ON \
@@ -54,7 +55,6 @@ jobs:
             # package_name: linux_gcc_x86_64
             artifact_path: build/*.zip
             configure: |
-              -G Ninja \
               -DCMAKE_C_COMPILER=gcc \
               -DCMAKE_CXX_COMPILER=g++ \
               -DENABLE_STATIC=ON \
@@ -67,7 +67,6 @@ jobs:
             package_name: macos_clang_arm64
             artifact_path: build/*.zip
             configure: |
-              -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
               -DCMAKE_OSX_ARCHITECTURES="arm64" \
@@ -87,7 +86,6 @@ jobs:
               mingw-w64-clang-x86_64-ninja
               mingw-w64-clang-x86_64-git
             configure: |
-              -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
               -DENABLE_STATIC=ON \
