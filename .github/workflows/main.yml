@@ -133,6 +133,9 @@ jobs:
           -DCPACK_PACKAGE_VERSION=nightly
           ${{ matrix.config.configure }}
 
+      - name: Build
+        run: cmake --build build
+
       - name: Run Clang-Tidy
         if: ${{ matrix.config.package_name == 'linux_x86_64' }}
         uses: cpp-linter/cpp-linter-action@v2
@@ -146,9 +149,6 @@ jobs:
           style: file
           tidy-checks: ''
           database: 'build'
-
-      - name: Build
-        run: cmake --build build
 
       - name: Check static linking
         if: ${{ runner.os == 'Linux' }}
