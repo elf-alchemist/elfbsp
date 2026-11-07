@@ -41,6 +41,7 @@
 #include <bit>
 #include <chrono>
 #include <limits>
+#include <numbers>
 #include <source_location>
 #include <vector>
 
@@ -473,13 +474,13 @@ inline void CopyLumpCString(char *dest, const char *src)
 //
 inline double ComputeAngle(double dx, double dy)
 {
-  const double angle = atan2(dy, dx) * 180.0 / M_PI;
+  const double angle = atan2(dy, dx) * 180.0 / std::numbers::pi;
   return angle + (angle < 0.0) * 360.0;
 }
 
 inline short_angle_t ComputeAngle_BAM(double dx, double dy)
 {
-  double angle = atan2(dy, dx) * 180.0 / M_PI;
+  double angle = atan2(dy, dx) * 180.0 / std::numbers::pi;
   angle = angle + (angle < 0.0) * 360.0;
   return static_cast<short_angle_t>(floor(angle * FRACFACTOR / 360.0 + 0.5));
 }
