@@ -21,10 +21,11 @@
 //
 //------------------------------------------------------------------------------
 
-#include "core.hpp"
 #include "local.hpp"
 
 import std.compat;
+
+import core;
 
 static constexpr auto BlockMap_GridSize = 128;
 static constexpr auto BlockMap_GridMask = BlockMap_GridSize - static_cast<int32_t>(OFF_BY_ONE);

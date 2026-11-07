@@ -1,11 +1,13 @@
 
-#include "core.hpp"
 #include "local.hpp"
 #include "scanner_support.h"
 #include "wad.hpp"
 
 #include "scanner.h"
+
 import std.compat;
+
+import core;
 
 //-----------------------------------------------------------------------------
 

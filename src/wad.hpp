@@ -22,10 +22,13 @@
 
 #pragma once
 
-#include "core.hpp"
+#include <zlib-ng.h>
+
 #include "macros.hpp"
 
 import std.compat;
+
+import core;
 
 //------------------------------------------------------------------------
 // WAD STRUCTURES

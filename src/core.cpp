@@ -22,20 +22,24 @@
 //
 //------------------------------------------------------------------------------
 
-#pragma once
+module;
 
 /*
  *  Standard headers
  */
 
-#include <cstdio>
+// for non-standard strcasecmp
 #include <cstring>
 
 #include "macros.hpp"
 
-#include <zlib-ng.h>
+export module core;
 
 import std.compat;
+
+// export everything!
+export
+{
 
 //
 //  OS support
@@ -271,11 +275,8 @@ enum Debug : uint32_t
 template <typename... Args>
 void PrintLine(const Log level, std::format_string<Args...> fmt, Args &&...args)
 {
-  FILE *const stream = (level == Log::NORMAL) ? stdout : stderr;
-  const std::string str = std::format(fmt, std::forward<Args>(args)...);
-
-  fprintf(stream, "%s\n", str.c_str());
-  fflush(stream);
+  auto& stream = (level == Log::NORMAL) ? std::cout : std::cerr;
+  std::println(stream, fmt, std::forward<Args>(args)...);
 }
 
 //
@@ -465,7 +466,7 @@ enum class MapFormat
   UDMF,
 };
 
-static std::string_view format_name[] = {"ERROR", "Doom Format", "Hexen Format", "Doom64 Format", "UDMF"};
+inline constexpr std::string_view format_name[] = {"ERROR", "Doom Format", "Hexen Format", "Doom64 Format", "UDMF"};
 
 // Lump order in a map WAD: each map needs a couple of lumps
 // to provide a complete scene geometry description.
@@ -508,7 +509,7 @@ enum lump_order_t
   LM_LMAPS,
 };
 
-static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
+inline constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
 
 struct MapVertexIntegral
 {
@@ -1119,7 +1120,7 @@ struct BuildInfo
   bool skip_bmap_zero = false; // Skip "zero index" header on vanilla blockmap lump
 };
 
-extern BuildInfo config;
+inline BuildInfo config;
 
 struct AnalysisData
 {
@@ -1295,3 +1296,5 @@ std::pair<size_t, T> LargestElement(std::vector<T> input)
   auto index = std::distance(input.begin(), value);
   return std::pair<size_t, T>(index, *value);
 }
+
+} // export

@@ -22,7 +22,6 @@
 //
 //------------------------------------------------------------------------------
 
-#include "core.hpp"
 #include "local.hpp"
 
 // Native platform headers required for low-level process priority
@@ -36,6 +35,7 @@
 
 import std.compat;
 
+import core;
 import thread;
 
 //------------------------------------------------------------------------

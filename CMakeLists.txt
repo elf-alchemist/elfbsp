@@ -83,6 +83,7 @@ target_sources(${PROJECT_NAME}
     src/udmf.cpp
     src/wad.cpp
   PRIVATE FILE_SET CXX_MODULES FILES
+    src/core.cpp
     src/thread.cpp
 )
 

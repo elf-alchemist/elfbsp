@@ -23,10 +23,11 @@
 
 #pragma once
 
-#include "core.hpp"
 #include "wad.hpp"
 
 import std.compat;
+
+import core;
 
 //------------------------------------------------------------------------
 // BLOCKMAP : Generate the blockmap
