@@ -297,7 +297,7 @@ void PutLeafs_DoomBSP(WadIO &io, Level &level)
 
       if (HAS_BIT(config.debug, DEBUG_BSP))
       {
-        PrintLine(Log::DEBUG, "[{}] Segment = {} Vertex = {}", __func__, raw.seg, raw.vertex);
+        PrintLine(Log::DEBUG, "[{}] Segment = {} Vertex = {}", __func__, +raw.seg, +raw.vertex);
       }
     }
   }
@@ -479,7 +479,7 @@ void PutLeafs_DeePBSPV4(WadIO &io, Level &level)
 
       if (HAS_BIT(config.debug, DEBUG_BSP))
       {
-        PrintLine(Log::DEBUG, "[{}] Segment = {} Vertex = {}", __func__, raw.seg, raw.vertex);
+        PrintLine(Log::DEBUG, "[{}] Segment = {} Vertex = {}", __func__, +raw.seg, +raw.vertex);
       }
     }
   }
