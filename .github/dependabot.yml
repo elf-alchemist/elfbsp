@@ -8,3 +8,7 @@ updates:
       actions:
         patterns:
           - "*"
+  - package-ecosystem: "gitsubmodule"
+    directory: "/"
+    schedule:
+      interval: "weekly"
