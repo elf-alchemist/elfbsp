@@ -303,25 +303,6 @@ enum Debug : uint32_t
   DEBUG_WAD = BIT(13),
 };
 
-// Safe, portable vsnprintf().
-inline int32_t PRINTF_ATTR(2, 0) M_vsnprintf(char *buf, const char *s, va_list args)
-{
-  // Windows (and other OSes?) has a vsnprintf() that doesn't always
-  // append a trailing \0. So we must do it, and write into a buffer
-  // that is one byte shorter; otherwise this function is unsafe.
-  int32_t result = vsnprintf(buf, MSG_BUFFER_LENGTH, s, args);
-
-  // If truncated, change the final char in the buffer to a \0.
-  // A negative result indicates a truncated buffer on Windows.
-  if (result < 0 || result >= static_cast<int32_t>(MSG_BUFFER_LENGTH))
-  {
-    buf[MSG_BUFFER_LENGTH - 1] = '\0';
-    result = static_cast<int32_t>(MSG_BUFFER_LENGTH) - 1;
-  }
-
-  return result;
-}
-
 //
 //  show a message
 //
