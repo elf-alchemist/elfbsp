@@ -18,12 +18,79 @@
 //
 //------------------------------------------------------------------------------
 
-#include "thread.hpp"
+export module thread;
 
 import std.compat;
 
 // How many threads to use; hardware_concurrency can return 0 when it does not know.
-size_t ChooseThreadCount()
+export size_t ChooseThreadCount()
 {
   return std::max<size_t>(1, std::thread::hardware_concurrency());
+}
+
+// The threads of a team all run the same function once and stay alive until it ends,
+// the same way an OpenMP parallel region works. Each thread keeps its own scratch space on
+// its own stack and the team meets at a barrier between steps instead of being started again.
+export struct TeamSync
+{
+  explicit TeamSync(std::ptrdiff_t threadCount) : barrier_(threadCount)
+  {
+  }
+
+  // Every thread of the team must call this. It returns once all of them have finished.
+  void Wait()
+  {
+    barrier_.arrive_and_wait();
+  }
+
+  // Every thread of the team must call this with the same count. Each index from 0 to count - 1
+  // is handed to one thread, to whichever thread is free (like OpenMP's dynamic scheduler).
+  // It returns once every thread has finished.
+  template <typename Body>
+  void For(size_t threadIndex, size_t count, Body &&body)
+  {
+    if (threadIndex == 0)
+    {
+      next_.value.store(0, std::memory_order_relaxed);
+    }
+    Wait(); // The counter is back at zero for everybody
+
+    for (;;)
+    {
+      const size_t index = next_.value.fetch_add(1, std::memory_order_relaxed);
+      if (index >= count) break;
+
+      body(index);
+    }
+
+    Wait(); // Everybody is finished
+  }
+
+private:
+  // The counter gets a cache line of its own, because every thread changes it.
+  struct alignas(64) PaddedCounter
+  {
+    std::atomic<size_t> value{0};
+  };
+
+  std::barrier<> barrier_;
+  PaddedCounter next_;
+};
+
+// Runs body(threadIndex, team) once on every thread of the team.
+// This thread is one of them. :p
+export template <typename Body>
+void RunTeam(size_t threadCount, Body &&body)
+{
+  TeamSync team(static_cast<std::ptrdiff_t>(threadCount));
+
+  std::vector<std::jthread> threads;
+  threads.reserve(threadCount - 1);
+
+  for (size_t threadIndex = 1; threadIndex < threadCount; ++threadIndex)
+  {
+    threads.emplace_back([&body, &team, threadIndex]() { body(threadIndex, team); });
+  }
+
+  body(static_cast<size_t>(0), team);
 }

@@ -24,7 +24,6 @@
 
 #include "core.hpp"
 #include "local.hpp"
-#include "thread.hpp"
 
 // Native platform headers required for low-level process priority
 #ifdef _WIN32
@@ -36,6 +35,8 @@
 #endif
 
 import std.compat;
+
+import thread;
 
 //------------------------------------------------------------------------
 // REJECT : Generate the reject table
