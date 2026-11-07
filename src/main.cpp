@@ -685,83 +685,97 @@ void ParseCommandLine(int32_t argc, const char *argv[])
 
 int32_t main(const int32_t argc, const char *argv[])
 {
-  ParseCommandLine(argc, argv);
-
-  if (opt_version)
+  try
   {
-    PrintLine(Log::NORMAL, VERSION_INFO);
-    return 0;
-  }
 
-  if (opt_help || argc <= 1)
-  {
-    PrintLine(Log::NORMAL, PRINT_HELP);
-    return 0;
-  }
+    ParseCommandLine(argc, argv);
 
-  size_t total_files = wad_list.size();
-
-  if (total_files == 0)
-  {
-    throw RuntimeException("no files to process");
-    return 0;
-  }
-
-  if (!opt_output.empty())
-  {
-    if (total_files > 1)
+    if (opt_version)
     {
-      throw RuntimeException("cannot use multiple input files with --output");
+      PrintLine(Log::NORMAL, VERSION_INFO);
+      return 0;
     }
 
-    if (wad_list[0] == opt_output)
+    if (opt_help || argc <= 1)
     {
-      throw RuntimeException("input and output files are the same");
-    }
-  }
-
-  // validate all filenames before processing any of them
-  for (const auto &filename : wad_list)
-  {
-    if (!FileExists(filename))
-    {
-      throw RuntimeException("no such file: {}", filename);
-    }
-  }
-
-  for (const auto &wad : wad_list)
-  {
-    VisitFile(wad);
-  }
-
-  if (total_failed_files > 0)
-  {
-    PrintLine(Log::NORMAL, "FAILURES occurred on {} map{} in {} file{}.", total_failed_maps, total_failed_maps == 1 ? "" : "s",
-              total_failed_files, total_failed_files == 1 ? "" : "s");
-
-    if (!config.verbose)
-    {
-      PrintLine(Log::NORMAL, "Rerun with --verbose to see more details.");
+      PrintLine(Log::NORMAL, PRINT_HELP);
+      return 0;
     }
 
-    return 2;
-  }
-  else if (total_built_maps == 0)
-  {
-    PrintLine(Log::NORMAL, "NOTHING was built!");
+    size_t total_files = wad_list.size();
 
+    if (total_files == 0)
+    {
+      throw RuntimeException("no files to process");
+      return 0;
+    }
+
+    if (!opt_output.empty())
+    {
+      if (total_files > 1)
+      {
+        throw RuntimeException("cannot use multiple input files with --output");
+      }
+
+      if (wad_list[0] == opt_output)
+      {
+        throw RuntimeException("input and output files are the same");
+      }
+    }
+
+    // validate all filenames before processing any of them
+    for (const auto &filename : wad_list)
+    {
+      if (!FileExists(filename))
+      {
+        throw RuntimeException("no such file: {}", filename);
+      }
+    }
+
+    for (const auto &wad : wad_list)
+    {
+      VisitFile(wad);
+    }
+
+    if (total_failed_files > 0)
+    {
+      PrintLine(Log::NORMAL, "FAILURES occurred on {} map{} in {} file{}.", total_failed_maps,
+                total_failed_maps == 1 ? "" : "s", total_failed_files, total_failed_files == 1 ? "" : "s");
+
+      if (!config.verbose)
+      {
+        PrintLine(Log::NORMAL, "Rerun with --verbose to see more details.");
+      }
+
+      return 2;
+    }
+    else if (total_built_maps == 0)
+    {
+      PrintLine(Log::NORMAL, "NOTHING was built!");
+
+      return 1;
+    }
+    else if (total_empty_files == 0)
+    {
+      PrintLine(Log::NORMAL, "Ok, built all files.");
+    }
+    else
+    {
+      size_t built = total_files - total_empty_files;
+
+      PrintLine(Log::NORMAL, "Ok, built {} file{}, {} file{} empty.", built, (built == 1 ? "" : "s"), total_empty_files,
+                (total_empty_files == 1 ? " was" : "s were"));
+    }
+  }
+  catch (const std::exception &e)
+  {
+    PrintLine(Log::WARN, "{}", e.what());
     return 1;
   }
-  else if (total_empty_files == 0)
+  catch (...)
   {
-    PrintLine(Log::NORMAL, "Ok, built all files.");
-  }
-  else
-  {
-    size_t built = total_files - total_empty_files;
-
-    PrintLine(Log::NORMAL, "Ok, built {} file{}, {} file{} empty.", built, (built == 1 ? "" : "s"), total_empty_files,
-              (total_empty_files == 1 ? " was" : "s were"));
+    PrintLine(Log::WARN, "Failed with unknown exception");
+    return 1;
   }
 
   // that's all folks!
