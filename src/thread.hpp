@@ -35,7 +35,9 @@ size_t ChooseThreadCount();
 // its own stack and the team meets at a barrier between steps instead of being started again.
 struct TeamSync
 {
-  explicit TeamSync(size_t threadCount) : threadCount_(threadCount) {}
+  explicit TeamSync(size_t threadCount) : threadCount_(threadCount)
+  {
+  }
 
   // Every thread of the team must call this. It returns once all of them have finished.
   void Wait();
@@ -44,7 +46,7 @@ struct TeamSync
   // is handed to one thread, to whichever thread is free (like OpenMP's dynamic scheduler).
   // It returns once every thread has finished.
   template <typename Body>
-  void For(size_t threadIndex, size_t count, Body&& body)
+  void For(size_t threadIndex, size_t count, Body &&body)
   {
     if (threadIndex == 0)
     {
@@ -81,7 +83,7 @@ private:
 // Runs body(threadIndex, team) once on every thread of the team.
 // This thread is one of them. :p
 template <typename Body>
-void RunTeam(size_t threadCount, Body&& body)
+void RunTeam(size_t threadCount, Body &&body)
 {
   TeamSync team(threadCount);
 
@@ -90,15 +92,12 @@ void RunTeam(size_t threadCount, Body&& body)
 
   for (size_t threadIndex = 1; threadIndex < threadCount; ++threadIndex)
   {
-    threads.emplace_back([&body, &team, threadIndex]()
-    {
-      body(threadIndex, team);
-    });
+    threads.emplace_back([&body, &team, threadIndex]() { body(threadIndex, team); });
   }
 
   body(static_cast<size_t>(0), team);
 
-  for (auto& thread : threads)
+  for (auto &thread : threads)
   {
     thread.join();
   }

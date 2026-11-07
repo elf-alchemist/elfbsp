@@ -42,9 +42,6 @@ void TeamSync::Wait()
   }
   else
   {
-    wakeUp_.wait(lock, [&]()
-    {
-      return generation_ != myGeneration;
-    });
+    wakeUp_.wait(lock, [&]() { return generation_ != myGeneration; });
   }
 }
