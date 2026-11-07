@@ -42,9 +42,8 @@ git_branch(HEAD GIT_BRANCH)
 string(REGEX REPLACE "^(heads\/|tags\/)(.+)(-0-g)([0-9a-f]+)" "\\4" GIT_SHORT_HASH "${GIT_DESCRIBE}")
 
 # Setup Zlib-ng
-set(ZLIB_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF)
+set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(library/zlib-ng EXCLUDE_FROM_ALL)
 
 add_library(scanner STATIC
