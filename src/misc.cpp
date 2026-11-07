@@ -54,7 +54,7 @@ void DetectOverlappingVertices(Level &level)
   auto PredicateCompare_VertexCoordinateX = [](const Vertex *Vertex1, const Vertex *Vertex2) -> auto
   { return Vertex1->x < Vertex2->x; };
 
-  std::sort(array.begin(), array.end(), PredicateCompare_VertexCoordinateX);
+  std::ranges::sort(array, PredicateCompare_VertexCoordinateX);
 
   // now mark them off
   for (size_t i = 0; i < level.vertices.size() - 1; i++)
@@ -163,7 +163,7 @@ void DetectOverlappingLines(Level &level)
   auto PredicateCompare_LinedefMinX = [](const Linedef *Linedef1, const Linedef *Linedef2) -> auto
   { return Linedef1->MinX() < Linedef2->MinX(); };
 
-  std::sort(array.begin(), array.end(), PredicateCompare_LinedefMinX);
+  std::ranges::sort(array, PredicateCompare_LinedefMinX);
 
   size_t count = 0;
 

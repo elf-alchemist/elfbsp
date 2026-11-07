@@ -191,7 +191,7 @@ struct SectorBBox
 // Removes coordinate duplicates and sort points along the X-axis.
 static void SortUnique(std::vector<SightPoint>& points)
 {
-  std::sort(points.begin(), points.end(), [](const SightPoint& a, const SightPoint& b)
+  std::ranges::sort(points, [](const SightPoint& a, const SightPoint& b)
   {
     return a.x < b.x || (a.x == b.x && a.y < b.y);
   });
@@ -282,11 +282,11 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines, in
       return std::atan2(a.y - cy, a.x - cx) < std::atan2(b.y - cy, b.x - cx);
     };
 
-    std::sort(points.verts.begin(), points.verts.end(), byAngle);
-    std::sort(points.firstVerts.begin(), points.firstVerts.end(), byAngle);
-    std::sort(points.openMids.begin(), points.openMids.end(), byAngle);
-    std::sort(points.openSplit.begin(), points.openSplit.end(), byAngle);
-    std::sort(points.allMids.begin(), points.allMids.end(), byAngle);
+    std::ranges::sort(points.verts, byAngle);
+    std::ranges::sort(points.firstVerts, byAngle);
+    std::ranges::sort(points.openMids, byAngle);
+    std::ranges::sort(points.openSplit, byAngle);
+    std::ranges::sort(points.allMids, byAngle);
   }
 
   return points;
@@ -339,7 +339,7 @@ struct alignas(64) RayWalkSpace
   {
     if (++stamp == 0) // Wrapped around? Clear and restart.
     {
-      std::fill(seen.begin(), seen.end(), 0);
+      std::ranges::fill(seen, 0);
       stamp = 1;
     }
     return stamp;
@@ -1086,7 +1086,7 @@ static std::vector<std::vector<std::pair<uint32_t, uint32_t>>> BuildCutLevels(
   {
     if (!isActive[cutSector]) continue;
 
-    std::fill(dist.begin(), dist.end(), -1);
+    std::ranges::fill(dist, -1);
     dist[cutSector] = 0;
     queue.assign(1, static_cast<uint32_t>(cutSector));
     for (size_t head = 0; head < queue.size(); ++head)
@@ -1152,7 +1152,7 @@ static CountSummary SummarizeCounts(std::vector<uint64_t> values)
   CountSummary summary;
   if (values.empty()) return summary;
 
-  std::sort(values.begin(), values.end());
+  std::ranges::sort(values);
 
   summary.count = values.size();
   summary.min = values.front();

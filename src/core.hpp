@@ -37,6 +37,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include <algorithm>
 #include <bit>
 #include <chrono>
 #include <limits>
@@ -435,12 +436,12 @@ inline int32_t StringCmp(const char *s1, const char *s2)
 
 inline void StringToLower(std::string &str)
 {
-  std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::tolower(c); });
+  std::ranges::transform(str, str.begin(), [](unsigned char c) { return std::tolower(c); });
 }
 
 inline void StringToUpper(std::string &str)
 {
-  std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::toupper(c); });
+  std::ranges::transform(str, str.begin(), [](unsigned char c) { return std::toupper(c); });
 }
 
 inline char CToUpper(const char c)
@@ -1429,7 +1430,7 @@ struct Iota
 template <std::integral T>
 std::pair<size_t, T> LargestElement(std::vector<T> input)
 {
-  auto value = std::max_element(input.begin(), input.end());
+  auto value = std::ranges::max_element(input);
   auto index = std::distance(input.begin(), value);
   return std::pair<size_t, T>(index, *value);
 }

@@ -400,7 +400,7 @@ void Blockmap_SortCells(BlockMap &bmap)
     return a.self_index < b.self_index;
   };
 
-  std::sort(bmap.cells.begin(), bmap.cells.end(), by_size);
+  std::ranges::sort(bmap.cells, by_size);
 }
 
 void Blockmap_FlattenSorted(BlockMap &bmap)

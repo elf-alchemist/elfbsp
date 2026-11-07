@@ -43,7 +43,7 @@ void SortSegs(Level &level)
   auto PredicateCompare_SegmentIndex = [](const Segment *Segment1, const Segment *Segment2) -> auto
   { return Segment1->index < Segment2->index; };
 
-  std::sort(level.segs.begin(), level.segs.end(), PredicateCompare_SegmentIndex);
+  std::ranges::sort(level.segs, PredicateCompare_SegmentIndex);
 
   // remove unwanted segs
   while (level.segs.size() > 0 && level.segs.back()->index == SEG_IS_GARBAGE)
