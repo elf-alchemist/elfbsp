@@ -44,7 +44,21 @@ string(REGEX REPLACE "^(heads\/|tags\/)(.+)(-0-g)([0-9a-f]+)" "\\4" GIT_SHORT_HA
 # Setup Zlib-ng
 set(BUILD_TESTING OFF)
 set(BUILD_SHARED_LIBS OFF)
-add_subdirectory(library/zlib-ng EXCLUDE_FROM_ALL)
+
+if(ENABLE_STATIC)
+  set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE NEVER)
+endif()
+
+include(FetchContent)
+
+FetchContent_Declare(
+  zlib-ng
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/library/zlib-ng"
+  SYSTEM
+  EXCLUDE_FROM_ALL
+  FIND_PACKAGE_ARGS CONFIG
+)
+FetchContent_MakeAvailable(zlib-ng)
 
 add_library(scanner STATIC
   library/scanner/scanner_support.h
@@ -173,7 +187,7 @@ find_package(Threads REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
   scanner
-  zlibstatic
+  zlib-ng::zlib
   Threads::Threads
 )
 
