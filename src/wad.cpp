@@ -361,40 +361,6 @@ void WadIO::AddToLump(const void *data, size_t len)
   this->write_directory[current].size += len;
 }
 
-WadIO &WadIO::operator<<(uint8_t value)
-{
-  this->AddToLumpZ(&value, sizeof(uint8_t));
-  return *this;
-}
-
-WadIO &WadIO::operator<<(uint16_t value)
-{
-  value = GetLittleEndian(value);
-  this->AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(uint16_t));
-  return *this;
-}
-
-WadIO &WadIO::operator<<(uint32_t value)
-{
-  value = GetLittleEndian(value);
-  this->AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(uint32_t));
-  return *this;
-}
-
-WadIO &WadIO::operator<<(int16_t value)
-{
-  value = GetLittleEndian(value);
-  this->AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(int16_t));
-  return *this;
-}
-
-WadIO &WadIO::operator<<(fixed_t value)
-{
-  value = GetLittleEndian(value);
-  this->AddToLumpZ(reinterpret_cast<byte *>(&value), sizeof(fixed_t));
-  return *this;
-}
-
 //
 // Zlib compression support
 //
