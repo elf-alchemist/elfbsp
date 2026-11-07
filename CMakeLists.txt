@@ -1,5 +1,5 @@
 # ELFBSP CMake Script
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 4.5)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
@@ -9,7 +9,7 @@ project(elfbsp
         VERSION "1.3.1"
         LANGUAGES CXX
         HOMEPAGE_URL "https://elf-alchemist.github.io/elfbsp"
-        # SPDX_LICENSE "GPL-2.0+" doesn't work?
+        SPDX_LICENSE "GPL-2.0-or-later"
         DESCRIPTION "Modern BSP tree builder for idTech1 games and source ports.")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
@@ -158,7 +158,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-  CXX_STANDARD 20
+  CXX_STANDARD 23
 )
 
 include(CheckedFlags)
