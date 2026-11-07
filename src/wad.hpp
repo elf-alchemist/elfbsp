@@ -23,6 +23,7 @@
 #pragma once
 
 #include "core.hpp"
+#include "macros.hpp"
 
 import std.compat;
 

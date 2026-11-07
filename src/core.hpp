@@ -31,6 +31,8 @@
 #include <cstdio>
 #include <cstring>
 
+#include "macros.hpp"
+
 #include <zlib-ng.h>
 
 import std.compat;
@@ -61,29 +63,6 @@ constexpr auto LINUX = true;
 
 constexpr char PATH_SEP_CH = (WINDOWS) ? ';' : ':';
 constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
-
-//
-// The packed attribute forces structures to be packed into the minimum
-// space necessary.  If this is not done, the compiler may align structure
-// fields differently to optimize memory access, inflating the overall
-// structure size.  It is important to use the packed attribute on certain
-// structures where alignment is important, particularly data read/written
-// to disk.
-//
-
-// -Elf- updated, pulled from Chocolate Doom
-
-#if defined(__clang__) || defined(__GNUC__)
-
-  #if defined(_WIN32) && !defined(__clang__)
-    #define PACKEDATTR __attribute__((packed, gcc_struct))
-  #else
-    #define PACKEDATTR __attribute__((packed))
-  #endif
-
-#else
-  #define PACKEDATTR
-#endif
 
 // endianness
 constexpr auto ENDIAN_BIG = (std::endian::native == std::endian::big);
@@ -789,9 +768,6 @@ struct MapBlockmapHeaderXBM1
   fixed_t x_origin, y_origin;
   uint32_t x_blocks, y_blocks;
 } PACKEDATTR;
-
-// Fail way earlier
-#define static_size(x, y) static_assert(sizeof(x) == y, "Size mismatch for '" #x "'. Should be " #y ".")
 
 static_size(MapVertexIntegral, 4);
 static_size(MapVertexFractional, 8);

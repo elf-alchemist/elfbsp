@@ -25,6 +25,7 @@
 
 #include "core.hpp"
 #include "local.hpp"
+#include "macros.hpp"
 
 //
 // DoomBSP
