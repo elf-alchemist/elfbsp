@@ -21,7 +21,7 @@
 #pragma once
 
 #include <atomic>
-#include <condition_variable>
+#include <barrier>
 #include <cstddef>
 #include <mutex>
 #include <thread>
@@ -35,12 +35,15 @@ size_t ChooseThreadCount();
 // its own stack and the team meets at a barrier between steps instead of being started again.
 struct TeamSync
 {
-  explicit TeamSync(size_t threadCount) : threadCount_(threadCount)
+  explicit TeamSync(std::ptrdiff_t threadCount) : barrier_(threadCount)
   {
   }
 
   // Every thread of the team must call this. It returns once all of them have finished.
-  void Wait();
+  void Wait()
+  {
+    barrier_.arrive_and_wait();
+  }
 
   // Every thread of the team must call this with the same count. Each index from 0 to count - 1
   // is handed to one thread, to whichever thread is free (like OpenMP's dynamic scheduler).
@@ -72,11 +75,7 @@ private:
     std::atomic<size_t> value{0};
   };
 
-  size_t threadCount_;
-  std::mutex mutex_;
-  std::condition_variable wakeUp_;
-  size_t arrived_ = 0;
-  size_t generation_ = 0;
+  std::barrier<> barrier_;
   PaddedCounter next_;
 };
 
@@ -85,7 +84,7 @@ private:
 template <typename Body>
 void RunTeam(size_t threadCount, Body &&body)
 {
-  TeamSync team(threadCount);
+  TeamSync team(static_cast<std::ptrdiff_t>(threadCount));
 
   std::vector<std::jthread> threads;
   threads.reserve(threadCount - 1);
