@@ -23,11 +23,11 @@
 
 #include "info.hpp"
 #include "local.hpp"
-#include "wad.hpp"
 
 import std.compat;
 
 import core;
+import wad;
 
 static bool opt_help = false;
 static bool opt_version = false;
