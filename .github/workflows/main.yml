@@ -24,6 +24,8 @@ jobs:
     defaults:
       run:
         shell: ${{ matrix.config.shell }}
+    env:
+      CMAKE_GENERATOR: Ninja
     strategy:
       fail-fast: false
       matrix:
@@ -39,10 +41,8 @@ jobs:
                 clang \
                 lld \
                 libc++-dev \
-                libc++abi-dev \
-                ninja-build
+                libc++abi-dev
             configure: |
-              -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
               -DENABLE_STATIC=ON \
@@ -54,11 +54,7 @@ jobs:
             shell: bash
             # package_name: linux_gcc_x86_64
             artifact_path: build/*.zip
-            install: |
-              sudo apt-get update
-              sudo apt-get install -y ninja-build
             configure: |
-              -G Ninja \
               -DCMAKE_C_COMPILER=gcc \
               -DCMAKE_CXX_COMPILER=g++ \
               -DENABLE_STATIC=ON \
@@ -70,10 +66,7 @@ jobs:
             shell: bash
             package_name: macos_clang_arm64
             artifact_path: build/*.zip
-            install: |
-              brew install ninja
             configure: |
-              -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
               -DCMAKE_OSX_ARCHITECTURES="arm64" \
@@ -93,7 +86,6 @@ jobs:
               mingw-w64-clang-x86_64-ninja
               mingw-w64-clang-x86_64-git
             configure: |
-              -G Ninja \
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
               -DENABLE_STATIC=ON \
@@ -117,6 +109,10 @@ jobs:
       - name: Install dependencies
         if: ${{ matrix.config.install }}
         run: ${{ matrix.config.install }}
+
+      - name: Install CMake
+        if: ${{ matrix.config.shell != 'msys2 {0}' }}
+        uses: lukka/get-cmake@latest
 
       - name: Configure (Release)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
