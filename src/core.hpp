@@ -105,10 +105,9 @@ constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
 constexpr auto ENDIAN_BIG = (std::endian::native == std::endian::big);
 constexpr auto ENDIAN_LITTLE = !ENDIAN_BIG;
 
-template <typename T>
+template <std::integral T>
 constexpr T byteswap(T value) noexcept
 {
-  static_assert(std::is_integral_v<T>, "byteswap: integral required");
   static_assert(sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "byteswap: only 16/32/64-bit supported");
 
   if constexpr (sizeof(T) == 2)
@@ -1333,12 +1332,11 @@ struct Benchmarker
 // FNV-1a
 //
 
-template <typename Hash_Type>
+template <std::unsigned_integral Hash_Type>
 struct FNV1a
 {
   static constexpr size_t Hash_size = sizeof(Hash_Type);
 
-  static_assert(std::is_unsigned<Hash_Type>(), "FNV1a hash type must be an unsigned integral.");
   static_assert(Hash_size == 4 || Hash_size == 8, "FNV1a only supports 32-bit or 64-bit hash types.");
 
   static constexpr uint32_t FNV1a_Basis32 = 0x811c9dc5;
@@ -1428,10 +1426,9 @@ struct Iota
   Iterator _end;
 };
 
-template <typename T>
+template <std::integral T>
 std::pair<size_t, T> LargestElement(std::vector<T> input)
 {
-  static_assert(std::is_integral_v<T>, "LargestElement: integral required");
   auto value = std::max_element(input.begin(), input.end());
   auto index = std::distance(input.begin(), value);
   return std::pair<size_t, T>(index, *value);
