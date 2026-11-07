@@ -535,7 +535,7 @@ inline bool HasExtension(const char *filename)
 //
 inline size_t FindExtension(std::string_view filename)
 {
-  const size_t len = strlen(filename.data());
+  const size_t len = filename.length();
   if (len == 0)
   {
     return NO_INDEX;
