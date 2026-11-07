@@ -473,7 +473,6 @@ struct Level
   std::vector<Node *> nodes;
   std::vector<WallTip *> walltips;
   std::vector<Intersection *> intercuts;
-  BspFormat bsp_format = BspFormat::XNOD;
 
   uint8_t *reject_matrix;
   size_t reject_size;
@@ -502,6 +501,7 @@ struct Level
   Sector *NewSector(void);
   Mobj *NewThing(void);
 
+  Vertex *NewBspVertex(void);
   Segment *NewSeg(void);
   Subsector *NewSubsec(void);
   Node *NewNode(void);

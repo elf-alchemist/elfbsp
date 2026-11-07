@@ -65,7 +65,7 @@ static bool FileExists(std::string filename)
   return std::filesystem::exists(filename);
 }
 
-static bool CheckMapInRange(const map_range_t *range, std::string name)
+static bool CheckMapInRange(const map_range_t *range, std::string_view name)
 {
   if (name.size() != range->low.size())
   {
@@ -85,7 +85,7 @@ static bool CheckMapInRange(const map_range_t *range, std::string name)
   return true;
 }
 
-static bool CheckMapInMapList(std::string name)
+static bool CheckMapInMapList(std::string_view name)
 {
   // when --map is not used, allow everything
   if (map_list.empty())
@@ -160,8 +160,13 @@ static void VisitFile(std::string_view filename)
         }
 
         current = wad.LevelLastLump(current) + 1;
+
+        // Skip GlBsp lumps
+        if (wad.LumpName(current) == wad.GlBspHeaderName(level.lumps.label))
+        {
+          current = wad.GlBspLastLump(current) + 1;
+        }
       }
-      // TODO: process glbsp
       else
       {
         wad.CopyLump(current);

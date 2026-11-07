@@ -23,10 +23,35 @@
 #include "core.hpp"
 
 #include <cstdio>
+#include <string_view>
 
 //------------------------------------------------------------------------
 //  Utilities
 //------------------------------------------------------------------------
+
+//
+// BINARY MAP FORMAT:
+//   Apart from changes in the actual binary structures themselves, these are the externally visible lump names.
+//
+// There are 11 lumps in the Doom map format:
+//   things, linedefs, sidedefs, segs, subsectors, nodes, vertices, sectors, reject, blockmap
+//
+// The Hexen map format adds two after the standard 11 lumps:
+//   behavior, scripts
+//
+// The Doom 64 map adds four after the standard 11 lumps:
+//   leafs, lights, macros, scripts
+//
+// There are up to 6 GlBsp lumps:
+//   label, gl_vert, gl_nodes, gl_ssect, gl_segs, gl_pvs [historically optional]
+//
+// There are 6 Dlight lumps:
+//   label, cells, sunlight, surfaces, uv coords, lightmaps
+//
+
+static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
+
+static std::string_view format_name[] = {"ERROR", "Doom Format", "Hexen Format", "Doom64 Format", "UDMF"};
 
 constexpr uint32_t HAS_THINGS = BIT(0);
 constexpr uint32_t HAS_LINEDEFS = BIT(1);
@@ -130,7 +155,7 @@ WadIO::~WadIO(void)
 }
 
 // call only after seeking
-void WadIO::SafeRead(void *buffer, size_t size)
+void WadIO::SafeRead(void *buffer, size_t size) const
 {
   if (fread(buffer, 1, size, this->read_file) != size)
   {
@@ -143,13 +168,13 @@ size_t WadIO::NumLumps(void) const
   return this->read_directory.size();
 }
 
-const char *WadIO::LumpName(size_t lump_index) const
+std::string_view WadIO::LumpName(size_t lump_index) const
 {
   SYS_ASSERT(lump_index < this->NumLumps());
   static char name[9];
   strncpy(name, this->read_directory[lump_index].name, 8);
   name[8] = 0;
-  return name;
+  return std::string_view(name);
 }
 
 bool WadIO::IsLevelLump(size_t lump_index) const
@@ -172,12 +197,12 @@ bool WadIO::IsLevelLump(size_t lump_index) const
 
 bool WadIO::IsLevelTextmapFormat(size_t lump_index) const
 {
-  if (lump_index + LL_TEXTMAP >= this->NumLumps())
+  if (lump_index + 1 >= this->NumLumps())
   {
     return false;
   }
 
-  return (TEXTMAP == this->LumpName(lump_index + LL_TEXTMAP));
+  return (TEXTMAP == this->LumpName(lump_index + 1));
 }
 
 bool WadIO::IsLevel(size_t lump_index) const
@@ -265,9 +290,9 @@ size_t WadIO::LevelLastLump(size_t lump_index) const
   }
   else // all other binary formats
   {
-    while (count < MAX_LUMPS_IN_A_LEVEL             //
-           && lump_index + count < this->NumLumps() //
-           && IsLevelLump(lump_index + count))      //
+    while (count < MAX_LUMPS_IN_A_LEVEL              //
+           && lump_index + count < this->NumLumps()  //
+           && this->IsLevelLump(lump_index + count)) //
     {
       count++;
     }
@@ -297,6 +322,42 @@ size_t WadIO::LevelLookupLump(size_t lump_index, std::string_view name) const
 bool WadIO::LevelHasLump(size_t lump_index, std::string_view name) const
 {
   return this->LevelLookupLump(lump_index, name) != NO_INDEX;
+}
+
+std::string_view WadIO::GlBspHeaderName(size_t lump_index) const
+{
+  SYS_ASSERT(lump_index < this->NumLumps());
+  auto map_name = this->LumpName(lump_index);
+  if (map_name.size() > 5)
+  {
+    return "GL_LEVEL";
+  }
+  else
+  {
+    return std::string("GL_").append(map_name);
+  }
+}
+
+bool WadIO::IsGlBspLump(size_t lump_index) const
+{
+  if (lump_index >= this->NumLumps()) return false;
+  auto name = this->LumpName(lump_index);
+  return (name == "GL_VERT"     //
+          || name == "GL_SEGS"  //
+          || name == "GL_SSECT" //
+          || name == "GL_NODES" //
+          || name == "GL_PVS"); //
+}
+
+size_t WadIO::GlBspLastLump(size_t lump_index) const
+{
+  size_t gl_lump = lump_index;                               // starting at glbsp header count all glbsp lumps
+  for (size_t i = lump_index + 1; i < this->NumLumps(); i++) // all because gl_pvs was an optional extension added later
+  {                                                          // header can also have differing names
+    if (!this->IsGlBspLump(i)) break;                        //
+    gl_lump++;                                               //
+  }
+  return gl_lump;
 }
 
 //
