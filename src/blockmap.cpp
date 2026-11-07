@@ -110,7 +110,7 @@ void Blockmap_Init(Level &level, BlockMap &bmap)
 
   if (config.verbose)
   {
-    PrintLine(Log::NORMAL, "[{}] Map limits: ({},{}) to ({},{})", __func__, bbox.minx, bbox.miny, bbox.maxx, bbox.maxy);
+    PrintLine(Log::NORMAL, "[{}] Map limits: ({},{}) to ({},{})", __func__, +bbox.minx, +bbox.miny, +bbox.maxx, +bbox.maxy);
     PrintLine(Log::NORMAL, "[{}] Origins are at ({},{})", __func__, bmap.origin_x, bmap.origin_y);
     PrintLine(Log::NORMAL, "[{}] There are {} columns and {} rows, totalling {} cells", __func__, bmap.columns, bmap.rows,
               bmap.BlockCount());
