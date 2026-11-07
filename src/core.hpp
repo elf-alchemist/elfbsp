@@ -44,7 +44,7 @@
 #include <source_location>
 #include <vector>
 
-#include "zlib-ng.h"
+#include <zlib-ng.h>
 
 //
 //  OS support
