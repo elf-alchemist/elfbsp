@@ -445,7 +445,7 @@ void WadIO::AddToLumpZ(const void *data, size_t length)
 
 void WadIO::Finish_Zlib(void)
 {
-  SYS_ASSERT(this->zout_stream.avail_out > 0)
+  SYS_ASSERT(this->zout_stream.avail_out > 0);
   size_t left_over;
   this->zlib_init = false;
 

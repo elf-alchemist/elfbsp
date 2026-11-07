@@ -41,6 +41,7 @@
 #include <bit>
 #include <chrono>
 #include <limits>
+#include <source_location>
 #include <vector>
 
 #include "zlib-ng.h"
@@ -327,8 +328,13 @@ std::runtime_error RuntimeException(std::format_string<Args...> fmt, Args... arg
 //
 // Assertion macros
 //
-#define SYS_ASSERT(cond) \
-  (cond) ? (void)0 : throw RuntimeException("Assertion failed! In function {} ({})", __func__, __FILE__, __LINE__);
+constexpr void SYS_ASSERT(bool cond, std::source_location loc = std::source_location::current())
+{
+  if (!cond)
+  {
+    throw RuntimeException("Assertion failed! In function {} ({}:{})", loc.function_name(), loc.file_name(), loc.line());
+  }
+}
 
 //
 // Version info
