@@ -87,7 +87,7 @@ void RunTeam(size_t threadCount, Body &&body)
 {
   TeamSync team(threadCount);
 
-  std::vector<std::thread> threads;
+  std::vector<std::jthread> threads;
   threads.reserve(threadCount - 1);
 
   for (size_t threadIndex = 1; threadIndex < threadCount; ++threadIndex)
@@ -96,9 +96,4 @@ void RunTeam(size_t threadCount, Body &&body)
   }
 
   body(static_cast<size_t>(0), team);
-
-  for (auto &thread : threads)
-  {
-    thread.join();
-  }
 }
