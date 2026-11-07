@@ -27,6 +27,7 @@
 #include "wad.hpp"
 
 #include <cstring>
+#include <filesystem>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -61,14 +62,7 @@ BuildInfo config;
 
 static bool FileExists(std::string filename)
 {
-
-  if (FILE *fp = fopen(filename.c_str(), "rb"))
-  {
-    fclose(fp);
-    return true;
-  }
-
-  return false;
+  return std::filesystem::exists(filename);
 }
 
 static bool CheckMapInRange(const map_range_t *range, std::string name)
