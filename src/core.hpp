@@ -340,12 +340,11 @@ constexpr void SYS_ASSERT(bool cond, std::source_location loc = std::source_loca
 // Version info
 //
 
-#define VERSION_INFO                            \
-  PROJECT_NAME " version " PROJECT_VERSION "\n" \
-               "Branch: " GIT_BRANCH "\n"       \
-               "Timestamp: " PROJECT_DATE "\n"  \
-               "Revision: " GIT_REV_COUNT "\n"  \
-               "Commit: " GIT_SHORT_HASH "\n"
+inline constexpr std::string_view VERSION_INFO = PROJECT_NAME " version " PROJECT_VERSION "\n"
+                                                              "Branch: " GIT_BRANCH "\n"
+                                                              "Timestamp: " PROJECT_DATE "\n"
+                                                              "Revision: " GIT_REV_COUNT "\n"
+                                                              "Commit: " GIT_SHORT_HASH "\n";
 
 //------------------------------------------------------------------------
 // MEMORY ALLOCATION
