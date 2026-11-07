@@ -138,7 +138,7 @@ jobs:
           ${{ matrix.config.configure }}
 
       - name: Run Clang-Tidy
-        if: ${{ matrix.config.package_name == 'linux_clang_x86_64' }}
+        if: ${{ matrix.config.package_name == 'linux_x86_64' }}
         uses: cpp-linter/cpp-linter-action@v2
         id: cpp-linter
         env:
