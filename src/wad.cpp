@@ -57,8 +57,8 @@ static const std::string_view ENDMAP = "ENDMAP";
 WadIO::WadIO(std::string in_file, std::string out_file)
 {
   // Input stuff
-  this->read_file = fopen(in_file.c_str(), "rb");
-  if (this->read_file == NULL)
+  this->read_file.open(in_file, std::ios::binary);
+  if (this->read_file.fail())
   {
     throw RuntimeException("Could not open input file");
   }
@@ -70,15 +70,15 @@ WadIO::WadIO(std::string in_file, std::string out_file)
       && this->read_header.ident[2] != 'A' //
       && this->read_header.ident[3] != 'D')
   {
-    fclose(this->read_file);
-    this->read_file = NULL;
+    this->read_file.close();
     throw RuntimeException("Input file is not a wad");
   }
 
   auto num_entries = GetLittleEndian(this->read_header.num_entries);
   auto dir_start = GetLittleEndian(this->read_header.dir_start);
 
-  if (fseek(this->read_file, dir_start, SEEK_SET))
+  this->read_file.seekg(dir_start);
+  if (this->read_file.fail())
   {
     throw RuntimeException("Could not read wad directory");
   }
@@ -93,8 +93,8 @@ WadIO::WadIO(std::string in_file, std::string out_file)
   }
 
   // Output stuff
-  this->write_file = fopen(out_file.c_str(), "wb");
-  if (this->write_file == NULL)
+  this->write_file.open(out_file, std::ios::binary);
+  if (this->write_file.fail())
   {
     throw RuntimeException("Could not open output file");
   }
@@ -112,27 +112,27 @@ WadIO::WadIO(std::string in_file, std::string out_file)
 WadIO::~WadIO(void)
 {
   // Input stuff
-  fclose(this->read_file);
+  this->read_file.close();
   this->read_directory.clear();
 
   // Output stuff
   auto num_entries = GetLittleEndian(IndexToUInt(this->write_directory.size()));
-  auto dir_start = GetLittleEndian(static_cast<uint32_t>(ftell(this->write_file)));
+  auto dir_start = GetLittleEndian(static_cast<uint32_t>(this->write_file.tellp()));
 
   this->SafeWrite(this->write_directory.data(), sizeof(WadLump) * this->write_directory.size());
 
-  fseek(this->write_file, sizeof(char[4]), SEEK_SET);
+  this->write_file.seekp(sizeof(char[4]));
   this->SafeWrite(&num_entries, sizeof(num_entries));
   this->SafeWrite(&dir_start, sizeof(dir_start));
-  fclose(this->write_file);
-
-  this->write_file = NULL;
+  this->write_file.close();
 }
 
 // call only after seeking
 void WadIO::SafeRead(void *buffer, size_t size)
 {
-  if (fread(buffer, 1, size, this->read_file) != size)
+  this->read_file.read(static_cast<char *>(buffer), static_cast<std::streamsize>(size));
+
+  if (this->read_file.fail())
   {
     throw RuntimeException("Failed to read");
   }
@@ -304,10 +304,10 @@ bool WadIO::LevelHasLump(size_t lump_index, std::string_view name) const
 //
 void WadIO::SafeWrite(const void *buffer, size_t size)
 {
-  if (fwrite(buffer, 1, size, write_file) != size)
+  this->write_file.write(static_cast<const char *>(buffer), static_cast<std::streamsize>(size));
+
+  if (this->write_file.fail())
   {
-    fclose(this->write_file);
-    this->write_file = NULL;
     throw RuntimeException("Failed to write. Check that this directory is writable and that you have enough free disk space.");
   }
 }
@@ -316,7 +316,7 @@ void WadIO::CreateEmptyLump(std::string_view name)
 {
   WadLump lump;
   CopyLumpCString(lump.name, name.data());
-  lump.pos = static_cast<int32_t>(GetLittleEndian(ftell(this->write_file)));
+  lump.pos = GetLittleEndian(static_cast<int32_t>(this->write_file.tellp()));
   lump.size = 0;
   this->write_directory.push_back(lump);
 }
@@ -325,7 +325,7 @@ void WadIO::WriteLump(std::string_view name, const void *data, size_t size)
 {
   WadLump lump;
   CopyLumpCString(lump.name, name.data());
-  lump.pos = static_cast<int32_t>(GetLittleEndian(ftell(this->write_file)));
+  lump.pos = GetLittleEndian(static_cast<int32_t>(this->write_file.tellp()));
   lump.size = IndexToInt(size);
   this->write_directory.push_back(lump);
   this->SafeWrite(data, size);
