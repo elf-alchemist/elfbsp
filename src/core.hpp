@@ -92,13 +92,8 @@ constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
     #define PACKEDATTR __attribute__((packed))
   #endif
 
-  #define PRINTF_ATTR(fmt, first) __attribute__((format(printf, fmt, first)))
-  #define PRINTF_ARG_ATTR(x)      __attribute__((format_arg(x)))
-
 #else
   #define PACKEDATTR
-  #define PRINTF_ATTR(fmt, first)
-  #define PRINTF_ARG_ATTR(x)
 #endif
 
 // endianness
