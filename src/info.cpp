@@ -18,6 +18,7 @@
 //
 //------------------------------------------------------------------------------
 
+#include <filesystem>
 #include <format>
 #include <fstream>
 
@@ -28,26 +29,16 @@ static std::vector<std::string> analysis_csv;
 
 //------------------------------------------------------------------------
 
-static void FileClear(std::string_view filename)
+static void FileClear(const std::filesystem::path &filename)
 {
-  if (FILE *fp = fopen(filename.data(), "w"))
-  {
-    fclose(fp);
-  }
+  std::ofstream file(filename);
 }
 
 void SetupAnalysisFile(std::string_view filepath)
 {
-  auto csv_path = std::string(filepath);
+  const auto csv_path = std::filesystem::path(filepath).replace_extension(".csv");
 
-  auto ext_pos = FindExtension(filepath);
-  if (ext_pos > 0)
-  {
-    csv_path.resize(ext_pos);
-  }
-
-  csv_path += ".csv";
-  FileClear(csv_path.c_str());
+  FileClear(csv_path);
 
   std::string line = "map,is_fast,split_cost,old_vertex,lines,sides,sectors,new_vertex,nodes,subsecs,segs,splits,left_depth,"
                      "right_depth,average_depth,optimal_depth,tree_balance,worst_case_ratio,tree_quality";
@@ -59,21 +50,14 @@ void SetupAnalysisFile(std::string_view filepath)
 void WriteAnalysis(std::string_view filename)
 {
   auto mark = Benchmarker(__func__);
-  auto csv_path = std::string(filename);
-
-  if (const auto ext_pos = FindExtension(filename); ext_pos > 0)
-  {
-    csv_path.resize(ext_pos);
-  }
-
-  csv_path += ".csv";
+  const auto csv_path = std::filesystem::path(filename).replace_extension(".csv");
 
   // Append to fresh CSV
-  auto csv_file = std::ofstream(csv_path.c_str(), std::ios::app);
+  auto csv_file = std::ofstream(csv_path, std::ios::app);
 
   if (!csv_file.is_open())
   {
-    PrintLine(Log::WARN, "[{}] Couldn't open file {} for writing.", __func__, csv_path.c_str());
+    PrintLine(Log::WARN, "[{}] Couldn't open file {} for writing.", __func__, csv_path.string());
     return;
   }
 
@@ -87,7 +71,7 @@ void WriteAnalysis(std::string_view filename)
   // Flush out from memory
   analysis_csv.clear();
 
-  PrintLine(Log::NORMAL, "[{}] Successfully wrote data to CSV file {}.", __func__, csv_path.c_str());
+  PrintLine(Log::NORMAL, "[{}] Successfully wrote data to CSV file {}.", __func__, csv_path.string());
 }
 
 static void ComputeTotalBspHeights(const Node *node, size_t depth, double &leaf_depth_sum)

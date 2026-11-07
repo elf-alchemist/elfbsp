@@ -37,12 +37,15 @@
 #include <cstdio>
 #include <cstring>
 
+#include <algorithm>
 #include <bit>
 #include <chrono>
 #include <limits>
+#include <numbers>
+#include <source_location>
 #include <vector>
 
-#include "zlib-ng.h"
+#include <zlib-ng.h>
 
 //
 //  OS support
@@ -90,25 +93,17 @@ constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
     #define PACKEDATTR __attribute__((packed))
   #endif
 
-  #define PRINTF_ATTR(fmt, first) __attribute__((format(printf, fmt, first)))
-  #define PRINTF_ARG_ATTR(x)      __attribute__((format_arg(x)))
-  #define NORETURN                __attribute__((noreturn))
-
 #else
   #define PACKEDATTR
-  #define PRINTF_ATTR(fmt, first)
-  #define PRINTF_ARG_ATTR(x)
-  #define NORETURN
 #endif
 
 // endianness
 constexpr auto ENDIAN_BIG = (std::endian::native == std::endian::big);
 constexpr auto ENDIAN_LITTLE = !ENDIAN_BIG;
 
-template <typename T>
+template <std::integral T>
 constexpr T byteswap(T value) noexcept
 {
-  static_assert(std::is_integral_v<T>, "byteswap: integral required");
   static_assert(sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "byteswap: only 16/32/64-bit supported");
 
   if constexpr (sizeof(T) == 2)
@@ -303,25 +298,6 @@ enum Debug : uint32_t
   DEBUG_WAD = BIT(13),
 };
 
-// Safe, portable vsnprintf().
-inline int32_t PRINTF_ATTR(2, 0) M_vsnprintf(char *buf, const char *s, va_list args)
-{
-  // Windows (and other OSes?) has a vsnprintf() that doesn't always
-  // append a trailing \0. So we must do it, and write into a buffer
-  // that is one byte shorter; otherwise this function is unsafe.
-  int32_t result = vsnprintf(buf, MSG_BUFFER_LENGTH, s, args);
-
-  // If truncated, change the final char in the buffer to a \0.
-  // A negative result indicates a truncated buffer on Windows.
-  if (result < 0 || result >= static_cast<int32_t>(MSG_BUFFER_LENGTH))
-  {
-    buf[MSG_BUFFER_LENGTH - 1] = '\0';
-    result = static_cast<int32_t>(MSG_BUFFER_LENGTH) - 1;
-  }
-
-  return result;
-}
-
 //
 //  show a message
 //
@@ -348,19 +324,23 @@ std::runtime_error RuntimeException(std::format_string<Args...> fmt, Args... arg
 //
 // Assertion macros
 //
-#define SYS_ASSERT(cond) \
-  (cond) ? (void)0 : throw RuntimeException("Assertion failed! In function {} ({})", __func__, __FILE__, __LINE__);
+constexpr void SYS_ASSERT(bool cond, std::source_location loc = std::source_location::current())
+{
+  if (!cond)
+  {
+    throw RuntimeException("Assertion failed! In function {} ({}:{})", loc.function_name(), loc.file_name(), loc.line());
+  }
+}
 
 //
 // Version info
 //
 
-#define VERSION_INFO                            \
-  PROJECT_NAME " version " PROJECT_VERSION "\n" \
-               "Branch: " GIT_BRANCH "\n"       \
-               "Timestamp: " PROJECT_DATE "\n"  \
-               "Revision: " GIT_REV_COUNT "\n"  \
-               "Commit: " GIT_SHORT_HASH "\n"
+inline constexpr std::string_view VERSION_INFO = PROJECT_NAME " version " PROJECT_VERSION "\n"
+                                                              "Branch: " GIT_BRANCH "\n"
+                                                              "Timestamp: " PROJECT_DATE "\n"
+                                                              "Revision: " GIT_REV_COUNT "\n"
+                                                              "Commit: " GIT_SHORT_HASH "\n";
 
 //------------------------------------------------------------------------
 // MEMORY ALLOCATION
@@ -436,12 +416,12 @@ inline int32_t StringCmp(const char *s1, const char *s2)
 
 inline void StringToLower(std::string &str)
 {
-  std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::tolower(c); });
+  std::ranges::transform(str, str.begin(), [](unsigned char c) { return std::tolower(c); });
 }
 
 inline void StringToUpper(std::string &str)
 {
-  std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::toupper(c); });
+  std::ranges::transform(str, str.begin(), [](unsigned char c) { return std::toupper(c); });
 }
 
 inline char CToUpper(const char c)
@@ -485,89 +465,6 @@ inline void CopyLumpCString(char *dest, const char *src)
 }
 
 //------------------------------------------------------------------------
-//  FILENAMES
-//------------------------------------------------------------------------
-
-inline bool HasExtension(const char *filename)
-{
-  const size_t len = strlen(filename);
-  if (len == 0)
-  {
-    return false;
-  }
-
-  // Trailing dot → no extension
-  if (filename[len - 1] == '.')
-  {
-    return false;
-  }
-
-  for (size_t i = len; i-- > 0;)
-  {
-    const char ch = filename[i];
-
-    if (ch == '.')
-    {
-      return true;
-    }
-
-    if (ch == DIR_SEP_CH)
-    {
-      break;
-    }
-
-    if constexpr (WINDOWS)
-    {
-      if (ch == ':')
-      {
-        break;
-      }
-    }
-  }
-
-  return false;
-}
-
-//
-// FindExtension
-//
-// Return offset of the '.', or NO_INDEX when no extension was found.
-//
-inline size_t FindExtension(std::string_view filename)
-{
-  const size_t len = strlen(filename.data());
-  if (len == 0)
-  {
-    return NO_INDEX;
-  }
-
-  for (size_t pos = len; pos-- > 0;)
-  {
-    const char ch = filename[pos];
-
-    if (ch == '.')
-    {
-      return pos;
-    }
-
-    if (ch == DIR_SEP_CH)
-    {
-      break;
-    }
-
-    if constexpr (WINDOWS)
-    {
-      if (ch == ':')
-      {
-        break;
-      }
-    }
-  }
-
-  return NO_INDEX;
-}
-
-//------------------------------------------------------------------------
 // MATH STUFF
 //------------------------------------------------------------------------
 
@@ -577,13 +474,13 @@ inline size_t FindExtension(std::string_view filename)
 //
 inline double ComputeAngle(double dx, double dy)
 {
-  const double angle = atan2(dy, dx) * 180.0 / M_PI;
+  const double angle = atan2(dy, dx) * 180.0 / std::numbers::pi;
   return angle + (angle < 0.0) * 360.0;
 }
 
 inline short_angle_t ComputeAngle_BAM(double dx, double dy)
 {
-  double angle = atan2(dy, dx) * 180.0 / M_PI;
+  double angle = atan2(dy, dx) * 180.0 / std::numbers::pi;
   angle = angle + (angle < 0.0) * 360.0;
   return static_cast<short_angle_t>(floor(angle * FRACFACTOR / 360.0 + 0.5));
 }
@@ -1333,12 +1230,11 @@ struct Benchmarker
 // FNV-1a
 //
 
-template <typename Hash_Type>
+template <std::unsigned_integral Hash_Type>
 struct FNV1a
 {
   static constexpr size_t Hash_size = sizeof(Hash_Type);
 
-  static_assert(std::is_unsigned<Hash_Type>(), "FNV1a hash type must be an unsigned integral.");
   static_assert(Hash_size == 4 || Hash_size == 8, "FNV1a only supports 32-bit or 64-bit hash types.");
 
   static constexpr uint32_t FNV1a_Basis32 = 0x811c9dc5;
@@ -1428,11 +1324,10 @@ struct Iota
   Iterator _end;
 };
 
-template <typename T>
+template <std::integral T>
 std::pair<size_t, T> LargestElement(std::vector<T> input)
 {
-  static_assert(std::is_integral_v<T>, "LargestElement: integral required");
-  auto value = std::max_element(input.begin(), input.end());
+  auto value = std::ranges::max_element(input);
   auto index = std::distance(input.begin(), value);
   return std::pair<size_t, T>(index, *value);
 }

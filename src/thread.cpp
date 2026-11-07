@@ -27,24 +27,3 @@ size_t ChooseThreadCount()
 {
   return std::max<size_t>(1, std::thread::hardware_concurrency());
 }
-
-// Every thread of the team must call this. It returns once all of them have finished.
-void TeamSync::Wait()
-{
-  std::unique_lock<std::mutex> lock(mutex_);
-  const size_t myGeneration = generation_;
-
-  if (++arrived_ == threadCount_)
-  {
-    arrived_ = 0;
-    ++generation_;
-    wakeUp_.notify_all();
-  }
-  else
-  {
-    wakeUp_.wait(lock, [&]()
-    {
-      return generation_ != myGeneration;
-    });
-  }
-}

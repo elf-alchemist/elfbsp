@@ -23,6 +23,7 @@
 //------------------------------------------------------------------------------
 
 #include <algorithm>
+#include <atomic>
 
 #include "core.hpp"
 #include "local.hpp"
@@ -33,8 +34,8 @@
   #define WIN32_LEAN_AND_MEAN
   #include <windows.h>
 #else
-  #include <unistd.h>
   #include <sys/resource.h>
+  #include <unistd.h>
 #endif
 
 //------------------------------------------------------------------------
@@ -146,13 +147,7 @@ struct SightSegment
   bool solid = false; // one-sided line; only used to prune rays
 
   SightSegment(double ax, double ay, double bx, double by)
-      : x1(ax),
-        y1(ay),
-        x2(bx),
-        y2(by),
-        minX(std::min(ax, bx)),
-        maxX(std::max(ax, bx)),
-        minY(std::min(ay, by)),
+      : x1(ax), y1(ay), x2(bx), y2(by), minX(std::min(ax, bx)), maxX(std::max(ax, bx)), minY(std::min(ay, by)),
         maxY(std::max(ay, by))
   {
   }
@@ -189,17 +184,13 @@ struct SectorBBox
 };
 
 // Removes coordinate duplicates and sort points along the X-axis.
-static void SortUnique(std::vector<SightPoint>& points)
+static void SortUnique(std::vector<SightPoint> &points)
 {
-  std::sort(points.begin(), points.end(), [](const SightPoint& a, const SightPoint& b)
-  {
-    return a.x < b.x || (a.x == b.x && a.y < b.y);
-  });
+  std::ranges::sort(points, [](const SightPoint &a, const SightPoint &b) { return a.x < b.x || (a.x == b.x && a.y < b.y); });
 
-  points.erase(std::unique(points.begin(), points.end(), [](const SightPoint& a, const SightPoint& b)
-  {
-    return a.x == b.x && a.y == b.y;
-  }), points.end());
+  points.erase(std::unique(points.begin(), points.end(),
+                           [](const SightPoint &a, const SightPoint &b) { return a.x == b.x && a.y == b.y; }),
+               points.end());
 }
 
 // Number of parts each open line is cut into. A split of N gives N - 1 points per open line,
@@ -226,11 +217,11 @@ static constexpr uint64_t OPEN_SPLIT_RAY_BUDGET = 50000000;
 
 // This extracts and groups unique locations (corners, open door frames, etc.) exactly once.
 // This will shift heavy allocation and duplication entirely out of the inner loops.
-static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines, int32_t split)
+static SectorPoints BuildSectorPoints(const std::vector<SightSegment> &lines, int32_t split)
 {
   SectorPoints points;
 
-  for (const auto& line : lines)
+  for (const auto &line : lines)
   {
     // Log absolute raw corner coordinates.
     points.verts.push_back({line.x1, line.y1});
@@ -269,7 +260,7 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines, in
   {
     double cx = 0.0;
     double cy = 0.0;
-    for (const auto& v : points.verts)
+    for (const auto &v : points.verts)
     {
       cx += v.x;
       cy += v.y;
@@ -277,16 +268,14 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment>& lines, in
     cx /= static_cast<double>(points.verts.size());
     cy /= static_cast<double>(points.verts.size());
 
-    auto byAngle = [cx, cy](const SightPoint& a, const SightPoint& b)
-    {
-      return std::atan2(a.y - cy, a.x - cx) < std::atan2(b.y - cy, b.x - cx);
-    };
+    auto byAngle = [cx, cy](const SightPoint &a, const SightPoint &b)
+    { return std::atan2(a.y - cy, a.x - cx) < std::atan2(b.y - cy, b.x - cx); };
 
-    std::sort(points.verts.begin(), points.verts.end(), byAngle);
-    std::sort(points.firstVerts.begin(), points.firstVerts.end(), byAngle);
-    std::sort(points.openMids.begin(), points.openMids.end(), byAngle);
-    std::sort(points.openSplit.begin(), points.openSplit.end(), byAngle);
-    std::sort(points.allMids.begin(), points.allMids.end(), byAngle);
+    std::ranges::sort(points.verts, byAngle);
+    std::ranges::sort(points.firstVerts, byAngle);
+    std::ranges::sort(points.openMids, byAngle);
+    std::ranges::sort(points.openSplit, byAngle);
+    std::ranges::sort(points.allMids, byAngle);
   }
 
   return points;
@@ -328,9 +317,7 @@ struct alignas(64) RayWalkSpace
   uint64_t cellSteps = 0;           // Grid cells walked by those rays
   std::vector<uint64_t> sectorRays; // Rays tested for each sector, both sectors of a pair get the rays
 
-  RayWalkSpace(size_t blockerCount, size_t sectorCount)
-      : seen(blockerCount, 0),
-        sectorRays(sectorCount, 0)
+  RayWalkSpace(size_t blockerCount, size_t sectorCount) : seen(blockerCount, 0), sectorRays(sectorCount, 0)
   {
   }
 
@@ -339,7 +326,7 @@ struct alignas(64) RayWalkSpace
   {
     if (++stamp == 0) // Wrapped around? Clear and restart.
     {
-      std::fill(seen.begin(), seen.end(), 0);
+      std::ranges::fill(seen, 0);
       stamp = 1;
     }
     return stamp;
@@ -379,10 +366,8 @@ static inline size_t GetCellIndex(double v, double origin, size_t limit, double 
 
 // Each blocker is registered in every cell its
 // padded bounding box covers, same coverage as the old vector-of-vectors grid.
-static BlockerGrid BuildBlockerGrid(const std::vector<SightSegment>& blockers,
-                                    double originX, double originY,
-                                    size_t cols, size_t rows,
-                                    double cellSize, double padding)
+static BlockerGrid BuildBlockerGrid(const std::vector<SightSegment> &blockers, double originX, double originY, size_t cols,
+                                    size_t rows, double cellSize, double padding)
 {
   BlockerGrid grid;
   grid.originX = originX;
@@ -393,7 +378,7 @@ static BlockerGrid BuildBlockerGrid(const std::vector<SightSegment>& blockers,
   grid.cellStart.assign(cols * rows + 1, 0);
 
   // Calls (cellIndex) for every cell the blocker's padded bbox covers.
-  auto forEachCell = [&](const SightSegment& s, auto&& fn)
+  auto forEachCell = [&](const SightSegment &s, auto &&fn)
   {
     const size_t x0 = GetCellIndex(s.minX - padding, originX, cols - 1, cellSize);
     const size_t x1 = GetCellIndex(s.maxX + padding, originX, cols - 1, cellSize);
@@ -410,7 +395,7 @@ static BlockerGrid BuildBlockerGrid(const std::vector<SightSegment>& blockers,
   };
 
   // Count entries per cell.
-  for (const auto& b : blockers)
+  for (const auto &b : blockers)
   {
     forEachCell(b, [&](size_t cell) { grid.cellStart[cell + 1]++; });
   }
@@ -427,10 +412,7 @@ static BlockerGrid BuildBlockerGrid(const std::vector<SightSegment>& blockers,
 
   for (size_t i = 0; i < blockers.size(); ++i)
   {
-    forEachCell(blockers[i], [&](size_t cell)
-    {
-      grid.items[fillPos[cell]++] = static_cast<uint32_t>(i);
-    });
+    forEachCell(blockers[i], [&](size_t cell) { grid.items[fillPos[cell]++] = static_cast<uint32_t>(i); });
   }
 
   return grid;
@@ -461,15 +443,15 @@ static constexpr double SIDE_MARGIN = 1e-3;
 static constexpr double SHADOW_MARGIN = SIDE_MARGIN * 2.0;
 
 // 2D intersection check between two line segments.
-inline bool TrueSegmentsIntersect(const SightSegment& s1, const SightSegment& s2)
+inline bool TrueSegmentsIntersect(const SightSegment &s1, const SightSegment &s2)
 {
   double d1 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1);
   double d2 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x2, s1.y2);
   double d3 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x1, s2.y1);
   double d4 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x2, s2.y2);
 
-  if (((d1 > SIDE_MARGIN && d2 < -SIDE_MARGIN) || (d1 < -SIDE_MARGIN && d2 > SIDE_MARGIN)) &&
-      ((d3 > SIDE_MARGIN && d4 < -SIDE_MARGIN) || (d3 < -SIDE_MARGIN && d4 > SIDE_MARGIN)))
+  if (((d1 > SIDE_MARGIN && d2 < -SIDE_MARGIN) || (d1 < -SIDE_MARGIN && d2 > SIDE_MARGIN))
+      && ((d3 > SIDE_MARGIN && d4 < -SIDE_MARGIN) || (d3 < -SIDE_MARGIN && d4 > SIDE_MARGIN)))
   {
     return true;
   }
@@ -494,18 +476,17 @@ inline bool TrueSegmentsIntersect(const SightSegment& s1, const SightSegment& s2
 
 // Does this solid wall stop this ray? Shared by the grid walk, the ring and the
 // end-point pre-check so all three always agree.
-static inline bool SolidBlocksRay(const SightSegment& ray, const SightSegment& blocker)
+static inline bool SolidBlocksRay(const SightSegment &ray, const SightSegment &blocker)
 {
   // AABB check, skip instantly if the blocker's bounding box does not overlap the ray's span.
-  if (blocker.maxX < ray.minX || blocker.minX > ray.maxX ||
-      blocker.maxY < ray.minY || blocker.minY > ray.maxY)
+  if (blocker.maxX < ray.minX || blocker.minX > ray.maxX || blocker.maxY < ray.minY || blocker.minY > ray.maxY)
   {
     return false;
   }
 
   // Ignore intersection tests if the sight ray is touching the exact corner vertex.
-  if ((std::abs(ray.x1 - blocker.x1) < DIST_EPSILON && std::abs(ray.y1 - blocker.y1) < DIST_EPSILON) ||
-      (std::abs(ray.x1 - blocker.x2) < DIST_EPSILON && std::abs(ray.y1 - blocker.y2) < DIST_EPSILON))
+  if ((std::abs(ray.x1 - blocker.x1) < DIST_EPSILON && std::abs(ray.y1 - blocker.y1) < DIST_EPSILON)
+      || (std::abs(ray.x1 - blocker.x2) < DIST_EPSILON && std::abs(ray.y1 - blocker.y2) < DIST_EPSILON))
   {
     return false;
   }
@@ -516,11 +497,8 @@ static inline bool SolidBlocksRay(const SightSegment& ray, const SightSegment& b
 // Is ray blocked by any solid walls?
 // Walks only the grid cells the ray passes through DDA,
 // so each ray is tested against nearby blockers instead of a gathered list.
-static bool IsRayBlocked(const SightSegment& ray,
-                         const std::vector<SightSegment>& blockers,
-                         const BlockerGrid& grid,
-                         RayWalkSpace& scratch,
-                         double maxRayLengthSq)
+static bool IsRayBlocked(const SightSegment &ray, const std::vector<SightSegment> &blockers, const BlockerGrid &grid,
+                         RayWalkSpace &scratch, double maxRayLengthSq)
 {
   const double dx = ray.x2 - ray.x1;
   const double dy = ray.y2 - ray.y1;
@@ -531,10 +509,7 @@ static bool IsRayBlocked(const SightSegment& ray,
 
   // The same checks apply to every candidate blocker, whether it comes from
   // the recent-blocker ring or from the grid walk below.
-  auto blocks = [&ray](const SightSegment& blocker) -> bool
-  {
-    return SolidBlocksRay(ray, blocker);
-  };
+  auto blocks = [&ray](const SightSegment &blocker) -> bool { return SolidBlocksRay(ray, blocker); };
 
   // Try the walls that stopped the previous rays first. This is only a reordering of
   // the same tests, so a ray is blocked here only if the full walk would also block it.
@@ -553,9 +528,7 @@ static bool IsRayBlocked(const SightSegment& ray,
   const double fy = (ray.y1 - grid.originY) * inv;
 
   auto clampCell = [](double v, ptrdiff_t limit) -> ptrdiff_t
-  {
-    return static_cast<ptrdiff_t>(std::clamp(std::floor(v), 0.0, static_cast<double>(limit)));
-  };
+  { return static_cast<ptrdiff_t>(std::clamp(std::floor(v), 0.0, static_cast<double>(limit))); };
 
   // Cell holding the ray start, and cell holding the ray end.
   ptrdiff_t cx = clampCell(fx, grid.cols - 1);
@@ -571,9 +544,9 @@ static bool IsRayBlocked(const SightSegment& ray,
   // and how much t advances per whole cell. An axis with no movement never advances.
   constexpr double kInf = std::numeric_limits<double>::infinity();
 
-  double tMaxX   = kInf;
+  double tMaxX = kInf;
   double tDeltaX = kInf;
-  double tMaxY   = kInf;
+  double tMaxY = kInf;
   double tDeltaY = kInf;
 
   if (stepX != 0)
@@ -621,9 +594,11 @@ static bool IsRayBlocked(const SightSegment& ray,
     // Step into the neighboring cell whose border the ray reaches first.
     // Once a row or column matches the end cell, only the other axis can move.
     bool stepInX;
-    if (cx == endCx)      stepInX = false;
-    else if (cy == endCy) stepInX = true;
-    else                  stepInX = tMaxX < tMaxY;
+    if (cx == endCx) stepInX = false;
+    else if (cy == endCy)
+      stepInX = true;
+    else
+      stepInX = tMaxX < tMaxY;
 
     if (stepInX)
     {
@@ -643,7 +618,7 @@ static bool IsRayBlocked(const SightSegment& ray,
 // Which side of a wall do all four corners of a box fall on?
 // Returns 1 when every corner is clearly on the positive side, -1 when every corner is clearly
 // on the negative side, and 0 when the wall does not cleanly separate the box.
-static inline int32_t BoxSideOfWall(const SightSegment& wall, const SectorBBox& box)
+static inline int32_t BoxSideOfWall(const SightSegment &wall, const SectorBBox &box)
 {
   // Twice the margin TrueSegmentsIntersect uses, so rounding can never make this shortcut
   // accept a ray that the original test would not call blocked.
@@ -673,7 +648,7 @@ static inline int32_t BoxSideOfWall(const SightSegment& wall, const SectorBBox& 
 // therefore crosses the rays to every point inside the box.
 // If the wall properly crosses the rays to all four corners, it crosses the rays to every point inside the box.
 // 'boxSide' is BoxSideOfWall, passed in because it does not depend on the start point.
-static inline bool WallShadowsBox(const SightSegment& wall, int32_t boxSide, double px, double py, const SectorBBox& box)
+static inline bool WallShadowsBox(const SightSegment &wall, int32_t boxSide, double px, double py, const SectorBBox &box)
 {
   constexpr double MARGIN = 2e-3; // Same reasoning as in BoxSideOfWall
 
@@ -683,8 +658,8 @@ static inline bool WallShadowsBox(const SightSegment& wall, int32_t boxSide, dou
   }
 
   // A ray starting on the wall's own end point is ignored by that wall.
-  if ((std::abs(px - wall.x1) < DIST_EPSILON && std::abs(py - wall.y1) < DIST_EPSILON) ||
-      (std::abs(px - wall.x2) < DIST_EPSILON && std::abs(py - wall.y2) < DIST_EPSILON))
+  if ((std::abs(px - wall.x1) < DIST_EPSILON && std::abs(py - wall.y1) < DIST_EPSILON)
+      || (std::abs(px - wall.x2) < DIST_EPSILON && std::abs(py - wall.y2) < DIST_EPSILON))
   {
     return false;
   }
@@ -707,7 +682,7 @@ static inline bool WallShadowsBox(const SightSegment& wall, int32_t boxSide, dou
   bool posNeg = true;
   bool negPos = true;
 
-    for (int32_t j = 0; j < 4; ++j)
+  for (int32_t j = 0; j < 4; ++j)
   {
     const double cx = cornerX[j] - px;
     const double cy = cornerY[j] - py;
@@ -723,15 +698,9 @@ static inline bool WallShadowsBox(const SightSegment& wall, int32_t boxSide, dou
 
 // Tests between the points of Sector A and the points of Sector B.
 // Returns true if a valid line of sight connects the two places.
-static bool DoVisibilityTest(const SectorPoints& A,
-                             const SectorPoints& B,
-                             const std::vector<SightSegment>& blockers,
-                             const BlockerGrid& grid,
-                             const std::vector<uint32_t>& touchWalls,
-                             const SectorBBox& boxB,
-                             RayWalkSpace& scratch,
-                             double maxRayLengthSq,
-                             bool vertexRays)
+static bool DoVisibilityTest(const SectorPoints &A, const SectorPoints &B, const std::vector<SightSegment> &blockers,
+                             const BlockerGrid &grid, const std::vector<uint32_t> &touchWalls, const SectorBBox &boxB,
+                             RayWalkSpace &scratch, double maxRayLengthSq, bool vertexRays)
 {
   // Every point of B lies inside its sector's bounding box. When the wall that blocked the
   // most recent ray also blocks every ray from a start point to that whole box, none of the
@@ -741,7 +710,7 @@ static bool DoVisibilityTest(const SectorPoints& A,
   uint32_t shadowWall = NO_INDEX_INT32;
   int32_t shadowSide = 0;
 
-  auto shadowed = [&](const SightPoint& from) -> bool
+  auto shadowed = [&](const SightPoint &from) -> bool
   {
     if (scratch.ringCount == 0) return false;
 
@@ -754,7 +723,7 @@ static bool DoVisibilityTest(const SectorPoints& A,
     return WallShadowsBox(blockers[id], shadowSide, from.x, from.y, boxB);
   };
 
-  auto clear = [&](const SightPoint& from, const SightPoint& to) -> bool
+  auto clear = [&](const SightPoint &from, const SightPoint &to) -> bool
   {
     ++scratch.rayCasts; // Analysis Counter
 
@@ -778,11 +747,11 @@ static bool DoVisibilityTest(const SectorPoints& A,
   // so visible pairs usually exit early.
   // The split points (the midpoint plus the extra points along each open line) are used
   // here, so narrow sight windows between the midpoints are not missed.
-  for (const auto& a : A.openSplit)
+  for (const auto &a : A.openSplit)
   {
     if (shadowed(a)) continue;
 
-    for (const auto& b : B.openSplit)
+    for (const auto &b : B.openSplit)
     {
       if (clear(a, b)) return true;
     }
@@ -795,21 +764,21 @@ static bool DoVisibilityTest(const SectorPoints& A,
   // Only used for maps within the ray budget.
   if (vertexRays)
   {
-    for (const auto& a : A.openSplit)
+    for (const auto &a : A.openSplit)
     {
       if (shadowed(a)) continue;
 
-      for (const auto& b : B.verts)
+      for (const auto &b : B.verts)
       {
         if (clear(a, b)) return true;
       }
     }
 
-    for (const auto& a : A.verts)
+    for (const auto &a : A.verts)
     {
       if (shadowed(a)) continue;
 
-      for (const auto& b : B.openSplit)
+      for (const auto &b : B.openSplit)
       {
         if (clear(a, b)) return true;
       }
@@ -817,11 +786,11 @@ static bool DoVisibilityTest(const SectorPoints& A,
   }
 
   // Portal midpoint to the first endpoint of each line in B.
-  for (const auto& a : A.openMids)
+  for (const auto &a : A.openMids)
   {
     if (shadowed(a)) continue;
 
-    for (const auto& b : B.firstVerts)
+    for (const auto &b : B.firstVerts)
     {
       if (clear(a, b)) return true;
     }
@@ -830,22 +799,22 @@ static bool DoVisibilityTest(const SectorPoints& A,
   // First endpoint of each line in A to any midpoint in B. Solid midpoints stay
   // in this list on purpose because a ray from a shared corner along a solid wall is
   // not blocked by that wall because IsRayBlocked skips blockers touching the ray start.
-  for (const auto& a : A.firstVerts)
+  for (const auto &a : A.firstVerts)
   {
     if (shadowed(a)) continue;
 
-    for (const auto& b : B.allMids)
+    for (const auto &b : B.allMids)
     {
       if (clear(a, b)) return true;
     }
   }
 
   // Corner to corner.
-  for (const auto& a : A.verts)
+  for (const auto &a : A.verts)
   {
     if (shadowed(a)) continue;
 
-    for (const auto& b : B.verts)
+    for (const auto &b : B.verts)
     {
       if (clear(a, b)) return true;
     }
@@ -872,23 +841,22 @@ static inline void SetPairBitsAtomic(Level &level, size_t view, size_t target, s
   const uint8_t bit2 = static_cast<uint8_t>(1u << (p2 & 7));
 
   // Several threads can touch the same byte, so each bit is set with an atomic OR.
-  // GCC and Clang have this built in, no library is needed. :)
-  __atomic_fetch_or(&level.reject_matrix[p1 >> 3], bit1, __ATOMIC_RELAXED);
-  __atomic_fetch_or(&level.reject_matrix[p2 >> 3], bit2, __ATOMIC_RELAXED);
+  std::atomic_ref<uint8_t>(level.reject_matrix[p1 >> 3]).fetch_or(bit1, std::memory_order_relaxed);
+  std::atomic_ref<uint8_t>(level.reject_matrix[p2 >> 3]).fetch_or(bit2, std::memory_order_relaxed);
 }
 
 // Restore process priority back to default.
 static inline void RestorePriority()
 {
-  #if defined(_WIN32)
-    SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
-  #else
-    setpriority(PRIO_PROCESS, 0, 0);
-  #endif
+#if defined(_WIN32)
+  SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
+#else
+  setpriority(PRIO_PROCESS, 0, 0);
+#endif
 }
 
 // Check if the geometric distance gap between two sector bounding boxes exceeds max span thresholds.
-static inline bool CheckGapTooWide(const SectorBBox& boxA, const SectorBBox& boxB, double maxMapSpanSq)
+static inline bool CheckGapTooWide(const SectorBBox &boxA, const SectorBBox &boxB, double maxMapSpanSq)
 {
   const double gapX = std::max({0.0, boxB.minX - boxA.maxX, boxA.minX - boxB.maxX});
   const double gapY = std::max({0.0, boxB.minY - boxA.maxY, boxA.minY - boxB.maxY});
@@ -896,17 +864,11 @@ static inline bool CheckGapTooWide(const SectorBBox& boxA, const SectorBBox& box
 }
 
 // Maps a ray endpoint vertex to its corresponding cell index and logs any touching solid wall data.
-static inline void RecordTouchingWalls(std::vector<SightPoint>& list,
-                                       const std::vector<SightSegment>& solidBlockers,
-                                       const BlockerGrid& grid,
-                                       std::vector<uint32_t>& touchWalls,
-                                       double mapMinX,
-                                       double mapMinY,
-                                       size_t gridCols,
-                                       size_t gridRows,
-                                       double cellSize)
+static inline void RecordTouchingWalls(std::vector<SightPoint> &list, const std::vector<SightSegment> &solidBlockers,
+                                       const BlockerGrid &grid, std::vector<uint32_t> &touchWalls, double mapMinX,
+                                       double mapMinY, size_t gridCols, size_t gridRows, double cellSize)
 {
-  for (auto& point : list)
+  for (auto &point : list)
   {
     const size_t cx = GetCellIndex(point.x, mapMinX, gridCols - 1, cellSize);
     const size_t cy = GetCellIndex(point.y, mapMinY, gridRows - 1, cellSize);
@@ -915,7 +877,7 @@ static inline void RecordTouchingWalls(std::vector<SightPoint>& list,
     point.touchStart = static_cast<uint32_t>(touchWalls.size());
     for (uint32_t k = grid.cellStart[cell]; k < grid.cellStart[cell + 1]; ++k)
     {
-      const SightSegment& wall = solidBlockers[grid.items[k]];
+      const SightSegment &wall = solidBlockers[grid.items[k]];
       if (IsPointOnSegment(wall.x1, wall.y1, wall.x2, wall.y2, point.x, point.y))
       {
         touchWalls.push_back(grid.items[k]);
@@ -939,28 +901,29 @@ static inline void RecordTouchingWalls(std::vector<SightPoint>& list,
 // used only grows with the number of sectors.
 struct CutPoints
 {
-  std::vector<uint8_t> isCut;   // 1 when the sector is a cut point
+  std::vector<uint8_t> isCut;      // 1 when the sector is a cut point
   std::vector<size_t> cutList;     // Every cut point sector
   std::vector<uint32_t> cutParent; // Tree: parent of each node. Nodes below num_secs are sectors, the rest are blocks
   std::vector<uint32_t> cutDepth;  // Tree: steps from the top of the tree to each node
-  std::vector<uint32_t> cutMap; // Which connected part of the map each sector is in
+  std::vector<uint32_t> cutMap;    // Which connected part of the map each sector is in
 };
 
 // Find the sectors that split the neighbor graph apart when taken away,
 // and the tree that tells which of them stand between two sectors.
-static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbors, size_t num_secs)
+static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>> &neighbors, size_t num_secs)
 {
   CutPoints cuts;
   cuts.isCut.assign(num_secs, 0);
   cuts.cutParent.assign(num_secs, NO_INDEX_INT32);
   cuts.cutMap.assign(num_secs, NO_INDEX_INT32);
 
-  std::vector<uint32_t> order(num_secs, 0);     // Order the depth first walk reached each sector in
-  std::vector<uint32_t> lowest(num_secs, 0);    // Earliest reached sector this one can get back to
-  std::vector<uint32_t> nextEdge(num_secs, 0);  // Next neighbor to look at, per sector
+  std::vector<uint32_t> order(num_secs, 0);    // Order the depth first walk reached each sector in
+  std::vector<uint32_t> lowest(num_secs, 0);   // Earliest reached sector this one can get back to
+  std::vector<uint32_t> nextEdge(num_secs, 0); // Next neighbor to look at, per sector
   std::vector<uint32_t> blockCount(num_secs, 0);
   std::vector<uint32_t> sectorStack;
-  std::vector<uint32_t> callStack; // Uses its own stack instead of recursion, because a long corridor of sectors could be very deep.
+  std::vector<uint32_t>
+      callStack; // Uses its own stack instead of recursion, because a long corridor of sectors could be very deep.
 
   uint32_t clock = 0;
   uint32_t parts = 0;
@@ -1066,11 +1029,9 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>>& neighbo
 // Every pair that involves a cut point, grouped by how many sectors apart the two are.
 // The pairs nearest to a cut point are tested first, so the result for a farther pair
 // can be worked out from them.
-static std::vector<std::vector<std::pair<uint32_t, uint32_t>>> BuildCutLevels(
-    const CutPoints& cuts,
-    const std::vector<std::vector<uint32_t>>& neighbors,
-    size_t num_secs,
-    const std::vector<size_t>& activeSectors)
+static std::vector<std::vector<std::pair<uint32_t, uint32_t>>>
+BuildCutLevels(const CutPoints &cuts, const std::vector<std::vector<uint32_t>> &neighbors, size_t num_secs,
+               const std::vector<size_t> &activeSectors)
 {
   std::vector<uint8_t> isActive(num_secs, 0);
   for (size_t cutSector : activeSectors)
@@ -1086,7 +1047,7 @@ static std::vector<std::vector<std::pair<uint32_t, uint32_t>>> BuildCutLevels(
   {
     if (!isActive[cutSector]) continue;
 
-    std::fill(dist.begin(), dist.end(), -1);
+    std::ranges::fill(dist, -1);
     dist[cutSector] = 0;
     queue.assign(1, static_cast<uint32_t>(cutSector));
     for (size_t head = 0; head < queue.size(); ++head)
@@ -1109,7 +1070,7 @@ static std::vector<std::vector<std::pair<uint32_t, uint32_t>>> BuildCutLevels(
       const size_t distance = static_cast<size_t>(dist[other]);
       if (levels.size() <= distance) levels.resize(distance + 1);
       levels[distance].push_back({static_cast<uint32_t>(std::max<size_t>(other, cutSector)),
-                           static_cast<uint32_t>(std::min<size_t>(other, cutSector))});
+                                  static_cast<uint32_t>(std::min<size_t>(other, cutSector))});
     }
   }
 
@@ -1119,11 +1080,11 @@ static std::vector<std::vector<std::pair<uint32_t, uint32_t>>> BuildCutLevels(
 // Everything the analysis stats report. Filled in once the reject build is finished.
 struct RejectStats
 {
-  uint64_t blockerLines = 0;  // Solid (one-sided) lines the rays can be stopped by
-  uint64_t portalLines = 0;   // Two-sided lines, which never stop a ray
-  uint64_t rayCasts = 0;      // Rays tested in total
-  uint64_t totalCells = 0;    // Cells in the blocker grid
-  uint64_t cellSteps = 0;     // Grid cells walked by all the rays together
+  uint64_t blockerLines = 0; // Solid (one-sided) lines the rays can be stopped by
+  uint64_t portalLines = 0;  // Two-sided lines, which never stop a ray
+  uint64_t rayCasts = 0;     // Rays tested in total
+  uint64_t totalCells = 0;   // Cells in the blocker grid
+  uint64_t cellSteps = 0;    // Grid cells walked by all the rays together
 
   // One entry per sector that has line geometry (the same sectors that are tested)
   std::vector<uint64_t> portalsPerSector;  // Two-sided lines touching the sector
@@ -1152,7 +1113,7 @@ static CountSummary SummarizeCounts(std::vector<uint64_t> values)
   CountSummary summary;
   if (values.empty()) return summary;
 
-  std::sort(values.begin(), values.end());
+  std::ranges::sort(values);
 
   summary.count = values.size();
   summary.min = values.front();
@@ -1164,22 +1125,22 @@ static CountSummary SummarizeCounts(std::vector<uint64_t> values)
     sum += v;
   }
 
-  const double totalSum   = static_cast<double>(sum);
+  const double totalSum = static_cast<double>(sum);
   const double totalCount = static_cast<double>(summary.count);
 
   summary.mean = totalSum / totalCount;
 
   const size_t mid = summary.count / 2;
-  summary.median = (summary.count % 2 == 1)
-                 ? static_cast<double>(values[mid])
-                 : (static_cast<double>(values[mid - 1]) + static_cast<double>(values[mid])) * 0.5;
+  summary.median = (summary.count % 2 == 1) ? static_cast<double>(values[mid])
+                                            : (static_cast<double>(values[mid - 1]) + static_cast<double>(values[mid])) * 0.5;
 
   // The list is sorted, so equal values sit together. Only a longer run replaces the mode,
   // which keeps the smallest value when two runs are the same length.
   for (size_t runStart = 0; runStart < values.size();)
   {
     size_t runEnd = runStart;
-    while (runEnd < values.size() && values[runEnd] == values[runStart]) ++runEnd;
+    while (runEnd < values.size() && values[runEnd] == values[runStart])
+      ++runEnd;
 
     if (static_cast<uint64_t>(runEnd - runStart) > summary.modeFreq)
     {
@@ -1201,18 +1162,18 @@ static std::string FormatTwoDecimals(double value)
   return std::to_string(hundredths / 100) + "." + fraction;
 }
 
-static void PrintCountSummary(const char* tag, const char* label, const std::vector<uint64_t>& values)
+static void PrintCountSummary(const char *tag, const char *label, const std::vector<uint64_t> &values)
 {
   const CountSummary summary = SummarizeCounts(values);
 
-  PrintLine(Log::NORMAL, "[{}]   {}: mean {}  median {}  mode {} (x{})  min {}  max {}",
-            tag, label, FormatTwoDecimals(summary.mean), FormatTwoDecimals(summary.median),
-            summary.mode, summary.modeFreq, summary.min, summary.max);
+  PrintLine(Log::NORMAL, "[{}]   {}: mean {}  median {}  mode {} (x{})  min {}  max {}", tag, label,
+            FormatTwoDecimals(summary.mean), FormatTwoDecimals(summary.median), summary.mode, summary.modeFreq, summary.min,
+            summary.max);
 }
 
-static void RejectAnalysis(const RejectStats& stats)
+static void RejectAnalysis(const RejectStats &stats)
 {
-  const char* tag = __func__;
+  const char *tag = __func__;
 
   PrintLine(Log::NORMAL, "[{}] Blocker lines: {}", tag, stats.blockerLines);
   PrintLine(Log::NORMAL, "[{}] Portal lines: {}", tag, stats.portalLines);
@@ -1233,8 +1194,7 @@ static void RejectAnalysis(const RejectStats& stats)
 
   for (size_t i = 0; i < stats.linesPerCell.size(); ++i)
   {
-    PrintLine(Log::DEBUG, "[{}] Cell {},{}  Linedefs {}", tag,
-              i % stats.gridCols, i / stats.gridCols, stats.linesPerCell[i]);
+    PrintLine(Log::DEBUG, "[{}] Cell {},{}  Linedefs {}", tag, i % stats.gridCols, i / stats.gridCols, stats.linesPerCell[i]);
   }
 }
 
@@ -1271,15 +1231,15 @@ static void Reject_ProcessSectors(Level &level)
     return; // Exit out early!
   }
 
-  // Lowers the operating system priority for this process.
-  // This prevents the PC from becoming choppy or unresponsive during long compile times.
-  #if defined(_WIN32)
-    // On Windows, set priority to below normal
-    SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
-  #else
-    // On Unix/Linux/macOS systems, set priority nice value to 10
-    setpriority(PRIO_PROCESS, 0, 10);
-  #endif
+// Lowers the operating system priority for this process.
+// This prevents the PC from becoming choppy or unresponsive during long compile times.
+#if defined(_WIN32)
+  // On Windows, set priority to below normal
+  SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
+#else
+  // On Unix/Linux/macOS systems, set priority nice value to 10
+  setpriority(PRIO_PROCESS, 0, 10);
+#endif
 
   // Declare empty first
   std::vector<std::vector<SightSegment>> sectorLines;
@@ -1310,16 +1270,12 @@ static void Reject_ProcessSectors(Level &level)
   double mapMaxY = std::numeric_limits<double>::lowest();
 
   // Parse geometry and build basic sector tracking dimensions
-  for (const auto* line : level.linedefs)
+  for (const auto *line : level.linedefs)
   {
     if (!line || !line->start || !line->end) continue;
 
-    SightSegment seg(
-        static_cast<double>(line->start->x),
-        static_cast<double>(line->start->y),
-        static_cast<double>(line->end->x),
-        static_cast<double>(line->end->y)
-    );
+    SightSegment seg(static_cast<double>(line->start->x), static_cast<double>(line->start->y),
+                     static_cast<double>(line->end->x), static_cast<double>(line->end->y));
 
     mapMinX = std::min({mapMinX, seg.x1, seg.x2});
     mapMaxX = std::max({mapMaxX, seg.x1, seg.x2});
@@ -1327,10 +1283,10 @@ static void Reject_ProcessSectors(Level &level)
     mapMinY = std::min({mapMinY, seg.y1, seg.y2});
     mapMaxY = std::max({mapMaxY, seg.y1, seg.y2});
 
-    const Sector* sRight = line->right ? line->right->sector : nullptr;
-    const Sector* sLeft  = line->left  ? line->left->sector  : nullptr;
+    const Sector *sRight = line->right ? line->right->sector : nullptr;
+    const Sector *sLeft = line->left ? line->left->sector : nullptr;
 
-    const bool isSolid   = !sRight || !sLeft;
+    const bool isSolid = !sRight || !sLeft;
 
     if (!isSolid)
     {
@@ -1368,7 +1324,7 @@ static void Reject_ProcessSectors(Level &level)
     if (sRight)
     {
       const size_t rIdx = sRight->index;
-      auto& box = sectorBoxes[rIdx];
+      auto &box = sectorBoxes[rIdx];
 
       sectorLines[rIdx].push_back(seg);
 
@@ -1391,7 +1347,7 @@ static void Reject_ProcessSectors(Level &level)
     if (sLeft && sLeft != sRight)
     {
       const size_t lIdx = sLeft->index;
-      auto& box = sectorBoxes[lIdx];
+      auto &box = sectorBoxes[lIdx];
 
       sectorLines[lIdx].push_back(seg);
 
@@ -1431,7 +1387,7 @@ static void Reject_ProcessSectors(Level &level)
   std::vector<uint64_t> openCount(num_secs, 0);
   for (size_t i = 0; i < num_secs; ++i)
   {
-    for (const auto& line : sectorLines[i])
+    for (const auto &line : sectorLines[i])
     {
       if (!line.solid) openCount[i]++;
     }
@@ -1479,13 +1435,12 @@ static void Reject_ProcessSectors(Level &level)
 
   const size_t gridCols = static_cast<size_t>(std::ceil((mapMaxX - mapMinX) / CELL_SIZE)) + 1;
   const size_t gridRows = static_cast<size_t>(std::ceil((mapMaxY - mapMinY) / CELL_SIZE)) + 1;
-  const BlockerGrid grid = BuildBlockerGrid(solidBlockers, mapMinX, mapMinY,
-                                            gridCols, gridRows, CELL_SIZE, PADDING);
+  const BlockerGrid grid = BuildBlockerGrid(solidBlockers, mapMinX, mapMinY, gridCols, gridRows, CELL_SIZE, PADDING);
 
   // For every ray end point, record which solid walls it lies on. Only the grid cell
   // holding the point needs searching because walls are registered with padding.
   std::vector<uint32_t> touchWalls;
-  for (auto& sp : sectorPoints)
+  for (auto &sp : sectorPoints)
   {
     RecordTouchingWalls(sp.verts, solidBlockers, grid, touchWalls, mapMinX, mapMinY, gridCols, gridRows, CELL_SIZE);
     RecordTouchingWalls(sp.firstVerts, solidBlockers, grid, touchWalls, mapMinX, mapMinY, gridCols, gridRows, CELL_SIZE);
@@ -1538,7 +1493,7 @@ static void Reject_ProcessSectors(Level &level)
 
     while (nodeA != nodeB)
     {
-      uint32_t& mover = (cuts.cutDepth[nodeA] >= cuts.cutDepth[nodeB]) ? nodeA : nodeB;
+      uint32_t &mover = (cuts.cutDepth[nodeA] >= cuts.cutDepth[nodeB]) ? nodeA : nodeB;
       mover = cuts.cutParent[mover];
 
       const size_t cut = mover;
@@ -1566,121 +1521,123 @@ static void Reject_ProcessSectors(Level &level)
 
   std::mutex totalsMutex;
 
-  RunTeam(threadCount, [&](size_t threadIndex, TeamSync& team)
-  {
-    // One ray scratch space per thread, made by the thread that uses it.
-    RayWalkSpace scratch(solidBlockers.size(), num_secs);
+  RunTeam(threadCount,
+          [&](size_t threadIndex, TeamSync &team)
+          {
+            // One ray scratch space per thread, made by the thread that uses it.
+            RayWalkSpace scratch(solidBlockers.size(), num_secs);
 
-    // Everything that decides one pair of sectors.
-    auto testPair = [&](size_t view, size_t target)
-    {
-      // Sectors in different groups were already marked blind in bulk.
-      if (groupOf[view] != groupOf[target])
-      {
-        return;
-      }
+            // Everything that decides one pair of sectors.
+            auto testPair = [&](size_t view, size_t target)
+            {
+              // Sectors in different groups were already marked blind in bulk.
+              if (groupOf[view] != groupOf[target])
+              {
+                return;
+              }
 
-      // Wow Yet Again Another Accuracy Fix! :(
-      // If these sectors touch directly, they are unconditionally visible!
-      // Skipping curved alternative geometric checks prevents tunnel/cave blindness bugs.
-      const size_t adjIdx = view * num_secs + target;
-      if ((adjacencyMatrix[adjIdx >> 3] & (1 << (adjIdx & 7))) != 0)
-      {
-        return;
-      }
+              // Wow Yet Again Another Accuracy Fix! :(
+              // If these sectors touch directly, they are unconditionally visible!
+              // Skipping curved alternative geometric checks prevents tunnel/cave blindness bugs.
+              const size_t adjIdx = view * num_secs + target;
+              if ((adjacencyMatrix[adjIdx >> 3] & (1 << (adjIdx & 7))) != 0)
+              {
+                return;
+              }
 
-      const auto& boxA = sectorBoxes[view];
-      const auto& boxB = sectorBoxes[target];
+              const auto &boxA = sectorBoxes[view];
+              const auto &boxB = sectorBoxes[target];
 
-      // Every ray endpoint lies inside its sector's bbox, so no ray can be shorter
-      // than the gap between the boxes. IsRayBlocked rejects anything longer than
-      // maxMapSpanSq anyway, so such a pair is blind without casting a ray.
-      if (CheckGapTooWide(boxA, boxB, maxMapSpanSq))
-      {
-        SetPairBitsAtomic(level, view, target, num_secs);
-        return;
-      }
+              // Every ray endpoint lies inside its sector's bbox, so no ray can be shorter
+              // than the gap between the boxes. IsRayBlocked rejects anything longer than
+              // maxMapSpanSq anyway, so such a pair is blind without casting a ray.
+              if (CheckGapTooWide(boxA, boxB, maxMapSpanSq))
+              {
+                SetPairBitsAtomic(level, view, target, num_secs);
+                return;
+              }
 
-      // A cut point blocks this pair, no rays needed.
-      if (prune && inferredBlind(view, target))
-      {
-        SetPairBitsAtomic(level, view, target, num_secs);
-        return;
-      }
+              // A cut point blocks this pair, no rays needed.
+              if (prune && inferredBlind(view, target))
+              {
+                SetPairBitsAtomic(level, view, target, num_secs);
+                return;
+              }
 
-      // Each ray now walks the grid on its own inside IsRayBlocked via DDA steps.
-      const uint64_t raysBefore = scratch.rayCasts;
+              // Each ray now walks the grid on its own inside IsRayBlocked via DDA steps.
+              const uint64_t raysBefore = scratch.rayCasts;
 
-      const bool visible = DoVisibilityTest(sectorPoints[view], sectorPoints[target],
-                                            solidBlockers, grid, touchWalls, boxB, scratch, maxMapSpanSq,
-                                            withinBudget);
+              const bool visible = DoVisibilityTest(sectorPoints[view], sectorPoints[target], solidBlockers, grid, touchWalls,
+                                                    boxB, scratch, maxMapSpanSq, withinBudget);
 
-      const uint64_t raysUsed = scratch.rayCasts - raysBefore;
-      scratch.sectorRays[view] += raysUsed;
-      scratch.sectorRays[target] += raysUsed;
+              const uint64_t raysUsed = scratch.rayCasts - raysBefore;
+              scratch.sectorRays[view] += raysUsed;
+              scratch.sectorRays[target] += raysUsed;
 
-      if (!visible)
-      {
-        SetPairBitsAtomic(level, view, target, num_secs);
-      }
-    };
+              if (!visible)
+              {
+                SetPairBitsAtomic(level, view, target, num_secs);
+              }
+            };
 
-    // Pairs that involve a cut point first, nearest pairs first. Each level is finished
-    // before the next one starts, so the results it relies on are all in place.
-    for (size_t lv = 0; lv < cutLevels.size(); ++lv)
-    {
-      team.For(threadIndex, cutLevels[lv].size(), [&](size_t pairIndex)
-      {
-        const auto& cutPair = cutLevels[lv][pairIndex];
-        testPair(cutPair.first, cutPair.second);
-      });
+            // Pairs that involve a cut point first, nearest pairs first. Each level is finished
+            // before the next one starts, so the results it relies on are all in place.
+            for (size_t lv = 0; lv < cutLevels.size(); ++lv)
+            {
+              team.For(threadIndex, cutLevels[lv].size(),
+                       [&](size_t pairIndex)
+                       {
+                         const auto &cutPair = cutLevels[lv][pairIndex];
+                         testPair(cutPair.first, cutPair.second);
+                       });
 
-      // Every thread is finished at this point. The others wait
-      // until this thread gets there, so the snapshot is safe to take.
-      if (threadIndex == 0)
-      {
-        memcpy(blindSnap.data(), level.reject_matrix, level.reject_size);
-      }
-    }
+              // Every thread is finished at this point. The others wait
+              // until this thread gets there, so the snapshot is safe to take.
+              if (threadIndex == 0)
+              {
+                memcpy(blindSnap.data(), level.reject_matrix, level.reject_size);
+              }
+            }
 
-    team.For(threadIndex, activeCount, [&](size_t rowIndex)
-    {
-      // Walk from the last active sector down.
-      // Row 'a' tests 'a' targets, so the biggest rows go first
-      // and no long row is left as a straggler.
-      const size_t from = activeCount - 1 - rowIndex;
+            team.For(threadIndex, activeCount,
+                     [&](size_t rowIndex)
+                     {
+                       // Walk from the last active sector down.
+                       // Row 'a' tests 'a' targets, so the biggest rows go first
+                       // and no long row is left as a straggler.
+                       const size_t from = activeCount - 1 - rowIndex;
 
-      // Map our active iterator index back to the real sector index
-      const size_t view = activeSectors[from];
+                       // Map our active iterator index back to the real sector index
+                       const size_t view = activeSectors[from];
 
-      for (size_t to = 0; to < from; to++)
-      {
-        // Map our active target iterator index back to the real sector index
-        const size_t target = activeSectors[to];
+                       for (size_t to = 0; to < from; to++)
+                       {
+                         // Map our active target iterator index back to the real sector index
+                         const size_t target = activeSectors[to];
 
-        // Pairs with a cut point were already done above.
-        if (prune && (cuts.isCut[view] || cuts.isCut[target]))
-        {
-          continue;
-        }
+                         // Pairs with a cut point were already done above.
+                         if (prune && (cuts.isCut[view] || cuts.isCut[target]))
+                         {
+                           continue;
+                         }
 
-        testPair(view, target);
-      }
-    });
+                         testPair(view, target);
+                       }
+                     });
 
-    // Add this thread's counters to the totals, one thread at a time.
-    {
-      std::lock_guard<std::mutex> lock(totalsMutex);
+            // Add this thread's counters to the totals, one thread at a time.
+            {
+              std::lock_guard<std::mutex> lock(totalsMutex);
 
-      totalRayCasts += scratch.rayCasts;
-      totalCellSteps += scratch.cellSteps;
+              totalRayCasts += scratch.rayCasts;
+              totalCellSteps += scratch.cellSteps;
 
-      for (size_t i = 0; i < num_secs; ++i)
-      {
-        totalSectorRays[i] += scratch.sectorRays[i];
-      }
-    }
-  });
+              for (size_t i = 0; i < num_secs; ++i)
+              {
+                totalSectorRays[i] += scratch.sectorRays[i];
+              }
+            }
+          });
 
   // Restore process priority back to normal once the heavy CPU work finishes
   RestorePriority();

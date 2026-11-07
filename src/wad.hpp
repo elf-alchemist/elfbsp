@@ -97,11 +97,16 @@ struct WadIO
   // Partial writing
   void StartWritingLump(std::string_view name);
   void AddToLump(const void *data, size_t len);
-  WadIO &operator<<(uint8_t value);
-  WadIO &operator<<(uint16_t value);
-  WadIO &operator<<(uint32_t value);
-  WadIO &operator<<(int16_t value);
-  WadIO &operator<<(fixed_t value);
+
+  WadIO &operator<<(std::integral auto value)
+  {
+    if constexpr (sizeof(value) > 1)
+    {
+      value = GetLittleEndian(value);
+    }
+    this->AddToLumpZ(&value, sizeof(value));
+    return *this;
+  }
 
   // Zlib compression support
   void Begin_Zlib(void);
