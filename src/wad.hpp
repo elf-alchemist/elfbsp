@@ -23,6 +23,7 @@
 #pragma once
 
 #include "core.hpp"
+#include <fstream>
 #include <vector>
 
 //------------------------------------------------------------------------
@@ -55,12 +56,12 @@ static_size(WadLump, 16);
 struct WadIO
 {
   // Read data
-  FILE *read_file;
+  std::ifstream read_file;
   WadHeader read_header;
   std::vector<WadLump> read_directory;
 
   // Write data
-  FILE *write_file;
+  std::ofstream write_file;
   WadHeader write_header;
   std::vector<WadLump> write_directory;
   bool zlib_init = false;
@@ -125,7 +126,8 @@ std::vector<T> WadIO::ReadLump(size_t lump_index)
   {
     return lump;
   }
-  if (fseek(this->read_file, this->read_directory[lump_index].pos, SEEK_SET))
+  this->read_file.seekg(this->read_directory[lump_index].pos);
+  if (this->read_file.fail())
   {
     throw RuntimeException("Failed to seek");
   }
