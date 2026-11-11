@@ -88,7 +88,6 @@ static void Reject_GroupSectors(const Level &level)
 
     Sector *sec1 = line->right->sector;
     Sector *sec2 = line->left->sector;
-    Sector *tmp;
 
     if (!sec1                                         // invalid
         || !sec2                                      // invalid
@@ -109,15 +108,14 @@ static void Reject_GroupSectors(const Level &level)
     // thereby minimising the updates to 'rej_group' fields when merging.
     if (sec1->rej_group > sec2->rej_group)
     {
-      tmp = sec1;
-      sec1 = sec2;
-      sec2 = tmp;
+      using std::swap;
+      swap(sec1, sec2);
     }
 
     // update the group numbers in the second group
     sec2->rej_group = sec1->rej_group;
 
-    for (tmp = sec2->rej_next; tmp != sec2; tmp = tmp->rej_next)
+    for (Sector *tmp = sec2->rej_next; tmp != sec2; tmp = tmp->rej_next)
     {
       tmp->rej_group = sec1->rej_group;
     }
@@ -126,9 +124,8 @@ static void Reject_GroupSectors(const Level &level)
     sec1->rej_next->rej_prev = sec2;
     sec2->rej_next->rej_prev = sec1;
 
-    tmp = sec1->rej_next;
-    sec1->rej_next = sec2->rej_next;
-    sec2->rej_next = tmp;
+    using std::swap;
+    swap(sec1->rej_next, sec2->rej_next);
   }
 }
 
