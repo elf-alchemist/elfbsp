@@ -306,6 +306,7 @@ struct Quadtree
   Segment *list{nullptr};
 
   Quadtree(int _x1, int _y1, int _x2, int _y2);
+  Quadtree(Segment *list, const MapBoundBox &bounds);
 
   [[nodiscard]] bool Empty() const
   {
@@ -573,8 +574,6 @@ static constexpr double ANG_EPSILON = (1.0 / 1024.0);
 // scan all the linedef of the level and convert each sidedef into a
 // seg (or seg pair).  Returns the list of segs.
 Segment *CreateSegs(Level &level);
-
-Quadtree *TreeFromSegList(Segment *list);
 
 // takes the seg list and determines if it is convex.  When it is, the
 // segs are converted to a subsector, and '*S' is the new subsector
