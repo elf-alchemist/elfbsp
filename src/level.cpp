@@ -89,12 +89,9 @@ bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y
     }
 
     // swap end points
-    tmp = x1;
-    x1 = x2;
-    x2 = tmp;
-    tmp = y1;
-    y1 = y2;
-    y2 = tmp;
+    using std::swap;
+    swap(x1, x2);
+    swap(y1, y2);
   }
 
   // linedef touches block
