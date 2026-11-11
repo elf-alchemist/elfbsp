@@ -1150,22 +1150,12 @@ static CountSummary SummarizeCounts(std::vector<uint64_t> values)
   return summary;
 }
 
-// Two decimals, built manually so it does not depend on what format options PrintLine accepts.
-static std::string FormatTwoDecimals(double value)
-{
-  const auto hundredths = static_cast<uint64_t>(value * 100.0 + 0.5);
-  std::string fraction = std::to_string(hundredths % 100);
-  if (fraction.size() < 2) fraction.insert(0, "0");
-  return std::to_string(hundredths / 100) + "." + fraction;
-}
-
 static void PrintCountSummary(const char *tag, const char *label, const std::vector<uint64_t> &values)
 {
   const CountSummary summary = SummarizeCounts(values);
 
-  PrintLine(Log::NORMAL, "[{}]   {}: mean {}  median {}  mode {} (x{})  min {}  max {}", tag, label,
-            FormatTwoDecimals(summary.mean), FormatTwoDecimals(summary.median), summary.mode, summary.modeFreq, summary.min,
-            summary.max);
+  PrintLine(Log::NORMAL, "[{}]   {}: mean {:.2f}  median {:.2f}  mode {} (x{})  min {}  max {}", tag, label, summary.mean,
+            summary.median, summary.mode, summary.modeFreq, summary.min, summary.max);
 }
 
 static void RejectAnalysis(const RejectStats &stats)
