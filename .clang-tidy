@@ -2,6 +2,7 @@
 Checks: >
   clang-diagnostic-*,
   clang-analyzer-*,
+  google-runtime-int,
   misc-*,
   -misc-include-cleaner,
   -misc-non-private-member-variables-in-classes,
@@ -23,6 +24,9 @@ HeaderFilterRegex: ''
 ExcludeHeaderFilterRegex: ''
 FormatStyle: none
 User: alchemist
-CheckOptions: {}
 SystemHeaders: false
+CheckOptions:
+  # Suggest standard library types with _t suffix
+  - key: google-runtime-int.TypeSuffix
+    value: _t
 ...
