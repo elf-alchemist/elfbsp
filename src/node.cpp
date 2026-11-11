@@ -464,24 +464,21 @@ bool EvalPartitionWorker(const Quadtree *tree, const Segment *part, double best_
   }
 
   /* handle sub-blocks recursively */
-  for (auto sub : tree->subs)
+  return std::ranges::any_of(tree->subs, [&](const auto sub)
   {
     if (info->cost > best_cost)
     {
       return true;
     }
 
-    if (sub != nullptr && !sub->Empty())
+    if (sub != nullptr && !sub->Empty() && EvalPartitionWorker(sub, part, best_cost, split_cost, info))
     {
-      if (EvalPartitionWorker(sub, part, best_cost, split_cost, info))
-      {
-        return true;
-      }
+      return true;
     }
-  }
 
-  /* no "bad seg" was found */
-  return false;
+    /* no "bad seg" was found */
+    return false;
+  });
 }
 
 //
