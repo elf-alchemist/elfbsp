@@ -1,5 +1,8 @@
 ---
-Checks: 'clang-diagnostic-*,clang-analyzer-*'
+Checks: >
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  misc-explicit-constructor
 WarningsAsErrors: ''
 HeaderFileExtensions:
   - h
