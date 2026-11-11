@@ -26,6 +26,7 @@
 #include "core.hpp"
 #include "wad.hpp"
 
+#include <memory>
 #include <vector>
 
 //------------------------------------------------------------------------
