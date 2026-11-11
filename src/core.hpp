@@ -801,7 +801,7 @@ struct MapBlockmapHeaderXBM1
 } PACKEDATTR;
 
 // Fail way earlier
-#define static_size(x, y) static_assert(sizeof(x) == y, "Size mismatch for '" #x "'. Should be " #y ".")
+#define static_size(x, y) static_assert(sizeof(x) == (y), "Size mismatch for '" #x "'. Should be " #y ".")
 
 static_size(MapVertexIntegral, 4);
 static_size(MapVertexFractional, 8);
