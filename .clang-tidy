@@ -13,6 +13,19 @@ Checks: >
   -misc-no-recursion,
   modernize-*,
   -modernize-use-trailing-return-type,
+  -modernize-avoid-c-arrays,
+  readability-*,
+  -readability-braces-around-statements,
+  -readability-else-after-return,
+  -readability-enum-initial-value,
+  -readability-function-cognitive-complexity,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-isolate-declaration,
+  -readability-magic-numbers,
+  -readability-math-missing-parentheses,
+  -readability-qualified-auto,
+  -readability-simplify-boolean-expr
 WarningsAsErrors: ''
 HeaderFileExtensions:
   - h

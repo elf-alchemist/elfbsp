@@ -69,8 +69,8 @@ constexpr auto LINUX = true;
 
 #endif
 
-constexpr char PATH_SEP_CH = (WINDOWS) ? ';' : ':';
-constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
+constexpr char PATH_SEP_CH = WINDOWS ? ';' : ':';
+constexpr char DIR_SEP_CH = WINDOWS ? '/' : '\\';
 
 //
 // The packed attribute forces structures to be packed into the minimum
@@ -181,7 +181,7 @@ constexpr size_t OFF_BY_ONE = 1;
 // bitflags
 constexpr uint32_t BIT(const uint32_t x)
 {
-  return (1u << x);
+  return (1U << x);
 }
 
 constexpr bool HAS_BIT(const uint32_t x, const uint32_t y)
@@ -1248,7 +1248,7 @@ struct FNV1a
   Hash_Type ComputeSingleByte(byte value)
   {
     this->hash ^= value;
-    this->hash *= this->Prime;
+    this->hash *= FNV1a<Hash_Type>::Prime;
     return this->hash;
   }
 

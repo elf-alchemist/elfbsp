@@ -91,7 +91,7 @@ void RunTeam(size_t threadCount, Body &&body)
 
   for (size_t threadIndex = 1; threadIndex < threadCount; ++threadIndex)
   {
-    threads.emplace_back([&body, &team, threadIndex]() { body(threadIndex, team); });
+    threads.emplace_back([&body, &team, threadIndex] { body(threadIndex, team); });
   }
 
   body(static_cast<size_t>(0), team);

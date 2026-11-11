@@ -585,7 +585,7 @@ static int32_t ParseLongArgument(std::string name, const int32_t argc, const cha
   }
   else if (name.starts_with("--debug-"))
   {
-    if (!ProcessDebugParam(name.c_str(), config.debug))
+    if (!ProcessDebugParam(name, config.debug))
     {
       throw RuntimeException("unknown debug parameter '{}'", name);
     }
