@@ -1,7 +1,7 @@
 ---
 Checks: >
-  clang-diagnostic-*,
   clang-analyzer-*,
+  clang-diagnostic-*,
   google-runtime-int,
   misc-*,
   -misc-include-cleaner,
