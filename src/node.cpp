@@ -569,7 +569,7 @@ void EvaluateFastWorker(const Quadtree *tree, Segment **best_H, Segment **best_V
       else
       {
         const double old_dist = fabs((*best_H)->psy - mid_y);
-        const double new_dist = fabs((part)->psy - mid_y);
+        const double new_dist = fabs(part->psy - mid_y);
 
         if (new_dist < old_dist)
         {
@@ -587,7 +587,7 @@ void EvaluateFastWorker(const Quadtree *tree, Segment **best_H, Segment **best_V
       else
       {
         const double old_dist = fabs((*best_V)->psx - mid_x);
-        const double new_dist = fabs((part)->psx - mid_x);
+        const double new_dist = fabs(part->psx - mid_x);
 
         if (new_dist < old_dist)
         {
@@ -917,10 +917,10 @@ static void FindSegListLimits(const Segment *list, MapBoundBox &bbox)
     const auto hx = FloatToShort(ceil(std::max(x1, x2) + 0.2));
     const auto hy = FloatToShort(ceil(std::max(y1, y2) + 0.2));
 
-    if (lx < bbox.minx) bbox.minx = lx;
-    if (ly < bbox.miny) bbox.miny = ly;
-    if (hx > bbox.maxx) bbox.maxx = hx;
-    if (hy > bbox.maxy) bbox.maxy = hy;
+    bbox.minx = std::min(lx, bbox.minx);
+    bbox.miny = std::min(ly, bbox.miny);
+    bbox.maxx = std::max(hx, bbox.maxx);
+    bbox.maxy = std::max(hy, bbox.maxy);
   }
 }
 
@@ -1038,7 +1038,7 @@ static void SetPartition(Node *node, const Segment *part)
 {
   SYS_ASSERT(part->linedef);
 
-  if (part->side == false)
+  if (!part->side)
   {
     node->x = part->linedef->start->x;
     node->y = part->linedef->start->y;

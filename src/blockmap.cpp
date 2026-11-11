@@ -59,17 +59,17 @@ static void Blockmap_FindLimits(const Level &level, MapBoundBox &bbox)
     const int16_t hx = FloatToShort(ceil(std::max(x1, x2)));
     const int16_t hy = FloatToShort(ceil(std::max(y1, y2)));
 
-    if (lx < bbox.minx) bbox.minx = lx;
-    if (ly < bbox.miny) bbox.miny = ly;
-    if (hx > bbox.maxx) bbox.maxx = hx;
-    if (hy > bbox.maxy) bbox.maxy = hy;
+    bbox.minx = std::min(lx, bbox.minx);
+    bbox.miny = std::min(ly, bbox.miny);
+    bbox.maxx = std::max(hx, bbox.maxx);
+    bbox.maxy = std::max(hy, bbox.maxy);
 
     // compute middle of cluster
     mid_x += (lx + hx) >> 1;
     mid_y += (ly + hy) >> 1;
   }
 
-  if (level.linedefs.size() > 0)
+  if (!level.linedefs.empty())
   {
     block_mid_x = FloatToShort(floor(mid_x / static_cast<double>(level.linedefs.size())));
     block_mid_y = FloatToShort(floor(mid_y / static_cast<double>(level.linedefs.size())));
@@ -540,7 +540,7 @@ void PutBlockmap(WadIO &io, Level &level)
   io.StartWritingLump("BLOCKMAP");
 
   // just leave an empty blockmap lump
-  if (level.linedefs.size() == 0)
+  if (level.linedefs.empty())
   {
     return;
   }

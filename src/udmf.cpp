@@ -657,19 +657,19 @@ void ParseTextMap(const WadIO &io, Level &level, std::vector<char> &lump)
     }
   }
 
-  if (level.udmf_vertex.size() == 0)
+  if (level.udmf_vertex.empty())
     throw RuntimeException("Not enough UDMF vertexes for map {}. Check your TEXTMAP.", io.LumpName(level.lumps.label));
 
-  if (level.udmf_linedef.size() == 0)
+  if (level.udmf_linedef.empty())
     throw RuntimeException("Not enough UDMF linedefs for map {}. Check your TEXTMAP.", io.LumpName(level.lumps.label));
 
-  if (level.udmf_sidedef.size() == 0)
+  if (level.udmf_sidedef.empty())
     throw RuntimeException("Not enough UDMF sidedefs for map {}. Check your TEXTMAP.", io.LumpName(level.lumps.label));
 
-  if (level.udmf_sector.size() == 0)
+  if (level.udmf_sector.empty())
     throw RuntimeException("Not enough UDMF sectors for map {}. Check your TEXTMAP.", io.LumpName(level.lumps.label));
 
-  if (level.udmf_thing.size() == 0)
+  if (level.udmf_thing.empty())
     throw RuntimeException("Not enough UDMF things for map {}. Check your TEXTMAP.", io.LumpName(level.lumps.label));
 }
 

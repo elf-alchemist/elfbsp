@@ -46,7 +46,7 @@ void SortSegs(Level &level)
   std::ranges::sort(level.segs, PredicateCompare_SegmentIndex);
 
   // remove unwanted segs
-  while (level.segs.size() > 0 && level.segs.back()->index == SEG_IS_GARBAGE)
+  while (!level.segs.empty() && level.segs.back()->index == SEG_IS_GARBAGE)
   {
     UtilFree(level.segs.back());
     level.segs.pop_back();
@@ -807,7 +807,7 @@ void PutTree_ZDBSP(WadIO &io, Level &level, std::string lumpname, BspFormat bsp_
 
   SortSegs(level);
 
-  io.StartWritingLump(lumpname.c_str());
+  io.StartWritingLump(lumpname);
 
   if (bsp_format == BspFormat::XNOD) io.AddToLump(compress ? "ZNOD" : "XNOD", 4);
   if (bsp_format == BspFormat::XGLN) io.AddToLump(compress ? "ZGLN" : "XGLN", 4);

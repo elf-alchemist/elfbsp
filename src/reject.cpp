@@ -837,8 +837,8 @@ static inline void SetPairBitsAtomic(const Level &level, size_t view, size_t tar
 {
   const size_t p1 = view * num_secs + target;
   const size_t p2 = target * num_secs + view;
-  const auto bit1 = static_cast<uint8_t>(1u << (p1 & 7));
-  const auto bit2 = static_cast<uint8_t>(1u << (p2 & 7));
+  const auto bit1 = static_cast<uint8_t>(1U << (p1 & 7));
+  const auto bit2 = static_cast<uint8_t>(1U << (p2 & 7));
 
   // Several threads can touch the same byte, so each bit is set with an atomic OR.
   std::atomic_ref<uint8_t>(level.reject_matrix[p1 >> 3]).fetch_or(bit1, std::memory_order_relaxed);
@@ -848,7 +848,7 @@ static inline void SetPairBitsAtomic(const Level &level, size_t view, size_t tar
 // Restore process priority back to default.
 static inline void RestorePriority()
 {
-#if defined(_WIN32)
+#ifdef _WIN32
   SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
 #else
   setpriority(PRIO_PROCESS, 0, 0);
@@ -1233,7 +1233,7 @@ static void Reject_ProcessSectors(Level &level)
 
 // Lowers the operating system priority for this process.
 // This prevents the PC from becoming choppy or unresponsive during long compile times.
-#if defined(_WIN32)
+#ifdef _WIN32
   // On Windows, set priority to below normal
   SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
 #else
@@ -1715,7 +1715,7 @@ void PutReject(WadIO &io, Level &level)
   io.StartWritingLump("REJECT");
 
   // just leave an empty reject lump
-  if (level.sectors.size() == 0)
+  if (level.sectors.empty())
   {
     return;
   }

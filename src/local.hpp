@@ -154,7 +154,7 @@ struct Linedef
   // length lines has occurred.
   size_t index;
 
-  [[nodiscard]] inline double MinX() const
+  [[nodiscard]] double MinX() const
   {
     return std::min(start->x, end->x);
   }
@@ -223,12 +223,12 @@ struct Segment
 
   // compute the parallel and perpendicular distances from a partition
   // line to a point.
-  [[nodiscard]] inline double ParallelDist(double x, double y) const
+  [[nodiscard]] double ParallelDist(double x, double y) const
   {
     return (x * pdx + y * pdy + p_para) / p_length;
   }
 
-  [[nodiscard]] inline double PerpDist(double x, double y) const
+  [[nodiscard]] double PerpDist(double x, double y) const
   {
     return (x * pdy - y * pdx + p_perp) / p_length;
   }
@@ -308,7 +308,7 @@ struct Quadtree
   Quadtree(int _x1, int _y1, int _x2, int _y2);
   ~Quadtree();
 
-  [[nodiscard]] inline bool Empty() const
+  [[nodiscard]] bool Empty() const
   {
     return (real_num + mini_num) == 0;
   }
@@ -389,7 +389,7 @@ struct BlockMap
     SouthEither,
     WestEither,
 
-    Any
+    Any,
   } cardinal_weight;
 
   // Actual blockmap size, from origin
@@ -596,7 +596,7 @@ enum class BuildResult
   Ok = 0,
 
   // when saving the map, one or more lumps overflowed
-  Overflow
+  Overflow,
 };
 
 // build the nodes of a particular level. otherwise the wad
