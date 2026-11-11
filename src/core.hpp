@@ -1220,8 +1220,8 @@ struct Benchmarker
   ~Benchmarker(void)
   {
     if (!enabled) return;
-    auto end = clock::now();
-    auto time = std::chrono::duration<double, std::milli>(end - start);
+    const auto end = clock::now();
+    const auto time = std::chrono::duration<double, std::milli>(end - start);
     PrintLine(Log::NORMAL, "[Benchmarker] '{}' runtime: {:.2f} ms", name.data(), time.count());
   };
 };
@@ -1327,7 +1327,7 @@ struct Iota
 template <std::integral T>
 std::pair<size_t, T> LargestElement(std::vector<T> input)
 {
-  auto value = std::ranges::max_element(input);
-  auto index = std::distance(input.begin(), value);
+  const auto value = std::ranges::max_element(input);
+  const auto index = std::distance(input.begin(), value);
   return std::pair<size_t, T>(index, *value);
 }

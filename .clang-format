@@ -51,6 +51,7 @@ KeepEmptyLinesAtTheStartOfBlocks: true
 MaxEmptyLinesToKeep: 1
 PPIndentWidth: 2
 PointerAlignment: Right
+QualifierAlignment: Left
 ReflowComments: true
 RemoveBracesLLVM: false
 SeparateDefinitionBlocks: Always

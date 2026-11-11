@@ -2,7 +2,8 @@
 Checks: >
   clang-diagnostic-*,
   clang-analyzer-*,
-  misc-explicit-constructor
+  misc-explicit-constructor,
+  misc-const-correctness,
 WarningsAsErrors: ''
 HeaderFileExtensions:
   - h

@@ -41,7 +41,7 @@ inline static int32_t UScanInt(Scanner &s)
   int32_t x = 0;
   s.MustGetToken('=');
 
-  bool neg = s.CheckToken('-');
+  const bool neg = s.CheckToken('-');
   s.MustGetToken(TK_IntConst);
   x = neg ? -s->number : s->number;
 
@@ -54,7 +54,7 @@ inline static double UScanFloat(Scanner &s)
   double x = 0;
   s.MustGetToken('=');
 
-  bool neg = s.CheckToken('-');
+  const bool neg = s.CheckToken('-');
   s.MustGetToken(TK_FloatConst);
   x = neg ? -s->decimal : s->decimal;
 
@@ -616,7 +616,7 @@ void ParseUThing(Scanner &s, Level &level)
 
 //-----------------------------------------------------------------------------
 
-void ParseTextMap(WadIO &io, Level &level, std::vector<char> &lump)
+void ParseTextMap(const WadIO &io, Level &level, std::vector<char> &lump)
 {
   auto s = Scanner(lump.data(), lump.size());
 

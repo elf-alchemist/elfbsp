@@ -31,7 +31,7 @@ static std::vector<std::string> analysis_csv;
 
 static void FileClear(const std::filesystem::path &filename)
 {
-  std::ofstream file(filename);
+  const std::ofstream file(filename);
 }
 
 void SetupAnalysisFile(std::string_view filepath)
@@ -40,8 +40,9 @@ void SetupAnalysisFile(std::string_view filepath)
 
   FileClear(csv_path);
 
-  std::string line = "map,is_fast,split_cost,old_vertex,lines,sides,sectors,new_vertex,nodes,subsecs,segs,splits,left_depth,"
-                     "right_depth,average_depth,optimal_depth,tree_balance,worst_case_ratio,tree_quality";
+  const std::string line =
+      "map,is_fast,split_cost,old_vertex,lines,sides,sectors,new_vertex,nodes,subsecs,segs,splits,left_depth,"
+      "right_depth,average_depth,optimal_depth,tree_balance,worst_case_ratio,tree_quality";
   analysis_csv.push_back(line);
 }
 
@@ -49,7 +50,7 @@ void SetupAnalysisFile(std::string_view filepath)
 // expects AnalysisPushLine to have been called with all 0-32 split costs during node-building
 void WriteAnalysis(std::string_view filename)
 {
-  auto mark = Benchmarker(__func__);
+  const auto mark = Benchmarker(__func__);
   const auto csv_path = std::filesystem::path(filename).replace_extension(".csv");
 
   // Append to fresh CSV
@@ -102,10 +103,10 @@ static void ComputeTotalBspHeights(const Node *node, size_t depth, double &leaf_
   }
 }
 
-void GenerateAnalysis(WadIO &io, Level &level, std::string_view filename)
+void GenerateAnalysis(WadIO &io, Level &level, std::string_view /*filename*/)
 {
-  auto mark = Benchmarker(__func__);
-  auto generate_analysis_data = [](WadIO &io, Level &level, bool is_fast, size_t split_cost) -> auto
+  const auto mark = Benchmarker(__func__);
+  const auto generate_analysis_data = [](WadIO &io, Level &level, bool is_fast, size_t split_cost) -> auto
   {
     AnalysisData data;
     Node *analysis_node = nullptr;
@@ -165,7 +166,7 @@ void GenerateAnalysis(WadIO &io, Level &level, std::string_view filename)
     data.worst_case_ratio = min_epl / max_epl;
     data.tree_quality = ((min_epl / total_depth_sum) - data.worst_case_ratio) / (1 - data.worst_case_ratio);
 
-    std::string line =
+    const std::string line =
         std::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}", io.LumpName(level.lumps.label), is_fast,
                     split_cost, data.vertex, data.lines, data.sides, data.sectors, data.bsp_vertex, data.nodes, data.subsecs,
                     data.segs, data.splits, data.left_depth, data.right_depth, data.average_depth, data.optimal_depth,

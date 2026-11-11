@@ -76,7 +76,7 @@ static void Reject_Free(Level &level)
 // merge the two sector groups into one.  That's it !
 //
 
-static void Reject_GroupSectors(Level &level)
+static void Reject_GroupSectors(const Level &level)
 {
   for (auto line : level.linedefs)
   {
@@ -268,7 +268,7 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment> &lines, in
     cx /= static_cast<double>(points.verts.size());
     cy /= static_cast<double>(points.verts.size());
 
-    auto byAngle = [cx, cy](const SightPoint &a, const SightPoint &b)
+    const auto byAngle = [cx, cy](const SightPoint &a, const SightPoint &b)
     { return std::atan2(a.y - cy, a.x - cx) < std::atan2(b.y - cy, b.x - cx); };
 
     std::ranges::sort(points.verts, byAngle);
@@ -378,7 +378,7 @@ static BlockerGrid BuildBlockerGrid(const std::vector<SightSegment> &blockers, d
   grid.cellStart.assign(cols * rows + 1, 0);
 
   // Calls (cellIndex) for every cell the blocker's padded bbox covers.
-  auto forEachCell = [&](const SightSegment &s, auto &&fn)
+  const auto forEachCell = [&](const SightSegment &s, auto &&fn)
   {
     const size_t x0 = GetCellIndex(s.minX - padding, originX, cols - 1, cellSize);
     const size_t x1 = GetCellIndex(s.maxX + padding, originX, cols - 1, cellSize);
@@ -445,10 +445,10 @@ static constexpr double SHADOW_MARGIN = SIDE_MARGIN * 2.0;
 // 2D intersection check between two line segments.
 inline bool TrueSegmentsIntersect(const SightSegment &s1, const SightSegment &s2)
 {
-  double d1 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1);
-  double d2 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x2, s1.y2);
-  double d3 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x1, s2.y1);
-  double d4 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x2, s2.y2);
+  const double d1 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1);
+  const double d2 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x2, s1.y2);
+  const double d3 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x1, s2.y1);
+  const double d4 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x2, s2.y2);
 
   if (((d1 > SIDE_MARGIN && d2 < -SIDE_MARGIN) || (d1 < -SIDE_MARGIN && d2 > SIDE_MARGIN))
       && ((d3 > SIDE_MARGIN && d4 < -SIDE_MARGIN) || (d3 < -SIDE_MARGIN && d4 > SIDE_MARGIN)))
@@ -509,7 +509,7 @@ static bool IsRayBlocked(const SightSegment &ray, const std::vector<SightSegment
 
   // The same checks apply to every candidate blocker, whether it comes from
   // the recent-blocker ring or from the grid walk below.
-  auto blocks = [&ray](const SightSegment &blocker) -> bool { return SolidBlocksRay(ray, blocker); };
+  const auto blocks = [&ray](const SightSegment &blocker) -> bool { return SolidBlocksRay(ray, blocker); };
 
   // Try the walls that stopped the previous rays first. This is only a reordering of
   // the same tests, so a ray is blocked here only if the full walk would also block it.
@@ -527,7 +527,7 @@ static bool IsRayBlocked(const SightSegment &ray, const std::vector<SightSegment
   const double fx = (ray.x1 - grid.originX) * inv;
   const double fy = (ray.y1 - grid.originY) * inv;
 
-  auto clampCell = [](double v, ptrdiff_t limit) -> ptrdiff_t
+  const auto clampCell = [](double v, ptrdiff_t limit) -> ptrdiff_t
   { return static_cast<ptrdiff_t>(std::clamp(std::floor(v), 0.0, static_cast<double>(limit))); };
 
   // Cell holding the ray start, and cell holding the ray end.
@@ -710,7 +710,7 @@ static bool DoVisibilityTest(const SectorPoints &A, const SectorPoints &B, const
   uint32_t shadowWall = NO_INDEX_INT32;
   int32_t shadowSide = 0;
 
-  auto shadowed = [&](const SightPoint &from) -> bool
+  const auto shadowed = [&](const SightPoint &from) -> bool
   {
     if (scratch.ringCount == 0) return false;
 
@@ -723,7 +723,7 @@ static bool DoVisibilityTest(const SectorPoints &A, const SectorPoints &B, const
     return WallShadowsBox(blockers[id], shadowSide, from.x, from.y, boxB);
   };
 
-  auto clear = [&](const SightPoint &from, const SightPoint &to) -> bool
+  const auto clear = [&](const SightPoint &from, const SightPoint &to) -> bool
   {
     ++scratch.rayCasts; // Analysis Counter
 
@@ -824,7 +824,7 @@ static bool DoVisibilityTest(const SectorPoints &A, const SectorPoints &B, const
 }
 
 // Mark a sector pair as blind in both directions.
-static inline void SetPairBits(Level &level, size_t view, size_t target, size_t num_secs)
+static inline void SetPairBits(const Level &level, size_t view, size_t target, size_t num_secs)
 {
   const size_t p1 = view * num_secs + target;
   const size_t p2 = target * num_secs + view;
@@ -833,7 +833,7 @@ static inline void SetPairBits(Level &level, size_t view, size_t target, size_t 
 }
 
 // Mark a sector pair as blind in both directions using thread-safe atomic guards.
-static inline void SetPairBitsAtomic(Level &level, size_t view, size_t target, size_t num_secs)
+static inline void SetPairBitsAtomic(const Level &level, size_t view, size_t target, size_t num_secs)
 {
   const size_t p1 = view * num_secs + target;
   const size_t p2 = target * num_secs + view;
@@ -1034,7 +1034,7 @@ BuildCutLevels(const CutPoints &cuts, const std::vector<std::vector<uint32_t>> &
                const std::vector<size_t> &activeSectors)
 {
   std::vector<uint8_t> isActive(num_secs, 0);
-  for (size_t cutSector : activeSectors)
+  for (const size_t cutSector : activeSectors)
   {
     isActive[cutSector] = 1;
   }
@@ -1043,7 +1043,7 @@ BuildCutLevels(const CutPoints &cuts, const std::vector<std::vector<uint32_t>> &
   std::vector<int32_t> dist(num_secs);
   std::vector<uint32_t> queue;
 
-  for (size_t cutSector : cuts.cutList)
+  for (const size_t cutSector : cuts.cutList)
   {
     if (!isActive[cutSector]) continue;
 
@@ -1052,7 +1052,7 @@ BuildCutLevels(const CutPoints &cuts, const std::vector<std::vector<uint32_t>> &
     queue.assign(1, static_cast<uint32_t>(cutSector));
     for (size_t head = 0; head < queue.size(); ++head)
     {
-      for (uint32_t v : neighbors[queue[head]])
+      for (const uint32_t v : neighbors[queue[head]])
       {
         if (dist[v] < 0)
         {
@@ -1062,7 +1062,7 @@ BuildCutLevels(const CutPoints &cuts, const std::vector<std::vector<uint32_t>> &
       }
     }
 
-    for (uint32_t other : queue)
+    for (const uint32_t other : queue)
     {
       if (other == cutSector || !isActive[other]) continue;
       if (cuts.isCut[other] && other < cutSector) continue; // A pair of two cut points is only listed once
@@ -1120,7 +1120,7 @@ static CountSummary SummarizeCounts(std::vector<uint64_t> values)
   summary.max = values.back();
 
   uint64_t sum = 0;
-  for (uint64_t v : values)
+  for (const uint64_t v : values)
   {
     sum += v;
   }
@@ -1251,7 +1251,7 @@ static void Reject_ProcessSectors(Level &level)
   sectorBoxes.resize(num_secs);
 
   // Pre-allocate bit-matrix to track touching sectors instantly.
-  size_t adj_matrix_size = (num_secs * num_secs + 7) / 8;
+  const size_t adj_matrix_size = (num_secs * num_secs + 7) / 8;
   std::vector<uint8_t> adjacencyMatrix;
   adjacencyMatrix.assign(adj_matrix_size, 0);
 
@@ -1309,8 +1309,8 @@ static void Reject_ProcessSectors(Level &level)
       // Accuracy Fix!
       // If a two-sided linedef sits between two different sectors, they share a physical edge.
       // We log this connection in our bitset matrix to bypass ray casting entirely later.
-      size_t idx1 = sLeft->index * num_secs + sRight->index;
-      size_t idx2 = sRight->index * num_secs + sLeft->index;
+      const size_t idx1 = sLeft->index * num_secs + sRight->index;
+      const size_t idx2 = sRight->index * num_secs + sLeft->index;
       if ((adjacencyMatrix[idx1 >> 3] & (1 << (idx1 & 7))) == 0)
       {
         neighbors[sLeft->index].push_back(static_cast<uint32_t>(sRight->index));
@@ -1627,7 +1627,7 @@ static void Reject_ProcessSectors(Level &level)
 
             // Add this thread's counters to the totals, one thread at a time.
             {
-              std::lock_guard<std::mutex> lock(totalsMutex);
+              const std::lock_guard<std::mutex> lock(totalsMutex);
 
               totalRayCasts += scratch.rayCasts;
               totalCellSteps += scratch.cellSteps;
@@ -1655,7 +1655,7 @@ static void Reject_ProcessSectors(Level &level)
     stats.gridCols = static_cast<uint64_t>(gridCols);
 
     // Sectors without any line are left out so they do not pull the averages down.
-    for (size_t sector : activeSectors)
+    for (const size_t sector : activeSectors)
     {
       stats.portalsPerSector.push_back(portalsPerSector[sector]);
       stats.blockersPerSector.push_back(blockersPerSector[sector]);
@@ -1674,7 +1674,7 @@ static void Reject_ProcessSectors(Level &level)
 }
 
 // Note: this routine is destructive to the group numbers
-static void Reject_DebugGroups(Level &level)
+static void Reject_DebugGroups(const Level &level)
 {
   if (HAS_NONE(config.debug, DEBUG_REJECT)) return;
 
@@ -1711,7 +1711,7 @@ void PutReject(WadIO &io, Level &level)
     return;
   }
 
-  auto mark = Benchmarker(__func__);
+  const auto mark = Benchmarker(__func__);
   io.StartWritingLump("REJECT");
 
   // just leave an empty reject lump
