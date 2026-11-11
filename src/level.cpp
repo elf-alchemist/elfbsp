@@ -33,7 +33,6 @@
 bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2)
 {
   int count = 2;
-  int tmp;
 
   for (;;)
   {
