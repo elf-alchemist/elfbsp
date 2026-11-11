@@ -154,7 +154,7 @@ struct Linedef
   // length lines has occurred.
   size_t index;
 
-  inline double MinX(void) const
+  inline double MinX() const
   {
     return std::min(start->x, end->x);
   }
@@ -306,9 +306,9 @@ struct Quadtree
   Segment *list;
 
   Quadtree(int _x1, int _y1, int _x2, int _y2);
-  ~Quadtree(void);
+  ~Quadtree();
 
-  inline bool Empty(void) const
+  inline bool Empty() const
   {
     return (real_num + mini_num) == 0;
   }
@@ -419,7 +419,7 @@ struct BlockMap
   double block_compression = 0.0;
 
   [[nodiscard]]
-  size_t BlockCount(void) const
+  size_t BlockCount() const
   {
     return this->columns * this->rows;
   }
@@ -496,29 +496,29 @@ struct Level
   Sector *SafeLookupSector(size_t num, size_t num_side) const;
   Sidedef *SafeLookupSidedef(int32_t num) const;
 
-  Vertex *NewVertex(void);
-  Linedef *NewLinedef(void);
-  Sidedef *NewSidedef(void);
-  Sector *NewSector(void);
-  Mobj *NewThing(void);
+  Vertex *NewVertex();
+  Linedef *NewLinedef();
+  Sidedef *NewSidedef();
+  Sector *NewSector();
+  Mobj *NewThing();
 
-  Segment *NewSeg(void);
-  Subsector *NewSubsec(void);
-  Node *NewNode(void);
-  WallTip *NewWallTip(void);
-  Intersection *NewIntersection(void);
+  Segment *NewSeg();
+  Subsector *NewSubsec();
+  Node *NewNode();
+  WallTip *NewWallTip();
+  Intersection *NewIntersection();
 
-  void FreeVertices(void);
-  void FreeSidedefs(void);
-  void FreeLinedefs(void);
-  void FreeSectors(void);
-  void FreeThings(void);
+  void FreeVertices();
+  void FreeSidedefs();
+  void FreeLinedefs();
+  void FreeSectors();
+  void FreeThings();
 
-  void FreeSegs(void);
-  void FreeSubsecs(void);
-  void FreeNodes(void);
-  void FreeWallTips(void);
-  void FreeIntersections(void);
+  void FreeSegs();
+  void FreeSubsecs();
+  void FreeNodes();
+  void FreeWallTips();
+  void FreeIntersections();
 };
 
 void ParseUDMF(WadIO &io, Level &level);

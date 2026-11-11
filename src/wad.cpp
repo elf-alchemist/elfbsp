@@ -109,7 +109,7 @@ WadIO::WadIO(std::string in_file, std::string out_file)
   this->SafeWrite(&this->write_header, sizeof(this->write_header));
 }
 
-WadIO::~WadIO(void)
+WadIO::~WadIO()
 {
   // Input stuff
   this->read_file.close();
@@ -138,7 +138,7 @@ void WadIO::SafeRead(void *buffer, size_t size)
   }
 }
 
-size_t WadIO::NumLumps(void) const
+size_t WadIO::NumLumps() const
 {
   return this->read_directory.size();
 }
@@ -365,7 +365,7 @@ void WadIO::AddToLump(const void *data, size_t len)
 // Zlib compression support
 //
 
-void WadIO::Begin_Zlib(void)
+void WadIO::Begin_Zlib()
 {
   this->zlib_init = true;
   this->zout_stream.zalloc = nullptr;
@@ -409,7 +409,7 @@ void WadIO::AddToLumpZ(const void *data, size_t length)
   }
 }
 
-void WadIO::Finish_Zlib(void)
+void WadIO::Finish_Zlib()
 {
   SYS_ASSERT(this->zout_stream.avail_out > 0);
   size_t left_over;
