@@ -464,7 +464,7 @@ bool EvalPartitionWorker(const Quadtree &tree, const Segment *part, double best_
   }
 
   /* handle sub-blocks recursively */
-  return std::ranges::any_of(tree.subs, [&](const auto& sub)
+  return std::ranges::any_of(tree.subs, [&](const auto &sub)
   {
     if (info->cost > best_cost)
     {
@@ -595,7 +595,7 @@ void EvaluateFastWorker(const Quadtree &tree, Segment **best_H, Segment **best_V
   }
 
   /* handle sub-blocks recursively */
-  for (auto& sub : tree.subs)
+  for (auto &sub : tree.subs)
   {
     if (sub != nullptr && !sub->Empty())
     {
@@ -683,7 +683,7 @@ static void PickNodeWorker(const Quadtree &part_list, Quadtree &tree, Segment **
   }
 
   /* recursively handle sub-blocks */
-  for (auto& sub : part_list.subs)
+  for (auto &sub : part_list.subs)
   {
     if (sub != nullptr && !sub->Empty())
     {
@@ -864,7 +864,7 @@ void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment **lef
 // remove all the segs from the list, partitioning them into the left
 // or right lists based on the given partition line.  Adds any
 // intersections into the intersection list as it goes.
-void SeparateSegs(Level &level, Quadtree& tree, Segment *part, Segment **left_list, Segment **right_list,
+void SeparateSegs(Level &level, Quadtree &tree, Segment *part, Segment **left_list, Segment **right_list,
                   Intersection **cut_list)
 {
   while (tree.list != nullptr)
@@ -1337,11 +1337,9 @@ Segment *CreateSegs(Level &level)
   return list;
 }
 
-std::unique_ptr<Quadtree> TreeFromSegList(Segment *list, const MapBoundBox &bounds)
+Quadtree::Quadtree(Segment *list, const MapBoundBox &bounds) : Quadtree(bounds.minx, bounds.miny, bounds.maxx, bounds.maxy)
 {
-  auto tree = std::make_unique<Quadtree>(bounds.minx, bounds.miny, bounds.maxx, bounds.maxy);
-  AddList(*tree, list);
-  return tree;
+  AddList(*this, list);
 }
 
 static void DetermineMiddle(Subsector *subsec)
@@ -1575,10 +1573,10 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Nod
   // determine bounds of segs
   FindSegListLimits(list, bounds);
 
-  auto tree = TreeFromSegList(list, bounds);
+  auto tree = Quadtree(list, bounds);
 
   /* pick partition line, NONE indicates convexicity */
-  Segment *part = PickNode(*tree, depth, split_cost, fast);
+  Segment *part = PickNode(tree, depth, split_cost, fast);
 
   if (part == nullptr)
   {
@@ -1587,7 +1585,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Nod
       PrintLine(Log::DEBUG, "[{}] CONVEX", __func__);
     }
 
-    *S = CreateSubsec(level, *tree);
+    *S = CreateSubsec(level, tree);
 
     return;
   }
@@ -1606,7 +1604,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Nod
   Segment *rights = nullptr;
   Intersection *cut_list = nullptr;
 
-  SeparateSegs(level, *tree, part, &lefts, &rights, &cut_list);
+  SeparateSegs(level, tree, part, &lefts, &rights, &cut_list);
 
   /* sanity checks... */
   if (rights == nullptr)
