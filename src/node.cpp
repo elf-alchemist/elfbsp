@@ -1420,33 +1420,8 @@ static void ClockwiseOrder(Subsector *subsec)
 
   // sort segs by angle (from the middle point to the start vertex).
   // the desired order (clockwise) means descending angles.
-  // since # of segs is usually small, a bubble sort is fast enough.
-
-  size_t i = 0;
-
-  while (i + 1 < array.size())
-  {
-    Segment *A = array[i];
-    Segment *B = array[i + 1];
-
-    if (A->cmp_angle < B->cmp_angle)
-    {
-      // swap 'em
-      array[i] = B;
-      array[i + 1] = A;
-
-      // bubble down
-      if (i > 0)
-      {
-        i--;
-      }
-    }
-    else
-    {
-      // bubble up
-      i++;
-    }
-  }
+  // does this need to be stable?
+  std::ranges::stable_sort(array, [](const Segment *A, const Segment *B) { return A->cmp_angle > B->cmp_angle; });
 
   // choose the seg that will be first (the game engine will typically use
   // that to determine the sector).  In particular, we don't like self
