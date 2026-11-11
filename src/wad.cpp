@@ -54,7 +54,7 @@ static const std::string_view ENDMAP = "ENDMAP";
 //  WAD Reading Interface
 //------------------------------------------------------------------------
 
-WadIO::WadIO(std::string in_file, std::string out_file)
+WadIO::WadIO(const std::string &in_file, const std::string &out_file)
 {
   // Input stuff
   this->read_file.open(in_file, std::ios::binary);

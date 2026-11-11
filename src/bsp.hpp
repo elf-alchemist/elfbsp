@@ -207,4 +207,4 @@ void PutSubsecs_DeePBSPV4(WadIO &io, const Level &level);
 void PutNodes_DeePBSPV4(WadIO &io, const Level &level);
 void PutLeafs_DeePBSPV4(WadIO &io, const Level &level);
 
-void PutTree_ZDBSP(WadIO &io, Level &level, std::string lumpname, BspFormat bsp_format, bool compress);
+void PutTree_ZDBSP(WadIO &io, Level &level, std::string_view lumpname, BspFormat bsp_format, bool compress);
