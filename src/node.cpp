@@ -1078,6 +1078,7 @@ static int PointOnLineSide(const Segment *seg, double x, double y)
 
 /* ----- quad-tree routines ------------------------------------ */
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- what else is there to do?
 Quadtree::Quadtree(int _x1, int _y1, int _x2, int _y2) : x1(_x1), y1(_y1), x2(_x2), y2(_y2)
 {
   const int dx = x2 - x1;

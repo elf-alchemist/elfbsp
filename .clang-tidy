@@ -27,7 +27,8 @@ Checks: >
   -readability-magic-numbers,
   -readability-math-missing-parentheses,
   -readability-qualified-auto,
-  -readability-simplify-boolean-expr
+  -readability-simplify-boolean-expr,
+  -readability-uppercase-literal-suffix
 WarningsAsErrors: ''
 HeaderFileExtensions:
   - h

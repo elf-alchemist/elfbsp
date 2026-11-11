@@ -181,7 +181,7 @@ constexpr size_t OFF_BY_ONE = 1;
 // bitflags
 constexpr uint32_t BIT(const uint32_t x)
 {
-  return (1U << x);
+  return (1u << x);
 }
 
 constexpr bool HAS_BIT(const uint32_t x, const uint32_t y)
@@ -264,6 +264,13 @@ constexpr long_angle_t DegreesToLongBAM(const double x)
 constexpr short_angle_t DegreesToShortBAM(const double x)
 {
   return static_cast<short_angle_t>(static_cast<long_angle_t>(LONG_ANGLE_1 * x) >> FRACBITS);
+}
+
+// C++23's uz suffix for size_t literals
+
+consteval size_t operator""_uz(unsigned long long val)
+{
+  return val;
 }
 
 //------------------------------------------------------------------------
