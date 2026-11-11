@@ -1518,123 +1518,120 @@ static void Reject_ProcessSectors(Level &level)
 
   std::mutex totalsMutex;
 
-  RunTeam(threadCount,
-          [&](size_t threadIndex, TeamSync &team)
-          {
-            // One ray scratch space per thread, made by the thread that uses it.
-            RayWalkSpace scratch(solidBlockers.size(), num_secs);
+  RunTeam(threadCount, [&](size_t threadIndex, TeamSync &team)
+  {
+    // One ray scratch space per thread, made by the thread that uses it.
+    RayWalkSpace scratch(solidBlockers.size(), num_secs);
 
-            // Everything that decides one pair of sectors.
-            auto testPair = [&](size_t view, size_t target)
-            {
-              // Sectors in different groups were already marked blind in bulk.
-              if (groupOf[view] != groupOf[target])
-              {
-                return;
-              }
+    // Everything that decides one pair of sectors.
+    auto testPair = [&](size_t view, size_t target)
+    {
+      // Sectors in different groups were already marked blind in bulk.
+      if (groupOf[view] != groupOf[target])
+      {
+        return;
+      }
 
-              // Wow Yet Again Another Accuracy Fix! :(
-              // If these sectors touch directly, they are unconditionally visible!
-              // Skipping curved alternative geometric checks prevents tunnel/cave blindness bugs.
-              const size_t adjIdx = view * num_secs + target;
-              if ((adjacencyMatrix[adjIdx >> 3] & (1 << (adjIdx & 7))) != 0)
-              {
-                return;
-              }
+      // Wow Yet Again Another Accuracy Fix! :(
+      // If these sectors touch directly, they are unconditionally visible!
+      // Skipping curved alternative geometric checks prevents tunnel/cave blindness bugs.
+      const size_t adjIdx = view * num_secs + target;
+      if ((adjacencyMatrix[adjIdx >> 3] & (1 << (adjIdx & 7))) != 0)
+      {
+        return;
+      }
 
-              const auto &boxA = sectorBoxes[view];
-              const auto &boxB = sectorBoxes[target];
+      const auto &boxA = sectorBoxes[view];
+      const auto &boxB = sectorBoxes[target];
 
-              // Every ray endpoint lies inside its sector's bbox, so no ray can be shorter
-              // than the gap between the boxes. IsRayBlocked rejects anything longer than
-              // maxMapSpanSq anyway, so such a pair is blind without casting a ray.
-              if (CheckGapTooWide(boxA, boxB, maxMapSpanSq))
-              {
-                SetPairBitsAtomic(level, view, target, num_secs);
-                return;
-              }
+      // Every ray endpoint lies inside its sector's bbox, so no ray can be shorter
+      // than the gap between the boxes. IsRayBlocked rejects anything longer than
+      // maxMapSpanSq anyway, so such a pair is blind without casting a ray.
+      if (CheckGapTooWide(boxA, boxB, maxMapSpanSq))
+      {
+        SetPairBitsAtomic(level, view, target, num_secs);
+        return;
+      }
 
-              // A cut point blocks this pair, no rays needed.
-              if (prune && inferredBlind(view, target))
-              {
-                SetPairBitsAtomic(level, view, target, num_secs);
-                return;
-              }
+      // A cut point blocks this pair, no rays needed.
+      if (prune && inferredBlind(view, target))
+      {
+        SetPairBitsAtomic(level, view, target, num_secs);
+        return;
+      }
 
-              // Each ray now walks the grid on its own inside IsRayBlocked via DDA steps.
-              const uint64_t raysBefore = scratch.rayCasts;
+      // Each ray now walks the grid on its own inside IsRayBlocked via DDA steps.
+      const uint64_t raysBefore = scratch.rayCasts;
 
-              const bool visible = DoVisibilityTest(sectorPoints[view], sectorPoints[target], solidBlockers, grid, touchWalls,
-                                                    boxB, scratch, maxMapSpanSq, withinBudget);
+      const bool visible = DoVisibilityTest(sectorPoints[view], sectorPoints[target], solidBlockers, grid, touchWalls, boxB,
+                                            scratch, maxMapSpanSq, withinBudget);
 
-              const uint64_t raysUsed = scratch.rayCasts - raysBefore;
-              scratch.sectorRays[view] += raysUsed;
-              scratch.sectorRays[target] += raysUsed;
+      const uint64_t raysUsed = scratch.rayCasts - raysBefore;
+      scratch.sectorRays[view] += raysUsed;
+      scratch.sectorRays[target] += raysUsed;
 
-              if (!visible)
-              {
-                SetPairBitsAtomic(level, view, target, num_secs);
-              }
-            };
+      if (!visible)
+      {
+        SetPairBitsAtomic(level, view, target, num_secs);
+      }
+    };
 
-            // Pairs that involve a cut point first, nearest pairs first. Each level is finished
-            // before the next one starts, so the results it relies on are all in place.
-            for (auto &cutLevel : cutLevels)
-            {
-              team.For(threadIndex, cutLevel.size(),
-                       [&](size_t pairIndex)
-                       {
-                         const auto &cutPair = cutLevel[pairIndex];
-                         testPair(cutPair.first, cutPair.second);
-                       });
+    // Pairs that involve a cut point first, nearest pairs first. Each level is finished
+    // before the next one starts, so the results it relies on are all in place.
+    for (auto &cutLevel : cutLevels)
+    {
+      team.For(threadIndex, cutLevel.size(), [&](size_t pairIndex)
+      {
+        const auto &cutPair = cutLevel[pairIndex];
+        testPair(cutPair.first, cutPair.second);
+      });
 
-              // Every thread is finished at this point. The others wait
-              // until this thread gets there, so the snapshot is safe to take.
-              if (threadIndex == 0)
-              {
-                memcpy(blindSnap.data(), level.reject_matrix, level.reject_size);
-              }
-            }
+      // Every thread is finished at this point. The others wait
+      // until this thread gets there, so the snapshot is safe to take.
+      if (threadIndex == 0)
+      {
+        memcpy(blindSnap.data(), level.reject_matrix, level.reject_size);
+      }
+    }
 
-            team.For(threadIndex, activeCount,
-                     [&](size_t rowIndex)
-                     {
-                       // Walk from the last active sector down.
-                       // Row 'a' tests 'a' targets, so the biggest rows go first
-                       // and no long row is left as a straggler.
-                       const size_t from = activeCount - 1 - rowIndex;
+    team.For(threadIndex, activeCount, [&](size_t rowIndex)
+    {
+      // Walk from the last active sector down.
+      // Row 'a' tests 'a' targets, so the biggest rows go first
+      // and no long row is left as a straggler.
+      const size_t from = activeCount - 1 - rowIndex;
 
-                       // Map our active iterator index back to the real sector index
-                       const size_t view = activeSectors[from];
+      // Map our active iterator index back to the real sector index
+      const size_t view = activeSectors[from];
 
-                       for (size_t to = 0; to < from; to++)
-                       {
-                         // Map our active target iterator index back to the real sector index
-                         const size_t target = activeSectors[to];
+      for (size_t to = 0; to < from; to++)
+      {
+        // Map our active target iterator index back to the real sector index
+        const size_t target = activeSectors[to];
 
-                         // Pairs with a cut point were already done above.
-                         if (prune && (cuts.isCut[view] || cuts.isCut[target]))
-                         {
-                           continue;
-                         }
+        // Pairs with a cut point were already done above.
+        if (prune && (cuts.isCut[view] || cuts.isCut[target]))
+        {
+          continue;
+        }
 
-                         testPair(view, target);
-                       }
-                     });
+        testPair(view, target);
+      }
+    });
 
-            // Add this thread's counters to the totals, one thread at a time.
-            {
-              const std::scoped_lock lock(totalsMutex);
+    // Add this thread's counters to the totals, one thread at a time.
+    {
+      const std::scoped_lock lock(totalsMutex);
 
-              totalRayCasts += scratch.rayCasts;
-              totalCellSteps += scratch.cellSteps;
+      totalRayCasts += scratch.rayCasts;
+      totalCellSteps += scratch.cellSteps;
 
-              for (size_t i = 0; i < num_secs; ++i)
-              {
-                totalSectorRays[i] += scratch.sectorRays[i];
-              }
-            }
-          });
+      for (size_t i = 0; i < num_secs; ++i)
+      {
+        totalSectorRays[i] += scratch.sectorRays[i];
+      }
+    }
+  });
 
   // Restore process priority back to normal once the heavy CPU work finishes
   RestorePriority();
