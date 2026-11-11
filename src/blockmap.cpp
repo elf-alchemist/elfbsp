@@ -32,7 +32,7 @@ static constexpr auto BlockMap_GridMask = BlockMap_GridSize - static_cast<int32_
 
 /* ----- create blockmap ------------------------------------ */
 
-static void Blockmap_FindLimits(Level &level, MapBoundBox &bbox)
+static void Blockmap_FindLimits(const Level &level, MapBoundBox &bbox)
 {
   double mid_x = 0;
   double mid_y = 0;
@@ -49,15 +49,15 @@ static void Blockmap_FindLimits(Level &level, MapBoundBox &bbox)
       continue;
     }
 
-    double x1 = L->start->x;
-    double y1 = L->start->y;
-    double x2 = L->end->x;
-    double y2 = L->end->y;
+    const double x1 = L->start->x;
+    const double y1 = L->start->y;
+    const double x2 = L->end->x;
+    const double y2 = L->end->y;
 
-    int16_t lx = FloatToShort(floor(std::min(x1, x2)));
-    int16_t ly = FloatToShort(floor(std::min(y1, y2)));
-    int16_t hx = FloatToShort(ceil(std::max(x1, x2)));
-    int16_t hy = FloatToShort(ceil(std::max(y1, y2)));
+    const int16_t lx = FloatToShort(floor(std::min(x1, x2)));
+    const int16_t ly = FloatToShort(floor(std::min(y1, y2)));
+    const int16_t hx = FloatToShort(ceil(std::max(x1, x2)));
+    const int16_t hy = FloatToShort(ceil(std::max(y1, y2)));
 
     if (lx < bbox.minx) bbox.minx = lx;
     if (ly < bbox.miny) bbox.miny = ly;
@@ -81,7 +81,7 @@ static void Blockmap_FindLimits(Level &level, MapBoundBox &bbox)
   }
 }
 
-void Blockmap_Init(Level &level, BlockMap &bmap)
+void Blockmap_Init(const Level &level, BlockMap &bmap)
 {
   MapBoundBox bbox;
 
@@ -99,7 +99,7 @@ void Blockmap_Init(Level &level, BlockMap &bmap)
   bmap.rows = static_cast<size_t>(bbox.maxy - bmap.origin_y) / BlockMap_GridSize + OFF_BY_ONE;
 
   bmap.cells.reserve(bmap.BlockCount());
-  for (auto i : Iota(bmap.BlockCount()))
+  for (const auto i : Iota(bmap.BlockCount()))
   {
     bmap.cells.push_back(BlockList(i));
   }
@@ -170,15 +170,15 @@ static void Block_AddLine(BlockMap &bmap, const Linedef *L)
   }
 
   // TODO, this really isn't needed, we don't support truncated blockmaps anymore
-  auto bx1_temp = (std::min(x1, x2) - bmap.origin_x) / BlockMap_GridSize;
-  auto by1_temp = (std::min(y1, y2) - bmap.origin_y) / BlockMap_GridSize;
-  auto bx2_temp = (std::max(x1, x2) - bmap.origin_x) / BlockMap_GridSize;
-  auto by2_temp = (std::max(y1, y2) - bmap.origin_y) / BlockMap_GridSize;
+  const auto bx1_temp = (std::min(x1, x2) - bmap.origin_x) / BlockMap_GridSize;
+  const auto by1_temp = (std::min(y1, y2) - bmap.origin_y) / BlockMap_GridSize;
+  const auto bx2_temp = (std::max(x1, x2) - bmap.origin_x) / BlockMap_GridSize;
+  const auto by2_temp = (std::max(y1, y2) - bmap.origin_y) / BlockMap_GridSize;
 
-  size_t bx1 = static_cast<size_t>(std::max(bx1_temp, 0));
-  size_t by1 = static_cast<size_t>(std::max(by1_temp, 0));
-  size_t bx2 = static_cast<size_t>(std::min(bx2_temp, static_cast<int32_t>(bmap.columns - OFF_BY_ONE)));
-  size_t by2 = static_cast<size_t>(std::min(by2_temp, static_cast<int32_t>(bmap.rows - OFF_BY_ONE)));
+  const size_t bx1 = static_cast<size_t>(std::max(bx1_temp, 0));
+  const size_t by1 = static_cast<size_t>(std::max(by1_temp, 0));
+  const size_t bx2 = static_cast<size_t>(std::min(bx2_temp, static_cast<int32_t>(bmap.columns - OFF_BY_ONE)));
+  const size_t by2 = static_cast<size_t>(std::min(by2_temp, static_cast<int32_t>(bmap.rows - OFF_BY_ONE)));
 
   if (bx2 < bx1 || by2 < by1)
   {
@@ -190,7 +190,7 @@ static void Block_AddLine(BlockMap &bmap, const Linedef *L)
   {
     for (size_t bx = bx1; bx <= bx2; bx++)
     {
-      size_t blk_num = by1 * bmap.columns + bx;
+      const size_t blk_num = by1 * bmap.columns + bx;
       Block_Add(bmap, blk_num, line_index);
     }
     return;
@@ -201,7 +201,7 @@ static void Block_AddLine(BlockMap &bmap, const Linedef *L)
   {
     for (size_t by = by1; by <= by2; by++)
     {
-      size_t blk_num = by * bmap.columns + bx1;
+      const size_t blk_num = by * bmap.columns + bx1;
       Block_Add(bmap, blk_num, line_index);
     }
     return;
@@ -213,12 +213,12 @@ static void Block_AddLine(BlockMap &bmap, const Linedef *L)
   {
     for (size_t bx = bx1; bx <= bx2; bx++)
     {
-      size_t blk_num = bx + by * bmap.columns;
+      const size_t blk_num = bx + by * bmap.columns;
 
-      auto minx = bmap.origin_x + BlockMap_GridSize * static_cast<int32_t>(bx);
-      auto miny = bmap.origin_y + BlockMap_GridSize * static_cast<int32_t>(by);
-      auto maxx = minx + BlockMap_GridMask;
-      auto maxy = miny + BlockMap_GridMask;
+      const auto minx = bmap.origin_x + BlockMap_GridSize * static_cast<int32_t>(bx);
+      const auto miny = bmap.origin_y + BlockMap_GridSize * static_cast<int32_t>(by);
+      const auto maxx = minx + BlockMap_GridMask;
+      const auto maxy = miny + BlockMap_GridMask;
 
       if (CheckLinedefInsideBox(minx, miny, maxx, maxy, x1, y1, x2, y2))
       {
@@ -244,13 +244,13 @@ static void Blockmap_Create(Level &level, BlockMap &bmap)
 
   if (!config.skip_bmap_zero)
   {
-    for (auto blk_num : Iota(bmap.BlockCount()))
+    for (const auto blk_num : Iota(bmap.BlockCount()))
     {
       Block_Add(bmap, blk_num, 0);
     }
   }
 
-  for (auto i : Iota(level.linedefs.size()))
+  for (const auto i : Iota(level.linedefs.size()))
   {
     auto L = level.linedefs[i];
     if (HAS_BIT(L->effects, FX_NoBlockmap))
@@ -276,10 +276,10 @@ static void Blockmap_FlattenUncompressed(BlockMap &bmap)
   // Skip header and offsets list
   size_t offset = 4 + bmap.BlockCount();
 
-  for (auto cell : bmap.cells)
+  for (const auto cell : bmap.cells)
   {
     bmap.unpacked_offsets.push_back(offset);
-    for (auto line : cell.lines)
+    for (const auto line : cell.lines)
     {
       bmap.unpacked_list.push_back(line);
     }
@@ -302,7 +302,7 @@ void Blockmap_Deduplicate(BlockMap &bmap)
   // This lets us cut down on comparisons between duplicate blocks
   std::map<size_t, std::vector<size_t>> SizeMatcher;
 
-  for (auto cell : bmap.cells)
+  for (const auto cell : bmap.cells)
   {
     SizeMatcher[cell.lines.size()].push_back(cell.self_index);
   }
@@ -312,14 +312,14 @@ void Blockmap_Deduplicate(BlockMap &bmap)
     // No actual duplicates? skip
     if (dupes.size() < 2) continue;
 
-    for (auto i : Iota(dupes.size()))
+    for (const auto i : Iota(dupes.size()))
     {
       auto &cell1 = bmap.cells[dupes[i]];
 
       // Already marked?
       if (cell1.dup_index != NO_INDEX) continue;
 
-      for (auto j : Iota(i + 1, dupes.size()))
+      for (const auto j : Iota(i + 1, dupes.size()))
       {
         auto &cell2 = bmap.cells[dupes[j]];
 
@@ -354,18 +354,18 @@ void Blockmap_FlattenDeduplicated(BlockMap &bmap)
 {
   size_t offset = 4 + bmap.BlockCount();
 
-  for (auto cell : bmap.cells)
+  for (const auto cell : bmap.cells)
   {
     if (cell.dup_index != NO_INDEX)
     {
-      auto duped_offset = bmap.deduped_offsets[cell.dup_index];
+      const auto duped_offset = bmap.deduped_offsets[cell.dup_index];
       bmap.deduped_offsets.push_back(duped_offset);
       continue;
     }
 
     bmap.deduped_offsets.push_back(offset);
 
-    for (auto line : cell.lines)
+    for (const auto line : cell.lines)
     {
       bmap.deduped_list.push_back(line);
     }
@@ -387,10 +387,10 @@ void Blockmap_FlattenDeduplicated(BlockMap &bmap)
 //
 void Blockmap_SortCells(BlockMap &bmap)
 {
-  auto by_size = [](BlockList &a, BlockList &b) -> auto
+  const auto by_size = [](BlockList &a, BlockList &b) -> auto
   {
-    auto size_a = a.lines.size();
-    auto size_b = b.lines.size();
+    const auto size_a = a.lines.size();
+    const auto size_b = b.lines.size();
 
     if (size_a != size_b)
     {
@@ -414,18 +414,18 @@ void Blockmap_FlattenSorted(BlockMap &bmap)
 
   // Blocks are sorted by size, so now we need to use .self_index to insert
   // offsets in the proper places
-  for (auto cell : bmap.cells)
+  for (const auto cell : bmap.cells)
   {
     if (cell.dup_index != NO_INDEX)
     {
-      auto duped_offset = bmap.sorted_offsets[cell.dup_index];
+      const auto duped_offset = bmap.sorted_offsets[cell.dup_index];
       bmap.sorted_offsets[cell.self_index] = duped_offset;
       continue;
     }
 
     bmap.sorted_offsets[cell.self_index] = offset;
 
-    for (auto line : cell.lines)
+    for (const auto line : cell.lines)
     {
       bmap.sorted_list.push_back(line);
     }
@@ -443,7 +443,7 @@ void Blockmap_FlattenSorted(BlockMap &bmap)
 void CheckFormatBlockMap(BlockMap &bmap)
 {
   // TODO: get verbose overflow output on all build steps
-  auto final_offset = LargestElement(bmap.sorted_offsets).second;
+  const auto final_offset = LargestElement(bmap.sorted_offsets).second;
 
   if (bmap.format == BlockmapFormat::DoomBSP && final_offset > LIMIT_BMAP_INDEX_VANILLA)
   {
@@ -489,12 +489,12 @@ static void Blockmap_Write(WadIO &io, BlockMap &bmap)
   std::vector<NumType> lump_data;
   lump_data.reserve(bmap.sorted_offsets.size() + bmap.sorted_list.size());
 
-  for (auto offset : bmap.sorted_offsets)
+  for (const auto offset : bmap.sorted_offsets)
   {
     lump_data.push_back(GetLittleEndian(static_cast<NumType>(offset)));
   }
 
-  for (auto block : bmap.sorted_list)
+  for (const auto block : bmap.sorted_list)
   {
     lump_data.push_back(GetLittleEndian(static_cast<NumType>(block)));
   }
@@ -505,8 +505,8 @@ static void Blockmap_Write(WadIO &io, BlockMap &bmap)
 template <size_t NumSize, size_t ExtraBytes>
 void PrintStuff1(std::vector<BlockList> &c, std::string_view f)
 {
-  size_t HeaderSize = 4 * NumSize;
-  size_t OffsetListSize = c.size() * NumSize;
+  const size_t HeaderSize = 4 * NumSize;
+  const size_t OffsetListSize = c.size() * NumSize;
   size_t TotalSize = ExtraBytes + HeaderSize + OffsetListSize;
 
   PrintLine(Log::NORMAL, "[{}]   Header and offset list take up {} bytes", f, TotalSize);
@@ -515,8 +515,8 @@ void PrintStuff1(std::vector<BlockList> &c, std::string_view f)
 template <size_t NumSize, size_t ExtraBytes>
 void PrintStuff2(std::vector<BlockList> &c, std::vector<size_t> &l, std::string_view f, std::string_view n)
 {
-  size_t HeaderSize = 4 * NumSize;
-  size_t OffsetListSize = c.size() * NumSize;
+  const size_t HeaderSize = 4 * NumSize;
+  const size_t OffsetListSize = c.size() * NumSize;
   size_t HeaderAndOffsetListSize = ExtraBytes + HeaderSize + OffsetListSize;
 
   size_t BlockListSize = l.size() * NumSize;
@@ -534,7 +534,7 @@ void PutBlockmap(WadIO &io, Level &level)
     return;
   }
 
-  auto mark = Benchmarker(__func__);
+  const auto mark = Benchmarker(__func__);
 
   BlockMap bmap;
   io.StartWritingLump("BLOCKMAP");

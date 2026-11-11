@@ -74,7 +74,7 @@ Sector *Level::SafeLookupSector(size_t num, size_t num_side) const
 Sidedef *Level::SafeLookupSidedef(int32_t num) const
 {
   // silently ignore illegal sidedef numbers
-  auto num_as_index = static_cast<size_t>(num);
+  const auto num_as_index = static_cast<size_t>(num);
 
   if (num < 0 || num_as_index >= sidedefs.size())
   {

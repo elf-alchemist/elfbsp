@@ -40,7 +40,7 @@ constexpr uint32_t NF_SUBSECTOR = BIT(31);
 void SortSegs(Level &level)
 {
   // sort segs into ascending index
-  auto PredicateCompare_SegmentIndex = [](const Segment *Segment1, const Segment *Segment2) -> auto
+  const auto PredicateCompare_SegmentIndex = [](const Segment *Segment1, const Segment *Segment2) -> auto
   { return Segment1->index < Segment2->index; };
 
   std::ranges::sort(level.segs, PredicateCompare_SegmentIndex);
@@ -55,12 +55,12 @@ void SortSegs(Level &level)
 
 static inline int16_t VanillaSegDist(const Segment *seg)
 {
-  double lx = seg->side ? seg->linedef->end->x : seg->linedef->start->x;
-  double ly = seg->side ? seg->linedef->end->y : seg->linedef->start->y;
+  const double lx = seg->side ? seg->linedef->end->x : seg->linedef->start->x;
+  const double ly = seg->side ? seg->linedef->end->y : seg->linedef->start->y;
 
   // use the "true" starting coord (as stored in the wad)
-  double sx = round(seg->start->x);
-  double sy = round(seg->start->y);
+  const double sx = round(seg->start->x);
+  const double sy = round(seg->start->y);
 
   return FloatToShort(floor(hypot(sx - lx, sy - ly) + 0.5));
 }
@@ -68,8 +68,8 @@ static inline int16_t VanillaSegDist(const Segment *seg)
 static inline short_angle_t VanillaSegAngle(const Segment *seg)
 {
   // compute the "true" delta
-  double dx = round(seg->end->x) - round(seg->start->x);
-  double dy = round(seg->end->y) - round(seg->start->y);
+  const double dx = round(seg->end->x) - round(seg->start->x);
+  const double dy = round(seg->end->y) - round(seg->start->y);
 
   short_angle_t result = 0;
 
@@ -126,7 +126,7 @@ void PutVertices(WadIO &io, Level &level, bool fractional, bool include_new_vert
 // Vanilla format
 //
 
-void PutSegs_DoomBSP(WadIO &io, Level &level)
+void PutSegs_DoomBSP(WadIO &io, const Level &level)
 {
   io.StartWritingLump("SEGS");
 
@@ -153,7 +153,7 @@ void PutSegs_DoomBSP(WadIO &io, Level &level)
   }
 }
 
-void PutSubsecs_DoomBSP(WadIO &io, Level &level)
+void PutSubsecs_DoomBSP(WadIO &io, const Level &level)
 {
   io.StartWritingLump("SSECTORS");
 
@@ -240,7 +240,7 @@ static void PutOneNode_Vanilla(WadIO &io, Node *node, size_t &node_cur_index)
   }
 }
 
-void PutNodes_DoomBSP(WadIO &io, Level &level)
+void PutNodes_DoomBSP(WadIO &io, const Level &level)
 {
   size_t node_cur_index = 0;
   io.StartWritingLump("NODES");
@@ -256,14 +256,14 @@ void PutNodes_DoomBSP(WadIO &io, Level &level)
   }
 }
 
-void PutLeafs_DoomBSP(WadIO &io, Level &level)
+void PutLeafs_DoomBSP(WadIO &io, const Level &level)
 {
   io.StartWritingLump("LEAFS");
   uint16_t actual_seg_index = 0;
 
   for (auto subsec : level.subsecs)
   {
-    Segment *seg = subsec->seg_list;
+    const Segment *seg = subsec->seg_list;
     uint16_t seg_count = IndexToShort(subsec->seg_count);
 
     io.AddToLump(&seg_count, sizeof(seg_count));
@@ -278,7 +278,7 @@ void PutLeafs_DoomBSP(WadIO &io, Level &level)
       // Do not remove minisegs from tree before
       // we are able to write all this
       MapLeafRefDoomBSP raw;
-      Vertex *vert = seg->start;
+      const Vertex *vert = seg->start;
 
       raw.vertex = GetLittleEndian(IndexToShort(vert->index));
       if (seg->linedef)
@@ -307,7 +307,7 @@ void PutLeafs_DoomBSP(WadIO &io, Level &level)
 // DeePBSPV4 format
 //
 
-void PutSegs_DeePBSPV4(WadIO &io, Level &level)
+void PutSegs_DeePBSPV4(WadIO &io, const Level &level)
 {
   io.StartWritingLump("SEGS");
 
@@ -334,7 +334,7 @@ void PutSegs_DeePBSPV4(WadIO &io, Level &level)
   }
 }
 
-void PutSubsecs_DeePBSPV4(WadIO &io, Level &level)
+void PutSubsecs_DeePBSPV4(WadIO &io, const Level &level)
 {
   io.StartWritingLump("SSECTORS");
 
@@ -421,7 +421,7 @@ static void PutOneNode_DeePBSPV4(WadIO &io, Node *node, size_t &node_cur_index)
   }
 }
 
-void PutNodes_DeePBSPV4(WadIO &io, Level &level)
+void PutNodes_DeePBSPV4(WadIO &io, const Level &level)
 {
   size_t node_cur_index = 0;
   io.StartWritingLump("NODES");
@@ -438,14 +438,14 @@ void PutNodes_DeePBSPV4(WadIO &io, Level &level)
   }
 }
 
-void PutLeafs_DeePBSPV4(WadIO &io, Level &level)
+void PutLeafs_DeePBSPV4(WadIO &io, const Level &level)
 {
   io.StartWritingLump("LEAFS");
   uint32_t actual_seg_index = 0;
 
   for (auto subsec : level.subsecs)
   {
-    Segment *seg = subsec->seg_list;
+    const Segment *seg = subsec->seg_list;
     uint32_t seg_count = IndexToUInt(subsec->seg_count);
 
     io.AddToLump(&seg_count, sizeof(seg_count));
@@ -460,7 +460,7 @@ void PutLeafs_DeePBSPV4(WadIO &io, Level &level)
       // Do not remove minisegs from tree before
       // we are able to write all this
       MapLeafRefDeePBSPV4 raw;
-      Vertex *vert = seg->start;
+      const Vertex *vert = seg->start;
 
       raw.vertex = GetLittleEndian(IndexToUInt(vert->index));
       if (seg->linedef)
@@ -521,7 +521,7 @@ static void PutVertices_XNOD(WadIO &io, Level &level)
   }
 }
 
-static void PutSubsecs_XNOD(WadIO &io, Level &level)
+static void PutSubsecs_XNOD(WadIO &io, const Level &level)
 {
   uint32_t raw_num = GetLittleEndian(IndexToUInt(level.subsecs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
@@ -557,7 +557,7 @@ static void PutSubsecs_XNOD(WadIO &io, Level &level)
   }
 }
 
-static void PutSegs_XNOD(WadIO &io, Level &level)
+static void PutSegs_XNOD(WadIO &io, const Level &level)
 {
   uint32_t raw_num = GetLittleEndian(IndexToUInt(level.segs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
@@ -648,7 +648,7 @@ static void PutOneNode_XNOD(WadIO &io, Node *node, size_t &node_cur_index)
   }
 }
 
-static void PutNodes_XNOD(WadIO &io, Level &level)
+static void PutNodes_XNOD(WadIO &io, const Level &level)
 {
   size_t node_cur_index = 0;
   uint32_t raw_num = GetLittleEndian(IndexToUInt(level.nodes.size()));
@@ -665,7 +665,7 @@ static void PutNodes_XNOD(WadIO &io, Level &level)
   }
 }
 
-static void PutSegs_XGLN(WadIO &io, Level &level)
+static void PutSegs_XGLN(WadIO &io, const Level &level)
 {
   uint32_t raw_num = GetLittleEndian(IndexToUInt(level.segs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
@@ -690,7 +690,7 @@ static void PutSegs_XGLN(WadIO &io, Level &level)
   }
 }
 
-static void PutSegs_XGL2(WadIO &io, Level &level)
+static void PutSegs_XGL2(WadIO &io, const Level &level)
 {
   uint32_t raw_num = GetLittleEndian(IndexToUInt(level.segs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
@@ -781,7 +781,7 @@ static void PutOneNode_XGL3(WadIO &io, Node *node, size_t &node_cur_index)
   }
 }
 
-static void PutNodes_XGL3(WadIO &io, Level &level)
+static void PutNodes_XGL3(WadIO &io, const Level &level)
 {
   size_t node_cur_index = 0;
   uint32_t raw_num = GetLittleEndian(IndexToUInt(level.nodes.size()));

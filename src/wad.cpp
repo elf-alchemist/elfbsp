@@ -74,8 +74,8 @@ WadIO::WadIO(std::string in_file, std::string out_file)
     throw RuntimeException("Input file is not a wad");
   }
 
-  auto num_entries = GetLittleEndian(this->read_header.num_entries);
-  auto dir_start = GetLittleEndian(this->read_header.dir_start);
+  const auto num_entries = GetLittleEndian(this->read_header.num_entries);
+  const auto dir_start = GetLittleEndian(this->read_header.dir_start);
 
   this->read_file.seekg(dir_start);
   if (this->read_file.fail())
@@ -210,7 +210,7 @@ bool WadIO::IsLevel(size_t lump_index) const
   {
     if (HAS_BIT(config.debug, DEBUG_WAD))
     {
-      auto format = static_cast<size_t>(this->LevelFormat(lump_index));
+      const auto format = static_cast<size_t>(this->LevelFormat(lump_index));
       PrintLine(Log::DEBUG, "[{}] Detected level: {} ({}) [Index: {}]", __func__, this->LumpName(lump_index),
                 format_name[format].data(), lump_index);
     }
@@ -279,7 +279,7 @@ size_t WadIO::LevelLastLump(size_t lump_index) const
 // returns a lump index, NO_INDEX if not found
 size_t WadIO::LevelLookupLump(size_t lump_index, std::string_view name) const
 {
-  size_t finish = this->LevelLastLump(lump_index);
+  const size_t finish = this->LevelLastLump(lump_index);
 
   for (size_t k = lump_index + 1; k <= finish; k++)
   {
@@ -356,7 +356,7 @@ void WadIO::StartWritingLump(std::string_view name)
 
 void WadIO::AddToLump(const void *data, size_t len)
 {
-  size_t current = this->write_directory.size() - 1;
+  const size_t current = this->write_directory.size() - 1;
   this->SafeWrite(data, len);
   this->write_directory[current].size += len;
 }
@@ -420,7 +420,7 @@ void WadIO::Finish_Zlib(void)
 
   while (true)
   {
-    int32_t err = zng_deflate(&this->zout_stream, Z_FINISH);
+    const int32_t err = zng_deflate(&this->zout_stream, Z_FINISH);
 
     if (err == Z_STREAM_END) break;
 

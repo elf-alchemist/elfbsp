@@ -131,7 +131,7 @@ std::vector<T> WadIO::ReadLump(size_t lump_index)
   {
     throw RuntimeException("Failed to seek");
   }
-  size_t size = this->read_directory[lump_index].size / sizeof(T);
+  const size_t size = this->read_directory[lump_index].size / sizeof(T);
   lump.resize(size);
   this->SafeRead(lump.data(), size * sizeof(T));
   return lump;
