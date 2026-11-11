@@ -2,8 +2,12 @@
 Checks: >
   clang-diagnostic-*,
   clang-analyzer-*,
-  misc-explicit-constructor,
-  misc-const-correctness,
+  misc-*,
+  -misc-include-cleaner,
+  -misc-non-private-member-variables-in-classes,
+  -misc-use-internal-linkage,
+  -misc-use-anonymous-namespace,
+  -misc-no-recursion,
 WarningsAsErrors: ''
 HeaderFileExtensions:
   - h
