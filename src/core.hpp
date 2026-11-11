@@ -1215,7 +1215,7 @@ struct Benchmarker
     start = clock::now();
   };
 
-  ~Benchmarker(void)
+  ~Benchmarker()
   {
     if (!enabled) return;
     const auto end = clock::now();

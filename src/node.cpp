@@ -1105,7 +1105,7 @@ Quadtree::Quadtree(int _x1, int _y1, int _x2, int _y2)
   }
 }
 
-Quadtree::~Quadtree(void)
+Quadtree::~Quadtree()
 {
   if (subs[0] != nullptr)
   {

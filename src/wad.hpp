@@ -70,11 +70,11 @@ struct WadIO
 
   // Init/die
   WadIO(std::string in_file, std::string out_file);
-  ~WadIO(void);
+  ~WadIO();
 
   // Read operations
   void SafeRead(void *buffer, size_t size);
-  size_t NumLumps(void) const;
+  size_t NumLumps() const;
   const char *LumpName(size_t lump_index) const;
   bool IsLevelLump(size_t lump_index) const;
   bool IsLevelTextmapFormat(size_t lump_index) const;
@@ -110,9 +110,9 @@ struct WadIO
   }
 
   // Zlib compression support
-  void Begin_Zlib(void);
+  void Begin_Zlib();
   void AddToLumpZ(const void *data, size_t length);
-  void Finish_Zlib(void);
+  void Finish_Zlib();
 };
 
 //
