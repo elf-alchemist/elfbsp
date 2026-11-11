@@ -276,7 +276,7 @@ static void Blockmap_FlattenUncompressed(BlockMap &bmap)
   // Skip header and offsets list
   size_t offset = 4 + bmap.BlockCount();
 
-  for (const auto cell : bmap.cells)
+  for (const auto &cell : bmap.cells)
   {
     bmap.unpacked_offsets.push_back(offset);
     for (const auto line : cell.lines)
@@ -302,7 +302,7 @@ void Blockmap_Deduplicate(BlockMap &bmap)
   // This lets us cut down on comparisons between duplicate blocks
   std::map<size_t, std::vector<size_t>> SizeMatcher;
 
-  for (const auto cell : bmap.cells)
+  for (const auto &cell : bmap.cells)
   {
     SizeMatcher[cell.lines.size()].push_back(cell.self_index);
   }
@@ -354,7 +354,7 @@ void Blockmap_FlattenDeduplicated(BlockMap &bmap)
 {
   size_t offset = 4 + bmap.BlockCount();
 
-  for (const auto cell : bmap.cells)
+  for (const auto &cell : bmap.cells)
   {
     if (cell.dup_index != NO_INDEX)
     {
@@ -414,7 +414,7 @@ void Blockmap_FlattenSorted(BlockMap &bmap)
 
   // Blocks are sorted by size, so now we need to use .self_index to insert
   // offsets in the proper places
-  for (const auto cell : bmap.cells)
+  for (const auto &cell : bmap.cells)
   {
     if (cell.dup_index != NO_INDEX)
     {
