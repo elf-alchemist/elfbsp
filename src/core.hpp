@@ -1200,19 +1200,18 @@ constexpr const char PRINT_HELP[] = "\n"
 // Benchmark
 //
 
-struct Benchmarker
+class Benchmarker
 {
+private:
   using clock = std::chrono::steady_clock;
   clock::time_point start;
   std::string_view name;
   bool enabled;
 
-  explicit Benchmarker(std::string_view _name, bool _enabled = true)
+public:
+  explicit Benchmarker(std::string_view _name, bool _enabled = true) noexcept : name(_name), enabled(_enabled)
   {
-    if (!_enabled) return;
-    enabled = _enabled;
-    name = _name;
-    start = clock::now();
+    if (enabled) start = clock::now();
   };
 
   ~Benchmarker()
@@ -1220,7 +1219,17 @@ struct Benchmarker
     if (!enabled) return;
     const auto end = clock::now();
     const auto time = std::chrono::duration<double, std::milli>(end - start);
-    PrintLine(Log::NORMAL, "[Benchmarker] '{}' runtime: {:.2f} ms", name.data(), time.count());
+    try
+    {
+      PrintLine(Log::NORMAL, "[Benchmarker] '{}' runtime: {:.2f} ms", name, time.count());
+    }
+    // NOLINTNEXTLINE(bugprone-empty-catch)
+    catch (...)
+    {
+      // destructors should not throw exceptions
+      // this is separate from any core program logic,
+      // and anything thrown by PrintLine here isn't really important
+    }
   };
 };
 
