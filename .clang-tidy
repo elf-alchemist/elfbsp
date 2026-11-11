@@ -1,5 +1,6 @@
 ---
 Checks: >
+  bugprone-*,
   clang-analyzer-*,
   clang-diagnostic-*,
   google-runtime-int,
@@ -29,4 +30,7 @@ CheckOptions:
   # Suggest standard library types with _t suffix
   - key: google-runtime-int.TypeSuffix
     value: _t
+  # Make it a little bit less strict
+  - key: bugprone-easily-swappable-parameters.MinimumLength
+    value: 3
 ...
