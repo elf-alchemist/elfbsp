@@ -101,7 +101,7 @@ void Blockmap_Init(const Level &level, BlockMap &bmap)
   bmap.cells.reserve(bmap.BlockCount());
   for (const auto i : Iota(bmap.BlockCount()))
   {
-    bmap.cells.push_back(BlockList(i));
+    bmap.cells.emplace_back(i);
   }
 
   bmap.deduped_offsets.reserve(bmap.BlockCount());

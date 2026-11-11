@@ -188,9 +188,9 @@ static void SortUnique(std::vector<SightPoint> &points)
 {
   std::ranges::sort(points, [](const SightPoint &a, const SightPoint &b) { return a.x < b.x || (a.x == b.x && a.y < b.y); });
 
-  points.erase(std::unique(points.begin(), points.end(),
-                           [](const SightPoint &a, const SightPoint &b) { return a.x == b.x && a.y == b.y; }),
-               points.end());
+  points.erase(
+      std::ranges::unique(points, [](const SightPoint &a, const SightPoint &b) { return a.x == b.x && a.y == b.y; }).begin(),
+      points.end());
 }
 
 // Number of parts each open line is cut into. A split of N gives N - 1 points per open line,
@@ -224,12 +224,12 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment> &lines, in
   for (const auto &line : lines)
   {
     // Log absolute raw corner coordinates.
-    points.verts.push_back({line.x1, line.y1});
-    points.verts.push_back({line.x2, line.y2});
-    points.firstVerts.push_back({line.x1, line.y1});
+    points.verts.push_back({.x = line.x1, .y = line.y1});
+    points.verts.push_back({.x = line.x2, .y = line.y2});
+    points.firstVerts.push_back({.x = line.x1, .y = line.y1});
 
     // Do structural midpoints once
-    const SightPoint mid = {(line.x1 + line.x2) * 0.5, (line.y1 + line.y2) * 0.5};
+    const SightPoint mid = {.x = (line.x1 + line.x2) * 0.5, .y = (line.y1 + line.y2) * 0.5};
     points.allMids.push_back(mid);
 
     // Non-solid structural lines can be open portals or windows.
@@ -241,7 +241,7 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment> &lines, in
       for (int32_t k = 1; k < split; ++k)
       {
         const double t = static_cast<double>(k) / static_cast<double>(split);
-        points.openSplit.push_back({line.x1 + (line.x2 - line.x1) * t, line.y1 + (line.y2 - line.y1) * t});
+        points.openSplit.push_back({.x = line.x1 + (line.x2 - line.x1) * t, .y = line.y1 + (line.y2 - line.y1) * t});
       }
     }
   }
@@ -551,13 +551,13 @@ static bool IsRayBlocked(const SightSegment &ray, const std::vector<SightSegment
 
   if (stepX != 0)
   {
-    const double border = static_cast<double>(stepX > 0 ? cx + 1 : cx);
+    const auto border = static_cast<double>(stepX > 0 ? cx + 1 : cx);
     tMaxX = (border - fx) * grid.cellSize / dx;
     tDeltaX = grid.cellSize / std::abs(dx);
   }
   if (stepY != 0)
   {
-    const double border = static_cast<double>(stepY > 0 ? cy + 1 : cy);
+    const auto border = static_cast<double>(stepY > 0 ? cy + 1 : cy);
     tMaxY = (border - fy) * grid.cellSize / dy;
     tDeltaY = grid.cellSize / std::abs(dy);
   }
@@ -571,7 +571,7 @@ static bool IsRayBlocked(const SightSegment &ray, const std::vector<SightSegment
   {
     ++scratch.cellSteps; // Analysis Counter
 
-    const size_t cell = static_cast<size_t>(cy * grid.cols + cx);
+    const auto cell = static_cast<size_t>(cy * grid.cols + cx);
 
     for (uint32_t k = grid.cellStart[cell]; k < grid.cellStart[cell + 1]; ++k)
     {
@@ -837,8 +837,8 @@ static inline void SetPairBitsAtomic(const Level &level, size_t view, size_t tar
 {
   const size_t p1 = view * num_secs + target;
   const size_t p2 = target * num_secs + view;
-  const uint8_t bit1 = static_cast<uint8_t>(1u << (p1 & 7));
-  const uint8_t bit2 = static_cast<uint8_t>(1u << (p2 & 7));
+  const auto bit1 = static_cast<uint8_t>(1u << (p1 & 7));
+  const auto bit2 = static_cast<uint8_t>(1u << (p2 & 7));
 
   // Several threads can touch the same byte, so each bit is set with an atomic OR.
   std::atomic_ref<uint8_t>(level.reject_matrix[p1 >> 3]).fetch_or(bit1, std::memory_order_relaxed);
@@ -970,7 +970,7 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>> &neighbo
       // form one block, joined to the rest of the map only through 'above'.
       if (lowest[current] >= order[above])
       {
-        const uint32_t block = static_cast<uint32_t>(cuts.cutParent.size());
+        const auto block = static_cast<uint32_t>(cuts.cutParent.size());
         cuts.cutParent.push_back(above);
         blockCount[above]++;
 
@@ -1009,7 +1009,7 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>> &neighbo
     if (cuts.cutDepth[node] != NO_INDEX_INT32) continue;
 
     chain.clear();
-    uint32_t ancestor = static_cast<uint32_t>(node);
+    auto ancestor = static_cast<uint32_t>(node);
     while (ancestor != NO_INDEX_INT32 && cuts.cutDepth[ancestor] == NO_INDEX_INT32)
     {
       chain.push_back(ancestor);
@@ -1067,10 +1067,10 @@ BuildCutLevels(const CutPoints &cuts, const std::vector<std::vector<uint32_t>> &
       if (other == cutSector || !isActive[other]) continue;
       if (cuts.isCut[other] && other < cutSector) continue; // A pair of two cut points is only listed once
 
-      const size_t distance = static_cast<size_t>(dist[other]);
+      const auto distance = static_cast<size_t>(dist[other]);
       if (levels.size() <= distance) levels.resize(distance + 1);
-      levels[distance].push_back({static_cast<uint32_t>(std::max<size_t>(other, cutSector)),
-                                  static_cast<uint32_t>(std::min<size_t>(other, cutSector))});
+      levels[distance].emplace_back(static_cast<uint32_t>(std::max<size_t>(other, cutSector)),
+                                    static_cast<uint32_t>(std::min<size_t>(other, cutSector)));
     }
   }
 
@@ -1125,8 +1125,8 @@ static CountSummary SummarizeCounts(std::vector<uint64_t> values)
     sum += v;
   }
 
-  const double totalSum = static_cast<double>(sum);
-  const double totalCount = static_cast<double>(summary.count);
+  const auto totalSum = static_cast<double>(sum);
+  const auto totalCount = static_cast<double>(summary.count);
 
   summary.mean = totalSum / totalCount;
 
@@ -1156,7 +1156,7 @@ static CountSummary SummarizeCounts(std::vector<uint64_t> values)
 // Two decimals, built manually so it does not depend on what format options PrintLine accepts.
 static std::string FormatTwoDecimals(double value)
 {
-  const uint64_t hundredths = static_cast<uint64_t>(value * 100.0 + 0.5);
+  const auto hundredths = static_cast<uint64_t>(value * 100.0 + 0.5);
   std::string fraction = std::to_string(hundredths % 100);
   if (fraction.size() < 2) fraction.insert(0, "0");
   return std::to_string(hundredths / 100) + "." + fraction;
@@ -1488,8 +1488,8 @@ static void Reject_ProcessSectors(Level &level)
   {
     if (cuts.cutMap[sectorA] != cuts.cutMap[sectorB]) return false;
 
-    uint32_t nodeA = static_cast<uint32_t>(sectorA);
-    uint32_t nodeB = static_cast<uint32_t>(sectorB);
+    auto nodeA = static_cast<uint32_t>(sectorA);
+    auto nodeB = static_cast<uint32_t>(sectorB);
 
     while (nodeA != nodeB)
     {
@@ -1582,12 +1582,12 @@ static void Reject_ProcessSectors(Level &level)
 
             // Pairs that involve a cut point first, nearest pairs first. Each level is finished
             // before the next one starts, so the results it relies on are all in place.
-            for (size_t lv = 0; lv < cutLevels.size(); ++lv)
+            for (auto &cutLevel : cutLevels)
             {
-              team.For(threadIndex, cutLevels[lv].size(),
+              team.For(threadIndex, cutLevel.size(),
                        [&](size_t pairIndex)
                        {
-                         const auto &cutPair = cutLevels[lv][pairIndex];
+                         const auto &cutPair = cutLevel[pairIndex];
                          testPair(cutPair.first, cutPair.second);
                        });
 
@@ -1627,7 +1627,7 @@ static void Reject_ProcessSectors(Level &level)
 
             // Add this thread's counters to the totals, one thread at a time.
             {
-              const std::lock_guard<std::mutex> lock(totalsMutex);
+              const std::scoped_lock lock(totalsMutex);
 
               totalRayCasts += scratch.rayCasts;
               totalCellSteps += scratch.cellSteps;

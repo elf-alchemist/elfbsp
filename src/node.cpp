@@ -464,16 +464,16 @@ bool EvalPartitionWorker(const Quadtree *tree, const Segment *part, double best_
   }
 
   /* handle sub-blocks recursively */
-  for (int c = 0; c < 2; c++)
+  for (auto sub : tree->subs)
   {
     if (info->cost > best_cost)
     {
       return true;
     }
 
-    if (tree->subs[c] != nullptr && !tree->subs[c]->Empty())
+    if (sub != nullptr && !sub->Empty())
     {
-      if (EvalPartitionWorker(tree->subs[c], part, best_cost, split_cost, info))
+      if (EvalPartitionWorker(sub, part, best_cost, split_cost, info))
       {
         return true;
       }
@@ -525,11 +525,11 @@ double EvalPartition(const Quadtree *tree, const Segment *part, double best_cost
   }
 
   /* increase cost by the difference between left & right */
-  info.cost += 100.0 * abs(int32_t(info.real_left) - int32_t(info.real_right));
+  info.cost += 100.0 * abs(static_cast<int32_t>(info.real_left) - static_cast<int32_t>(info.real_right));
 
   // -AJA- allow miniseg counts to affect the outcome, but to a
   //       lesser degree than real segs.
-  info.cost += 50.0 * abs(int32_t(info.mini_left) - int32_t(info.mini_right));
+  info.cost += 50.0 * abs(static_cast<int32_t>(info.mini_left) - static_cast<int32_t>(info.mini_right));
 
   // -AJA- Another little twist, here we show a slight preference for
   //       partition lines that lie either purely horizontally or
@@ -598,11 +598,11 @@ void EvaluateFastWorker(const Quadtree *tree, Segment **best_H, Segment **best_V
   }
 
   /* handle sub-blocks recursively */
-  for (int c = 0; c < 2; c++)
+  for (auto sub : tree->subs)
   {
-    if (tree->subs[c] != nullptr && !tree->subs[c]->Empty())
+    if (sub != nullptr && !sub->Empty())
     {
-      EvaluateFastWorker(tree->subs[c], best_H, best_V, mid_x, mid_y);
+      EvaluateFastWorker(sub, best_H, best_V, mid_x, mid_y);
     }
   }
 }
@@ -686,11 +686,11 @@ static void PickNodeWorker(const Quadtree *part_list, Quadtree *tree, Segment **
   }
 
   /* recursively handle sub-blocks */
-  for (int c = 0; c < 2; c++)
+  for (auto sub : part_list->subs)
   {
-    if (part_list->subs[c] != nullptr && !part_list->subs[c]->Empty())
+    if (sub != nullptr && !sub->Empty())
     {
-      PickNodeWorker(part_list->subs[c], tree, best, best_cost, split_cost);
+      PickNodeWorker(sub, tree, best, best_cost, split_cost);
     }
   }
 }
@@ -1081,8 +1081,7 @@ static int PointOnLineSide(const Segment *seg, double x, double y)
 
 /* ----- quad-tree routines ------------------------------------ */
 
-Quadtree::Quadtree(int _x1, int _y1, int _x2, int _y2)
-    : x1(_x1), y1(_y1), x2(_x2), y2(_y2), real_num(0), mini_num(0), list(nullptr)
+Quadtree::Quadtree(int _x1, int _y1, int _x2, int _y2) : x1(_x1), y1(_y1), x2(_x2), y2(_y2)
 {
   const int dx = x2 - x1;
   const int dy = y2 - y1;
@@ -1354,7 +1353,7 @@ Segment *CreateSegs(Level &level)
 
 Quadtree *TreeFromSegList(Segment *list, const MapBoundBox &bounds)
 {
-  Quadtree *tree = new Quadtree(bounds.minx, bounds.miny, bounds.maxx, bounds.maxy);
+  auto *tree = new Quadtree(bounds.minx, bounds.miny, bounds.maxx, bounds.maxy);
   AddList(tree, list);
   return tree;
 }

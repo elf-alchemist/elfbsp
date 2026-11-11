@@ -154,7 +154,7 @@ struct Linedef
   // length lines has occurred.
   size_t index;
 
-  inline double MinX() const
+  [[nodiscard]] inline double MinX() const
   {
     return std::min(start->x, end->x);
   }
@@ -223,12 +223,12 @@ struct Segment
 
   // compute the parallel and perpendicular distances from a partition
   // line to a point.
-  inline double ParallelDist(double x, double y) const
+  [[nodiscard]] inline double ParallelDist(double x, double y) const
   {
     return (x * pdx + y * pdy + p_para) / p_length;
   }
 
-  inline double PerpDist(double x, double y) const
+  [[nodiscard]] inline double PerpDist(double x, double y) const
   {
     return (x * pdy - y * pdx + p_perp) / p_length;
   }
@@ -299,16 +299,16 @@ struct Quadtree
   Quadtree *subs[2];
 
   // count of real/minisegs contained in this node AND ALL CHILDREN.
-  size_t real_num;
-  size_t mini_num;
+  size_t real_num{0};
+  size_t mini_num{0};
 
   // list of segs completely contained in this node.
-  Segment *list;
+  Segment *list{nullptr};
 
   Quadtree(int _x1, int _y1, int _x2, int _y2);
   ~Quadtree();
 
-  inline bool Empty() const
+  [[nodiscard]] inline bool Empty() const
   {
     return (real_num + mini_num) == 0;
   }
@@ -492,9 +492,9 @@ struct Level
 
   void SetLumps(WadIO &io, size_t label_index);
 
-  Vertex *SafeLookupVertex(size_t num, size_t num_line) const;
-  Sector *SafeLookupSector(size_t num, size_t num_side) const;
-  Sidedef *SafeLookupSidedef(int32_t num) const;
+  [[nodiscard]] Vertex *SafeLookupVertex(size_t num, size_t num_line) const;
+  [[nodiscard]] Sector *SafeLookupSector(size_t num, size_t num_side) const;
+  [[nodiscard]] Sidedef *SafeLookupSidedef(int32_t num) const;
 
   Vertex *NewVertex();
   Linedef *NewLinedef();
