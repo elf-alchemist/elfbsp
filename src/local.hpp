@@ -296,7 +296,7 @@ struct Quadtree
   // [0] has the lower coordinates, and [1] has the higher coordinates.
   // Division of a square always occurs horizontally (e.g. 512x512 ->
   // 256x512).
-  Quadtree *subs[2];
+  std::array<std::unique_ptr<Quadtree>, 2> subs;
 
   // count of real/minisegs contained in this node AND ALL CHILDREN.
   size_t real_num{0};
@@ -306,7 +306,6 @@ struct Quadtree
   Segment *list{nullptr};
 
   Quadtree(int _x1, int _y1, int _x2, int _y2);
-  ~Quadtree();
 
   [[nodiscard]] bool Empty() const
   {
@@ -317,7 +316,7 @@ struct Quadtree
 // check relationship between this box and the partition line.
 // returns -1 or +1 if box is definitively on a particular side,
 // or 0 if the line intersects or touches the box.
-int OnLineSide(const Quadtree *quadtree, const Segment *part);
+int OnLineSide(const Quadtree &quadtree, const Segment *part);
 
 // an "intersection" remembers the vertex that touches a BSP divider
 // line (especially a new vertex that is created at a seg split).
