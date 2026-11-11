@@ -11,7 +11,8 @@ Checks: >
   -misc-use-internal-linkage,
   -misc-use-anonymous-namespace,
   -misc-no-recursion,
-  modernize-redundant-void-arg
+  modernize-*,
+  -modernize-use-trailing-return-type,
 WarningsAsErrors: ''
 HeaderFileExtensions:
   - h

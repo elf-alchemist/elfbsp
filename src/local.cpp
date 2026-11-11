@@ -88,7 +88,7 @@ Sidedef *Level::SafeLookupSidedef(int32_t num) const
 
 Vertex *Level::NewVertex()
 {
-  Vertex *V = UtilCalloc<Vertex>(sizeof(Vertex));
+  auto *V = UtilCalloc<Vertex>(sizeof(Vertex));
   V->index = this->vertices.size();
   this->vertices.push_back(V);
   return V;
@@ -96,7 +96,7 @@ Vertex *Level::NewVertex()
 
 Linedef *Level::NewLinedef()
 {
-  Linedef *L = UtilCalloc<Linedef>(sizeof(Linedef));
+  auto *L = UtilCalloc<Linedef>(sizeof(Linedef));
   L->index = this->linedefs.size();
   this->linedefs.push_back(L);
   return L;
@@ -104,7 +104,7 @@ Linedef *Level::NewLinedef()
 
 Sidedef *Level::NewSidedef()
 {
-  Sidedef *S = UtilCalloc<Sidedef>(sizeof(Sidedef));
+  auto *S = UtilCalloc<Sidedef>(sizeof(Sidedef));
   S->index = this->sidedefs.size();
   this->sidedefs.push_back(S);
   return S;
@@ -112,7 +112,7 @@ Sidedef *Level::NewSidedef()
 
 Sector *Level::NewSector()
 {
-  Sector *S = UtilCalloc<Sector>(sizeof(Sector));
+  auto *S = UtilCalloc<Sector>(sizeof(Sector));
   S->index = this->sectors.size();
   this->sectors.push_back(S);
   return S;
@@ -128,14 +128,14 @@ Mobj *Level::NewThing()
 
 Segment *Level::NewSeg()
 {
-  Segment *S = UtilCalloc<Segment>(sizeof(Segment));
+  auto *S = UtilCalloc<Segment>(sizeof(Segment));
   this->segs.push_back(S);
   return S;
 }
 
 Subsector *Level::NewSubsec()
 {
-  Subsector *S = UtilCalloc<Subsector>(sizeof(Subsector));
+  auto *S = UtilCalloc<Subsector>(sizeof(Subsector));
   this->subsecs.push_back(S);
   return S;
 }
@@ -149,14 +149,14 @@ Node *Level::NewNode()
 
 WallTip *Level::NewWallTip()
 {
-  WallTip *WT = UtilCalloc<WallTip>(sizeof(WallTip));
+  auto *WT = UtilCalloc<WallTip>(sizeof(WallTip));
   this->walltips.push_back(WT);
   return WT;
 }
 
 Intersection *Level::NewIntersection()
 {
-  Intersection *cut = new Intersection;
+  auto *cut = new Intersection;
   this->intercuts.push_back(cut);
   return cut;
 }
