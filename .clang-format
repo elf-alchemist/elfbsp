@@ -48,6 +48,7 @@ InsertBraces: false
 InsertNewlineAtEOF: true
 InsertTrailingCommas: None
 KeepEmptyLinesAtTheStartOfBlocks: true
+LambdaBodyIndentation: OuterScope
 MaxEmptyLinesToKeep: 1
 PPIndentWidth: 2
 PointerAlignment: Right
