@@ -1209,7 +1209,7 @@ struct Benchmarker
   std::string_view name;
   bool enabled;
 
-  Benchmarker(std::string_view _name, bool _enabled = true)
+  explicit Benchmarker(std::string_view _name, bool _enabled = true)
   {
     if (!_enabled) return;
     enabled = _enabled;
@@ -1298,7 +1298,7 @@ struct Iota
     }
   };
 
-  constexpr Iota(T e)
+  constexpr explicit Iota(T e)
   {
     _begin = {0};
     _end = {e};
