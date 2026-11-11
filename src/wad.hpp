@@ -69,7 +69,7 @@ struct WadIO
   byte zout_buffer[8192];
 
   // Init/die
-  WadIO(std::string in_file, std::string out_file);
+  WadIO(const std::string &in_file, const std::string &out_file);
   ~WadIO();
 
   // Read operations

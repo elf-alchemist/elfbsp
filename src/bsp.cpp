@@ -801,7 +801,7 @@ static void PutNodes_XGL3(WadIO &io, const Level &level)
 //
 // The family of ZDBSP BSP tree formats use a single lump no matter what
 //
-void PutTree_ZDBSP(WadIO &io, Level &level, std::string lumpname, BspFormat bsp_format, bool compress)
+void PutTree_ZDBSP(WadIO &io, Level &level, std::string_view lumpname, BspFormat bsp_format, bool compress)
 {
   if (bsp_format == BspFormat::XNOD) NormaliseBspTree(level);
 

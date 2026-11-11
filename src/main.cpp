@@ -60,12 +60,12 @@ BuildInfo config;
 // FILE MANAGEMENT
 //------------------------------------------------------------------------
 
-static bool FileExists(std::string filename)
+static bool FileExists(std::string_view filename)
 {
   return std::filesystem::exists(filename);
 }
 
-static bool CheckMapInRange(const map_range_t *range, std::string name)
+static bool CheckMapInRange(const map_range_t *range, std::string_view name)
 {
   if (name.size() != range->low.size())
   {
@@ -85,7 +85,7 @@ static bool CheckMapInRange(const map_range_t *range, std::string name)
   return true;
 }
 
-static bool CheckMapInMapList(std::string name)
+static bool CheckMapInMapList(std::string_view name)
 {
   // when --map is not used, allow everything
   if (map_list.empty())
@@ -387,7 +387,7 @@ static void ParseShortArgument(const char *arg)
   }
 }
 
-static bool ProcessDebugParam(std::string param, uint32_t &debug)
+static bool ProcessDebugParam(std::string_view param, uint32_t &debug)
 {
   if (param == "--debug-blockmap")
   {
