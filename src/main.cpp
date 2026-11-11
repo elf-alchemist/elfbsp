@@ -169,6 +169,8 @@ static void VisitFile(std::string_view filename)
       }
     }
 
+    wad.WriteDirectory();
+
     if (levels_visited == 0)
     {
       PrintLine(Log::NORMAL, "[{}] No matching levels found", __func__);
