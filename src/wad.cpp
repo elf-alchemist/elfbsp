@@ -109,22 +109,19 @@ WadIO::WadIO(const std::string &in_file, const std::string &out_file)
   this->SafeWrite(&this->write_header, sizeof(this->write_header));
 }
 
-WadIO::~WadIO()
+void WadIO::WriteDirectory()
 {
-  // Input stuff
-  this->read_file.close();
-  this->read_directory.clear();
-
   // Output stuff
-  auto num_entries = GetLittleEndian(IndexToUInt(this->write_directory.size()));
-  auto dir_start = GetLittleEndian(static_cast<uint32_t>(this->write_file.tellp()));
+  const auto num_entries = GetLittleEndian(IndexToUInt(this->write_directory.size()));
+  const auto dir_start = GetLittleEndian(static_cast<uint32_t>(this->write_file.tellp()));
 
   this->SafeWrite(this->write_directory.data(), sizeof(WadLump) * this->write_directory.size());
 
   this->write_file.seekp(sizeof(char[4]));
   this->SafeWrite(&num_entries, sizeof(num_entries));
   this->SafeWrite(&dir_start, sizeof(dir_start));
-  this->write_file.close();
+
+  this->directory_written = true;
 }
 
 // call only after seeking
@@ -304,6 +301,11 @@ bool WadIO::LevelHasLump(size_t lump_index, std::string_view name) const
 //
 void WadIO::SafeWrite(const void *buffer, size_t size)
 {
+  if (this->directory_written)
+  {
+    throw RuntimeException("Attempted to write to a finalized wad.");
+  }
+
   this->write_file.write(static_cast<const char *>(buffer), static_cast<std::streamsize>(size));
 
   if (this->write_file.fail())

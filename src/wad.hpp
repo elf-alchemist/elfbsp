@@ -53,8 +53,9 @@ static_size(WadLump, 16);
 // File handling
 //
 
-struct WadIO
+class WadIO
 {
+private:
   // Read data
   std::ifstream read_file;
   WadHeader read_header;
@@ -64,13 +65,14 @@ struct WadIO
   std::ofstream write_file;
   WadHeader write_header;
   std::vector<WadLump> write_directory;
+  bool directory_written = false;
   bool zlib_init = false;
   zng_stream zout_stream;
   byte zout_buffer[8192];
 
+public:
   // Init/die
   WadIO(const std::string &in_file, const std::string &out_file);
-  ~WadIO();
 
   // Read operations
   void SafeRead(void *buffer, size_t size);
@@ -94,6 +96,7 @@ struct WadIO
   void WriteLump(std::string_view name, const void *data, size_t size);
   void CopyLump(size_t lump);
   void LevelCopyLump(size_t lump, std::string_view name);
+  void WriteDirectory();
 
   // Partial writing
   void StartWritingLump(std::string_view name);
