@@ -211,8 +211,7 @@ void ParseUNamespace(Scanner &s, Level &level)
 
 void ParseUVertex(Scanner &s, Level &level)
 {
-  UVertexMinimal vertex;
-  UtilZero(&vertex);
+  UVertexMinimal vertex{};
 
   s.MustGetToken('{');
   while (!s.CheckToken('}'))
@@ -241,8 +240,7 @@ void ParseUVertex(Scanner &s, Level &level)
 
 void ParseULinedef(Scanner &s, Level &level)
 {
-  ULinedefMinimal linedef;
-  UtilZero(&linedef);
+  ULinedefMinimal linedef{};
   linedef.sideback = -1;
 
   s.MustGetToken('{');
@@ -396,8 +394,7 @@ void ParseULinedef(Scanner &s, Level &level)
 
 void ParseUSidedef(Scanner &s, Level &level)
 {
-  USidedefMinimal sidedef;
-  UtilZero(&sidedef);
+  USidedefMinimal sidedef{};
   sidedef.texturebottom[0] = '-';
   sidedef.texturemiddle[0] = '-';
   sidedef.texturetop[0] = '-';
@@ -445,8 +442,7 @@ void ParseUSidedef(Scanner &s, Level &level)
 
 void ParseUSector(Scanner &s, Level &level)
 {
-  USectorMinimal sector;
-  UtilZero(&sector);
+  USectorMinimal sector{};
   sector.lightlevel = 160;
   sector.texturefloor[0] = '-';
   sector.textureceiling[0] = '-';
@@ -498,8 +494,7 @@ void ParseUSector(Scanner &s, Level &level)
 
 void ParseUThing(Scanner &s, Level &level)
 {
-  UThingMinimal thing;
-  UtilZero(&thing);
+  UThingMinimal thing{};
 
   s.MustGetToken('{');
   while (!s.CheckToken('}'))

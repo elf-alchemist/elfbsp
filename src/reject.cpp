@@ -49,13 +49,7 @@ static void Reject_Init(Level &level)
 {
   level.reject_size = (level.sectors.size() * level.sectors.size() + 7) / 8;
 
-  level.reject_matrix = new uint8_t[level.reject_size];
-
-  // UtilZero clears one object, so clear the matrix until done.
-  for (size_t i = 0; i < level.reject_size; ++i)
-  {
-    UtilZero(&level.reject_matrix[i]);
-  }
+  level.reject_matrix = new uint8_t[level.reject_size]{};
 
   for (auto &sec : level.sectors)
   {
