@@ -291,7 +291,7 @@ void CalculateWallTips(Level &level)
   }
 }
 
-Vertex *NewVertexFromSplitSeg(Level &level, const Segment *seg, double x, double y)
+Vertex *NewVertexFromSplitSeg(Level &level, const Segment &seg, double x, double y)
 {
   Vertex *vert = level.NewVertex();
 
@@ -303,21 +303,21 @@ Vertex *NewVertexFromSplitSeg(Level &level, const Segment *seg, double x, double
   level.num_new_vert++;
 
   // compute wall-tip info
-  if (seg->linedef == nullptr)
+  if (seg.linedef == nullptr)
   {
-    AddWallTip(level, vert, seg->pdx, seg->pdy, true, true);
-    AddWallTip(level, vert, -seg->pdx, -seg->pdy, true, true);
+    AddWallTip(level, vert, seg.pdx, seg.pdy, true, true);
+    AddWallTip(level, vert, -seg.pdx, -seg.pdy, true, true);
   }
   else
   {
-    const Sidedef *front = seg->side ? seg->linedef->left : seg->linedef->right;
-    const Sidedef *back = seg->side ? seg->linedef->right : seg->linedef->left;
+    const Sidedef *front = seg.side ? seg.linedef->left : seg.linedef->right;
+    const Sidedef *back = seg.side ? seg.linedef->right : seg.linedef->left;
 
     const bool left = (back != nullptr) && (back->sector != nullptr);
     const bool right = (front != nullptr) && (front->sector != nullptr);
 
-    AddWallTip(level, vert, seg->pdx, seg->pdy, left, right);
-    AddWallTip(level, vert, -seg->pdx, -seg->pdy, right, left);
+    AddWallTip(level, vert, seg.pdx, seg.pdy, left, right);
+    AddWallTip(level, vert, -seg.pdx, -seg.pdy, right, left);
   }
 
   return vert;

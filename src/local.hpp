@@ -318,7 +318,7 @@ struct Quadtree
 // check relationship between this box and the partition line.
 // returns -1 or +1 if box is definitively on a particular side,
 // or 0 if the line intersects or touches the box.
-int OnLineSide(const Quadtree &quadtree, const Segment *part);
+int OnLineSide(const Quadtree &quadtree, const Segment &part);
 
 // an "intersection" remembers the vertex that touches a BSP divider
 // line (especially a new vertex that is created at a seg split).
@@ -502,7 +502,7 @@ struct Level
   Sector *NewSector();
   Mobj *NewThing();
 
-  Segment *NewSeg();
+  Segment &NewSeg();
   Subsector *NewSubsec();
   Node *NewNode();
   WallTip *NewWallTip();
@@ -545,7 +545,7 @@ void CalculateWallTips(Level &level);
 
 // return a new vertex (with correct wall-tip info) for the split that
 // happens along the given seg at the given location.
-Vertex *NewVertexFromSplitSeg(Level &level, const Segment *seg, double x, double y);
+Vertex *NewVertexFromSplitSeg(Level &level, const Segment &seg, double x, double y);
 
 // return a new end vertex to compensate for a seg that would end up
 // being zero-length (after integer rounding).  Doesn't compute the wall-tip

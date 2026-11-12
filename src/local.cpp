@@ -121,9 +121,9 @@ Mobj *Level::NewThing()
   return T;
 }
 
-Segment *Level::NewSeg()
+Segment &Level::NewSeg()
 {
-  return this->segs.emplace_back(std::make_unique<Segment>()).get();
+  return *this->segs.emplace_back(std::make_unique<Segment>());
 }
 
 Subsector *Level::NewSubsec()
