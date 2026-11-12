@@ -121,9 +121,9 @@ Mobj *Level::NewThing()
   return T;
 }
 
-Segment *Level::NewSeg()
+Segment &Level::NewSeg()
 {
-  return this->segs.emplace_back().get();
+  return *this->segs.emplace_back();
 }
 
 Subsector *Level::NewSubsec()
