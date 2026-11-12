@@ -348,56 +348,6 @@ inline constexpr std::string_view VERSION_INFO = PROJECT_NAME " version " PROJEC
                                                               "Commit: " GIT_SHORT_HASH "\n";
 
 //------------------------------------------------------------------------
-// MEMORY ALLOCATION
-//------------------------------------------------------------------------
-
-//
-// Allocate memory with error checking.  Zeros the memory.
-//
-template <typename T>
-constexpr T *UtilCalloc(const size_t size)
-{
-  T *ret = static_cast<T *>(calloc(1, size));
-
-  if (!ret) throw std::bad_alloc();
-
-  return ret;
-}
-
-//
-// Reallocate memory with error checking.
-//
-template <typename T>
-constexpr T *UtilRealloc(T *old, const size_t size)
-{
-  T *ret = static_cast<T *>(realloc(old, size));
-
-  if (!ret) throw std::bad_alloc();
-
-  return ret;
-}
-
-//
-// Free the memory with error checking.
-//
-template <typename T>
-constexpr void UtilFree(T *data)
-{
-  if (data == nullptr) throw RuntimeException("Trying to free a nullptr");
-
-  free(data);
-}
-
-//
-// Zero init a chunk of memory
-//
-template <typename T, size_t TSize = sizeof(T)>
-constexpr void UtilZero(T *data)
-{
-  memset(data, 0, TSize);
-}
-
-//------------------------------------------------------------------------
 // STRINGS
 //------------------------------------------------------------------------
 
