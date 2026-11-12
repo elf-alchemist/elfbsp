@@ -1241,14 +1241,14 @@ int OnLineSide(const Quadtree &quadtree, const Segment *part)
   return p1;
 }
 
-Segment *CreateOneSeg(Level &level, Linedef *line, Vertex *start, Vertex *end, const Sidedef *side, bool what_side)
+Segment *CreateOneSeg(Level &level, Linedef &line, Vertex *start, Vertex *end, const Sidedef &side, bool what_side)
 {
   Segment *seg = level.NewSeg();
 
   // check for bad sidedef
-  if (side->sector == nullptr)
+  if (side.sector == nullptr)
   {
-    PrintLine(Log::WARN, "[{}] Bad sidedef on linedef #{} (Z_CheckHeap error)", __func__, line->index);
+    PrintLine(Log::WARN, "[{}] Bad sidedef on linedef #{} (Z_CheckHeap error)", __func__, line.index);
     config.total_warnings++;
   }
 
@@ -1264,7 +1264,7 @@ Segment *CreateOneSeg(Level &level, Linedef *line, Vertex *start, Vertex *end, c
 
   seg->start = start;
   seg->end = end;
-  seg->linedef = line;
+  seg->linedef = &line;
   seg->side = what_side;
   seg->partner = nullptr;
 
@@ -1309,7 +1309,7 @@ Segment *CreateSegs(Level &level)
     }
     else if (L->right != nullptr && HAS_NONE(L->effects, FX_DoNotRenderFront))
     {
-      right = CreateOneSeg(level, L.get(), L->start, L->end, L->right, false);
+      right = CreateOneSeg(level, *L, L->start, L->end, *L->right, false);
       ListAddSeg(&list, right);
     }
 
@@ -1320,7 +1320,7 @@ Segment *CreateSegs(Level &level)
     }
     else if (L->left != nullptr && HAS_NONE(L->effects, FX_DoNotRenderBack))
     {
-      left = CreateOneSeg(level, L.get(), L->end, L->start, L->left, true);
+      left = CreateOneSeg(level, *L, L->end, L->start, *L->left, true);
       ListAddSeg(&list, left);
     }
 
@@ -1365,17 +1365,17 @@ static void DetermineMiddle(Subsector *subsec)
   }
 }
 
-static void AddToTail(Subsector *subsec, Segment *seg)
+static void AddToTail(Subsector &subsec, Segment *seg)
 {
   seg->next = nullptr;
 
-  if (subsec->seg_list == nullptr)
+  if (subsec.seg_list == nullptr)
   {
-    subsec->seg_list = seg;
+    subsec.seg_list = seg;
     return;
   }
 
-  Segment *tail = subsec->seg_list;
+  Segment *tail = subsec.seg_list;
   while (tail->next != nullptr)
   {
     tail = tail->next;
@@ -1384,21 +1384,19 @@ static void AddToTail(Subsector *subsec, Segment *seg)
   tail->next = seg;
 }
 
-static void ClockwiseOrder(Subsector *subsec)
+static void ClockwiseOrder(Subsector &subsec)
 {
-  Segment *seg;
-
   if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
-    PrintLine(Log::DEBUG, "[{}] Clockwising {}", __func__, subsec->index);
+    PrintLine(Log::DEBUG, "[{}] Clockwising {}", __func__, subsec.index);
   }
 
   std::vector<Segment *> array;
 
-  for (seg = subsec->seg_list; seg; seg = seg->next)
+  for (Segment *seg = subsec.seg_list; seg; seg = seg->next)
   {
     // compute angles now
-    seg->cmp_angle = ComputeAngle(seg->start->x - subsec->mid_x, seg->start->y - subsec->mid_y);
+    seg->cmp_angle = ComputeAngle(seg->start->x - subsec.mid_x, seg->start->y - subsec.mid_y);
     array.push_back(seg);
   }
 
@@ -1434,7 +1432,7 @@ static void ClockwiseOrder(Subsector *subsec)
   }
 
   // transfer sorted array back into sub
-  subsec->seg_list = nullptr;
+  subsec.seg_list = nullptr;
 
   for (size_t j = 0; j < array.size(); j++)
   {
@@ -1444,9 +1442,9 @@ static void ClockwiseOrder(Subsector *subsec)
 
   if (HAS_BIT(config.debug, DEBUG_SORTER))
   {
-    PrintLine(Log::DEBUG, "[{}] Sorted SEGS around ({:1.1f},{:1.1f})", __func__, subsec->mid_x, subsec->mid_y);
+    PrintLine(Log::DEBUG, "[{}] Sorted SEGS around ({:1.1f},{:1.1f})", __func__, subsec.mid_x, subsec.mid_y);
 
-    for (seg = subsec->seg_list; seg; seg = seg->next)
+    for (Segment *seg = subsec.seg_list; seg; seg = seg->next)
     {
       PrintLine(Log::DEBUG, "[{}] Seg {}: Angle {:1.6f}  ({:1.1f},{:1.1f}) -> ({:1.1f},{:1.1f})", __func__, seg->index,
                 seg->cmp_angle, seg->start->x, seg->start->y, seg->end->x, seg->end->y);
@@ -1454,16 +1452,14 @@ static void ClockwiseOrder(Subsector *subsec)
   }
 }
 
-static void SanityCheckClosed(Subsector *subsec)
+static void SanityCheckClosed(Subsector &subsec)
 {
   int gaps = 0;
   int total = 0;
 
-  Segment *seg, *next;
-
-  for (seg = subsec->seg_list; seg; seg = seg->next)
+  for (const Segment *seg = subsec.seg_list; seg; seg = seg->next)
   {
-    next = seg->next ? seg->next : subsec->seg_list;
+    const Segment *next = seg->next ? seg->next : subsec.seg_list;
 
     const double dx = seg->end->x - next->start->x;
     const double dy = seg->end->y - next->start->y;
@@ -1481,12 +1477,12 @@ static void SanityCheckClosed(Subsector *subsec)
     if (config.verbose)
     {
       PrintLine(Log::NORMAL, "[{}] Subsector #{} near ({:1.1f},{:1.1f}) is not closed ({} gaps, {} segs)", __func__,
-                subsec->index, subsec->mid_x, subsec->mid_y, gaps, total);
+                subsec.index, subsec.mid_x, subsec.mid_y, gaps, total);
     }
 
     if (HAS_BIT(config.debug, DEBUG_SUBSEC))
     {
-      for (seg = subsec->seg_list; seg; seg = seg->next)
+      for (Segment *seg = subsec.seg_list; seg; seg = seg->next)
       {
         PrintLine(Log::DEBUG, "[{}] SEG {}  ({:1.1f},{:1.1f}) --> ({:1.1f},{:1.1f})", __func__, seg->index, seg->start->x,
                   seg->start->y, seg->end->x, seg->end->y);
@@ -1495,9 +1491,9 @@ static void SanityCheckClosed(Subsector *subsec)
   }
 }
 
-static void SanityCheckHasRealSeg(Subsector *subsec)
+static void SanityCheckHasRealSeg(Subsector &subsec)
 {
-  for (const Segment *seg = subsec->seg_list; seg; seg = seg->next)
+  for (const Segment *seg = subsec.seg_list; seg; seg = seg->next)
   {
     if (seg->linedef != nullptr)
     {
@@ -1505,28 +1501,28 @@ static void SanityCheckHasRealSeg(Subsector *subsec)
     }
   }
 
-  throw RuntimeException("Subsector {} near ({:1.1f},{:1.1f}) has no real seg!", subsec->index, subsec->mid_x, subsec->mid_y);
+  throw RuntimeException("Subsector {} near ({:1.1f},{:1.1f}) has no real seg!", subsec.index, subsec.mid_x, subsec.mid_y);
 }
 
-static void RenumberSegs(Subsector *subsec, size_t &cur_seg_index)
+static void RenumberSegs(Subsector &subsec, size_t &cur_seg_index)
 {
   if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
-    PrintLine(Log::DEBUG, "[{}] Renumbering {}", __func__, subsec->index);
+    PrintLine(Log::DEBUG, "[{}] Renumbering {}", __func__, subsec.index);
   }
 
-  subsec->seg_count = 0;
+  subsec.seg_count = 0;
 
-  for (Segment *seg = subsec->seg_list; seg; seg = seg->next)
+  for (Segment *seg = subsec.seg_list; seg; seg = seg->next)
   {
     seg->index = cur_seg_index;
     cur_seg_index += 1;
 
-    subsec->seg_count++;
+    subsec.seg_count++;
 
     if (HAS_BIT(config.debug, DEBUG_SUBSEC))
     {
-      PrintLine(Log::DEBUG, "[{}]   {}: Seg Index {}", __func__, subsec->seg_count, seg->index);
+      PrintLine(Log::DEBUG, "[{}]   {}: Seg Index {}", __func__, subsec.seg_count, seg->index);
     }
   }
 }
@@ -1653,16 +1649,16 @@ void ClockwiseBspTree(const Level &level)
 
   for (auto &sub : level.subsecs)
   {
-    ClockwiseOrder(sub.get());
-    RenumberSegs(sub.get(), cur_seg_index);
+    ClockwiseOrder(*sub);
+    RenumberSegs(*sub, cur_seg_index);
 
     // do some sanity checks
-    SanityCheckClosed(sub.get());
-    SanityCheckHasRealSeg(sub.get());
+    SanityCheckClosed(*sub);
+    SanityCheckHasRealSeg(*sub);
   }
 }
 
-static void Normalise(Subsector *subsec)
+static void Normalise(Subsector &subsec)
 {
   // use head + tail to maintain same order of segs
   Segment *new_head = nullptr;
@@ -1670,14 +1666,14 @@ static void Normalise(Subsector *subsec)
 
   if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
-    PrintLine(Log::DEBUG, "[{}] Normalising {}", __func__, subsec->index);
+    PrintLine(Log::DEBUG, "[{}] Normalising {}", __func__, subsec.index);
   }
 
-  while (subsec->seg_list)
+  while (subsec.seg_list)
   {
     // remove head
-    Segment *seg = subsec->seg_list;
-    subsec->seg_list = seg->next;
+    Segment *seg = subsec.seg_list;
+    subsec.seg_list = seg->next;
 
     // filter out minisegs
     if (seg->linedef == nullptr)
@@ -1712,10 +1708,10 @@ static void Normalise(Subsector *subsec)
 
   if (new_head == nullptr)
   {
-    throw RuntimeException("Subsector {} normalised to being EMPTY", subsec->index);
+    throw RuntimeException("Subsector {} normalised to being EMPTY", subsec.index);
   }
 
-  subsec->seg_list = new_head;
+  subsec.seg_list = new_head;
 }
 
 void NormaliseBspTree(const Level &level)
@@ -1725,18 +1721,17 @@ void NormaliseBspTree(const Level &level)
 
   for (auto &sub : level.subsecs)
   {
-    Normalise(sub.get());
-    RenumberSegs(sub.get(), cur_seg_index);
+    Normalise(*sub);
+    RenumberSegs(*sub, cur_seg_index);
   }
 }
 
-static void RoundOffSubsector(Level &level, Subsector *subsec)
+static void RoundOffSubsector(Level &level, Subsector &subsec)
 {
   // use head + tail to maintain same order of segs
   Segment *new_head = nullptr;
   Segment *new_tail = nullptr;
 
-  Segment *seg = nullptr;
   Segment *last_real_degen = nullptr;
 
   int real_total = 0;
@@ -1744,11 +1739,11 @@ static void RoundOffSubsector(Level &level, Subsector *subsec)
 
   if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
-    PrintLine(Log::DEBUG, "[{}] Rounding off {}", __func__, subsec->index);
+    PrintLine(Log::DEBUG, "[{}] Rounding off {}", __func__, subsec.index);
   }
 
   // do an initial pass, just counting the degenerates
-  for (seg = subsec->seg_list; seg; seg = seg->next)
+  for (Segment *seg = subsec.seg_list; seg; seg = seg->next)
   {
     // is the seg degenerate ?
     if (FloatToShort(seg->start->x) == FloatToShort(seg->end->x) && FloatToShort(seg->start->y) == FloatToShort(seg->end->y))
@@ -1782,7 +1777,7 @@ static void RoundOffSubsector(Level &level, Subsector *subsec)
   {
     if (last_real_degen == nullptr)
     {
-      throw RuntimeException("Subsector {} rounded off with NO real segs", subsec->index);
+      throw RuntimeException("Subsector {} rounded off with NO real segs", subsec.index);
     }
 
     if (HAS_BIT(config.debug, DEBUG_SUBSEC))
@@ -1805,11 +1800,11 @@ static void RoundOffSubsector(Level &level, Subsector *subsec)
   }
 
   // second pass, remove the blighters...
-  while (subsec->seg_list != nullptr)
+  while (subsec.seg_list != nullptr)
   {
     // remove head
-    seg = subsec->seg_list;
-    subsec->seg_list = seg->next;
+    Segment *seg = subsec.seg_list;
+    subsec.seg_list = seg->next;
 
     if (seg->is_degenerate)
     {
@@ -1842,10 +1837,10 @@ static void RoundOffSubsector(Level &level, Subsector *subsec)
 
   if (new_head == nullptr)
   {
-    throw RuntimeException("Subsector {} rounded off to being EMPTY", subsec->index);
+    throw RuntimeException("Subsector {} rounded off to being EMPTY", subsec.index);
   }
 
-  subsec->seg_list = new_head;
+  subsec.seg_list = new_head;
 }
 
 void RoundOffBspTree(Level &level)
@@ -1854,7 +1849,7 @@ void RoundOffBspTree(Level &level)
 
   for (const auto &sub : level.subsecs)
   {
-    RoundOffSubsector(level, sub.get());
-    RenumberSegs(sub.get(), cur_seg_index);
+    RoundOffSubsector(level, *sub);
+    RenumberSegs(*sub, cur_seg_index);
   }
 }
