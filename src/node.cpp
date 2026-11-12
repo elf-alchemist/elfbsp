@@ -1285,7 +1285,7 @@ Segment *CreateSegs(Level &level)
   const auto mark = Benchmarker(__func__);
   Segment *list = nullptr;
 
-  for (auto L : level.linedefs)
+  for (auto &L : level.linedefs)
   {
     Segment *left = nullptr;
     Segment *right = nullptr;
@@ -1309,7 +1309,7 @@ Segment *CreateSegs(Level &level)
     }
     else if (L->right != nullptr && HAS_NONE(L->effects, FX_DoNotRenderFront))
     {
-      right = CreateOneSeg(level, L, L->start, L->end, L->right, false);
+      right = CreateOneSeg(level, L.get(), L->start, L->end, L->right, false);
       ListAddSeg(&list, right);
     }
 
@@ -1320,7 +1320,7 @@ Segment *CreateSegs(Level &level)
     }
     else if (L->left != nullptr && HAS_NONE(L->effects, FX_DoNotRenderBack))
     {
-      left = CreateOneSeg(level, L, L->end, L->start, L->left, true);
+      left = CreateOneSeg(level, L.get(), L->end, L->start, L->left, true);
       ListAddSeg(&list, left);
     }
 
@@ -1651,14 +1651,14 @@ void ClockwiseBspTree(const Level &level)
   const auto mark = Benchmarker(__func__);
   size_t cur_seg_index = 0;
 
-  for (auto sub : level.subsecs)
+  for (auto &sub : level.subsecs)
   {
-    ClockwiseOrder(sub);
-    RenumberSegs(sub, cur_seg_index);
+    ClockwiseOrder(sub.get());
+    RenumberSegs(sub.get(), cur_seg_index);
 
     // do some sanity checks
-    SanityCheckClosed(sub);
-    SanityCheckHasRealSeg(sub);
+    SanityCheckClosed(sub.get());
+    SanityCheckHasRealSeg(sub.get());
   }
 }
 
@@ -1723,10 +1723,10 @@ void NormaliseBspTree(const Level &level)
   // unlinks all minisegs from each subsector
   size_t cur_seg_index = 0;
 
-  for (auto sub : level.subsecs)
+  for (auto &sub : level.subsecs)
   {
-    Normalise(sub);
-    RenumberSegs(sub, cur_seg_index);
+    Normalise(sub.get());
+    RenumberSegs(sub.get(), cur_seg_index);
   }
 }
 
@@ -1852,9 +1852,9 @@ void RoundOffBspTree(Level &level)
 {
   size_t cur_seg_index = 0;
 
-  for (auto sub : level.subsecs)
+  for (const auto &sub : level.subsecs)
   {
-    RoundOffSubsector(level, sub);
-    RenumberSegs(sub, cur_seg_index);
+    RoundOffSubsector(level, sub.get());
+    RenumberSegs(sub.get(), cur_seg_index);
   }
 }

@@ -25,12 +25,24 @@
 #include "local.hpp"
 
 #include <algorithm>
+#include <ranges>
 
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
 //------------------------------------------------------------------------
 
 /* ----- analysis routines ----------------------------- */
+
+template <typename T>
+std::vector<T *> UqPtrVecToRawPtrVec(const std::vector<std::unique_ptr<T>> &vec)
+{
+  std::vector<T *> ret(vec.size());
+  for (auto &elem : vec)
+  {
+    ret.push_back(elem.get());
+  }
+  return ret;
+}
 
 bool Overlaps(const Vertex *vertex, const Vertex *other)
 {
@@ -47,7 +59,7 @@ void DetectOverlappingVertices(const Level &level)
   }
 
   // copy the vertex pointers
-  auto array = std::vector<Vertex *>(level.vertices);
+  auto array = UqPtrVecToRawPtrVec(level.vertices);
 
   // sort the vertices by increasing X coordinate.
   // hence any overlapping vertices will be near each other.
@@ -86,7 +98,7 @@ void DetectOverlappingVertices(const Level &level)
   // update the in-memory linedefs.
   // DOES NOT affect the on-disk linedefs.
   // this is mainly to help the miniseg creation code.
-  for (auto L : level.linedefs)
+  for (auto &L : level.linedefs)
   {
     while (L->start->overlap)
     {
@@ -102,17 +114,8 @@ void DetectOverlappingVertices(const Level &level)
 
 void ClearNewVertices(Level &level)
 {
-  for (size_t i = level.vertices.size() - 1; i != NO_INDEX; i--)
+  while (!level.vertices.empty() && level.vertices.back()->is_new)
   {
-    Vertex *V = level.vertices[i];
-
-    if (!V->is_new)
-    {
-      break;
-    }
-
-    UtilFree(V);
-
     level.vertices.pop_back();
   }
 
@@ -127,17 +130,8 @@ void PruneVerticesAtEnd(Level &level)
 
   // scan all vertices.
   // only remove from the end, so stop when hit a used one.
-  for (size_t i = level.vertices.size() - 1; i != NO_INDEX; i--)
+  while (!level.vertices.empty() && level.vertices.back()->is_used)
   {
-    Vertex *V = level.vertices[i];
-
-    if (V->is_used)
-    {
-      break;
-    }
-
-    UtilFree(V);
-
     level.vertices.pop_back();
   }
 
@@ -154,7 +148,7 @@ void PruneVerticesAtEnd(Level &level)
 void DetectOverlappingLines(const Level &level)
 {
   // copy
-  auto array = std::vector<Linedef *>(level.linedefs);
+  auto array = UqPtrVecToRawPtrVec(level.linedefs);
 
   // Algorithm:
   //   Sort all lines by minimum X coordinate.
@@ -259,7 +253,7 @@ void AddWallTip(Level &level, Vertex *vertex, double dx, double dy, bool open_le
 
 void CalculateWallTips(Level &level)
 {
-  for (auto L : level.linedefs)
+  for (auto &L : level.linedefs)
   {
     if (L->overlap || HAS_BIT(L->effects, FX_ZeroLength))
     {
@@ -283,7 +277,7 @@ void CalculateWallTips(Level &level)
 
   if (HAS_BIT(config.debug, DEBUG_WALLTIPS))
   {
-    for (auto V : level.vertices)
+    for (auto &V : level.vertices)
     {
       PrintLine(Log::DEBUG, "[{}] WallTips for vertex {}:", __func__, V->index);
 
