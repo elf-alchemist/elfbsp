@@ -476,8 +476,7 @@ struct Level
   std::vector<std::unique_ptr<Intersection>> intercuts;
   BspFormat bsp_format = BspFormat::XNOD;
 
-  uint8_t *reject_matrix;
-  size_t reject_size;
+  std::vector<uint8_t> reject_matrix;
 
   std::vector<UVertexMinimal> udmf_vertex;
   std::vector<ULinedefMinimal> udmf_linedef;
