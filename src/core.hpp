@@ -431,7 +431,7 @@ inline void StringToUpper(std::string &str)
 
 inline char CToUpper(const char c)
 {
-  return (c >= 'a' && c <= 'z') ? (c + 'A' - 'a') : c;
+  return (c >= 'a' && c <= 'z') ? static_cast<char>(c + 'A' - 'a') : c;
 }
 
 inline void CStringToUpper(char *str)
@@ -445,7 +445,7 @@ inline void CStringToUpper(char *str)
 
 inline char CToLower(const char c)
 {
-  return (c >= 'A' && c <= 'Z') ? (c - 'A' + 'a') : c;
+  return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
 }
 
 inline void CStringToLower(char *str)

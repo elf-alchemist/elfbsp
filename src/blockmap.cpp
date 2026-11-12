@@ -92,8 +92,10 @@ void Blockmap_Init(const Level &level, BlockMap &bmap)
   // Equivalent to
   //  * (Coordinate - (Coordinate % 8))
   //  * (Coordinate &= ~7)
-  bmap.origin_x = bbox.minx - (bbox.minx & 0x7);
-  bmap.origin_y = bbox.miny - (bbox.miny & 0x7);
+  // NOLINTBEGIN(bugprone-signed-bitwise)
+  bmap.origin_x = static_cast<int16_t>(bbox.minx - (bbox.minx & 0x7));
+  bmap.origin_y = static_cast<int16_t>(bbox.miny - (bbox.miny & 0x7));
+  // NOLINTEND(bugprone-signed-bitwise)
 
   bmap.columns = static_cast<size_t>(bbox.maxx - bmap.origin_x) / BlockMap_GridSize + OFF_BY_ONE;
   bmap.rows = static_cast<size_t>(bbox.maxy - bmap.origin_y) / BlockMap_GridSize + OFF_BY_ONE;
