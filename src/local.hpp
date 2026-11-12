@@ -460,20 +460,20 @@ struct Level
 
   PolyObject po;
 
-  std::vector<Vertex *> vertices;
-  std::vector<Linedef *> linedefs;
-  std::vector<Sidedef *> sidedefs;
-  std::vector<Sector *> sectors;
-  std::vector<Mobj *> things;
+  std::vector<std::unique_ptr<Vertex>> vertices;
+  std::vector<std::unique_ptr<Linedef>> linedefs;
+  std::vector<std::unique_ptr<Sidedef>> sidedefs;
+  std::vector<std::unique_ptr<Sector>> sectors;
+  std::vector<std::unique_ptr<Mobj>> things;
 
   Node *root_node = nullptr;
   Subsector *root_sub = nullptr;
 
-  std::vector<Segment *> segs;
-  std::vector<Subsector *> subsecs;
-  std::vector<Node *> nodes;
-  std::vector<WallTip *> walltips;
-  std::vector<Intersection *> intercuts;
+  std::vector<std::unique_ptr<Segment>> segs;
+  std::vector<std::unique_ptr<Subsector>> subsecs;
+  std::vector<std::unique_ptr<Node>> nodes;
+  std::vector<std::unique_ptr<WallTip>> walltips;
+  std::vector<std::unique_ptr<Intersection>> intercuts;
   BspFormat bsp_format = BspFormat::XNOD;
 
   uint8_t *reject_matrix;

@@ -42,7 +42,7 @@ static void Blockmap_FindLimits(const Level &level, MapBoundBox &bbox)
   bbox.minx = bbox.miny = Limits<int16_t>::max();
   bbox.maxx = bbox.maxy = Limits<int16_t>::min();
 
-  for (auto L : level.linedefs)
+  for (auto &L : level.linedefs)
   {
     if (HAS_BIT(L->effects, FX_NoBlockmap))
     {
@@ -252,15 +252,14 @@ static void Blockmap_Create(Level &level, BlockMap &bmap)
     }
   }
 
-  for (const auto i : Iota(level.linedefs.size()))
+  for (const auto &L : level.linedefs)
   {
-    auto L = level.linedefs[i];
     if (HAS_BIT(L->effects, FX_NoBlockmap))
     {
       continue;
     }
 
-    Block_AddLine(bmap, L);
+    Block_AddLine(bmap, L.get());
   }
 
   // Force extended format
