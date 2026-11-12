@@ -24,6 +24,7 @@
 
 #include "core.hpp"
 #include <fstream>
+#include <string_view>
 #include <vector>
 
 //------------------------------------------------------------------------
@@ -77,7 +78,7 @@ public:
   // Read operations
   void SafeRead(void *buffer, size_t size);
   size_t NumLumps() const;
-  const char *LumpName(size_t lump_index) const;
+  std::string_view LumpName(size_t lump_index) const;
   bool IsLevelLump(size_t lump_index) const;
   bool IsLevelTextmapFormat(size_t lump_index) const;
   bool IsLevel(size_t lump_index) const;

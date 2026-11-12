@@ -140,13 +140,10 @@ size_t WadIO::NumLumps() const
   return this->read_directory.size();
 }
 
-const char *WadIO::LumpName(size_t lump_index) const
+std::string_view WadIO::LumpName(size_t lump_index) const
 {
   SYS_ASSERT(lump_index < this->NumLumps());
-  static char name[9];
-  strncpy(name, this->read_directory[lump_index].name, 8);
-  name[8] = 0;
-  return name;
+  return {this->read_directory[lump_index].name, 8};
 }
 
 bool WadIO::IsLevelLump(size_t lump_index) const
