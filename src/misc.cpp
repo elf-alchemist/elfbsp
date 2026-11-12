@@ -210,44 +210,44 @@ void AddWallTip(Level &level, Vertex *vertex, double dx, double dy, bool open_le
 {
   SYS_ASSERT(vertex->overlap == nullptr);
 
-  WallTip *tip = level.NewWallTip();
+  WallTip &tip = level.NewWallTip();
   WallTip *after;
 
-  tip->angle = ComputeAngle(dx, dy);
-  tip->open_left = open_left;
-  tip->open_right = open_right;
+  tip.angle = ComputeAngle(dx, dy);
+  tip.open_left = open_left;
+  tip.open_right = open_right;
 
   // find the correct place (order is increasing angle)
   for (after = vertex->tip_set; after && after->next; after = after->next)
   {
   }
 
-  while (after && tip->angle + ANG_EPSILON < after->angle)
+  while (after && tip.angle + ANG_EPSILON < after->angle)
   {
     after = after->prev;
   }
 
   // link it in
-  tip->next = after ? after->next : vertex->tip_set;
-  tip->prev = after;
+  tip.next = after ? after->next : vertex->tip_set;
+  tip.prev = after;
 
   if (after)
   {
     if (after->next)
     {
-      after->next->prev = tip;
+      after->next->prev = &tip;
     }
 
-    after->next = tip;
+    after->next = &tip;
   }
   else
   {
     if (vertex->tip_set != nullptr)
     {
-      vertex->tip_set->prev = tip;
+      vertex->tip_set->prev = &tip;
     }
 
-    vertex->tip_set = tip;
+    vertex->tip_set = &tip;
   }
 }
 
@@ -292,20 +292,20 @@ void CalculateWallTips(Level &level)
 
 Vertex *NewVertexFromSplitSeg(Level &level, const Segment &seg, double x, double y)
 {
-  Vertex *vert = level.NewVertex();
+  Vertex &vert = level.NewVertex();
 
-  vert->x = x;
-  vert->y = y;
+  vert.x = x;
+  vert.y = y;
 
-  vert->is_new = true;
-  vert->is_used = true;
+  vert.is_new = true;
+  vert.is_used = true;
   level.num_new_vert++;
 
   // compute wall-tip info
   if (seg.linedef == nullptr)
   {
-    AddWallTip(level, vert, seg.pdx, seg.pdy, true, true);
-    AddWallTip(level, vert, -seg.pdx, -seg.pdy, true, true);
+    AddWallTip(level, &vert, seg.pdx, seg.pdy, true, true);
+    AddWallTip(level, &vert, -seg.pdx, -seg.pdy, true, true);
   }
   else
   {
@@ -315,11 +315,11 @@ Vertex *NewVertexFromSplitSeg(Level &level, const Segment &seg, double x, double
     const bool left = (back != nullptr) && (back->sector != nullptr);
     const bool right = (front != nullptr) && (front->sector != nullptr);
 
-    AddWallTip(level, vert, seg.pdx, seg.pdy, left, right);
-    AddWallTip(level, vert, -seg.pdx, -seg.pdy, right, left);
+    AddWallTip(level, &vert, seg.pdx, seg.pdy, left, right);
+    AddWallTip(level, &vert, -seg.pdx, -seg.pdy, right, left);
   }
 
-  return vert;
+  return &vert;
 }
 
 Vertex *NewVertexDegenerate(Level &level, const Vertex *start, const Vertex *end)
@@ -332,17 +332,17 @@ Vertex *NewVertexDegenerate(Level &level, const Vertex *start, const Vertex *end
 
   const double dlen = hypot(dx, dy);
 
-  Vertex *vert = level.NewVertex();
+  Vertex &vert = level.NewVertex();
 
-  vert->is_new = false;
-  vert->is_used = true;
+  vert.is_new = false;
+  vert.is_used = true;
 
-  vert->index = level.num_old_vert;
+  vert.index = level.num_old_vert;
   level.num_old_vert++;
 
   // compute new coordinates
-  vert->x = start->x;
-  vert->y = start->x;
+  vert.x = start->x;
+  vert.y = start->x;
 
   if (dlen == 0)
   {
@@ -352,13 +352,13 @@ Vertex *NewVertexDegenerate(Level &level, const Vertex *start, const Vertex *end
   dx /= dlen;
   dy /= dlen;
 
-  while (FloatToShort(vert->x) == FloatToShort(start->x) && FloatToShort(vert->y) == FloatToShort(start->y))
+  while (FloatToShort(vert.x) == FloatToShort(start->x) && FloatToShort(vert.y) == FloatToShort(start->y))
   {
-    vert->x += dx;
-    vert->y += dy;
+    vert.x += dx;
+    vert.y += dy;
   }
 
-  return vert;
+  return &vert;
 }
 
 bool CheckOpen(const Vertex *vertex, double dx, double dy)
