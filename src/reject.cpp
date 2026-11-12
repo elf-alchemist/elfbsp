@@ -1261,8 +1261,7 @@ static void Reject_ProcessSectors(Level &level)
   {
     if (!line || !line->start || !line->end) continue;
 
-    SightSegment seg(static_cast<double>(line->start->x), static_cast<double>(line->start->y),
-                     static_cast<double>(line->end->x), static_cast<double>(line->end->y));
+    SightSegment seg(line->start->x, line->start->y, line->end->x, line->end->y);
 
     mapMinX = std::min({mapMinX, seg.x1, seg.x2});
     mapMaxX = std::max({mapMaxX, seg.x1, seg.x2});
