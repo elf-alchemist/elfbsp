@@ -157,14 +157,14 @@ static void Block_Add(BlockMap &bmap, size_t blk_num, size_t line_index)
   blk.lines.push_back(line_index);
 }
 
-static void Block_AddLine(BlockMap &bmap, const Linedef *L)
+static void Block_AddLine(BlockMap &bmap, const Linedef &L)
 {
-  auto x1 = FloatToShort(L->start->x);
-  auto y1 = FloatToShort(L->start->y);
-  auto x2 = FloatToShort(L->end->x);
-  auto y2 = FloatToShort(L->end->y);
+  auto x1 = FloatToShort(L.start->x);
+  auto y1 = FloatToShort(L.start->y);
+  auto x2 = FloatToShort(L.end->x);
+  auto y2 = FloatToShort(L.end->y);
 
-  size_t line_index = L->index;
+  size_t line_index = L.index;
 
   if (HAS_BIT(config.debug, DEBUG_BLOCKMAP))
   {
@@ -259,7 +259,7 @@ static void Blockmap_Create(Level &level, BlockMap &bmap)
       continue;
     }
 
-    Block_AddLine(bmap, L.get());
+    Block_AddLine(bmap, *L);
   }
 
   // Force extended format

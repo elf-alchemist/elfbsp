@@ -52,41 +52,41 @@ void SortSegs(Level &level)
   }
 }
 
-static inline int16_t VanillaSegDist(const Segment *seg)
+static inline int16_t VanillaSegDist(const Segment &seg)
 {
-  const double lx = seg->side ? seg->linedef->end->x : seg->linedef->start->x;
-  const double ly = seg->side ? seg->linedef->end->y : seg->linedef->start->y;
+  const double lx = seg.side ? seg.linedef->end->x : seg.linedef->start->x;
+  const double ly = seg.side ? seg.linedef->end->y : seg.linedef->start->y;
 
   // use the "true" starting coord (as stored in the wad)
-  const double sx = round(seg->start->x);
-  const double sy = round(seg->start->y);
+  const double sx = round(seg.start->x);
+  const double sy = round(seg.start->y);
 
   return FloatToShort(floor(hypot(sx - lx, sy - ly) + 0.5));
 }
 
-static inline short_angle_t VanillaSegAngle(const Segment *seg)
+static inline short_angle_t VanillaSegAngle(const Segment &seg)
 {
   // compute the "true" delta
-  const double dx = round(seg->end->x) - round(seg->start->x);
-  const double dy = round(seg->end->y) - round(seg->start->y);
+  const double dx = round(seg.end->x) - round(seg.start->x);
+  const double dy = round(seg.end->y) - round(seg.start->y);
 
   short_angle_t result = 0;
 
-  switch (seg->linedef->angle)
+  switch (seg.linedef->angle)
   {
   case FX_RotateRelativeDegrees:
     result = ComputeAngle_BAM(dx, dy);
-    result += DegreesToShortBAM(seg->linedef->id);
+    result += DegreesToShortBAM(seg.linedef->id);
     break;
   case FX_RotateAbsoluteDegrees:
-    result = DegreesToShortBAM(seg->linedef->id);
+    result = DegreesToShortBAM(seg.linedef->id);
     break;
   case FX_RotateRelativeBAM:
     result = ComputeAngle_BAM(dx, dy);
-    result += static_cast<short_angle_t>(seg->linedef->id);
+    result += static_cast<short_angle_t>(seg.linedef->id);
     break;
   case FX_RotateAbsoluteBAM:
-    result = static_cast<short_angle_t>(seg->linedef->id);
+    result = static_cast<short_angle_t>(seg.linedef->id);
     break;
   case FX_DoNotRotate:
     result = ComputeAngle_BAM(dx, dy);
@@ -135,10 +135,10 @@ void PutSegs_DoomBSP(WadIO &io, const Level &level)
 
     raw.start = GetLittleEndian(IndexToShort(seg->start->index));
     raw.end = GetLittleEndian(IndexToShort(seg->end->index));
-    raw.angle = GetLittleEndian(VanillaSegAngle(seg.get()));
+    raw.angle = GetLittleEndian(VanillaSegAngle(*seg));
     raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
     raw.flip = GetLittleEndian(seg->side);
-    raw.dist = GetLittleEndian(VanillaSegDist(seg.get()));
+    raw.dist = GetLittleEndian(VanillaSegDist(*seg));
 
     io.AddToLump(&raw, sizeof(raw));
 
@@ -316,10 +316,10 @@ void PutSegs_DeePBSPV4(WadIO &io, const Level &level)
 
     raw.start = GetLittleEndian(IndexToUInt(seg->start->index));
     raw.end = GetLittleEndian(IndexToUInt(seg->end->index));
-    raw.angle = GetLittleEndian(VanillaSegAngle(seg.get()));
+    raw.angle = GetLittleEndian(VanillaSegAngle(*seg));
     raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
     raw.flip = GetLittleEndian(seg->side);
-    raw.dist = GetLittleEndian(VanillaSegDist(seg.get()));
+    raw.dist = GetLittleEndian(VanillaSegDist(*seg));
 
     io.AddToLump(&raw, sizeof(raw));
 
