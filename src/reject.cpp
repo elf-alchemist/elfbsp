@@ -47,9 +47,7 @@
 //
 static void Reject_Init(Level &level)
 {
-  level.reject_size = (level.sectors.size() * level.sectors.size() + 7) / 8;
-
-  level.reject_matrix = new uint8_t[level.reject_size]{};
+  level.reject_matrix.resize((level.sectors.size() * level.sectors.size() + 7) / 8);
 
   for (auto &sec : level.sectors)
   {
@@ -60,8 +58,7 @@ static void Reject_Init(Level &level)
 
 static void Reject_Free(Level &level)
 {
-  delete[] level.reject_matrix;
-  level.reject_matrix = nullptr;
+  level.reject_matrix.clear();
 }
 
 //
@@ -815,7 +812,7 @@ static bool DoVisibilityTest(const SectorPoints &A, const SectorPoints &B, const
 }
 
 // Mark a sector pair as blind in both directions.
-static inline void SetPairBits(const Level &level, size_t view, size_t target, size_t num_secs)
+static inline void SetPairBits(Level &level, size_t view, size_t target, size_t num_secs)
 {
   const size_t p1 = view * num_secs + target;
   const size_t p2 = target * num_secs + view;
@@ -824,7 +821,7 @@ static inline void SetPairBits(const Level &level, size_t view, size_t target, s
 }
 
 // Mark a sector pair as blind in both directions using thread-safe atomic guards.
-static inline void SetPairBitsAtomic(const Level &level, size_t view, size_t target, size_t num_secs)
+static inline void SetPairBitsAtomic(Level &level, size_t view, size_t target, size_t num_secs)
 {
   const size_t p1 = view * num_secs + target;
   const size_t p2 = target * num_secs + view;
@@ -1456,8 +1453,7 @@ static void Reject_ProcessSectors(Level &level)
   {
     cutLevels = BuildCutLevels(cuts, neighbors, num_secs, activeSectors);
 
-    blindSnap.resize(level.reject_size);
-    memcpy(blindSnap.data(), level.reject_matrix, level.reject_size);
+    blindSnap = level.reject_matrix;
   }
 
   // Is this pair blind because a cut point stands between the two sectors
@@ -1573,7 +1569,7 @@ static void Reject_ProcessSectors(Level &level)
       // until this thread gets there, so the snapshot is safe to take.
       if (threadIndex == 0)
       {
-        memcpy(blindSnap.data(), level.reject_matrix, level.reject_size);
+        blindSnap = level.reject_matrix;
       }
     }
 
@@ -1701,11 +1697,11 @@ void PutReject(WadIO &io, Level &level)
   Reject_GroupSectors(level);
   Reject_ProcessSectors(level);
   Reject_DebugGroups(level);
-  io.AddToLump(level.reject_matrix, level.reject_size);
+  io.AddToLump(level.reject_matrix.data(), level.reject_matrix.size());
   Reject_Free(level);
 
   if (config.verbose)
   {
-    PrintLine(Log::NORMAL, "[{}] Reject size: {}", __func__, level.reject_size);
+    PrintLine(Log::NORMAL, "[{}] Reject size: {}", __func__, level.reject_matrix.size());
   }
 }
