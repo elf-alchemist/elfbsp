@@ -248,7 +248,7 @@ void AddIntersection(Level &level, Intersection **cut_list, Vertex *vert, const 
   }
 
   /* create new intersection */
-  cut = level.NewIntersection();
+  cut = &level.NewIntersection();
 
   cut->vertex = vert;
   cut->along_dist = along_dist;
@@ -1031,33 +1031,33 @@ void AddMinisegs(Level &level, Intersection *cut_list, Segment *part, Segment **
 // Rewritten by Andrew Apted (-AJA-), 1999-2000.
 //
 
-static void SetPartition(Node *node, const Segment *part)
+static void SetPartition(Node &node, const Segment &part)
 {
-  SYS_ASSERT(part->linedef);
+  SYS_ASSERT(part.linedef);
 
-  if (!part->side)
+  if (!part.side)
   {
-    node->x = part->linedef->start->x;
-    node->y = part->linedef->start->y;
-    node->dx = part->linedef->end->x - node->x;
-    node->dy = part->linedef->end->y - node->y;
+    node.x = part.linedef->start->x;
+    node.y = part.linedef->start->y;
+    node.dx = part.linedef->end->x - node.x;
+    node.dy = part.linedef->end->y - node.y;
   }
   else /* left side */
   {
-    node->x = part->linedef->end->x;
-    node->y = part->linedef->end->y;
-    node->dx = part->linedef->start->x - node->x;
-    node->dy = part->linedef->start->y - node->y;
+    node.x = part.linedef->end->x;
+    node.y = part.linedef->end->y;
+    node.dx = part.linedef->start->x - node.x;
+    node.dy = part.linedef->start->y - node.y;
   }
 
   /* check for very long partition (overflow of dx,dy in NODES) */
 
-  if (fabs(node->dx) > 32766 || fabs(node->dy) > 32766)
+  if (fabs(node.dx) > 32766 || fabs(node.dy) > 32766)
   {
     // XGL3 nodes are 16.16 fixed point, hence we still need
     // to reduce the delta.
-    node->dx = node->dx / 2.0;
-    node->dy = node->dy / 2.0;
+    node.dx = node.dx / 2.0;
+    node.dy = node.dy / 2.0;
   }
 }
 
@@ -1342,26 +1342,26 @@ Quadtree::Quadtree(Segment *_list, const MapBoundBox &bounds) : Quadtree(bounds.
   AddList(*this, _list);
 }
 
-static void DetermineMiddle(Subsector *subsec)
+static void DetermineMiddle(Subsector &subsec)
 {
-  subsec->mid_x = 0;
-  subsec->mid_y = 0;
+  subsec.mid_x = 0;
+  subsec.mid_y = 0;
 
   int total = 0;
 
   // compute middle coordinates
-  for (const Segment *seg = subsec->seg_list; seg; seg = seg->next)
+  for (const Segment *seg = subsec.seg_list; seg; seg = seg->next)
   {
-    subsec->mid_x += seg->start->x + seg->end->x;
-    subsec->mid_y += seg->start->y + seg->end->y;
+    subsec.mid_x += seg->start->x + seg->end->x;
+    subsec.mid_y += seg->start->y + seg->end->y;
 
     total += 2;
   }
 
   if (total > 0)
   {
-    subsec->mid_x /= total;
-    subsec->mid_y /= total;
+    subsec.mid_x /= total;
+    subsec.mid_y /= total;
   }
 }
 
@@ -1532,29 +1532,29 @@ static void RenumberSegs(Subsector &subsec, size_t &cur_seg_index)
 //
 Subsector *CreateSubsec(Level &level, Quadtree &tree)
 {
-  Subsector *sub = level.NewSubsec();
+  Subsector &sub = level.NewSubsec();
 
   // compute subsector's index
-  sub->index = level.subsecs.size() - 1;
+  sub.index = level.subsecs.size() - 1;
 
   // copy segs into subsector
-  sub->seg_list = nullptr;
-  ConvertToList(tree, &sub->seg_list);
+  sub.seg_list = nullptr;
+  ConvertToList(tree, &sub.seg_list);
   DetermineMiddle(sub);
 
   if (HAS_BIT(config.debug, DEBUG_SUBSEC))
   {
-    PrintLine(Log::DEBUG, "[{}] Creating {}", __func__, sub->index);
+    PrintLine(Log::DEBUG, "[{}] Creating {}", __func__, sub.index);
   }
 
-  return sub;
+  return &sub;
 }
 
-void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Node **N, Subsector **S, double split_cost,
+void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Node *&N, Subsector *&S, double split_cost,
                 bool fast, bool analysis)
 {
-  *N = nullptr;
-  *S = nullptr;
+  N = nullptr;
+  S = nullptr;
 
   if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {
@@ -1581,7 +1581,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Nod
       PrintLine(Log::DEBUG, "[{}] CONVEX", __func__);
     }
 
-    *S = CreateSubsec(level, tree);
+    S = CreateSubsec(level, tree);
 
     return;
   }
@@ -1592,8 +1592,8 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Nod
               part->start->y, part->end->x, part->end->y);
   }
 
-  Node *node = level.NewNode();
-  *N = node;
+  Node &node = level.NewNode();
+  N = &node;
 
   /* divide the segs into two lists: left & right */
   Segment *lefts = nullptr;
@@ -1618,7 +1618,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Nod
     AddMinisegs(level, cut_list, part, &lefts, &rights);
   }
 
-  SetPartition(node, part);
+  SetPartition(node, *part);
 
   if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {
@@ -1626,7 +1626,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Nod
   }
 
   // recursively build the left side
-  BuildNodes(level, lefts, depth + 1, node->l.bounds, &node->l.node, &node->l.subsec, split_cost, fast, analysis);
+  BuildNodes(level, lefts, depth + 1, node.l.bounds, node.l.node, node.l.subsec, split_cost, fast, analysis);
 
   if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {
@@ -1634,7 +1634,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Nod
   }
 
   // recursively build the right side
-  BuildNodes(level, rights, depth + 1, node->r.bounds, &node->r.node, &node->r.subsec, split_cost, fast, analysis);
+  BuildNodes(level, rights, depth + 1, node.r.bounds, node.r.node, node.r.subsec, split_cost, fast, analysis);
 
   if (HAS_BIT(config.debug, DEBUG_BUILDER))
   {

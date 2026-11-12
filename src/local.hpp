@@ -496,17 +496,17 @@ struct Level
   [[nodiscard]] Sector *SafeLookupSector(size_t num, size_t num_side) const;
   [[nodiscard]] Sidedef *SafeLookupSidedef(int32_t num) const;
 
-  Vertex *NewVertex();
-  Linedef *NewLinedef();
-  Sidedef *NewSidedef();
-  Sector *NewSector();
-  Mobj *NewThing();
+  Vertex &NewVertex();
+  Linedef &NewLinedef();
+  Sidedef &NewSidedef();
+  Sector &NewSector();
+  Mobj &NewThing();
 
   Segment &NewSeg();
-  Subsector *NewSubsec();
-  Node *NewNode();
-  WallTip *NewWallTip();
-  Intersection *NewIntersection();
+  Subsector &NewSubsec();
+  Node &NewNode();
+  WallTip &NewWallTip();
+  Intersection &NewIntersection();
 
   void FreeVertices();
   void FreeSidedefs();
@@ -582,7 +582,7 @@ Segment *CreateSegs(Level &level);
 // and '*N' is the new node (and '*S' is set to nullptr).  Normally
 // returns BUILD_OK.
 
-void BuildNodes(Level &level, Segment *seg_list, int depth, MapBoundBox &bounds, Node **N, Subsector **S, double split_cost,
+void BuildNodes(Level &level, Segment *seg_list, int depth, MapBoundBox &bounds, Node *&N, Subsector *&S, double split_cost,
                 bool fast, bool analysis);
 
 // compute the height of the bsp tree, starting at 'node'.
