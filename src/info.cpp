@@ -106,7 +106,7 @@ static void ComputeTotalBspHeights(const Node *node, size_t depth, double &leaf_
 void GenerateAnalysis(WadIO &io, Level &level, std::string_view /*filename*/)
 {
   const auto mark = Benchmarker(__func__);
-  const auto generate_analysis_data = [](WadIO &io, Level &level, bool is_fast, size_t split_cost) -> auto
+  const auto generate_analysis_data = [&io, &level](bool is_fast, size_t split_cost) -> auto
   {
     AnalysisData data;
     Node *analysis_node = nullptr;
@@ -186,7 +186,7 @@ void GenerateAnalysis(WadIO &io, Level &level, std::string_view /*filename*/)
     // across all split costs
     for (size_t split_cost = 1; split_cost <= 32; split_cost++)
     {
-      generate_analysis_data(io, level, is_fast != 0, split_cost);
+      generate_analysis_data(is_fast != 0, split_cost);
       PrintLine(Log::NORMAL, "[{}] Analyzed {}, {} mode, split cost factor of {}", __func__, io.LumpName(level.lumps.label),
                 is_fast ? "fast" : "normal", split_cost);
     }
