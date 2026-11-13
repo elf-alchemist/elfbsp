@@ -50,7 +50,7 @@ void MarkPolyobjSector(const Level &level, Sector *sector)
   // the sector from being split.
   sector->has_polyobj = true;
 
-  for (auto L : level.linedefs)
+  for (auto &L : level.linedefs)
   {
     if ((L->right && L->right->sector == sector) || (L->left && L->left->sector == sector))
     {
@@ -76,7 +76,7 @@ void MarkPolyobjPoint(const Level &level, double x, double y)
   const auto bmaxx = FloatToShort(x + POLY_BOX_SZ);
   const auto bmaxy = FloatToShort(y + POLY_BOX_SZ);
 
-  for (auto L : level.linedefs)
+  for (auto &L : level.linedefs)
   {
     if (CheckLinedefInsideBox(bminx, bminy, bmaxx, bmaxy, FloatToShort(L->start->x), FloatToShort(L->start->y),
                               FloatToShort(L->end->x), FloatToShort(L->end->y)))
@@ -111,7 +111,7 @@ void MarkPolyobjPoint(const Level &level, double x, double y)
   //       If the point is sitting directly on a (two-sided) line,
   //       then we mark the sectors on both sides.
 
-  for (auto L : level.linedefs)
+  for (auto &L : level.linedefs)
   {
     const double x1 = L->start->x;
     const double y1 = L->start->y;
@@ -135,7 +135,7 @@ void MarkPolyobjPoint(const Level &level, double x, double y)
     {
       /* found a closer linedef */
 
-      best_match = L;
+      best_match = L.get();
       best_dist = x_cut;
     }
   }
@@ -147,8 +147,8 @@ void MarkPolyobjPoint(const Level &level, double x, double y)
     return;
   }
 
-  double y1 = best_match->start->y;
-  double y2 = best_match->end->y;
+  const double y1 = best_match->start->y;
+  const double y2 = best_match->end->y;
 
   if (HAS_BIT(config.debug, DEBUG_POLYOBJ))
   {
@@ -200,7 +200,7 @@ void DetectPolyobjSectors(const BuildInfo &ctx, const Level &level)
   const auto mark = Benchmarker(__func__);
   // -JL- First go through all lines to see if level contains any polyobjs
   bool has_polyobj = false;
-  for (auto L : level.linedefs)
+  for (auto &L : level.linedefs)
   {
     if (L->special == Polyobj_StartLine || L->special == Polyobj_ExplicitLine)
     {
@@ -221,10 +221,10 @@ void DetectPolyobjSectors(const BuildInfo &ctx, const Level &level)
               (level.po.anchor == ZDoom_PolyObj_Anchor) ? "ZDOOM" : "HEXEN");
   }
 
-  for (auto T : level.things)
+  for (auto &T : level.things)
   {
-    double x = T->x;
-    double y = T->y;
+    const double x = T->x;
+    const double y = T->y;
     const DoomEdNum t = T->type;
 
     // ignore everything except polyobj start spots

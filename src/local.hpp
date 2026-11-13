@@ -26,6 +26,7 @@
 #include "core.hpp"
 #include "wad.hpp"
 
+#include <memory>
 #include <vector>
 
 //------------------------------------------------------------------------
@@ -296,7 +297,7 @@ struct Quadtree
   // [0] has the lower coordinates, and [1] has the higher coordinates.
   // Division of a square always occurs horizontally (e.g. 512x512 ->
   // 256x512).
-  Quadtree *subs[2];
+  std::array<std::unique_ptr<Quadtree>, 2> subs;
 
   // count of real/minisegs contained in this node AND ALL CHILDREN.
   size_t real_num{0};
@@ -306,7 +307,7 @@ struct Quadtree
   Segment *list{nullptr};
 
   Quadtree(int _x1, int _y1, int _x2, int _y2);
-  ~Quadtree();
+  Quadtree(Segment *_list, const MapBoundBox &bounds);
 
   [[nodiscard]] bool Empty() const
   {
@@ -317,7 +318,7 @@ struct Quadtree
 // check relationship between this box and the partition line.
 // returns -1 or +1 if box is definitively on a particular side,
 // or 0 if the line intersects or touches the box.
-int OnLineSide(const Quadtree *quadtree, const Segment *part);
+int OnLineSide(const Quadtree &quadtree, const Segment *part);
 
 // an "intersection" remembers the vertex that touches a BSP divider
 // line (especially a new vertex that is created at a seg split).
@@ -459,24 +460,23 @@ struct Level
 
   PolyObject po;
 
-  std::vector<Vertex *> vertices;
-  std::vector<Linedef *> linedefs;
-  std::vector<Sidedef *> sidedefs;
-  std::vector<Sector *> sectors;
-  std::vector<Mobj *> things;
+  std::vector<std::unique_ptr<Vertex>> vertices;
+  std::vector<std::unique_ptr<Linedef>> linedefs;
+  std::vector<std::unique_ptr<Sidedef>> sidedefs;
+  std::vector<std::unique_ptr<Sector>> sectors;
+  std::vector<std::unique_ptr<Mobj>> things;
 
   Node *root_node = nullptr;
   Subsector *root_sub = nullptr;
 
-  std::vector<Segment *> segs;
-  std::vector<Subsector *> subsecs;
-  std::vector<Node *> nodes;
-  std::vector<WallTip *> walltips;
-  std::vector<Intersection *> intercuts;
+  std::vector<std::unique_ptr<Segment>> segs;
+  std::vector<std::unique_ptr<Subsector>> subsecs;
+  std::vector<std::unique_ptr<Node>> nodes;
+  std::vector<std::unique_ptr<WallTip>> walltips;
+  std::vector<std::unique_ptr<Intersection>> intercuts;
   BspFormat bsp_format = BspFormat::XNOD;
 
-  uint8_t *reject_matrix;
-  size_t reject_size;
+  std::vector<uint8_t> reject_matrix;
 
   std::vector<UVertexMinimal> udmf_vertex;
   std::vector<ULinedefMinimal> udmf_linedef;
@@ -574,8 +574,6 @@ static constexpr double ANG_EPSILON = (1.0 / 1024.0);
 // scan all the linedef of the level and convert each sidedef into a
 // seg (or seg pair).  Returns the list of segs.
 Segment *CreateSegs(Level &level);
-
-Quadtree *TreeFromSegList(Segment *list);
 
 // takes the seg list and determines if it is convex.  When it is, the
 // segs are converted to a subsector, and '*S' is the new subsector
