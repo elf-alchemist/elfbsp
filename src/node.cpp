@@ -1337,9 +1337,9 @@ Segment *CreateSegs(Level &level)
   return list;
 }
 
-Quadtree::Quadtree(Segment *list, const MapBoundBox &bounds) : Quadtree(bounds.minx, bounds.miny, bounds.maxx, bounds.maxy)
+Quadtree::Quadtree(Segment *_list, const MapBoundBox &bounds) : Quadtree(bounds.minx, bounds.miny, bounds.maxx, bounds.maxy)
 {
-  AddList(*this, list);
+  AddList(*this, _list);
 }
 
 static void DetermineMiddle(Subsector *subsec)
