@@ -129,7 +129,7 @@ void GenerateAnalysis(WadIO &io, Level &level, std::string_view /*filename*/)
 
     MapBoundBox dummy = {.maxy = 0, .miny = 0, .minx = 0, .maxx = 0};
     analysis_seg = CreateSegs(level);
-    BuildNodes(level, analysis_seg, 0, dummy, &analysis_node, &analysis_sub, static_cast<double>(split_cost), is_fast, true);
+    BuildNodes(level, analysis_seg, 0, dummy, analysis_node, analysis_sub, static_cast<double>(split_cost), is_fast, true);
 
     data.vertex = level.num_old_vert;
     data.lines = level.linedefs.size();

@@ -86,64 +86,64 @@ Sidedef *Level::SafeLookupSidedef(int32_t num) const
 
 /* ----- allocation routines ---------------------------- */
 
-Vertex *Level::NewVertex()
+Vertex &Level::NewVertex()
 {
   auto *V = this->vertices.emplace_back().get();
   V->index = this->vertices.size() - 1;
-  return V;
+  return *V;
 }
 
-Linedef *Level::NewLinedef()
+Linedef &Level::NewLinedef()
 {
   auto *L = this->linedefs.emplace_back().get();
   L->index = this->linedefs.size() - 1;
-  return L;
+  return *L;
 }
 
-Sidedef *Level::NewSidedef()
+Sidedef &Level::NewSidedef()
 {
   auto *S = this->sidedefs.emplace_back().get();
   S->index = this->sidedefs.size() - 1;
-  return S;
+  return *S;
 }
 
-Sector *Level::NewSector()
+Sector &Level::NewSector()
 {
   auto *S = this->sectors.emplace_back().get();
   S->index = this->sectors.size() - 1;
-  return S;
+  return *S;
 }
 
-Mobj *Level::NewThing()
+Mobj &Level::NewThing()
 {
   auto *T = this->things.emplace_back().get();
   T->index = this->things.size() - 1;
-  return T;
+  return *T;
 }
 
-Segment *Level::NewSeg()
+Segment &Level::NewSeg()
 {
-  return this->segs.emplace_back().get();
+  return *this->segs.emplace_back();
 }
 
-Subsector *Level::NewSubsec()
+Subsector &Level::NewSubsec()
 {
-  return this->subsecs.emplace_back().get();
+  return *this->subsecs.emplace_back();
 }
 
-Node *Level::NewNode()
+Node &Level::NewNode()
 {
-  return this->nodes.emplace_back().get();
+  return *this->nodes.emplace_back();
 }
 
-WallTip *Level::NewWallTip()
+WallTip &Level::NewWallTip()
 {
-  return this->walltips.emplace_back().get();
+  return *this->walltips.emplace_back();
 }
 
-Intersection *Level::NewIntersection()
+Intersection &Level::NewIntersection()
 {
-  return this->intercuts.emplace_back().get();
+  return *this->intercuts.emplace_back();
 }
 
 /* ----- free routines ---------------------------- */
