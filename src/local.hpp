@@ -307,7 +307,7 @@ struct Quadtree
   Segment *list{nullptr};
 
   Quadtree(int _x1, int _y1, int _x2, int _y2);
-  Quadtree(Segment *list, const MapBoundBox &bounds);
+  Quadtree(Segment *_list, const MapBoundBox &bounds);
 
   [[nodiscard]] bool Empty() const
   {
