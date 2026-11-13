@@ -24,6 +24,7 @@
 
 #include "core.hpp"
 #include <fstream>
+#include <string_view>
 #include <vector>
 
 //------------------------------------------------------------------------
@@ -53,8 +54,9 @@ static_size(WadLump, 16);
 // File handling
 //
 
-struct WadIO
+class WadIO
 {
+private:
   // Read data
   std::ifstream read_file;
   WadHeader read_header;
@@ -64,18 +66,19 @@ struct WadIO
   std::ofstream write_file;
   WadHeader write_header;
   std::vector<WadLump> write_directory;
+  bool directory_written = false;
   bool zlib_init = false;
   zng_stream zout_stream;
   byte zout_buffer[8192];
 
+public:
   // Init/die
-  WadIO(std::string in_file, std::string out_file);
-  ~WadIO(void);
+  WadIO(const std::string &in_file, const std::string &out_file);
 
   // Read operations
   void SafeRead(void *buffer, size_t size);
-  size_t NumLumps(void) const;
-  const char *LumpName(size_t lump_index) const;
+  size_t NumLumps() const;
+  std::string_view LumpName(size_t lump_index) const;
   bool IsLevelLump(size_t lump_index) const;
   bool IsLevelTextmapFormat(size_t lump_index) const;
   bool IsLevel(size_t lump_index) const;
@@ -94,6 +97,7 @@ struct WadIO
   void WriteLump(std::string_view name, const void *data, size_t size);
   void CopyLump(size_t lump);
   void LevelCopyLump(size_t lump, std::string_view name);
+  void WriteDirectory();
 
   // Partial writing
   void StartWritingLump(std::string_view name);
@@ -110,9 +114,9 @@ struct WadIO
   }
 
   // Zlib compression support
-  void Begin_Zlib(void);
+  void Begin_Zlib();
   void AddToLumpZ(const void *data, size_t length);
-  void Finish_Zlib(void);
+  void Finish_Zlib();
 };
 
 //
@@ -126,12 +130,17 @@ std::vector<T> WadIO::ReadLump(size_t lump_index)
   {
     return lump;
   }
-  this->read_file.seekg(this->read_directory[lump_index].pos);
+  const auto &directory_entry = this->read_directory[lump_index];
+  this->read_file.seekg(directory_entry.pos);
   if (this->read_file.fail())
   {
     throw RuntimeException("Failed to seek");
   }
-  size_t size = this->read_directory[lump_index].size / sizeof(T);
+  if (directory_entry.size < 0)
+  {
+    throw RuntimeException("Invalid lump size");
+  }
+  const size_t size = static_cast<size_t>(directory_entry.size) / sizeof(T);
   lump.resize(size);
   this->SafeRead(lump.data(), size * sizeof(T));
   return lump;

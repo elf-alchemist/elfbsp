@@ -41,7 +41,7 @@ inline static int32_t UScanInt(Scanner &s)
   int32_t x = 0;
   s.MustGetToken('=');
 
-  bool neg = s.CheckToken('-');
+  const bool neg = s.CheckToken('-');
   s.MustGetToken(TK_IntConst);
   x = neg ? -s->number : s->number;
 
@@ -54,7 +54,7 @@ inline static double UScanFloat(Scanner &s)
   double x = 0;
   s.MustGetToken('=');
 
-  bool neg = s.CheckToken('-');
+  const bool neg = s.CheckToken('-');
   s.MustGetToken(TK_FloatConst);
   x = neg ? -s->decimal : s->decimal;
 
@@ -616,7 +616,7 @@ void ParseUThing(Scanner &s, Level &level)
 
 //-----------------------------------------------------------------------------
 
-void ParseTextMap(WadIO &io, Level &level, std::vector<char> &lump)
+void ParseTextMap(const WadIO &io, Level &level, std::vector<char> &lump)
 {
   auto s = Scanner(lump.data(), lump.size());
 
@@ -657,19 +657,19 @@ void ParseTextMap(WadIO &io, Level &level, std::vector<char> &lump)
     }
   }
 
-  if (level.udmf_vertex.size() == 0)
+  if (level.udmf_vertex.empty())
     throw RuntimeException("Not enough UDMF vertexes for map {}. Check your TEXTMAP.", io.LumpName(level.lumps.label));
 
-  if (level.udmf_linedef.size() == 0)
+  if (level.udmf_linedef.empty())
     throw RuntimeException("Not enough UDMF linedefs for map {}. Check your TEXTMAP.", io.LumpName(level.lumps.label));
 
-  if (level.udmf_sidedef.size() == 0)
+  if (level.udmf_sidedef.empty())
     throw RuntimeException("Not enough UDMF sidedefs for map {}. Check your TEXTMAP.", io.LumpName(level.lumps.label));
 
-  if (level.udmf_sector.size() == 0)
+  if (level.udmf_sector.empty())
     throw RuntimeException("Not enough UDMF sectors for map {}. Check your TEXTMAP.", io.LumpName(level.lumps.label));
 
-  if (level.udmf_thing.size() == 0)
+  if (level.udmf_thing.empty())
     throw RuntimeException("Not enough UDMF things for map {}. Check your TEXTMAP.", io.LumpName(level.lumps.label));
 }
 

@@ -60,12 +60,12 @@ BuildInfo config;
 // FILE MANAGEMENT
 //------------------------------------------------------------------------
 
-static bool FileExists(std::string filename)
+static bool FileExists(std::string_view filename)
 {
   return std::filesystem::exists(filename);
 }
 
-static bool CheckMapInRange(const map_range_t *range, std::string name)
+static bool CheckMapInRange(const map_range_t *range, std::string_view name)
 {
   if (name.size() != range->low.size())
   {
@@ -85,7 +85,7 @@ static bool CheckMapInRange(const map_range_t *range, std::string name)
   return true;
 }
 
-static bool CheckMapInMapList(std::string name)
+static bool CheckMapInMapList(std::string_view name)
 {
   // when --map is not used, allow everything
   if (map_list.empty())
@@ -93,7 +93,7 @@ static bool CheckMapInMapList(std::string name)
     return true;
   }
 
-  for (auto &map : map_list)
+  for (const auto &map : map_list)
   {
     if (CheckMapInRange(&map, name))
     {
@@ -106,7 +106,7 @@ static bool CheckMapInMapList(std::string name)
 
 static void VisitFile(std::string_view filename)
 {
-  auto mark = Benchmarker(__func__);
+  const auto mark = Benchmarker(__func__);
   auto in_file = std::string(filename);
   auto out_file = std::string();
 
@@ -134,7 +134,7 @@ static void VisitFile(std::string_view filename)
     config.total_warnings = 0;
     auto wad = WadIO(in_file, out_file);
     size_t current = 0;
-    size_t max = wad.NumLumps();
+    const size_t max = wad.NumLumps();
 
     size_t levels_visited = 0;
     size_t levels_failed = 0;
@@ -147,7 +147,7 @@ static void VisitFile(std::string_view filename)
         level.SetLumps(wad, current);
 
         levels_visited += 1;
-        auto result = BuildLevel(wad, level, in_file);
+        const auto result = BuildLevel(wad, level, in_file);
 
         // handle a failed map (due to lump overflow)
         if (result == BuildResult::Overflow)
@@ -168,6 +168,8 @@ static void VisitFile(std::string_view filename)
         current++;
       }
     }
+
+    wad.WriteDirectory();
 
     if (levels_visited == 0)
     {
@@ -387,7 +389,7 @@ static void ParseShortArgument(const char *arg)
   }
 }
 
-static bool ProcessDebugParam(std::string param, uint32_t &debug)
+static bool ProcessDebugParam(std::string_view param, uint32_t &debug)
 {
   if (param == "--debug-blockmap")
   {
@@ -515,7 +517,7 @@ static int32_t ParseLongArgument(std::string name, const int32_t argc, const cha
       throw RuntimeException("missing value for '--type' option");
     }
 
-    auto val = static_cast<BspFormat>(std::stoi(argv[0]));
+    const auto val = static_cast<BspFormat>(std::stoi(argv[0]));
 
     if (val < BspFormat::MIN || val > BspFormat::MAX)
     {
@@ -532,7 +534,7 @@ static int32_t ParseLongArgument(std::string name, const int32_t argc, const cha
       throw RuntimeException("missing value for '--bmap' option");
     }
 
-    auto val = static_cast<BlockmapFormat>(std::stoi(argv[0]));
+    const auto val = static_cast<BlockmapFormat>(std::stoi(argv[0]));
 
     if (val < BlockmapFormat::MIN || val > BlockmapFormat::MAX)
     {
@@ -549,7 +551,7 @@ static int32_t ParseLongArgument(std::string name, const int32_t argc, const cha
       throw RuntimeException("missing value for '--cost' option");
     }
 
-    int32_t val = std::stoi(argv[0]);
+    const int32_t val = std::stoi(argv[0]);
 
     if (val < SPLIT_COST_MIN || val > SPLIT_COST_MAX)
     {
@@ -585,7 +587,7 @@ static int32_t ParseLongArgument(std::string name, const int32_t argc, const cha
   }
   else if (name.starts_with("--debug-"))
   {
-    if (!ProcessDebugParam(name.c_str(), config.debug))
+    if (!ProcessDebugParam(name, config.debug))
     {
       throw RuntimeException("unknown debug parameter '{}'", name);
     }
@@ -667,7 +669,7 @@ void ParseCommandLine(int32_t argc, const char *argv[])
       continue;
     }
 
-    int32_t count = ParseLongArgument(arg, argc, argv);
+    const int32_t count = ParseLongArgument(arg, argc, argv);
 
     if (count > 0)
     {
@@ -696,7 +698,7 @@ int32_t main(const int32_t argc, const char *argv[])
       return 0;
     }
 
-    size_t total_files = wad_list.size();
+    const size_t total_files = wad_list.size();
 
     if (total_files == 0)
     {

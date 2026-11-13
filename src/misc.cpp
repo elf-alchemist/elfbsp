@@ -34,12 +34,12 @@
 
 bool Overlaps(const Vertex *vertex, const Vertex *other)
 {
-  double dx = fabs(other->x - vertex->x);
-  double dy = fabs(other->y - vertex->y);
+  const double dx = fabs(other->x - vertex->x);
+  const double dy = fabs(other->y - vertex->y);
   return (dx < DIST_EPSILON) && (dy < DIST_EPSILON);
 }
 
-void DetectOverlappingVertices(Level &level)
+void DetectOverlappingVertices(const Level &level)
 {
   if (level.vertices.size() < 2)
   {
@@ -51,7 +51,7 @@ void DetectOverlappingVertices(Level &level)
 
   // sort the vertices by increasing X coordinate.
   // hence any overlapping vertices will be near each other.
-  auto PredicateCompare_VertexCoordinateX = [](const Vertex *Vertex1, const Vertex *Vertex2) -> auto
+  const auto PredicateCompare_VertexCoordinateX = [](const Vertex *Vertex1, const Vertex *Vertex2) -> auto
   { return Vertex1->x < Vertex2->x; };
 
   std::ranges::sort(array, PredicateCompare_VertexCoordinateX);
@@ -123,7 +123,7 @@ void PruneVerticesAtEnd(Level &level)
 {
   // always prune vertices at end of lump, otherwise all the
   // unused vertices from seg splits would keep accumulating.
-  size_t old_num = level.vertices.size();
+  const size_t old_num = level.vertices.size();
 
   // scan all vertices.
   // only remove from the end, so stop when hit a used one.
@@ -151,7 +151,7 @@ void PruneVerticesAtEnd(Level &level)
   level.num_old_vert = level.vertices.size();
 }
 
-void DetectOverlappingLines(Level &level)
+void DetectOverlappingLines(const Level &level)
 {
   // copy
   auto array = std::vector<Linedef *>(level.linedefs);
@@ -160,7 +160,7 @@ void DetectOverlappingLines(Level &level)
   //   Sort all lines by minimum X coordinate.
   //   Overlapping lines will then be near each other in this set.
   //   NOTE: does not detect partially overlapping lines.
-  auto PredicateCompare_LinedefMinX = [](const Linedef *Linedef1, const Linedef *Linedef2) -> auto
+  const auto PredicateCompare_LinedefMinX = [](const Linedef *Linedef1, const Linedef *Linedef2) -> auto
   { return Linedef1->MinX() < Linedef2->MinX(); };
 
   std::ranges::sort(array, PredicateCompare_LinedefMinX);
@@ -182,8 +182,8 @@ void DetectOverlappingLines(Level &level)
 
       // due to DetectOverlappingVertices(), we can compare the vertex
       // pointers
-      bool over1 = (A->start == B->start) && (A->end == B->end);
-      bool over2 = (A->start == B->end) && (A->end == B->start);
+      const bool over1 = (A->start == B->start) && (A->end == B->end);
+      const bool over2 = (A->start == B->end) && (A->end == B->start);
 
       if (over1 || over2)
       {
@@ -266,13 +266,13 @@ void CalculateWallTips(Level &level)
       continue;
     }
 
-    double x1 = L->start->x;
-    double y1 = L->start->y;
-    double x2 = L->end->x;
-    double y2 = L->end->y;
+    const double x1 = L->start->x;
+    const double y1 = L->start->y;
+    const double x2 = L->end->x;
+    const double y2 = L->end->y;
 
-    bool left = (L->left != nullptr) && (L->left->sector != nullptr);
-    bool right = (L->right != nullptr) && (L->right->sector != nullptr);
+    const bool left = (L->left != nullptr) && (L->left->sector != nullptr);
+    const bool right = (L->right != nullptr) && (L->right->sector != nullptr);
 
     // note that start->overlap and end->overlap should be nullptr
     // due to logic in DetectOverlappingVertices.
@@ -296,7 +296,7 @@ void CalculateWallTips(Level &level)
   }
 }
 
-Vertex *NewVertexFromSplitSeg(Level &level, Segment *seg, double x, double y)
+Vertex *NewVertexFromSplitSeg(Level &level, const Segment *seg, double x, double y)
 {
   Vertex *vert = level.NewVertex();
 
@@ -318,8 +318,8 @@ Vertex *NewVertexFromSplitSeg(Level &level, Segment *seg, double x, double y)
     const Sidedef *front = seg->side ? seg->linedef->left : seg->linedef->right;
     const Sidedef *back = seg->side ? seg->linedef->right : seg->linedef->left;
 
-    bool left = (back != nullptr) && (back->sector != nullptr);
-    bool right = (front != nullptr) && (front->sector != nullptr);
+    const bool left = (back != nullptr) && (back->sector != nullptr);
+    const bool right = (front != nullptr) && (front->sector != nullptr);
 
     AddWallTip(level, vert, seg->pdx, seg->pdy, left, right);
     AddWallTip(level, vert, -seg->pdx, -seg->pdy, right, left);
@@ -328,7 +328,7 @@ Vertex *NewVertexFromSplitSeg(Level &level, Segment *seg, double x, double y)
   return vert;
 }
 
-Vertex *NewVertexDegenerate(Level &level, Vertex *start, Vertex *end)
+Vertex *NewVertexDegenerate(Level &level, const Vertex *start, const Vertex *end)
 {
   // this is only called when rounding off the BSP tree and
   // all the segs are degenerate (zero length), hence we need
@@ -336,7 +336,7 @@ Vertex *NewVertexDegenerate(Level &level, Vertex *start, Vertex *end)
   double dx = end->x - start->x;
   double dy = end->y - start->y;
 
-  double dlen = hypot(dx, dy);
+  const double dlen = hypot(dx, dy);
 
   Vertex *vert = level.NewVertex();
 
@@ -371,7 +371,7 @@ bool CheckOpen(const Vertex *vertex, double dx, double dy)
 {
   const WallTip *tip;
 
-  double angle = ComputeAngle(dx, dy);
+  const double angle = ComputeAngle(dx, dy);
 
   // first check whether there's a wall-tip that lies in the exact
   // direction of the given direction (which is relative to the

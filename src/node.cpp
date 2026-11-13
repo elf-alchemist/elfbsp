@@ -188,7 +188,7 @@ Segment *SplitSeg(Level &level, Segment *old_seg, double x, double y)
 //       and the partitioning seg, and takes advantage of some common
 //       situations like horizontal/vertical lines.
 //
-inline void ComputeIntersection(Segment *seg, Segment *part, double perp_c, double perp_d, double *x, double *y)
+inline void ComputeIntersection(const Segment *seg, const Segment *part, double perp_c, double perp_d, double *x, double *y)
 {
   // horizontal partition against vertical seg
   if (part->pdy == 0 && seg->pdx == 0)
@@ -207,7 +207,7 @@ inline void ComputeIntersection(Segment *seg, Segment *part, double perp_c, doub
   }
 
   // 0 = start, 1 = end
-  double ds = perp_c / (perp_c - perp_d);
+  const double ds = perp_c / (perp_c - perp_d);
 
   if (seg->pdx == 0)
   {
@@ -228,12 +228,12 @@ inline void ComputeIntersection(Segment *seg, Segment *part, double perp_c, doub
   }
 }
 
-void AddIntersection(Level &level, Intersection **cut_list, Vertex *vert, Segment *part, bool self_ref)
+void AddIntersection(Level &level, Intersection **cut_list, Vertex *vert, const Segment *part, bool self_ref)
 {
-  bool open_before = CheckOpen(vert, -part->pdx, -part->pdy);
-  bool open_after = CheckOpen(vert, part->pdx, part->pdy);
+  const bool open_before = CheckOpen(vert, -part->pdx, -part->pdy);
+  const bool open_after = CheckOpen(vert, part->pdx, part->pdy);
 
-  double along_dist = part->ParallelDist(vert->x, vert->y);
+  const double along_dist = part->ParallelDist(vert->x, vert->y);
 
   Intersection *cut;
   Intersection *after;
@@ -294,14 +294,14 @@ void AddIntersection(Level &level, Intersection **cut_list, Vertex *vert, Segmen
 //
 // Returns true if a "bad seg" was found early.
 //
-bool EvalPartitionWorker(Quadtree *tree, Segment *part, double best_cost, double split_cost, eval_info_t *info)
+bool EvalPartitionWorker(const Quadtree *tree, const Segment *part, double best_cost, double split_cost, eval_info_t *info)
 {
   // -AJA- this is the heart of the superblock idea, it tests the
   //       *whole* quad against the partition line to quickly handle
   //       all the segs within it at once.  Only when the partition
   //       line intercepts the box do we need to go deeper into it.
 
-  int side = OnLineSide(tree, part);
+  const int side = OnLineSide(tree, part);
 
   if (side < 0)
   {
@@ -321,7 +321,7 @@ bool EvalPartitionWorker(Quadtree *tree, Segment *part, double best_cost, double
   }
 
   /* check partition against all Segs */
-  for (Segment *check = tree->list; check; check = check->next)
+  for (const Segment *check = tree->list; check; check = check->next)
   {
     // This is the heart of my pruning idea - it catches
     // bad segs early on. Killough
@@ -464,24 +464,21 @@ bool EvalPartitionWorker(Quadtree *tree, Segment *part, double best_cost, double
   }
 
   /* handle sub-blocks recursively */
-  for (int c = 0; c < 2; c++)
+  return std::ranges::any_of(tree->subs, [&](const auto sub)
   {
     if (info->cost > best_cost)
     {
       return true;
     }
 
-    if (tree->subs[c] != nullptr && !tree->subs[c]->Empty())
+    if (sub != nullptr && !sub->Empty() && EvalPartitionWorker(sub, part, best_cost, split_cost, info))
     {
-      if (EvalPartitionWorker(tree->subs[c], part, best_cost, split_cost, info))
-      {
-        return true;
-      }
+      return true;
     }
-  }
 
-  /* no "bad seg" was found */
-  return false;
+    /* no "bad seg" was found */
+    return false;
+  });
 }
 
 //
@@ -492,7 +489,7 @@ bool EvalPartitionWorker(Quadtree *tree, Segment *part, double best_cost, double
 // Returns the computed cost, or a negative value if the seg should be
 // skipped altogether.
 //
-double EvalPartition(Quadtree *tree, Segment *part, double best_cost, double split_cost)
+double EvalPartition(const Quadtree *tree, const Segment *part, double best_cost, double split_cost)
 {
   eval_info_t info;
 
@@ -525,11 +522,11 @@ double EvalPartition(Quadtree *tree, Segment *part, double best_cost, double spl
   }
 
   /* increase cost by the difference between left & right */
-  info.cost += 100.0 * abs(int32_t(info.real_left) - int32_t(info.real_right));
+  info.cost += 100.0 * abs(static_cast<int32_t>(info.real_left) - static_cast<int32_t>(info.real_right));
 
   // -AJA- allow miniseg counts to affect the outcome, but to a
   //       lesser degree than real segs.
-  info.cost += 50.0 * abs(int32_t(info.mini_left) - int32_t(info.mini_right));
+  info.cost += 50.0 * abs(static_cast<int32_t>(info.mini_left) - static_cast<int32_t>(info.mini_right));
 
   // -AJA- Another little twist, here we show a slight preference for
   //       partition lines that lie either purely horizontally or
@@ -549,7 +546,7 @@ double EvalPartition(Quadtree *tree, Segment *part, double best_cost, double spl
   return info.cost;
 }
 
-void EvaluateFastWorker(Quadtree *tree, Segment **best_H, Segment **best_V, int mid_x, int mid_y)
+void EvaluateFastWorker(const Quadtree *tree, Segment **best_H, Segment **best_V, int mid_x, int mid_y)
 {
   for (Segment *part = tree->list; part; part = part->next)
   {
@@ -568,8 +565,8 @@ void EvaluateFastWorker(Quadtree *tree, Segment **best_H, Segment **best_V, int 
       }
       else
       {
-        double old_dist = fabs((*best_H)->psy - mid_y);
-        double new_dist = fabs((part)->psy - mid_y);
+        const double old_dist = fabs((*best_H)->psy - mid_y);
+        const double new_dist = fabs(part->psy - mid_y);
 
         if (new_dist < old_dist)
         {
@@ -586,8 +583,8 @@ void EvaluateFastWorker(Quadtree *tree, Segment **best_H, Segment **best_V, int 
       }
       else
       {
-        double old_dist = fabs((*best_V)->psx - mid_x);
-        double new_dist = fabs((part)->psx - mid_x);
+        const double old_dist = fabs((*best_V)->psx - mid_x);
+        const double new_dist = fabs(part->psx - mid_x);
 
         if (new_dist < old_dist)
         {
@@ -598,22 +595,22 @@ void EvaluateFastWorker(Quadtree *tree, Segment **best_H, Segment **best_V, int 
   }
 
   /* handle sub-blocks recursively */
-  for (int c = 0; c < 2; c++)
+  for (auto sub : tree->subs)
   {
-    if (tree->subs[c] != nullptr && !tree->subs[c]->Empty())
+    if (sub != nullptr && !sub->Empty())
     {
-      EvaluateFastWorker(tree->subs[c], best_H, best_V, mid_x, mid_y);
+      EvaluateFastWorker(sub, best_H, best_V, mid_x, mid_y);
     }
   }
 }
 
-Segment *FindFastSeg(Quadtree *tree, double split_cost)
+Segment *FindFastSeg(const Quadtree *tree, double split_cost)
 {
   Segment *best_H = nullptr;
   Segment *best_V = nullptr;
 
-  int mid_x = (tree->x1 + tree->x2) / 2;
-  int mid_y = (tree->y1 + tree->y2) / 2;
+  const int mid_x = (tree->x1 + tree->x2) / 2;
+  const int mid_y = (tree->y1 + tree->y2) / 2;
 
   EvaluateFastWorker(tree, &best_H, &best_V, mid_x, mid_y);
 
@@ -653,7 +650,7 @@ Segment *FindFastSeg(Quadtree *tree, double split_cost)
   return (V_cost < H_cost) ? best_V : best_H;
 }
 
-static void PickNodeWorker(Quadtree *part_list, Quadtree *tree, Segment **best, double *best_cost, double split_cost)
+static void PickNodeWorker(const Quadtree *part_list, Quadtree *tree, Segment **best, double *best_cost, double split_cost)
 {
   /* try each Seg as partition */
   for (Segment *part = part_list->list; part; part = part->next)
@@ -670,7 +667,7 @@ static void PickNodeWorker(Quadtree *part_list, Quadtree *tree, Segment **best, 
       continue;
     }
 
-    double cost = EvalPartition(tree, part, *best_cost, split_cost);
+    const double cost = EvalPartition(tree, part, *best_cost, split_cost);
 
     /* seg unsuitable or too costly ? */
     if (cost < 0 || cost >= *best_cost)
@@ -686,11 +683,11 @@ static void PickNodeWorker(Quadtree *part_list, Quadtree *tree, Segment **best, 
   }
 
   /* recursively handle sub-blocks */
-  for (int c = 0; c < 2; c++)
+  for (auto sub : part_list->subs)
   {
-    if (part_list->subs[c] != nullptr && !part_list->subs[c]->Empty())
+    if (sub != nullptr && !sub->Empty())
     {
-      PickNodeWorker(part_list->subs[c], tree, best, best_cost, split_cost);
+      PickNodeWorker(sub, tree, best, best_cost, split_cost);
     }
   }
 }
@@ -777,13 +774,14 @@ static void ListAddSeg(Segment **list_ptr, Segment *seg)
 //       it is important that both these routines follow the exact
 //       same logic when determining which segs should go left, right
 //       or be split.
-void DivideOneSeg(Level &level, Segment *seg, Segment *part, Segment **left_list, Segment **right_list, Intersection **cut_list)
+void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment **left_list, Segment **right_list,
+                  Intersection **cut_list)
 {
   /* get state of lines' relation to each other */
   double a = part->PerpDist(seg->psx, seg->psy);
   double b = part->PerpDist(seg->pex, seg->pey);
 
-  bool self_ref = seg->linedef && HAS_BIT(seg->linedef->effects, FX_SelfReferential);
+  const bool self_ref = seg->linedef && HAS_BIT(seg->linedef->effects, FX_SelfReferential);
 
   if (seg->source_line == part->source_line)
   {
@@ -889,7 +887,7 @@ void SeparateSegs(Level &level, Quadtree *tree, Segment *part, Segment **left_li
 }
 
 // compute the boundary of the list of segs
-static void FindSegListLimits(Segment *list, MapBoundBox &bbox)
+static void FindSegListLimits(const Segment *list, MapBoundBox &bbox)
 {
   // empty list?
   if (list == nullptr)
@@ -906,20 +904,20 @@ static void FindSegListLimits(Segment *list, MapBoundBox &bbox)
 
   for (; list != nullptr; list = list->next)
   {
-    double x1 = list->start->x;
-    double y1 = list->start->y;
-    double x2 = list->end->x;
-    double y2 = list->end->y;
+    const double x1 = list->start->x;
+    const double y1 = list->start->y;
+    const double x2 = list->end->x;
+    const double y2 = list->end->y;
 
-    auto lx = FloatToShort(floor(std::min(x1, x2) - 0.2));
-    auto ly = FloatToShort(floor(std::min(y1, y2) - 0.2));
-    auto hx = FloatToShort(ceil(std::max(x1, x2) + 0.2));
-    auto hy = FloatToShort(ceil(std::max(y1, y2) + 0.2));
+    const auto lx = FloatToShort(floor(std::min(x1, x2) - 0.2));
+    const auto ly = FloatToShort(floor(std::min(y1, y2) - 0.2));
+    const auto hx = FloatToShort(ceil(std::max(x1, x2) + 0.2));
+    const auto hy = FloatToShort(ceil(std::max(y1, y2) + 0.2));
 
-    if (lx < bbox.minx) bbox.minx = lx;
-    if (ly < bbox.miny) bbox.miny = ly;
-    if (hx > bbox.maxx) bbox.maxx = hx;
-    if (hy > bbox.maxy) bbox.maxy = hy;
+    bbox.minx = std::min(lx, bbox.minx);
+    bbox.miny = std::min(ly, bbox.miny);
+    bbox.maxx = std::max(hx, bbox.maxx);
+    bbox.maxy = std::max(hy, bbox.maxy);
   }
 }
 
@@ -951,14 +949,14 @@ void AddMinisegs(Level &level, Intersection *cut_list, Segment *part, Segment **
     next = cut->next;
 
     // sanity check
-    double len = next->along_dist - cut->along_dist;
+    const double len = next->along_dist - cut->along_dist;
     if (len < -0.001)
     {
       throw RuntimeException("Bad order in intersect list: {:1.3f} > {:1.3f}", cut->along_dist, next->along_dist);
     }
 
-    bool A = cut->open_after;
-    bool B = next->open_before;
+    const bool A = cut->open_after;
+    const bool B = next->open_before;
 
     // nothing possible when both ends are CLOSED
     if (!(A || B))
@@ -1037,7 +1035,7 @@ static void SetPartition(Node *node, const Segment *part)
 {
   SYS_ASSERT(part->linedef);
 
-  if (part->side == false)
+  if (!part->side)
   {
     node->x = part->linedef->start->x;
     node->y = part->linedef->start->y;
@@ -1068,7 +1066,7 @@ static void SetPartition(Node *node, const Segment *part)
 //
 static int PointOnLineSide(const Segment *seg, double x, double y)
 {
-  double perp = seg->PerpDist(x, y);
+  const double perp = seg->PerpDist(x, y);
 
   if (fabs(perp) <= DIST_EPSILON)
   {
@@ -1080,11 +1078,11 @@ static int PointOnLineSide(const Segment *seg, double x, double y)
 
 /* ----- quad-tree routines ------------------------------------ */
 
-Quadtree::Quadtree(int _x1, int _y1, int _x2, int _y2)
-    : x1(_x1), y1(_y1), x2(_x2), y2(_y2), real_num(0), mini_num(0), list(nullptr)
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters) -- what else is there to do?
+Quadtree::Quadtree(int _x1, int _y1, int _x2, int _y2) : x1(_x1), y1(_y1), x2(_x2), y2(_y2)
 {
-  int dx = x2 - x1;
-  int dy = y2 - y1;
+  const int dx = x2 - x1;
+  const int dy = y2 - y1;
 
   if (dx <= 320 && dy <= 320)
   {
@@ -1104,7 +1102,7 @@ Quadtree::Quadtree(int _x1, int _y1, int _x2, int _y2)
   }
 }
 
-Quadtree::~Quadtree(void)
+Quadtree::~Quadtree()
 {
   if (subs[0] != nullptr)
   {
@@ -1130,11 +1128,11 @@ static void AddSeg(Quadtree *quadtree, Segment *seg)
 
   if (quadtree->subs[0] != nullptr)
   {
-    double x_min = std::min(seg->start->x, seg->end->x);
-    double y_min = std::min(seg->start->y, seg->end->y);
+    const double x_min = std::min(seg->start->x, seg->end->x);
+    const double y_min = std::min(seg->start->y, seg->end->y);
 
-    double x_max = std::max(seg->start->x, seg->end->x);
-    double y_max = std::max(seg->start->y, seg->end->y);
+    const double x_max = std::max(seg->start->x, seg->end->x);
+    const double y_max = std::max(seg->start->y, seg->end->y);
 
     if ((quadtree->x2 - quadtree->x1) >= (quadtree->y2 - quadtree->y1))
     {
@@ -1201,13 +1199,13 @@ static void ConvertToList(Quadtree *quadtree, Segment **_list)
   // this quadtree is empty now
 }
 
-int OnLineSide(Quadtree *quadtree, const Segment *part)
+int OnLineSide(const Quadtree *quadtree, const Segment *part)
 {
   // expand bounds a bit, adds some safety and loses nothing
-  auto tx1 = static_cast<double>(quadtree->x1) - 0.4;
-  auto ty1 = static_cast<double>(quadtree->y1) - 0.4;
-  auto tx2 = static_cast<double>(quadtree->x2) + 0.4;
-  auto ty2 = static_cast<double>(quadtree->y2) + 0.4;
+  const auto tx1 = static_cast<double>(quadtree->x1) - 0.4;
+  const auto ty1 = static_cast<double>(quadtree->y1) - 0.4;
+  const auto tx2 = static_cast<double>(quadtree->x2) + 0.4;
+  const auto ty2 = static_cast<double>(quadtree->y2) + 0.4;
 
   int p1, p2;
 
@@ -1255,7 +1253,7 @@ int OnLineSide(Quadtree *quadtree, const Segment *part)
   return p1;
 }
 
-Segment *CreateOneSeg(Level &level, Linedef *line, Vertex *start, Vertex *end, Sidedef *side, bool what_side)
+Segment *CreateOneSeg(Level &level, Linedef *line, Vertex *start, Vertex *end, const Sidedef *side, bool what_side)
 {
   Segment *seg = level.NewSeg();
 
@@ -1296,7 +1294,7 @@ Segment *CreateOneSeg(Level &level, Linedef *line, Vertex *start, Vertex *end, S
 //
 Segment *CreateSegs(Level &level)
 {
-  auto mark = Benchmarker(__func__);
+  const auto mark = Benchmarker(__func__);
   Segment *list = nullptr;
 
   for (auto L : level.linedefs)
@@ -1353,7 +1351,7 @@ Segment *CreateSegs(Level &level)
 
 Quadtree *TreeFromSegList(Segment *list, const MapBoundBox &bounds)
 {
-  Quadtree *tree = new Quadtree(bounds.minx, bounds.miny, bounds.maxx, bounds.maxy);
+  auto *tree = new Quadtree(bounds.minx, bounds.miny, bounds.maxx, bounds.maxy);
   AddList(tree, list);
   return tree;
 }
@@ -1366,7 +1364,7 @@ static void DetermineMiddle(Subsector *subsec)
   int total = 0;
 
   // compute middle coordinates
-  for (Segment *seg = subsec->seg_list; seg; seg = seg->next)
+  for (const Segment *seg = subsec->seg_list; seg; seg = seg->next)
   {
     subsec->mid_x += seg->start->x + seg->end->x;
     subsec->mid_y += seg->start->y + seg->end->y;
@@ -1420,33 +1418,8 @@ static void ClockwiseOrder(Subsector *subsec)
 
   // sort segs by angle (from the middle point to the start vertex).
   // the desired order (clockwise) means descending angles.
-  // since # of segs is usually small, a bubble sort is fast enough.
-
-  size_t i = 0;
-
-  while (i + 1 < array.size())
-  {
-    Segment *A = array[i];
-    Segment *B = array[i + 1];
-
-    if (A->cmp_angle < B->cmp_angle)
-    {
-      // swap 'em
-      array[i] = B;
-      array[i + 1] = A;
-
-      // bubble down
-      if (i > 0)
-      {
-        i--;
-      }
-    }
-    else
-    {
-      // bubble up
-      i++;
-    }
-  }
+  // does this need to be stable?
+  std::ranges::stable_sort(array, [](const Segment *A, const Segment *B) { return A->cmp_angle > B->cmp_angle; });
 
   // choose the seg that will be first (the game engine will typically use
   // that to determine the sector).  In particular, we don't like self
@@ -1479,7 +1452,7 @@ static void ClockwiseOrder(Subsector *subsec)
 
   for (size_t j = 0; j < array.size(); j++)
   {
-    size_t k = (first + j) % array.size();
+    const size_t k = (first + j) % array.size();
     AddToTail(subsec, array[k]);
   }
 
@@ -1506,8 +1479,8 @@ static void SanityCheckClosed(Subsector *subsec)
   {
     next = seg->next ? seg->next : subsec->seg_list;
 
-    double dx = seg->end->x - next->start->x;
-    double dy = seg->end->y - next->start->y;
+    const double dx = seg->end->x - next->start->x;
+    const double dy = seg->end->y - next->start->y;
 
     if (fabs(dx) > DIST_EPSILON || fabs(dy) > DIST_EPSILON)
     {
@@ -1538,7 +1511,7 @@ static void SanityCheckClosed(Subsector *subsec)
 
 static void SanityCheckHasRealSeg(Subsector *subsec)
 {
-  for (Segment *seg = subsec->seg_list; seg; seg = seg->next)
+  for (const Segment *seg = subsec->seg_list; seg; seg = seg->next)
   {
     if (seg->linedef != nullptr)
     {
@@ -1691,9 +1664,9 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Nod
   }
 }
 
-void ClockwiseBspTree(Level &level)
+void ClockwiseBspTree(const Level &level)
 {
-  auto mark = Benchmarker(__func__);
+  const auto mark = Benchmarker(__func__);
   size_t cur_seg_index = 0;
 
   for (auto sub : level.subsecs)
@@ -1763,7 +1736,7 @@ static void Normalise(Subsector *subsec)
   subsec->seg_list = new_head;
 }
 
-void NormaliseBspTree(Level &level)
+void NormaliseBspTree(const Level &level)
 {
   // unlinks all minisegs from each subsector
   size_t cur_seg_index = 0;

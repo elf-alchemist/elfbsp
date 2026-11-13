@@ -2,6 +2,7 @@ name: Continuous Integration
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -140,12 +141,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          version: 21
+          version: 23
           step-summary: true
           files-changed-only: true
+          lines-changed-only: true
           style: file
           tidy-checks: ''
           database: 'build'
+
+      - name: Fail on lint errors
+        if: steps.cpp-linter.outputs.checks-failed > 0
+        run: exit 1
 
       - name: Build
         run: cmake --build build
