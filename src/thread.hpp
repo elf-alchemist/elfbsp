@@ -24,6 +24,7 @@
 #include <barrier>
 #include <cstddef>
 #include <mutex>
+#include <new>
 #include <thread>
 #include <vector>
 
@@ -53,13 +54,13 @@ struct TeamSync
   {
     if (threadIndex == 0)
     {
-      next_.value.store(0, std::memory_order_relaxed);
+      next_.store(0, std::memory_order_relaxed);
     }
     Wait(); // The counter is back at zero for everybody
 
     for (;;)
     {
-      const size_t index = next_.value.fetch_add(1, std::memory_order_relaxed);
+      const size_t index = next_.fetch_add(1, std::memory_order_relaxed);
       if (index >= count) break;
 
       body(index);
@@ -69,14 +70,9 @@ struct TeamSync
   }
 
 private:
-  // The counter gets a cache line of its own, because every thread changes it.
-  struct alignas(64) PaddedCounter
-  {
-    std::atomic<size_t> value{0};
-  };
-
   std::barrier<> barrier_;
-  PaddedCounter next_;
+  // The counter gets a cache line of its own, because every thread changes it.
+  alignas(std::hardware_destructive_interference_size) std::atomic<size_t> next_{0};
 };
 
 // Runs body(threadIndex, team) once on every thread of the team.
