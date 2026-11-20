@@ -74,7 +74,7 @@ Sector *Level::SafeLookupSector(size_t num, size_t num_side) const
 Sidedef *Level::SafeLookupSidedef(int32_t num) const
 {
   // silently ignore illegal sidedef numbers
-  auto num_as_index = static_cast<size_t>(num);
+  const auto num_as_index = static_cast<size_t>(num);
 
   if (num < 0 || num_as_index >= sidedefs.size())
   {
@@ -86,39 +86,39 @@ Sidedef *Level::SafeLookupSidedef(int32_t num) const
 
 /* ----- allocation routines ---------------------------- */
 
-Vertex *Level::NewVertex(void)
+Vertex *Level::NewVertex()
 {
-  Vertex *V = UtilCalloc<Vertex>(sizeof(Vertex));
+  auto *V = UtilCalloc<Vertex>(sizeof(Vertex));
   V->index = this->vertices.size();
   this->vertices.push_back(V);
   return V;
 }
 
-Linedef *Level::NewLinedef(void)
+Linedef *Level::NewLinedef()
 {
-  Linedef *L = UtilCalloc<Linedef>(sizeof(Linedef));
+  auto *L = UtilCalloc<Linedef>(sizeof(Linedef));
   L->index = this->linedefs.size();
   this->linedefs.push_back(L);
   return L;
 }
 
-Sidedef *Level::NewSidedef(void)
+Sidedef *Level::NewSidedef()
 {
-  Sidedef *S = UtilCalloc<Sidedef>(sizeof(Sidedef));
+  auto *S = UtilCalloc<Sidedef>(sizeof(Sidedef));
   S->index = this->sidedefs.size();
   this->sidedefs.push_back(S);
   return S;
 }
 
-Sector *Level::NewSector(void)
+Sector *Level::NewSector()
 {
-  Sector *S = UtilCalloc<Sector>(sizeof(Sector));
+  auto *S = UtilCalloc<Sector>(sizeof(Sector));
   S->index = this->sectors.size();
   this->sectors.push_back(S);
   return S;
 }
 
-Mobj *Level::NewThing(void)
+Mobj *Level::NewThing()
 {
   Mobj *T = UtilCalloc<Mobj>(sizeof(Mobj));
   T->index = this->things.size();
@@ -126,44 +126,44 @@ Mobj *Level::NewThing(void)
   return T;
 }
 
-Segment *Level::NewSeg(void)
+Segment *Level::NewSeg()
 {
-  Segment *S = UtilCalloc<Segment>(sizeof(Segment));
+  auto *S = UtilCalloc<Segment>(sizeof(Segment));
   this->segs.push_back(S);
   return S;
 }
 
-Subsector *Level::NewSubsec(void)
+Subsector *Level::NewSubsec()
 {
-  Subsector *S = UtilCalloc<Subsector>(sizeof(Subsector));
+  auto *S = UtilCalloc<Subsector>(sizeof(Subsector));
   this->subsecs.push_back(S);
   return S;
 }
 
-Node *Level::NewNode(void)
+Node *Level::NewNode()
 {
   Node *N = UtilCalloc<Node>(sizeof(Node));
   this->nodes.push_back(N);
   return N;
 }
 
-WallTip *Level::NewWallTip(void)
+WallTip *Level::NewWallTip()
 {
-  WallTip *WT = UtilCalloc<WallTip>(sizeof(WallTip));
+  auto *WT = UtilCalloc<WallTip>(sizeof(WallTip));
   this->walltips.push_back(WT);
   return WT;
 }
 
-Intersection *Level::NewIntersection(void)
+Intersection *Level::NewIntersection()
 {
-  Intersection *cut = new Intersection;
+  auto *cut = new Intersection;
   this->intercuts.push_back(cut);
   return cut;
 }
 
 /* ----- free routines ---------------------------- */
 
-void Level::FreeVertices(void)
+void Level::FreeVertices()
 {
   for (auto V : this->vertices)
   {
@@ -173,7 +173,7 @@ void Level::FreeVertices(void)
   this->vertices.clear();
 }
 
-void Level::FreeLinedefs(void)
+void Level::FreeLinedefs()
 {
   for (auto L : this->linedefs)
   {
@@ -183,7 +183,7 @@ void Level::FreeLinedefs(void)
   this->linedefs.clear();
 }
 
-void Level::FreeSidedefs(void)
+void Level::FreeSidedefs()
 {
   for (auto S : this->sidedefs)
   {
@@ -193,7 +193,7 @@ void Level::FreeSidedefs(void)
   this->sidedefs.clear();
 }
 
-void Level::FreeSectors(void)
+void Level::FreeSectors()
 {
   for (auto S : this->sectors)
   {
@@ -203,7 +203,7 @@ void Level::FreeSectors(void)
   this->sectors.clear();
 }
 
-void Level::FreeThings(void)
+void Level::FreeThings()
 {
   for (auto T : this->things)
   {
@@ -213,7 +213,7 @@ void Level::FreeThings(void)
   this->things.clear();
 }
 
-void Level::FreeSegs(void)
+void Level::FreeSegs()
 {
   for (auto S : this->segs)
   {
@@ -223,7 +223,7 @@ void Level::FreeSegs(void)
   this->segs.clear();
 }
 
-void Level::FreeSubsecs(void)
+void Level::FreeSubsecs()
 {
   for (auto S : this->subsecs)
   {
@@ -233,7 +233,7 @@ void Level::FreeSubsecs(void)
   this->subsecs.clear();
 }
 
-void Level::FreeNodes(void)
+void Level::FreeNodes()
 {
   for (auto N : this->nodes)
   {
@@ -243,7 +243,7 @@ void Level::FreeNodes(void)
   this->nodes.clear();
 }
 
-void Level::FreeWallTips(void)
+void Level::FreeWallTips()
 {
   for (auto W : this->walltips)
   {
@@ -253,7 +253,7 @@ void Level::FreeWallTips(void)
   this->walltips.clear();
 }
 
-void Level::FreeIntersections(void)
+void Level::FreeIntersections()
 {
   for (auto I : this->intercuts)
   {

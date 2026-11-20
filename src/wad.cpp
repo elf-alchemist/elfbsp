@@ -54,7 +54,7 @@ static const std::string_view ENDMAP = "ENDMAP";
 //  WAD Reading Interface
 //------------------------------------------------------------------------
 
-WadIO::WadIO(std::string in_file, std::string out_file)
+WadIO::WadIO(const std::string &in_file, const std::string &out_file)
 {
   // Input stuff
   this->read_file.open(in_file, std::ios::binary);
@@ -74,8 +74,8 @@ WadIO::WadIO(std::string in_file, std::string out_file)
     throw RuntimeException("Input file is not a wad");
   }
 
-  auto num_entries = GetLittleEndian(this->read_header.num_entries);
-  auto dir_start = GetLittleEndian(this->read_header.dir_start);
+  const auto num_entries = GetLittleEndian(this->read_header.num_entries);
+  const auto dir_start = GetLittleEndian(this->read_header.dir_start);
 
   this->read_file.seekg(dir_start);
   if (this->read_file.fail())
@@ -109,22 +109,19 @@ WadIO::WadIO(std::string in_file, std::string out_file)
   this->SafeWrite(&this->write_header, sizeof(this->write_header));
 }
 
-WadIO::~WadIO(void)
+void WadIO::WriteDirectory()
 {
-  // Input stuff
-  this->read_file.close();
-  this->read_directory.clear();
-
   // Output stuff
-  auto num_entries = GetLittleEndian(IndexToUInt(this->write_directory.size()));
-  auto dir_start = GetLittleEndian(static_cast<uint32_t>(this->write_file.tellp()));
+  const auto num_entries = GetLittleEndian(IndexToUInt(this->write_directory.size()));
+  const auto dir_start = GetLittleEndian(static_cast<uint32_t>(this->write_file.tellp()));
 
   this->SafeWrite(this->write_directory.data(), sizeof(WadLump) * this->write_directory.size());
 
   this->write_file.seekp(sizeof(char[4]));
   this->SafeWrite(&num_entries, sizeof(num_entries));
   this->SafeWrite(&dir_start, sizeof(dir_start));
-  this->write_file.close();
+
+  this->directory_written = true;
 }
 
 // call only after seeking
@@ -138,18 +135,15 @@ void WadIO::SafeRead(void *buffer, size_t size)
   }
 }
 
-size_t WadIO::NumLumps(void) const
+size_t WadIO::NumLumps() const
 {
   return this->read_directory.size();
 }
 
-const char *WadIO::LumpName(size_t lump_index) const
+std::string_view WadIO::LumpName(size_t lump_index) const
 {
   SYS_ASSERT(lump_index < this->NumLumps());
-  static char name[9];
-  strncpy(name, this->read_directory[lump_index].name, 8);
-  name[8] = 0;
-  return name;
+  return {this->read_directory[lump_index].name, 8};
 }
 
 bool WadIO::IsLevelLump(size_t lump_index) const
@@ -210,7 +204,7 @@ bool WadIO::IsLevel(size_t lump_index) const
   {
     if (HAS_BIT(config.debug, DEBUG_WAD))
     {
-      auto format = static_cast<size_t>(this->LevelFormat(lump_index));
+      const auto format = static_cast<size_t>(this->LevelFormat(lump_index));
       PrintLine(Log::DEBUG, "[{}] Detected level: {} ({}) [Index: {}]", __func__, this->LumpName(lump_index),
                 format_name[format].data(), lump_index);
     }
@@ -279,7 +273,7 @@ size_t WadIO::LevelLastLump(size_t lump_index) const
 // returns a lump index, NO_INDEX if not found
 size_t WadIO::LevelLookupLump(size_t lump_index, std::string_view name) const
 {
-  size_t finish = this->LevelLastLump(lump_index);
+  const size_t finish = this->LevelLastLump(lump_index);
 
   for (size_t k = lump_index + 1; k <= finish; k++)
   {
@@ -304,6 +298,11 @@ bool WadIO::LevelHasLump(size_t lump_index, std::string_view name) const
 //
 void WadIO::SafeWrite(const void *buffer, size_t size)
 {
+  if (this->directory_written)
+  {
+    throw RuntimeException("Attempted to write to a finalized wad.");
+  }
+
   this->write_file.write(static_cast<const char *>(buffer), static_cast<std::streamsize>(size));
 
   if (this->write_file.fail())
@@ -356,7 +355,7 @@ void WadIO::StartWritingLump(std::string_view name)
 
 void WadIO::AddToLump(const void *data, size_t len)
 {
-  size_t current = this->write_directory.size() - 1;
+  const size_t current = this->write_directory.size() - 1;
   this->SafeWrite(data, len);
   this->write_directory[current].size += len;
 }
@@ -365,7 +364,7 @@ void WadIO::AddToLump(const void *data, size_t len)
 // Zlib compression support
 //
 
-void WadIO::Begin_Zlib(void)
+void WadIO::Begin_Zlib()
 {
   this->zlib_init = true;
   this->zout_stream.zalloc = nullptr;
@@ -409,7 +408,7 @@ void WadIO::AddToLumpZ(const void *data, size_t length)
   }
 }
 
-void WadIO::Finish_Zlib(void)
+void WadIO::Finish_Zlib()
 {
   SYS_ASSERT(this->zout_stream.avail_out > 0);
   size_t left_over;
@@ -420,7 +419,7 @@ void WadIO::Finish_Zlib(void)
 
   while (true)
   {
-    int32_t err = zng_deflate(&this->zout_stream, Z_FINISH);
+    const int32_t err = zng_deflate(&this->zout_stream, Z_FINISH);
 
     if (err == Z_STREAM_END) break;
 

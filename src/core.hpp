@@ -30,9 +30,7 @@
 
 #include <cassert>
 #include <cctype>
-#include <climits>
 #include <cmath>
-#include <cstdarg>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -71,8 +69,8 @@ constexpr auto LINUX = true;
 
 #endif
 
-constexpr char PATH_SEP_CH = (WINDOWS) ? ';' : ':';
-constexpr char DIR_SEP_CH = (WINDOWS) ? '/' : '\\';
+constexpr char PATH_SEP_CH = WINDOWS ? ';' : ':';
+constexpr char DIR_SEP_CH = WINDOWS ? '/' : '\\';
 
 //
 // The packed attribute forces structures to be packed into the minimum
@@ -268,6 +266,13 @@ constexpr short_angle_t DegreesToShortBAM(const double x)
   return static_cast<short_angle_t>(static_cast<long_angle_t>(LONG_ANGLE_1 * x) >> FRACBITS);
 }
 
+// C++23's uz suffix for size_t literals
+
+consteval size_t operator""_uz(unsigned long long val)
+{
+  return val;
+}
+
 //------------------------------------------------------------------------
 // STRING STUFF
 //------------------------------------------------------------------------
@@ -426,7 +431,7 @@ inline void StringToUpper(std::string &str)
 
 inline char CToUpper(const char c)
 {
-  return (c >= 'a' && c <= 'z') ? (c + 'A' - 'a') : c;
+  return (c >= 'a' && c <= 'z') ? static_cast<char>(c + 'A' - 'a') : c;
 }
 
 inline void CStringToUpper(char *str)
@@ -440,7 +445,7 @@ inline void CStringToUpper(char *str)
 
 inline char CToLower(const char c)
 {
-  return (c >= 'A' && c <= 'Z') ? (c - 'A' + 'a') : c;
+  return (c >= 'A' && c <= 'Z') ? static_cast<char>(c - 'A' + 'a') : c;
 }
 
 inline void CStringToLower(char *str)
@@ -803,7 +808,7 @@ struct MapBlockmapHeaderXBM1
 } PACKEDATTR;
 
 // Fail way earlier
-#define static_size(x, y) static_assert(sizeof(x) == y, "Size mismatch for '" #x "'. Should be " #y ".")
+#define static_size(x, y) static_assert(sizeof(x) == (y), "Size mismatch for '" #x "'. Should be " #y ".")
 
 static_size(MapVertexIntegral, 4);
 static_size(MapVertexFractional, 8);
@@ -1202,27 +1207,36 @@ constexpr const char PRINT_HELP[] = "\n"
 // Benchmark
 //
 
-struct Benchmarker
+class Benchmarker
 {
+private:
   using clock = std::chrono::steady_clock;
   clock::time_point start;
   std::string_view name;
   bool enabled;
 
-  Benchmarker(std::string_view _name, bool _enabled = true)
+public:
+  explicit Benchmarker(std::string_view _name, bool _enabled = true) noexcept : name(_name), enabled(_enabled)
   {
-    if (!_enabled) return;
-    enabled = _enabled;
-    name = _name;
-    start = clock::now();
+    if (enabled) start = clock::now();
   };
 
-  ~Benchmarker(void)
+  ~Benchmarker()
   {
     if (!enabled) return;
-    auto end = clock::now();
-    auto time = std::chrono::duration<double, std::milli>(end - start);
-    PrintLine(Log::NORMAL, "[Benchmarker] '{}' runtime: {:.2f} ms", name.data(), time.count());
+    const auto end = clock::now();
+    const auto time = std::chrono::duration<double, std::milli>(end - start);
+    try
+    {
+      PrintLine(Log::NORMAL, "[Benchmarker] '{}' runtime: {:.2f} ms", name, time.count());
+    }
+    // NOLINTNEXTLINE(bugprone-empty-catch)
+    catch (...)
+    {
+      // destructors should not throw exceptions
+      // this is separate from any core program logic,
+      // and anything thrown by PrintLine here isn't really important
+    }
   };
 };
 
@@ -1250,7 +1264,7 @@ struct FNV1a
   Hash_Type ComputeSingleByte(byte value)
   {
     this->hash ^= value;
-    this->hash *= this->Prime;
+    this->hash *= FNV1a<Hash_Type>::Prime;
     return this->hash;
   }
 
@@ -1298,7 +1312,7 @@ struct Iota
     }
   };
 
-  constexpr Iota(T e)
+  constexpr explicit Iota(T e)
   {
     _begin = {0};
     _end = {e};
@@ -1327,7 +1341,7 @@ struct Iota
 template <std::integral T>
 std::pair<size_t, T> LargestElement(std::vector<T> input)
 {
-  auto value = std::ranges::max_element(input);
-  auto index = std::distance(input.begin(), value);
+  const auto value = std::ranges::max_element(input);
+  const auto index = std::distance(input.begin(), value);
   return std::pair<size_t, T>(index, *value);
 }

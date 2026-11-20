@@ -1,5 +1,34 @@
 ---
-Checks: 'clang-diagnostic-*,clang-analyzer-*'
+Checks: >
+  bugprone-*,
+  clang-analyzer-*,
+  clang-diagnostic-*,
+  google-default-arguments,
+  google-runtime-int,
+  misc-*,
+  -misc-include-cleaner,
+  -misc-non-private-member-variables-in-classes,
+  -misc-use-internal-linkage,
+  -misc-use-anonymous-namespace,
+  -misc-no-recursion,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-avoid-c-arrays,
+  performance-*,
+  -performance-enum-size,
+  readability-*,
+  -readability-braces-around-statements,
+  -readability-else-after-return,
+  -readability-enum-initial-value,
+  -readability-function-cognitive-complexity,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-isolate-declaration,
+  -readability-magic-numbers,
+  -readability-math-missing-parentheses,
+  -readability-qualified-auto,
+  -readability-simplify-boolean-expr,
+  -readability-uppercase-literal-suffix
 WarningsAsErrors: ''
 HeaderFileExtensions:
   - h
@@ -15,6 +44,12 @@ HeaderFilterRegex: ''
 ExcludeHeaderFilterRegex: ''
 FormatStyle: none
 User: alchemist
-CheckOptions: {}
 SystemHeaders: false
+CheckOptions:
+  # Suggest standard library types with _t suffix
+  - key: google-runtime-int.TypeSuffix
+    value: _t
+  # Make it a little bit less strict
+  - key: bugprone-easily-swappable-parameters.MinimumLength
+    value: 3
 ...

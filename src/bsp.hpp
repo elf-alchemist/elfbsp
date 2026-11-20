@@ -173,12 +173,12 @@ static_size(MapNodeXGL3, 40);
 // [ This cannot be done DURING BuildNodes() since splitting a seg with
 //   a partner will insert another seg into that partner's list, usually
 //   in the wrong place order-wise. ]
-void ClockwiseBspTree(Level &level);
+void ClockwiseBspTree(const Level &level);
 
 // traverse the BSP tree and do whatever is necessary to convert the
 // node information from GL standard to normal standard (for example,
 // removing minisegs).
-void NormaliseBspTree(Level &level);
+void NormaliseBspTree(const Level &level);
 
 // traverse the BSP tree, doing whatever is necessary to round
 // vertices to integer coordinates (for example, removing segs whose
@@ -197,14 +197,14 @@ void SortSegs(Level &level);
 
 void PutVertices(WadIO &io, Level &level, bool fractional, bool include_new_verts);
 
-void PutSegs_DoomBSP(WadIO &io, Level &level);
-void PutSubsecs_DoomBSP(WadIO &io, Level &level);
-void PutNodes_DoomBSP(WadIO &io, Level &level);
-void PutLeafs_DoomBSP(WadIO &io, Level &level);
+void PutSegs_DoomBSP(WadIO &io, const Level &level);
+void PutSubsecs_DoomBSP(WadIO &io, const Level &level);
+void PutNodes_DoomBSP(WadIO &io, const Level &level);
+void PutLeafs_DoomBSP(WadIO &io, const Level &level);
 
-void PutSegs_DeePBSPV4(WadIO &io, Level &level);
-void PutSubsecs_DeePBSPV4(WadIO &io, Level &level);
-void PutNodes_DeePBSPV4(WadIO &io, Level &level);
-void PutLeafs_DeePBSPV4(WadIO &io, Level &level);
+void PutSegs_DeePBSPV4(WadIO &io, const Level &level);
+void PutSubsecs_DeePBSPV4(WadIO &io, const Level &level);
+void PutNodes_DeePBSPV4(WadIO &io, const Level &level);
+void PutLeafs_DeePBSPV4(WadIO &io, const Level &level);
 
-void PutTree_ZDBSP(WadIO &io, Level &level, std::string lumpname, BspFormat bsp_format, bool compress);
+void PutTree_ZDBSP(WadIO &io, Level &level, std::string_view lumpname, BspFormat bsp_format, bool compress);

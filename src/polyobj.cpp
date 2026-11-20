@@ -28,7 +28,7 @@ static constexpr uint32_t POLY_BOX_SZ = 10;
 
 /* ----- polyobj handling ----------------------------- */
 
-void MarkPolyobjSector(Level &level, Sector *sector)
+void MarkPolyobjSector(const Level &level, Sector *sector)
 {
   if (sector == nullptr)
   {
@@ -59,7 +59,7 @@ void MarkPolyobjSector(Level &level, Sector *sector)
   }
 }
 
-void MarkPolyobjPoint(Level &level, double x, double y)
+void MarkPolyobjPoint(const Level &level, double x, double y)
 {
   size_t inside_count = 0;
 
@@ -71,10 +71,10 @@ void MarkPolyobjPoint(Level &level, double x, double y)
   //       directly on a linedef or even a vertex.  We check all lines
   //       that intersect a small box around the spawn point.
 
-  auto bminx = FloatToShort(x - POLY_BOX_SZ);
-  auto bminy = FloatToShort(y - POLY_BOX_SZ);
-  auto bmaxx = FloatToShort(x + POLY_BOX_SZ);
-  auto bmaxy = FloatToShort(y + POLY_BOX_SZ);
+  const auto bminx = FloatToShort(x - POLY_BOX_SZ);
+  const auto bminy = FloatToShort(y - POLY_BOX_SZ);
+  const auto bmaxx = FloatToShort(x + POLY_BOX_SZ);
+  const auto bmaxy = FloatToShort(y + POLY_BOX_SZ);
 
   for (auto L : level.linedefs)
   {
@@ -113,10 +113,10 @@ void MarkPolyobjPoint(Level &level, double x, double y)
 
   for (auto L : level.linedefs)
   {
-    double x1 = L->start->x;
-    double y1 = L->start->y;
-    double x2 = L->end->x;
-    double y2 = L->end->y;
+    const double x1 = L->start->x;
+    const double y1 = L->start->y;
+    const double x2 = L->end->x;
+    const double y2 = L->end->y;
 
     /* check vertical range */
     if (fabs(y2 - y1) < DIST_EPSILON)
@@ -129,7 +129,7 @@ void MarkPolyobjPoint(Level &level, double x, double y)
       continue;
     }
 
-    double x_cut = x1 + (x2 - x1) * (y - y1) / (y2 - y1) - x;
+    const double x_cut = x1 + (x2 - x1) * (y - y1) / (y2 - y1) - x;
 
     if (fabs(x_cut) < fabs(best_dist))
     {
@@ -195,9 +195,9 @@ void MarkPolyobjPoint(Level &level, double x, double y)
 //
 // Based on code courtesy of Janis Legzdinsh.
 //
-void DetectPolyobjSectors(BuildInfo &ctx, Level &level)
+void DetectPolyobjSectors(const BuildInfo &ctx, const Level &level)
 {
-  auto mark = Benchmarker(__func__);
+  const auto mark = Benchmarker(__func__);
   // -JL- First go through all lines to see if level contains any polyobjs
   bool has_polyobj = false;
   for (auto L : level.linedefs)
@@ -225,7 +225,7 @@ void DetectPolyobjSectors(BuildInfo &ctx, Level &level)
   {
     double x = T->x;
     double y = T->y;
-    DoomEdNum t = T->type;
+    const DoomEdNum t = T->type;
 
     // ignore everything except polyobj start spots
     if (t != level.po.anchor && t != level.po.spawn && t != level.po.spawn_crush && t != level.po.spawn_hurt)

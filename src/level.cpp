@@ -33,7 +33,6 @@
 bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2)
 {
   int count = 2;
-  int tmp;
 
   for (;;)
   {
@@ -89,12 +88,9 @@ bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y
     }
 
     // swap end points
-    tmp = x1;
-    x1 = x2;
-    x2 = tmp;
-    tmp = y1;
-    y1 = y2;
-    y2 = tmp;
+    using std::swap;
+    swap(x1, x2);
+    swap(y1, y2);
   }
 
   // linedef touches block
@@ -139,8 +135,8 @@ static void ValidateLinedef(Level &level, Linedef *line)
     line->effects |= FX_DoNotRenderFront;
   }
 
-  double deltax = line->start->x - line->end->x;
-  double deltay = line->start->y - line->end->y;
+  const double deltax = line->start->x - line->end->x;
+  const double deltay = line->start->y - line->end->y;
 
   // check for extremely short lines
   if ((fabs(deltax) < DIST_EPSILON) && (fabs(deltay) < DIST_EPSILON))
@@ -158,14 +154,14 @@ static void ValidateLinedef(Level &level, Linedef *line)
 
 static void GetVertices_Integral(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapVertexIntegral>(level.lumps.label, "VERTEXES");
+  const auto lump = io.ReadLevelLump<MapVertexIntegral>(level.lumps.label, "VERTEXES");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
-  for (auto &raw : lump)
+  for (const auto &raw : lump)
   {
     auto v = level.NewVertex();
     v->x = ShortToFloat(GetLittleEndian(raw.x));
@@ -177,14 +173,14 @@ static void GetVertices_Integral(WadIO &io, Level &level)
 
 static void GetVertices_Fractional(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapVertexFractional>(level.lumps.label, "VERTEXES");
+  const auto lump = io.ReadLevelLump<MapVertexFractional>(level.lumps.label, "VERTEXES");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
-  for (auto &raw : lump)
+  for (const auto &raw : lump)
   {
     auto v = level.NewVertex();
 
@@ -197,14 +193,14 @@ static void GetVertices_Fractional(WadIO &io, Level &level)
 
 static void GetSectors_Doom(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapSectorDoom>(level.lumps.label, "SECTORS");
+  const auto lump = io.ReadLevelLump<MapSectorDoom>(level.lumps.label, "SECTORS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
-  for (auto &_ : lump)
+  for (const auto &_ : lump)
   {
     auto s = level.NewSector();
     s->effects = FX_Sector_None;
@@ -213,14 +209,14 @@ static void GetSectors_Doom(WadIO &io, Level &level)
 
 static void GetThings_Doom(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapThingDoom>(level.lumps.label, "THINGS");
+  const auto lump = io.ReadLevelLump<MapThingDoom>(level.lumps.label, "THINGS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
-  for (auto &raw : lump)
+  for (const auto &raw : lump)
   {
     auto t = level.NewThing();
 
@@ -258,14 +254,14 @@ static void GetSidedefs_Doom(WadIO &io, Level &level)
 
 static void GetLinedefs_Doom(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapLinedefDoom>(level.lumps.label, "LINEDEFS");
+  const auto lump = io.ReadLevelLump<MapLinedefDoom>(level.lumps.label, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
-  for (auto &raw : lump)
+  for (const auto &raw : lump)
   {
     auto l = level.NewLinedef();
 
@@ -339,14 +335,14 @@ static void GetLinedefs_Doom(WadIO &io, Level &level)
 
 static void GetThings_Hexen(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapThingHexen>(level.lumps.label, "THINGS");
+  const auto lump = io.ReadLevelLump<MapThingHexen>(level.lumps.label, "THINGS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
-  for (auto &raw : lump)
+  for (const auto &raw : lump)
   {
     auto t = level.NewThing();
 
@@ -358,14 +354,14 @@ static void GetThings_Hexen(WadIO &io, Level &level)
 
 static void GetLinedefs_Hexen(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapLinedefHexen>(level.lumps.label, "LINEDEFS");
+  const auto lump = io.ReadLevelLump<MapLinedefHexen>(level.lumps.label, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
-  for (auto &raw : lump)
+  for (const auto &raw : lump)
   {
     auto l = level.NewLinedef();
 
@@ -404,14 +400,14 @@ static void GetLinedefs_Hexen(WadIO &io, Level &level)
 
 static void GetSectors_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapSectorDoom64>(level.lumps.label, "SECTORS");
+  const auto lump = io.ReadLevelLump<MapSectorDoom64>(level.lumps.label, "SECTORS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
-  for (auto &raw : lump)
+  for (const auto &raw : lump)
   {
     auto s = level.NewSector();
 
@@ -426,14 +422,14 @@ static void GetSectors_Doom64(WadIO &io, Level &level)
 
 static void GetSidedefs_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapSidedefDoom64>(level.lumps.label, "SIDEDEFS");
+  const auto lump = io.ReadLevelLump<MapSidedefDoom64>(level.lumps.label, "SIDEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
-  for (auto &raw : lump)
+  for (const auto &raw : lump)
   {
     auto s = level.NewSidedef();
 
@@ -446,14 +442,14 @@ static void GetSidedefs_Doom64(WadIO &io, Level &level)
 
 static void GetLinedefs_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapLinedefDoom64>(level.lumps.label, "LINEDEFS");
+  const auto lump = io.ReadLevelLump<MapLinedefDoom64>(level.lumps.label, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
-  for (auto &raw : lump)
+  for (const auto &raw : lump)
   {
     auto l = level.NewLinedef();
 
@@ -467,7 +463,7 @@ static void GetLinedefs_Doom64(WadIO &io, Level &level)
     l->start->is_used = true;
     l->end->is_used = true;
 
-    auto flags = GetLittleEndian(raw.flags);
+    const auto flags = GetLittleEndian(raw.flags);
 
     if (HAS_BIT(flags, MLF_DOOM64_TWOSIDED))
     {
@@ -491,14 +487,14 @@ static void GetLinedefs_Doom64(WadIO &io, Level &level)
 
 static void GetThings_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapThingDoom64>(level.lumps.label, "LINEDEFS");
+  const auto lump = io.ReadLevelLump<MapThingDoom64>(level.lumps.label, "LINEDEFS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, lump.size());
   }
 
-  for (auto &raw : lump)
+  for (const auto &raw : lump)
   {
     auto t = level.NewThing();
 
@@ -518,7 +514,7 @@ static void GetVertices_UDMF(Level &level)
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, level.udmf_vertex.size());
   }
 
-  for (auto &u_vertex : level.udmf_vertex)
+  for (const auto &u_vertex : level.udmf_vertex)
   {
     auto v = level.NewVertex();
     v->x = u_vertex.x;
@@ -535,7 +531,7 @@ static void GetSectors_UDMF(Level &level)
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, level.udmf_sector.size());
   }
 
-  for (auto &_ : level.udmf_sector)
+  for (const auto &_ : level.udmf_sector)
   {
     auto s = level.NewSector();
     s->effects = FX_Sector_None;
@@ -577,7 +573,7 @@ static void GetLinedefs_UDMF(Level &level)
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, level.udmf_linedef.size());
   }
 
-  for (auto &u_linedef : level.udmf_linedef)
+  for (const auto &u_linedef : level.udmf_linedef)
   {
     auto l = level.NewLinedef();
     l->start = level.SafeLookupVertex(u_linedef.v1_id, l->index);
@@ -608,7 +604,7 @@ static void GetThings_UDMF(Level &level)
     PrintLine(Log::DEBUG, "[{}] num = {}", __func__, level.udmf_thing.size());
   }
 
-  for (auto &u_thing : level.udmf_thing)
+  for (const auto &u_thing : level.udmf_thing)
   {
     auto t = level.NewThing();
     t->x = u_thing.x;
@@ -650,7 +646,7 @@ static void CheckBinaryFormatLimits(Level &level)
   }
 }
 
-static BspFormat CheckFormatBSP(BuildInfo &ctx, Level &level)
+static BspFormat CheckFormatBSP(const BuildInfo &ctx, Level &level)
 {
   BspFormat Levelype = ctx.bsp_format;
 
@@ -680,7 +676,7 @@ static BspFormat CheckFormatBSP(BuildInfo &ctx, Level &level)
 
 void LoadLevel(WadIO &io, Level &level)
 {
-  auto mark = Benchmarker(__func__);
+  const auto mark = Benchmarker(__func__);
   auto LEV = io.LumpName(level.lumps.label);
 
   level.overflows = false;
@@ -770,13 +766,13 @@ static void HandleBinaryMapBSP(WadIO &io, Level &level, BspFormat bsp_format)
   }
 
   // Use fractional VERTEXES lump in some map formats
-  bool do_fractional = level.map_format == MapFormat::Doom64;
+  const bool do_fractional = level.map_format == MapFormat::Doom64;
 
   // Only include BSP-generated vertices in non-ZDBSP lump format
-  bool do_new_vert = bsp_format == BspFormat::DoomBSP || bsp_format == BspFormat::DeePBSPV4;
+  const bool do_new_vert = bsp_format == BspFormat::DoomBSP || bsp_format == BspFormat::DeePBSPV4;
 
   // Use Zlib-compressed version of ZDBSP lump formats
-  bool zdbsp_compress = config.compress;
+  const bool zdbsp_compress = config.compress;
 
   // Do the four BSP lumps, before promptly doing the other normal lumps
   if (bsp_format == BspFormat::DoomBSP)
@@ -819,7 +815,7 @@ static void HandleBinaryMapBSP(WadIO &io, Level &level, BspFormat bsp_format)
   }
 }
 
-static void HandleBinaryMapLeafs(WadIO &io, Level &level, BspFormat bsp_format)
+static void HandleBinaryMapLeafs(WadIO &io, const Level &level, BspFormat bsp_format)
 {
   // Part of Doom 64
   if (level.map_format != MapFormat::Doom64) return;
@@ -844,16 +840,16 @@ static void HandleBinaryMapLeafs(WadIO &io, Level &level, BspFormat bsp_format)
 
 static BuildResult SaveLevelBinary(WadIO &io, Level &level)
 {
-  auto mark = Benchmarker(__func__);
+  const auto mark = Benchmarker(__func__);
 
   // Normal binary format limits
   CheckBinaryFormatLimits(level);
 
   // On BSP overflow, bump to DeePBSPV4 from DoomBSP
-  BspFormat bsp_format = CheckFormatBSP(config, level);
+  const BspFormat bsp_format = CheckFormatBSP(config, level);
 
   // Copy marker wholesale
-  size_t lump = level.lumps.label;
+  const size_t lump = level.lumps.label;
   io.CopyLump(lump);
 
   // Correct order is paramount
@@ -890,10 +886,10 @@ static BuildResult SaveLevelBinary(WadIO &io, Level &level)
 
 static BuildResult SaveLevelTextMap(WadIO &io, Level &level)
 {
-  auto mark = Benchmarker(__func__);
+  const auto mark = Benchmarker(__func__);
 
   // Copy marker wholesale
-  size_t lump = level.lumps.label;
+  const size_t lump = level.lumps.label;
   io.CopyLump(lump);
 
   // duh.
@@ -929,13 +925,13 @@ static BuildResult SaveLevelTextMap(WadIO &io, Level &level)
 // MAIN STUFF
 //------------------------------------------------------------------------
 
-static void SkipBuild(WadIO &io, Level &level)
+static void SkipBuild(const WadIO &io, Level &level)
 {
-  auto l = level.lumps;
+  const auto l = level.lumps;
 
-  bool has_rej = l.reject != NO_INDEX;
-  bool has_bmap = l.blockmap != NO_INDEX;
-  bool has_bsp = (l.znodes != NO_INDEX) || (l.nodes != NO_INDEX && l.ssectors != NO_INDEX && l.segs != NO_INDEX);
+  const bool has_rej = l.reject != NO_INDEX;
+  const bool has_bmap = l.blockmap != NO_INDEX;
+  const bool has_bsp = (l.znodes != NO_INDEX) || (l.nodes != NO_INDEX && l.ssectors != NO_INDEX && l.segs != NO_INDEX);
 
   if (config.skip_bsp && has_bsp)
   {
@@ -963,8 +959,8 @@ size_t ComputeBspHeight(const Node *node)
     return 0;
   }
 
-  size_t right = ComputeBspHeight(node->r.node);
-  size_t left = ComputeBspHeight(node->l.node);
+  const size_t right = ComputeBspHeight(node->r.node);
+  const size_t left = ComputeBspHeight(node->l.node);
 
   return std::max(left, right) + 1;
 }
@@ -992,7 +988,7 @@ BuildResult BuildLevel(WadIO &io, Level &level, std::string_view filename)
     // recursively create nodes
     Segment *seg_list = CreateSegs(level);
     // recursive function T-T
-    auto mark = Benchmarker("BuildNodes");
+    const auto mark = Benchmarker("BuildNodes");
     BuildNodes(level, seg_list, 0, dummy, &level.root_node, &level.root_sub, config.split_cost, config.fast, false);
   }
 
@@ -1010,7 +1006,7 @@ BuildResult BuildLevel(WadIO &io, Level &level, std::string_view filename)
 
   if (!level.skip_bsp)
   {
-     ClockwiseBspTree(level);
+    ClockwiseBspTree(level);
   }
 
   auto ret = BuildResult::Ok;
