@@ -47,27 +47,18 @@
 //
 static void Reject_Init(Level &level)
 {
-  level.reject_size = (level.sectors.size() * level.sectors.size() + 7) / 8;
+  level.reject_matrix.resize((level.sectors.size() * level.sectors.size() + 7) / 8);
 
-  level.reject_matrix = new uint8_t[level.reject_size];
-
-  // UtilZero clears one object, so clear the matrix until done.
-  for (size_t i = 0; i < level.reject_size; ++i)
-  {
-    UtilZero(&level.reject_matrix[i]);
-  }
-
-  for (auto sec : level.sectors)
+  for (auto &sec : level.sectors)
   {
     sec->rej_group = sec->index;
-    sec->rej_next = sec->rej_prev = sec;
+    sec->rej_next = sec->rej_prev = sec.get();
   }
 }
 
 static void Reject_Free(Level &level)
 {
-  delete[] level.reject_matrix;
-  level.reject_matrix = nullptr;
+  level.reject_matrix.clear();
 }
 
 //
@@ -78,7 +69,7 @@ static void Reject_Free(Level &level)
 
 static void Reject_GroupSectors(const Level &level)
 {
-  for (auto line : level.linedefs)
+  for (auto &line : level.linedefs)
   {
     // must be valid two-sided line
     if (!line->right || !line->left)
@@ -821,7 +812,7 @@ static bool DoVisibilityTest(const SectorPoints &A, const SectorPoints &B, const
 }
 
 // Mark a sector pair as blind in both directions.
-static inline void SetPairBits(const Level &level, size_t view, size_t target, size_t num_secs)
+static inline void SetPairBits(Level &level, size_t view, size_t target, size_t num_secs)
 {
   const size_t p1 = view * num_secs + target;
   const size_t p2 = target * num_secs + view;
@@ -830,7 +821,7 @@ static inline void SetPairBits(const Level &level, size_t view, size_t target, s
 }
 
 // Mark a sector pair as blind in both directions using thread-safe atomic guards.
-static inline void SetPairBitsAtomic(const Level &level, size_t view, size_t target, size_t num_secs)
+static inline void SetPairBitsAtomic(Level &level, size_t view, size_t target, size_t num_secs)
 {
   const size_t p1 = view * num_secs + target;
   const size_t p2 = target * num_secs + view;
@@ -1257,7 +1248,7 @@ static void Reject_ProcessSectors(Level &level)
   double mapMaxY = std::numeric_limits<double>::lowest();
 
   // Parse geometry and build basic sector tracking dimensions
-  for (const auto *line : level.linedefs)
+  for (const auto &line : level.linedefs)
   {
     if (!line || !line->start || !line->end) continue;
 
@@ -1462,8 +1453,7 @@ static void Reject_ProcessSectors(Level &level)
   {
     cutLevels = BuildCutLevels(cuts, neighbors, num_secs, activeSectors);
 
-    blindSnap.resize(level.reject_size);
-    memcpy(blindSnap.data(), level.reject_matrix, level.reject_size);
+    blindSnap = level.reject_matrix;
   }
 
   // Is this pair blind because a cut point stands between the two sectors
@@ -1579,7 +1569,7 @@ static void Reject_ProcessSectors(Level &level)
       // until this thread gets there, so the snapshot is safe to take.
       if (threadIndex == 0)
       {
-        memcpy(blindSnap.data(), level.reject_matrix, level.reject_size);
+        blindSnap = level.reject_matrix;
       }
     }
 
@@ -1661,7 +1651,7 @@ static void Reject_DebugGroups(const Level &level)
 {
   if (HAS_NONE(config.debug, DEBUG_REJECT)) return;
 
-  for (auto sec : level.sectors)
+  for (auto &sec : level.sectors)
   {
     size_t group = sec->rej_group;
     size_t num = 0;
@@ -1671,7 +1661,7 @@ static void Reject_DebugGroups(const Level &level)
     sec->rej_group = NO_INDEX;
     num++;
 
-    for (Sector *tmp = sec->rej_next; tmp != sec; tmp = tmp->rej_next)
+    for (Sector *tmp = sec->rej_next; tmp != sec.get(); tmp = tmp->rej_next)
     {
       tmp->rej_group = NO_INDEX;
       num++;
@@ -1707,11 +1697,11 @@ void PutReject(WadIO &io, Level &level)
   Reject_GroupSectors(level);
   Reject_ProcessSectors(level);
   Reject_DebugGroups(level);
-  io.AddToLump(level.reject_matrix, level.reject_size);
+  io.AddToLump(level.reject_matrix.data(), level.reject_matrix.size());
   Reject_Free(level);
 
   if (config.verbose)
   {
-    PrintLine(Log::NORMAL, "[{}] Reject size: {}", __func__, level.reject_size);
+    PrintLine(Log::NORMAL, "[{}] Reject size: {}", __func__, level.reject_matrix.size());
   }
 }
