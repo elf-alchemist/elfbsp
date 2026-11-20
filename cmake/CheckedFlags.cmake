@@ -67,6 +67,8 @@ else()
     _checked_add_compile_option(-Wdate-time)
     # We only want -Wall on GCC compilers, since /Wall on MSVC is noisy.
     _checked_add_compile_option(-Wall)
+    # It's not being used in a public ABI so we don't need a warning
+    _checked_add_compile_option(-Wno-interference-size)
 endif()
 
 if(ENABLE_WERROR)
