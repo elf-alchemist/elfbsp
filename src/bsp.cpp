@@ -175,15 +175,10 @@ void PutSubsecs_DoomBSP(WadIO &io, const Level &level)
 
 static void PutOneNode_Vanilla(WadIO &io, Node *node, size_t &node_cur_index)
 {
-  if (node->r.node)
-  {
-    PutOneNode_Vanilla(io, node->r.node, node_cur_index);
-  }
+  if (node == nullptr) return;
 
-  if (node->l.node)
-  {
-    PutOneNode_Vanilla(io, node->l.node, node_cur_index);
-  }
+  PutOneNode_Vanilla(io, node->r.node, node_cur_index);
+  PutOneNode_Vanilla(io, node->l.node, node_cur_index);
 
   node->index = node_cur_index++;
 
@@ -244,10 +239,7 @@ void PutNodes_DoomBSP(WadIO &io, const Level &level)
   size_t node_cur_index = 0;
   io.StartWritingLump("NODES");
 
-  if (level.root_node != nullptr)
-  {
-    PutOneNode_Vanilla(io, level.root_node, node_cur_index);
-  }
+  PutOneNode_Vanilla(io, level.root_node, node_cur_index);
 
   if (node_cur_index != level.nodes.size())
   {
@@ -356,15 +348,10 @@ void PutSubsecs_DeePBSPV4(WadIO &io, const Level &level)
 
 static void PutOneNode_DeePBSPV4(WadIO &io, Node *node, size_t &node_cur_index)
 {
-  if (node->r.node)
-  {
-    PutOneNode_DeePBSPV4(io, node->r.node, node_cur_index);
-  }
+  if (node == nullptr) return;
 
-  if (node->l.node)
-  {
-    PutOneNode_DeePBSPV4(io, node->l.node, node_cur_index);
-  }
+  PutOneNode_DeePBSPV4(io, node->r.node, node_cur_index);
+  PutOneNode_DeePBSPV4(io, node->l.node, node_cur_index);
 
   node->index = node_cur_index++;
 
@@ -426,10 +413,7 @@ void PutNodes_DeePBSPV4(WadIO &io, const Level &level)
   io.StartWritingLump("NODES");
   io.AddToLump("xNd4\0\0\0\0", 8);
 
-  if (level.root_node != nullptr)
-  {
-    PutOneNode_DeePBSPV4(io, level.root_node, node_cur_index);
-  }
+  PutOneNode_DeePBSPV4(io, level.root_node, node_cur_index);
 
   if (node_cur_index != level.nodes.size())
   {
@@ -583,15 +567,10 @@ static void PutSegs_XNOD(WadIO &io, const Level &level)
 
 static void PutOneNode_XNOD(WadIO &io, Node *node, size_t &node_cur_index)
 {
-  if (node->r.node)
-  {
-    PutOneNode_XNOD(io, node->r.node, node_cur_index);
-  }
+  if (node == nullptr) return;
 
-  if (node->l.node)
-  {
-    PutOneNode_XNOD(io, node->l.node, node_cur_index);
-  }
+  PutOneNode_XNOD(io, node->r.node, node_cur_index);
+  PutOneNode_XNOD(io, node->l.node, node_cur_index);
 
   node->index = node_cur_index++;
 
@@ -653,10 +632,7 @@ static void PutNodes_XNOD(WadIO &io, const Level &level)
   uint32_t raw_num = GetLittleEndian(IndexToUInt(level.nodes.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
-  if (level.root_node)
-  {
-    PutOneNode_XNOD(io, level.root_node, node_cur_index);
-  }
+  PutOneNode_XNOD(io, level.root_node, node_cur_index);
 
   if (node_cur_index != level.nodes.size())
   {
@@ -716,15 +692,10 @@ static void PutSegs_XGL2(WadIO &io, const Level &level)
 
 static void PutOneNode_XGL3(WadIO &io, Node *node, size_t &node_cur_index)
 {
-  if (node->r.node)
-  {
-    PutOneNode_XGL3(io, node->r.node, node_cur_index);
-  }
+  if (node == nullptr) return;
 
-  if (node->l.node)
-  {
-    PutOneNode_XGL3(io, node->l.node, node_cur_index);
-  }
+  PutOneNode_XGL3(io, node->r.node, node_cur_index);
+  PutOneNode_XGL3(io, node->l.node, node_cur_index);
 
   node->index = node_cur_index++;
 
@@ -786,10 +757,7 @@ static void PutNodes_XGL3(WadIO &io, const Level &level)
   uint32_t raw_num = GetLittleEndian(IndexToUInt(level.nodes.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
-  if (level.root_node)
-  {
-    PutOneNode_XGL3(io, level.root_node, node_cur_index);
-  }
+  PutOneNode_XGL3(io, level.root_node, node_cur_index);
 
   if (node_cur_index != level.nodes.size())
   {
