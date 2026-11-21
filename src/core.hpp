@@ -1209,60 +1209,6 @@ struct FNV1a
   }
 };
 
-//
-// Simple iota, from Rum-And-Raisin
-//
-
-template <typename T>
-struct Iota
-{
-  struct Iterator
-  {
-    T val;
-
-    constexpr T operator*() noexcept
-    {
-      return val;
-    }
-
-    constexpr bool operator!=(const Iterator &rhs)
-    {
-      return val != rhs.val;
-    }
-
-    constexpr Iterator &operator++()
-    {
-      ++val;
-      return *this;
-    }
-  };
-
-  constexpr explicit Iota(T e)
-  {
-    _begin = {0};
-    _end = {e};
-  }
-
-  constexpr Iota(T b, T e)
-  {
-    _begin = {b};
-    _end = {e};
-  }
-
-  constexpr Iterator begin() noexcept
-  {
-    return _begin;
-  }
-
-  constexpr Iterator end() noexcept
-  {
-    return _end;
-  }
-
-  Iterator _begin;
-  Iterator _end;
-};
-
 template <std::integral T>
 std::pair<size_t, T> LargestElement(std::vector<T> input)
 {

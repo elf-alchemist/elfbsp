@@ -25,6 +25,7 @@
 #include "local.hpp"
 #include <algorithm>
 #include <map>
+#include <ranges>
 #include <span>
 #include <vector>
 
@@ -102,7 +103,7 @@ void Blockmap_Init(const Level &level, BlockMap &bmap)
   bmap.rows = static_cast<size_t>(bbox.maxy - bmap.origin_y) / BlockMap_GridSize + OFF_BY_ONE;
 
   bmap.cells.reserve(bmap.BlockCount());
-  for (const auto i : Iota(bmap.BlockCount()))
+  for (const auto i : std::views::iota(0uz, bmap.BlockCount()))
   {
     bmap.cells.emplace_back(i);
   }
@@ -247,7 +248,7 @@ static void Blockmap_Create(Level &level, BlockMap &bmap)
 
   if (!config.skip_bmap_zero)
   {
-    for (const auto blk_num : Iota(bmap.BlockCount()))
+    for (const auto blk_num : std::views::iota(0uz, bmap.BlockCount()))
     {
       Block_Add(bmap, blk_num, 0);
     }
@@ -314,14 +315,14 @@ void Blockmap_Deduplicate(BlockMap &bmap)
     // No actual duplicates? skip
     if (dupes.size() < 2) continue;
 
-    for (const auto i : Iota(dupes.size()))
+    for (const auto i : std::views::iota(0uz, dupes.size()))
     {
       auto &cell1 = bmap.cells[dupes[i]];
 
       // Already marked?
       if (cell1.dup_index != NO_INDEX) continue;
 
-      for (const auto j : Iota(i + 1, dupes.size()))
+      for (const auto j : std::views::iota(i + 1, dupes.size()))
       {
         auto &cell2 = bmap.cells[dupes[j]];
 
