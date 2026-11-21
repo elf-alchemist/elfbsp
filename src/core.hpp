@@ -40,6 +40,7 @@
 #include <chrono>
 #include <limits>
 #include <numbers>
+#include <print>
 #include <source_location>
 #include <vector>
 
@@ -284,10 +285,8 @@ template <typename... Args>
 void PrintLine(const Log level, std::format_string<Args...> fmt, Args &&...args)
 {
   FILE *const stream = (level == Log::NORMAL) ? stdout : stderr;
-  const std::string str = std::format(fmt, std::forward<Args>(args)...);
-
-  fprintf(stream, "%s\n", str.c_str());
-  fflush(stream);
+  std::println(stream, fmt, std::forward<Args>(args)...);
+  std::fflush(stream);
 }
 
 //
