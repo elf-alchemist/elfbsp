@@ -611,7 +611,7 @@ void ParseUThing(Scanner &s, Level &level)
 
 //-----------------------------------------------------------------------------
 
-void ParseTextMap(const WadIO &io, Level &level, std::vector<char> &lump)
+void ParseTextMap(const WadIO &io, Level &level, std::span<char> lump)
 {
   auto s = Scanner(lump.data(), lump.size());
 

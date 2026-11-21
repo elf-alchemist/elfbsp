@@ -25,6 +25,7 @@
 #include "local.hpp"
 #include <algorithm>
 #include <map>
+#include <span>
 #include <vector>
 
 static constexpr auto BlockMap_GridSize = 128;
@@ -504,7 +505,7 @@ static void Blockmap_Write(WadIO &io, BlockMap &bmap)
 }
 
 template <size_t NumSize, size_t ExtraBytes>
-void PrintStuff1(std::vector<BlockList> &c, std::string_view f)
+void PrintStuff1(std::span<const BlockList> c, std::string_view f)
 {
   const size_t HeaderSize = 4 * NumSize;
   const size_t OffsetListSize = c.size() * NumSize;
@@ -514,7 +515,7 @@ void PrintStuff1(std::vector<BlockList> &c, std::string_view f)
 }
 
 template <size_t NumSize, size_t ExtraBytes>
-void PrintStuff2(std::vector<BlockList> &c, std::vector<size_t> &l, std::string_view f, std::string_view n)
+void PrintStuff2(std::span<const BlockList> c, std::span<const size_t> l, std::string_view f, std::string_view n)
 {
   const size_t HeaderSize = 4 * NumSize;
   const size_t OffsetListSize = c.size() * NumSize;
