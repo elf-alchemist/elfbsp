@@ -228,12 +228,12 @@ inline void ComputeIntersection(const Segment *seg, const Segment *part, double 
   }
 }
 
-void AddIntersection(Level &level, Intersection *&cut_list, Vertex *vert, const Segment *part, bool self_ref)
+void AddIntersection(Level &level, Intersection *&cut_list, Vertex &vert, const Segment *part, bool self_ref)
 {
   const bool open_before = CheckOpen(vert, -part->pdx, -part->pdy);
   const bool open_after = CheckOpen(vert, part->pdx, part->pdy);
 
-  const double along_dist = part->ParallelDist(vert->x, vert->y);
+  const double along_dist = part->ParallelDist(vert.x, vert.y);
 
   Intersection *cut;
   Intersection *after;
@@ -241,7 +241,7 @@ void AddIntersection(Level &level, Intersection *&cut_list, Vertex *vert, const 
   /* merge with any existing vertex? */
   for (cut = cut_list; cut; cut = cut->next)
   {
-    if (Overlaps(vert, cut->vertex))
+    if (Overlaps(vert, *cut->vertex))
     {
       return;
     }
@@ -250,7 +250,7 @@ void AddIntersection(Level &level, Intersection *&cut_list, Vertex *vert, const 
   /* create new intersection */
   cut = &level.NewIntersection();
 
-  cut->vertex = vert;
+  cut->vertex = &vert;
   cut->along_dist = along_dist;
   cut->self_ref = self_ref;
   cut->open_before = open_before;
@@ -791,8 +791,8 @@ void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment *&lef
   /* check for being on the same line */
   if (fabs(a) <= DIST_EPSILON && fabs(b) <= DIST_EPSILON)
   {
-    AddIntersection(level, cut_list, seg->start, part, self_ref);
-    AddIntersection(level, cut_list, seg->end, part, self_ref);
+    AddIntersection(level, cut_list, *seg->start, part, self_ref);
+    AddIntersection(level, cut_list, *seg->end, part, self_ref);
 
     // this seg runs along the same line as the partition.  check
     // whether it goes in the same direction or the opposite.
@@ -813,11 +813,11 @@ void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment *&lef
   {
     if (a < DIST_EPSILON)
     {
-      AddIntersection(level, cut_list, seg->start, part, self_ref);
+      AddIntersection(level, cut_list, *seg->start, part, self_ref);
     }
     else if (b < DIST_EPSILON)
     {
-      AddIntersection(level, cut_list, seg->end, part, self_ref);
+      AddIntersection(level, cut_list, *seg->end, part, self_ref);
     }
 
     ListAddSeg(right_list, seg);
@@ -829,11 +829,11 @@ void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment *&lef
   {
     if (a > -DIST_EPSILON)
     {
-      AddIntersection(level, cut_list, seg->start, part, self_ref);
+      AddIntersection(level, cut_list, *seg->start, part, self_ref);
     }
     else if (b > -DIST_EPSILON)
     {
-      AddIntersection(level, cut_list, seg->end, part, self_ref);
+      AddIntersection(level, cut_list, *seg->end, part, self_ref);
     }
 
     ListAddSeg(left_list, seg);
@@ -847,7 +847,7 @@ void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment *&lef
 
   Segment *new_seg = SplitSeg(level, *seg, x, y);
 
-  AddIntersection(level, cut_list, seg->end, part, self_ref);
+  AddIntersection(level, cut_list, *seg->end, part, self_ref);
 
   if (a < 0)
   {
@@ -1785,7 +1785,7 @@ static void RoundOffSubsector(Level &level, Subsector &subsec)
     }
 
     // create a new vertex for this baby
-    last_real_degen->end = NewVertexDegenerate(level, last_real_degen->start, last_real_degen->end);
+    last_real_degen->end = NewVertexDegenerate(level, *last_real_degen->start, *last_real_degen->end);
 
     if (HAS_BIT(config.debug, DEBUG_SUBSEC))
     {

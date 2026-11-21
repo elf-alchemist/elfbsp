@@ -86,9 +86,9 @@ struct Vertex
 // check whether a line with the given delta coordinates from this
 // vertex is open or closed.  If there exists a walltip at same
 // angle, it is closed, likewise if line is in void space.
-bool CheckOpen(const Vertex *vertex, double dx, double dy);
+bool CheckOpen(const Vertex &vertex, double dx, double dy);
 
-bool Overlaps(const Vertex *vertex, const Vertex *other);
+bool Overlaps(const Vertex &vertex, const Vertex &other);
 
 struct Sector
 {
@@ -550,7 +550,7 @@ Vertex *NewVertexFromSplitSeg(Level &level, const Segment &seg, double x, double
 // return a new end vertex to compensate for a seg that would end up
 // being zero-length (after integer rounding).  Doesn't compute the wall-tip
 // info (thus this routine should only be used *after* node building).
-Vertex *NewVertexDegenerate(Level &level, const Vertex *start, const Vertex *end);
+Vertex *NewVertexDegenerate(Level &level, const Vertex &start, const Vertex &end);
 
 //------------------------------------------------------------------------
 // SEG : Choose the best Seg to use for a node line.
