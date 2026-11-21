@@ -103,51 +103,51 @@ bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y
 
 /* ----- reading routines ------------------------------ */
 
-static void ValidateLinedef(Level &level, Linedef *line)
+static void ValidateLinedef(Level &level, Linedef &line)
 {
-  if (line->right || line->left)
+  if (line.right || line.left)
   {
     level.num_real_lines++;
   }
 
-  if (line->left && line->right && line->left->sector == line->right->sector)
+  if (line.left && line.right && line.left->sector == line.right->sector)
   {
-    line->effects |= FX_SelfReferential;
+    line.effects |= FX_SelfReferential;
     if (config.verbose)
     {
-      PrintLine(Log::NORMAL, "[{}] Linedef #{} is self-referencing", __func__, line->index);
+      PrintLine(Log::NORMAL, "[{}] Linedef #{} is self-referencing", __func__, line.index);
     }
   }
 
+  if (config.effects                                  // Effects enabled ...
+      && line.left                                    // ... side exists ...
+      && line.left->tex_lower[0] != '-'               // ... lower texture isn't empty ...
+      && StringCmp(line.left->tex_lower, "BSPNOSEG")) // ... lower texture is BSPNOSEG
+  {
+    line.effects |= FX_DoNotRenderBack;
+  }
+
   if (config.effects                                   // Effects enabled ...
-      && line->left                                    // ... side exists ...
-      && line->left->tex_lower[0] != '-'               // ... lower texture isn't empty ...
-      && StringCmp(line->left->tex_lower, "BSPNOSEG")) // ... lower texture is BSPNOSEG
+      && line.right                                    // ... side exists ...
+      && line.right->tex_lower[0] != '-'               // ... lower texture isn't empty ...
+      && StringCmp(line.right->tex_lower, "BSPNOSEG")) // ... lower texture is BSPNOSEG
   {
-    line->effects |= FX_DoNotRenderBack;
+    line.effects |= FX_DoNotRenderFront;
   }
 
-  if (config.effects                                    // Effects enabled ...
-      && line->right                                    // ... side exists ...
-      && line->right->tex_lower[0] != '-'               // ... lower texture isn't empty ...
-      && StringCmp(line->right->tex_lower, "BSPNOSEG")) // ... lower texture is BSPNOSEG
-  {
-    line->effects |= FX_DoNotRenderFront;
-  }
-
-  const double deltax = line->start->x - line->end->x;
-  const double deltay = line->start->y - line->end->y;
+  const double deltax = line.start->x - line.end->x;
+  const double deltay = line.start->y - line.end->y;
 
   // check for extremely short lines
   if ((fabs(deltax) < DIST_EPSILON) && (fabs(deltay) < DIST_EPSILON))
   {
-    line->effects |= FX_ZeroLength | FX_NoBlockmap;
+    line.effects |= FX_ZeroLength | FX_NoBlockmap;
   }
 
   // check for extremely long lines
   if (hypot(deltax, deltay) >= 32000)
   {
-    PrintLine(Log::WARN, "[{}] Linedef #{} is VERY long, it may cause problems", __func__, line->index);
+    PrintLine(Log::WARN, "[{}] Linedef #{} is VERY long, it may cause problems", __func__, line.index);
     config.total_warnings++;
   }
 }
@@ -280,7 +280,7 @@ static void GetLinedefs_Doom(WadIO &io, Level &level)
       l.effects |= FX_TwoSided;
     }
 
-    ValidateLinedef(level, &l);
+    ValidateLinedef(level, l);
 
     if (!config.effects) continue;
 
@@ -379,7 +379,7 @@ static void GetLinedefs_Hexen(WadIO &io, Level &level)
       l.effects |= FX_TwoSided;
     }
 
-    ValidateLinedef(level, &l);
+    ValidateLinedef(level, l);
 
     if (!config.effects) continue;
 
@@ -470,7 +470,7 @@ static void GetLinedefs_Doom64(WadIO &io, Level &level)
       l.effects |= FX_TwoSided;
     }
 
-    ValidateLinedef(level, &l);
+    ValidateLinedef(level, l);
 
     if (!config.effects) continue;
 
@@ -591,7 +591,7 @@ static void GetLinedefs_UDMF(Level &level)
       l.effects |= FX_TwoSided;
     }
 
-    ValidateLinedef(level, &l);
+    ValidateLinedef(level, l);
   }
 }
 
