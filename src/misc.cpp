@@ -33,18 +33,6 @@
 
 /* ----- analysis routines ----------------------------- */
 
-template <typename T>
-std::vector<T *> UqPtrVecToRawPtrVec(const std::vector<std::unique_ptr<T>> &vec)
-{
-  std::vector<T *> ret;
-  ret.reserve(vec.size());
-  for (auto &elem : vec)
-  {
-    ret.push_back(elem.get());
-  }
-  return ret;
-}
-
 bool Overlaps(const Vertex &vertex, const Vertex &other)
 {
   const double dx = fabs(other.x - vertex.x);
@@ -60,7 +48,7 @@ void DetectOverlappingVertices(const Level &level)
   }
 
   // copy the vertex pointers
-  auto array = UqPtrVecToRawPtrVec(level.vertices);
+  auto array = level.vertices | std::views::transform([](auto &v) { return v.get(); }) | std::ranges::to<std::vector>();
 
   // sort the vertices by increasing X coordinate.
   // hence any overlapping vertices will be near each other.
@@ -149,7 +137,7 @@ void PruneVerticesAtEnd(Level &level)
 void DetectOverlappingLines(const Level &level)
 {
   // copy
-  auto array = UqPtrVecToRawPtrVec(level.linedefs);
+  auto array = level.linedefs | std::views::transform([](auto &l) { return l.get(); }) | std::ranges::to<std::vector>();
 
   // Algorithm:
   //   Sort all lines by minimum X coordinate.
