@@ -273,6 +273,7 @@ void CalculateWallTips(Level &level)
     // due to logic in DetectOverlappingVertices.
 
     AddWallTip(level, *L->start, x2 - x1, y2 - y1, left, right);
+    // NOLINTNEXTLINE(readability-suspicious-call-argument) -- swapping is intentional
     AddWallTip(level, *L->end, x1 - x2, y1 - y2, right, left);
   }
 
@@ -317,6 +318,7 @@ Vertex *NewVertexFromSplitSeg(Level &level, const Segment &seg, double x, double
     const bool right = (front != nullptr) && (front->sector != nullptr);
 
     AddWallTip(level, vert, seg.pdx, seg.pdy, left, right);
+    // NOLINTNEXTLINE(readability-suspicious-call-argument) -- swapping is intentional
     AddWallTip(level, vert, -seg.pdx, -seg.pdy, right, left);
   }
 
