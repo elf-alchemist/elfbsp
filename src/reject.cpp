@@ -826,8 +826,8 @@ static inline void SetPairBitsAtomic(Level &level, size_t view, size_t target, s
 {
   const size_t p1 = view * num_secs + target;
   const size_t p2 = target * num_secs + view;
-  const auto bit1 = static_cast<uint8_t>(1_uz << (p1 & 7_uz));
-  const auto bit2 = static_cast<uint8_t>(1_uz << (p2 & 7_uz));
+  const auto bit1 = static_cast<uint8_t>(1uz << (p1 & 7uz));
+  const auto bit2 = static_cast<uint8_t>(1uz << (p2 & 7uz));
 
   // Several threads can touch the same byte, so each bit is set with an atomic OR.
   std::atomic_ref<uint8_t>(level.reject_matrix[p1 >> 3]).fetch_or(bit1, std::memory_order_relaxed);
@@ -1381,7 +1381,7 @@ static void Reject_ProcessSectors(Level &level)
       if (openCount[target] == 0 || groupOf[view] != groupOf[target]) continue;
 
       const size_t adjIdx = view * num_secs + target;
-      if ((adjacencyMatrix[adjIdx >> 3_uz] & (1_uz << (adjIdx & 7_uz))) != 0) continue;
+      if ((adjacencyMatrix[adjIdx >> 3uz] & (1uz << (adjIdx & 7uz))) != 0) continue;
       if (CheckGapTooWide(sectorBoxes[view], sectorBoxes[target], maxMapSpanSq)) continue;
 
       portalPairs += openCount[view] * openCount[target];
@@ -1516,7 +1516,7 @@ static void Reject_ProcessSectors(Level &level)
       // If these sectors touch directly, they are unconditionally visible!
       // Skipping curved alternative geometric checks prevents tunnel/cave blindness bugs.
       const size_t adjIdx = view * num_secs + target;
-      if ((adjacencyMatrix[adjIdx >> 3_uz] & (1_uz << (adjIdx & 7_uz))) != 0)
+      if ((adjacencyMatrix[adjIdx >> 3uz] & (1uz << (adjIdx & 7uz))) != 0)
       {
         return;
       }

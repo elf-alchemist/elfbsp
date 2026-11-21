@@ -247,13 +247,6 @@ constexpr short_angle_t DegreesToShortBAM(const double x)
   return static_cast<short_angle_t>(static_cast<long_angle_t>(LONG_ANGLE_1 * x) >> FRACBITS);
 }
 
-// C++23's uz suffix for size_t literals
-
-consteval size_t operator""_uz(unsigned long long val)
-{
-  return val;
-}
-
 //------------------------------------------------------------------------
 // STRING STUFF
 //------------------------------------------------------------------------
