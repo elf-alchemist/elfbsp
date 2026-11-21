@@ -24,6 +24,8 @@
 #include "core.hpp"
 #include "local.hpp"
 
+#include <utility>
+
 //
 // To be able to divide the nodes down, this routine must decide which
 // is the best Seg to use as a nodeline. It does this by selecting the
@@ -188,44 +190,37 @@ Segment &SplitSeg(Level &level, Segment &old_seg, double x, double y)
 //       and the partitioning seg, and takes advantage of some common
 //       situations like horizontal/vertical lines.
 //
-inline void ComputeIntersection(const Segment &seg, const Segment &part, double perp_c, double perp_d, double *x, double *y)
+inline std::pair<double, double> ComputeIntersection(const Segment &seg, const Segment &part, double perp_c, double perp_d)
 {
   // horizontal partition against vertical seg
   if (part.pdy == 0 && seg.pdx == 0)
   {
-    *x = seg.psx;
-    *y = part.psy;
-    return;
+    return {seg.psx, part.psy};
   }
 
   // vertical partition against horizontal seg
   if (part.pdx == 0 && seg.pdy == 0)
   {
-    *x = part.psx;
-    *y = seg.psy;
-    return;
+    return {part.psx, seg.psy};
   }
 
   // 0 = start, 1 = end
   const double ds = perp_c / (perp_c - perp_d);
 
-  if (seg.pdx == 0)
+  double x = seg.psx;
+  double y = seg.psy;
+
+  if (seg.pdx != 0)
   {
-    *x = seg.psx;
-  }
-  else
-  {
-    *x = seg.psx + (seg.pdx * ds);
+    x += seg.pdx * ds;
   }
 
-  if (seg.pdy == 0)
+  if (seg.pdy != 0)
   {
-    *y = seg.psy;
+    y += seg.pdy * ds;
   }
-  else
-  {
-    *y = seg.psy + (seg.pdy * ds);
-  }
+
+  return {x, y};
 }
 
 void AddIntersection(Level &level, Intersection *&cut_list, Vertex &vert, const Segment &part, bool self_ref)
@@ -842,8 +837,7 @@ void DivideOneSeg(Level &level, Segment &seg, const Segment &part, Segment *&lef
 
   // when we reach here, we have a and b non-zero and opposite sign,
   // hence this seg will be split by the partition line.
-  double x, y;
-  ComputeIntersection(seg, part, a, b, &x, &y);
+  const auto [x, y] = ComputeIntersection(seg, part, a, b);
 
   Segment &new_seg = SplitSeg(level, seg, x, y);
 
