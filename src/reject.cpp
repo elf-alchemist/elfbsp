@@ -1152,8 +1152,7 @@ static void PrintCountSummary(std::string_view tag, std::string_view label, std:
 
 static void RejectAnalysis(const RejectStats &stats)
 {
-
-  const char *tag = std::source_location::current().function_name();
+  const char *tag = __func__;
 
   PrintLine(Log::NORMAL, "[{}] Blocker lines: {}", tag, stats.blockerLines);
   PrintLine(Log::NORMAL, "[{}] Portal lines: {}", tag, stats.portalLines);
