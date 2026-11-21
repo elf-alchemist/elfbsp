@@ -117,7 +117,7 @@ static void Recompute(Segment &seg)
 //       segs (except the one we are currently splitting) must exist
 //       on a singly-linked list somewhere.
 //
-Segment *SplitSeg(Level &level, Segment &old_seg, double x, double y)
+Segment &SplitSeg(Level &level, Segment &old_seg, double x, double y)
 {
   if (HAS_BIT(config.debug, DEBUG_SPLIT))
   {
@@ -179,7 +179,7 @@ Segment *SplitSeg(Level &level, Segment &old_seg, double x, double y)
     old_seg.partner->next = new_seg.partner;
   }
 
-  return &new_seg;
+  return new_seg;
 }
 
 //
@@ -188,52 +188,52 @@ Segment *SplitSeg(Level &level, Segment &old_seg, double x, double y)
 //       and the partitioning seg, and takes advantage of some common
 //       situations like horizontal/vertical lines.
 //
-inline void ComputeIntersection(const Segment *seg, const Segment *part, double perp_c, double perp_d, double *x, double *y)
+inline void ComputeIntersection(const Segment &seg, const Segment &part, double perp_c, double perp_d, double *x, double *y)
 {
   // horizontal partition against vertical seg
-  if (part->pdy == 0 && seg->pdx == 0)
+  if (part.pdy == 0 && seg.pdx == 0)
   {
-    *x = seg->psx;
-    *y = part->psy;
+    *x = seg.psx;
+    *y = part.psy;
     return;
   }
 
   // vertical partition against horizontal seg
-  if (part->pdx == 0 && seg->pdy == 0)
+  if (part.pdx == 0 && seg.pdy == 0)
   {
-    *x = part->psx;
-    *y = seg->psy;
+    *x = part.psx;
+    *y = seg.psy;
     return;
   }
 
   // 0 = start, 1 = end
   const double ds = perp_c / (perp_c - perp_d);
 
-  if (seg->pdx == 0)
+  if (seg.pdx == 0)
   {
-    *x = seg->psx;
+    *x = seg.psx;
   }
   else
   {
-    *x = seg->psx + (seg->pdx * ds);
+    *x = seg.psx + (seg.pdx * ds);
   }
 
-  if (seg->pdy == 0)
+  if (seg.pdy == 0)
   {
-    *y = seg->psy;
+    *y = seg.psy;
   }
   else
   {
-    *y = seg->psy + (seg->pdy * ds);
+    *y = seg.psy + (seg.pdy * ds);
   }
 }
 
-void AddIntersection(Level &level, Intersection *&cut_list, Vertex &vert, const Segment *part, bool self_ref)
+void AddIntersection(Level &level, Intersection *&cut_list, Vertex &vert, const Segment &part, bool self_ref)
 {
-  const bool open_before = CheckOpen(vert, -part->pdx, -part->pdy);
-  const bool open_after = CheckOpen(vert, part->pdx, part->pdy);
+  const bool open_before = CheckOpen(vert, -part.pdx, -part.pdy);
+  const bool open_after = CheckOpen(vert, part.pdx, part.pdy);
 
-  const double along_dist = part->ParallelDist(vert.x, vert.y);
+  const double along_dist = part.ParallelDist(vert.x, vert.y);
 
   Intersection *cut;
   Intersection *after;
@@ -752,10 +752,10 @@ Segment *PickNode(Quadtree &tree, int depth, double split_cost, bool fast)
   return best;
 }
 
-static void ListAddSeg(Segment *&list_ptr, Segment *seg)
+static void ListAddSeg(Segment *&list_ptr, Segment &seg)
 {
-  seg->next = list_ptr;
-  list_ptr = seg;
+  seg.next = list_ptr;
+  list_ptr = &seg;
 }
 
 //
@@ -774,16 +774,16 @@ static void ListAddSeg(Segment *&list_ptr, Segment *seg)
 //       it is important that both these routines follow the exact
 //       same logic when determining which segs should go left, right
 //       or be split.
-void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment *&left_list, Segment *&right_list,
+void DivideOneSeg(Level &level, Segment &seg, const Segment &part, Segment *&left_list, Segment *&right_list,
                   Intersection *&cut_list)
 {
   /* get state of lines' relation to each other */
-  double a = part->PerpDist(seg->psx, seg->psy);
-  double b = part->PerpDist(seg->pex, seg->pey);
+  double a = part.PerpDist(seg.psx, seg.psy);
+  double b = part.PerpDist(seg.pex, seg.pey);
 
-  const bool self_ref = seg->linedef && HAS_BIT(seg->linedef->effects, FX_SelfReferential);
+  const bool self_ref = seg.linedef && HAS_BIT(seg.linedef->effects, FX_SelfReferential);
 
-  if (seg->source_line == part->source_line)
+  if (seg.source_line == part.source_line)
   {
     a = b = 0;
   }
@@ -791,12 +791,12 @@ void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment *&lef
   /* check for being on the same line */
   if (fabs(a) <= DIST_EPSILON && fabs(b) <= DIST_EPSILON)
   {
-    AddIntersection(level, cut_list, *seg->start, part, self_ref);
-    AddIntersection(level, cut_list, *seg->end, part, self_ref);
+    AddIntersection(level, cut_list, *seg.start, part, self_ref);
+    AddIntersection(level, cut_list, *seg.end, part, self_ref);
 
     // this seg runs along the same line as the partition.  check
     // whether it goes in the same direction or the opposite.
-    if (seg->pdx * part->pdx + seg->pdy * part->pdy < 0)
+    if (seg.pdx * part.pdx + seg.pdy * part.pdy < 0)
     {
       ListAddSeg(left_list, seg);
     }
@@ -813,11 +813,11 @@ void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment *&lef
   {
     if (a < DIST_EPSILON)
     {
-      AddIntersection(level, cut_list, *seg->start, part, self_ref);
+      AddIntersection(level, cut_list, *seg.start, part, self_ref);
     }
     else if (b < DIST_EPSILON)
     {
-      AddIntersection(level, cut_list, *seg->end, part, self_ref);
+      AddIntersection(level, cut_list, *seg.end, part, self_ref);
     }
 
     ListAddSeg(right_list, seg);
@@ -829,11 +829,11 @@ void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment *&lef
   {
     if (a > -DIST_EPSILON)
     {
-      AddIntersection(level, cut_list, *seg->start, part, self_ref);
+      AddIntersection(level, cut_list, *seg.start, part, self_ref);
     }
     else if (b > -DIST_EPSILON)
     {
-      AddIntersection(level, cut_list, *seg->end, part, self_ref);
+      AddIntersection(level, cut_list, *seg.end, part, self_ref);
     }
 
     ListAddSeg(left_list, seg);
@@ -845,9 +845,9 @@ void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment *&lef
   double x, y;
   ComputeIntersection(seg, part, a, b, &x, &y);
 
-  Segment *new_seg = SplitSeg(level, *seg, x, y);
+  Segment &new_seg = SplitSeg(level, seg, x, y);
 
-  AddIntersection(level, cut_list, *seg->end, part, self_ref);
+  AddIntersection(level, cut_list, *seg.end, part, self_ref);
 
   if (a < 0)
   {
@@ -864,7 +864,7 @@ void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment *&lef
 // remove all the segs from the list, partitioning them into the left
 // or right lists based on the given partition line.  Adds any
 // intersections into the intersection list as it goes.
-void SeparateSegs(Level &level, Quadtree &tree, Segment *part, Segment *&left_list, Segment *&right_list,
+void SeparateSegs(Level &level, Quadtree &tree, Segment &part, Segment *&left_list, Segment *&right_list,
                   Intersection *&cut_list)
 {
   while (tree.list != nullptr)
@@ -873,7 +873,7 @@ void SeparateSegs(Level &level, Quadtree &tree, Segment *part, Segment *&left_li
     tree.list = seg->next;
 
     seg->quad = nullptr;
-    DivideOneSeg(level, seg, part, left_list, right_list, cut_list);
+    DivideOneSeg(level, *seg, part, left_list, right_list, cut_list);
   }
 
   // recursively handle sub-blocks
@@ -994,8 +994,8 @@ void AddMinisegs(Level &level, Intersection *cut_list, Segment *part, Segment *&
     Recompute(buddy);
 
     // add the new segs to the appropriate lists
-    ListAddSeg(right_list, &seg);
-    ListAddSeg(left_list, &buddy);
+    ListAddSeg(right_list, seg);
+    ListAddSeg(left_list, buddy);
 
     if (HAS_BIT(config.debug, DEBUG_CUTLIST))
     {
@@ -1100,10 +1100,10 @@ Quadtree::Quadtree(int _x1, int _y1, int _x2, int _y2) : x1(_x1), y1(_y1), x2(_x
   }
 }
 
-static void AddSeg(Quadtree &quadtree, Segment *seg)
+static void AddSeg(Quadtree &quadtree, Segment &seg)
 {
   // update seg counts
-  if (seg->linedef != nullptr)
+  if (seg.linedef != nullptr)
   {
     quadtree.real_num++;
   }
@@ -1114,11 +1114,11 @@ static void AddSeg(Quadtree &quadtree, Segment *seg)
 
   if (quadtree.subs[0] != nullptr)
   {
-    const double x_min = std::min(seg->start->x, seg->end->x);
-    const double y_min = std::min(seg->start->y, seg->end->y);
+    const double x_min = std::min(seg.start->x, seg.end->x);
+    const double y_min = std::min(seg.start->y, seg.end->y);
 
-    const double x_max = std::max(seg->start->x, seg->end->x);
-    const double y_max = std::max(seg->start->y, seg->end->y);
+    const double x_max = std::max(seg.start->x, seg.end->x);
+    const double y_max = std::max(seg.start->y, seg.end->y);
 
     if ((quadtree.x2 - quadtree.x1) >= (quadtree.y2 - quadtree.y1))
     {
@@ -1152,7 +1152,7 @@ static void AddSeg(Quadtree &quadtree, Segment *seg)
 
   ListAddSeg(quadtree.list, seg);
 
-  seg->quad = &quadtree;
+  seg.quad = &quadtree;
 }
 
 static void AddList(Quadtree &quadtree, Segment *new_list)
@@ -1162,7 +1162,7 @@ static void AddList(Quadtree &quadtree, Segment *new_list)
     Segment *seg = new_list;
     new_list = seg->next;
 
-    AddSeg(quadtree, seg);
+    AddSeg(quadtree, *seg);
   }
 }
 
@@ -1173,7 +1173,7 @@ static void ConvertToList(Quadtree &quadtree, Segment *&_list)
     Segment *seg = quadtree.list;
     quadtree.list = seg->next;
 
-    ListAddSeg(_list, seg);
+    ListAddSeg(_list, *seg);
   }
 
   if (quadtree.subs[0] != nullptr)
@@ -1239,7 +1239,7 @@ int OnLineSide(const Quadtree &quadtree, const Segment &part)
   return p1;
 }
 
-Segment *CreateOneSeg(Level &level, Linedef &line, Vertex *start, Vertex *end, const Sidedef &side, bool what_side)
+Segment &CreateOneSeg(Level &level, Linedef &line, Vertex *start, Vertex *end, const Sidedef &side, bool what_side)
 {
   Segment &seg = level.NewSeg();
 
@@ -1271,7 +1271,7 @@ Segment *CreateOneSeg(Level &level, Linedef &line, Vertex *start, Vertex *end, c
 
   Recompute(seg);
 
-  return &seg;
+  return seg;
 }
 
 //
@@ -1307,8 +1307,8 @@ Segment *CreateSegs(Level &level)
     }
     else if (L->right != nullptr && HAS_NONE(L->effects, FX_DoNotRenderFront))
     {
-      right = CreateOneSeg(level, *L, L->start, L->end, *L->right, false);
-      ListAddSeg(list, right);
+      right = &CreateOneSeg(level, *L, L->start, L->end, *L->right, false);
+      ListAddSeg(list, *right);
     }
 
     if (L->left == nullptr && HAS_BIT(L->effects, FX_TwoSided))
@@ -1318,8 +1318,8 @@ Segment *CreateSegs(Level &level)
     }
     else if (L->left != nullptr && HAS_NONE(L->effects, FX_DoNotRenderBack))
     {
-      left = CreateOneSeg(level, *L, L->end, L->start, *L->left, true);
-      ListAddSeg(list, left);
+      left = &CreateOneSeg(level, *L, L->end, L->start, *L->left, true);
+      ListAddSeg(list, *left);
     }
 
     // -AJA- Partner segs.  These always maintain a one-to-one
@@ -1598,7 +1598,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Nod
   Segment *rights = nullptr;
   Intersection *cut_list = nullptr;
 
-  SeparateSegs(level, tree, part, lefts, rights, cut_list);
+  SeparateSegs(level, tree, *part, lefts, rights, cut_list);
 
   /* sanity checks... */
   if (rights == nullptr)
