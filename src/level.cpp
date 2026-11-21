@@ -287,7 +287,7 @@ static void GetLinedefs_Doom(WadIO &io, Level &level)
     // Line tags ( 900 <= x <=999 ) are considered "precious" and will, therefore, have a much higher seg split cost
     switch (l.id)
     {
-    case 900 ... 996:
+    case Tag_DoNotSplitSegStart ... Tag_DoNotSplitSegEnd:
       l.effects |= FX_DoNotSplitSeg;
       break;
     case Tag_NoReject:
@@ -297,7 +297,9 @@ static void GetLinedefs_Doom(WadIO &io, Level &level)
       l.effects |= FX_DoNotRenderFront | FX_DoNotRenderBack | FX_DoNotSplitSeg;
       break;
     case Tag_NoBlockmap:
-      l.effects |= FX_DoNotSplitSeg | FX_NoBlockmap;
+      l.effects |= FX_NoBlockmap | FX_DoNotSplitSeg;
+      break;
+    default:
       break;
     }
 
@@ -383,17 +385,13 @@ static void GetLinedefs_Hexen(WadIO &io, Level &level)
 
     if (!config.effects) continue;
 
-    switch (l.special)
+    if (l.special == BSP_SpecialEffects)
     {
-    case BSP_SpecialEffects:
       if (raw.args[0]) l.effects |= FX_NoBlockmap;
       if (raw.args[1]) l.effects |= FX_DoNotSplitSeg;
       if (raw.args[2]) l.effects |= FX_DoNotRenderBack;
       if (raw.args[3]) l.effects |= FX_DoNotRenderFront;
       if (raw.args[4]) l.effects |= FX_NoReject;
-      break;
-    default:
-      break;
     }
   }
 }
