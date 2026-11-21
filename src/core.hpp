@@ -99,31 +99,12 @@ constexpr char DIR_SEP_CH = WINDOWS ? '/' : '\\';
 constexpr auto ENDIAN_BIG = (std::endian::native == std::endian::big);
 constexpr auto ENDIAN_LITTLE = !ENDIAN_BIG;
 
-template <std::integral T>
-constexpr T byteswap(T value) noexcept
-{
-  static_assert(sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "byteswap: only 16/32/64-bit supported");
-
-  if constexpr (sizeof(T) == 2)
-  {
-    return static_cast<T>(__builtin_bswap16(static_cast<uint16_t>(value)));
-  }
-  else if constexpr (sizeof(T) == 4)
-  {
-    return static_cast<T>(__builtin_bswap32(static_cast<uint32_t>(value)));
-  }
-  else
-  {
-    return static_cast<T>(__builtin_bswap64(static_cast<uint64_t>(value)));
-  }
-}
-
 template <typename T>
 constexpr T GetLittleEndian(T value)
 {
   if constexpr (ENDIAN_BIG)
   {
-    return byteswap(value);
+    return std::byteswap(value);
   }
   else
   {
@@ -136,7 +117,7 @@ constexpr T GetBigEndian(T value)
 {
   if constexpr (ENDIAN_LITTLE)
   {
-    return byteswap(value);
+    return std::byteswap(value);
   }
   else
   {
