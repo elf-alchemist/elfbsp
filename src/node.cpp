@@ -752,10 +752,10 @@ Segment *PickNode(Quadtree &tree, int depth, double split_cost, bool fast)
   return best;
 }
 
-static void ListAddSeg(Segment **list_ptr, Segment *seg)
+static void ListAddSeg(Segment *&list_ptr, Segment *seg)
 {
-  seg->next = *list_ptr;
-  *list_ptr = seg;
+  seg->next = list_ptr;
+  list_ptr = seg;
 }
 
 //
@@ -774,7 +774,7 @@ static void ListAddSeg(Segment **list_ptr, Segment *seg)
 //       it is important that both these routines follow the exact
 //       same logic when determining which segs should go left, right
 //       or be split.
-void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment **left_list, Segment **right_list,
+void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment *&left_list, Segment *&right_list,
                   Intersection **cut_list)
 {
   /* get state of lines' relation to each other */
@@ -864,7 +864,7 @@ void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment **lef
 // remove all the segs from the list, partitioning them into the left
 // or right lists based on the given partition line.  Adds any
 // intersections into the intersection list as it goes.
-void SeparateSegs(Level &level, Quadtree &tree, Segment *part, Segment **left_list, Segment **right_list,
+void SeparateSegs(Level &level, Quadtree &tree, Segment *part, Segment *&left_list, Segment *&right_list,
                   Intersection **cut_list)
 {
   while (tree.list != nullptr)
@@ -924,7 +924,7 @@ static void FindSegListLimits(const Segment *list, MapBoundBox &bbox)
 // analyse the intersection list, and add any needed minisegs to the
 // given seg lists (one miniseg on each side).  All the intersection
 // structures will be freed back into a quick-alloc list.
-void AddMinisegs(Level &level, Intersection *cut_list, Segment *part, Segment **left_list, Segment **right_list)
+void AddMinisegs(Level &level, Intersection *cut_list, Segment *part, Segment *&left_list, Segment *&right_list)
 {
   Intersection *cut, *next;
 
@@ -1152,7 +1152,7 @@ static void AddSeg(Quadtree &quadtree, Segment *seg)
 
   // link into this node
 
-  ListAddSeg(&quadtree.list, seg);
+  ListAddSeg(quadtree.list, seg);
 
   seg->quad = &quadtree;
 }
@@ -1168,7 +1168,7 @@ static void AddList(Quadtree &quadtree, Segment *new_list)
   }
 }
 
-static void ConvertToList(Quadtree &quadtree, Segment **_list)
+static void ConvertToList(Quadtree &quadtree, Segment *&_list)
 {
   while (quadtree.list != nullptr)
   {
@@ -1310,7 +1310,7 @@ Segment *CreateSegs(Level &level)
     else if (L->right != nullptr && HAS_NONE(L->effects, FX_DoNotRenderFront))
     {
       right = CreateOneSeg(level, *L, L->start, L->end, *L->right, false);
-      ListAddSeg(&list, right);
+      ListAddSeg(list, right);
     }
 
     if (L->left == nullptr && HAS_BIT(L->effects, FX_TwoSided))
@@ -1321,7 +1321,7 @@ Segment *CreateSegs(Level &level)
     else if (L->left != nullptr && HAS_NONE(L->effects, FX_DoNotRenderBack))
     {
       left = CreateOneSeg(level, *L, L->end, L->start, *L->left, true);
-      ListAddSeg(&list, left);
+      ListAddSeg(list, left);
     }
 
     // -AJA- Partner segs.  These always maintain a one-to-one
@@ -1539,7 +1539,7 @@ Subsector *CreateSubsec(Level &level, Quadtree &tree)
 
   // copy segs into subsector
   sub.seg_list = nullptr;
-  ConvertToList(tree, &sub.seg_list);
+  ConvertToList(tree, sub.seg_list);
   DetermineMiddle(sub);
 
   if (HAS_BIT(config.debug, DEBUG_SUBSEC))
@@ -1600,7 +1600,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Nod
   Segment *rights = nullptr;
   Intersection *cut_list = nullptr;
 
-  SeparateSegs(level, tree, part, &lefts, &rights, &cut_list);
+  SeparateSegs(level, tree, part, lefts, rights, &cut_list);
 
   /* sanity checks... */
   if (rights == nullptr)
@@ -1615,7 +1615,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Nod
 
   if (cut_list != nullptr)
   {
-    AddMinisegs(level, cut_list, part, &lefts, &rights);
+    AddMinisegs(level, cut_list, part, lefts, rights);
   }
 
   SetPartition(node, *part);
