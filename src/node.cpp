@@ -228,7 +228,7 @@ inline void ComputeIntersection(const Segment *seg, const Segment *part, double 
   }
 }
 
-void AddIntersection(Level &level, Intersection **cut_list, Vertex *vert, const Segment *part, bool self_ref)
+void AddIntersection(Level &level, Intersection *&cut_list, Vertex *vert, const Segment *part, bool self_ref)
 {
   const bool open_before = CheckOpen(vert, -part->pdx, -part->pdy);
   const bool open_after = CheckOpen(vert, part->pdx, part->pdy);
@@ -239,7 +239,7 @@ void AddIntersection(Level &level, Intersection **cut_list, Vertex *vert, const 
   Intersection *after;
 
   /* merge with any existing vertex? */
-  for (cut = (*cut_list); cut; cut = cut->next)
+  for (cut = cut_list; cut; cut = cut->next)
   {
     if (Overlaps(vert, cut->vertex))
     {
@@ -258,7 +258,7 @@ void AddIntersection(Level &level, Intersection **cut_list, Vertex *vert, const 
 
   /* insert the new intersection into the list */
 
-  for (after = (*cut_list); after && after->next; after = after->next)
+  for (after = cut_list; after && after->next; after = after->next)
   {
   }
 
@@ -268,7 +268,7 @@ void AddIntersection(Level &level, Intersection **cut_list, Vertex *vert, const 
   }
 
   /* link it in */
-  cut->next = after ? after->next : (*cut_list);
+  cut->next = after ? after->next : cut_list;
   cut->prev = after;
 
   if (after)
@@ -282,12 +282,12 @@ void AddIntersection(Level &level, Intersection **cut_list, Vertex *vert, const 
   }
   else
   {
-    if (*cut_list)
+    if (cut_list)
     {
-      (*cut_list)->prev = cut;
+      cut_list->prev = cut;
     }
 
-    (*cut_list) = cut;
+    cut_list = cut;
   }
 }
 
@@ -775,7 +775,7 @@ static void ListAddSeg(Segment *&list_ptr, Segment *seg)
 //       same logic when determining which segs should go left, right
 //       or be split.
 void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment *&left_list, Segment *&right_list,
-                  Intersection **cut_list)
+                  Intersection *&cut_list)
 {
   /* get state of lines' relation to each other */
   double a = part->PerpDist(seg->psx, seg->psy);
@@ -865,7 +865,7 @@ void DivideOneSeg(Level &level, Segment *seg, const Segment *part, Segment *&lef
 // or right lists based on the given partition line.  Adds any
 // intersections into the intersection list as it goes.
 void SeparateSegs(Level &level, Quadtree &tree, Segment *part, Segment *&left_list, Segment *&right_list,
-                  Intersection **cut_list)
+                  Intersection *&cut_list)
 {
   while (tree.list != nullptr)
   {
@@ -926,15 +926,13 @@ static void FindSegListLimits(const Segment *list, MapBoundBox &bbox)
 // structures will be freed back into a quick-alloc list.
 void AddMinisegs(Level &level, Intersection *cut_list, Segment *part, Segment *&left_list, Segment *&right_list)
 {
-  Intersection *cut, *next;
-
   if (HAS_BIT(config.debug, DEBUG_CUTLIST))
   {
     PrintLine(Log::DEBUG, "[{}] CUT LIST:", __func__);
     PrintLine(Log::DEBUG, "[{}] PARTITION: ({:1.1f},{:1.1f}) += ({:1.1f},{:1.1f})", __func__, part->psx, part->psy, part->pdx,
               part->pdy);
 
-    for (cut = cut_list; cut; cut = cut->next)
+    for (Intersection *cut = cut_list; cut; cut = cut->next)
     {
       PrintLine(Log::DEBUG, "[{}] Vertex {} ({:1.1f},{:1.1f})  Along {:1.2f}  [{}/{}]  {}", __func__, cut->vertex->index,
                 cut->vertex->x, cut->vertex->y, cut->along_dist, cut->open_before ? 1 : 0, cut->open_after ? 1 : 0,
@@ -944,9 +942,9 @@ void AddMinisegs(Level &level, Intersection *cut_list, Segment *part, Segment *&
 
   // find open gaps in the intersection list, convert to minisegs
 
-  for (cut = cut_list; cut && cut->next; cut = cut->next)
+  for (Intersection *cut = cut_list; cut && cut->next; cut = cut->next)
   {
-    next = cut->next;
+    Intersection *next = cut->next;
 
     // sanity check
     const double len = next->along_dist - cut->along_dist;
@@ -1600,7 +1598,7 @@ void BuildNodes(Level &level, Segment *list, int depth, MapBoundBox &bounds, Nod
   Segment *rights = nullptr;
   Intersection *cut_list = nullptr;
 
-  SeparateSegs(level, tree, part, lefts, rights, &cut_list);
+  SeparateSegs(level, tree, part, lefts, rights, cut_list);
 
   /* sanity checks... */
   if (rights == nullptr)
