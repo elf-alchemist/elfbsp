@@ -40,7 +40,7 @@ constexpr uint32_t NF_SUBSECTOR = BIT(31);
 void SortSegs(Level &level)
 {
   // sort segs into ascending index
-  const auto PredicateCompare_SegmentIndex = [](const Segment *Segment1, const Segment *Segment2) -> auto
+  const auto PredicateCompare_SegmentIndex = [](const auto &Segment1, const auto &Segment2) -> auto
   { return Segment1->index < Segment2->index; };
 
   std::ranges::sort(level.segs, PredicateCompare_SegmentIndex);
@@ -48,46 +48,45 @@ void SortSegs(Level &level)
   // remove unwanted segs
   while (!level.segs.empty() && level.segs.back()->index == SEG_IS_GARBAGE)
   {
-    UtilFree(level.segs.back());
     level.segs.pop_back();
   }
 }
 
-static inline int16_t VanillaSegDist(const Segment *seg)
+static inline int16_t VanillaSegDist(const Segment &seg)
 {
-  const double lx = seg->side ? seg->linedef->end->x : seg->linedef->start->x;
-  const double ly = seg->side ? seg->linedef->end->y : seg->linedef->start->y;
+  const double lx = seg.side ? seg.linedef->end->x : seg.linedef->start->x;
+  const double ly = seg.side ? seg.linedef->end->y : seg.linedef->start->y;
 
   // use the "true" starting coord (as stored in the wad)
-  const double sx = round(seg->start->x);
-  const double sy = round(seg->start->y);
+  const double sx = round(seg.start->x);
+  const double sy = round(seg.start->y);
 
   return FloatToShort(floor(hypot(sx - lx, sy - ly) + 0.5));
 }
 
-static inline short_angle_t VanillaSegAngle(const Segment *seg)
+static inline short_angle_t VanillaSegAngle(const Segment &seg)
 {
   // compute the "true" delta
-  const double dx = round(seg->end->x) - round(seg->start->x);
-  const double dy = round(seg->end->y) - round(seg->start->y);
+  const double dx = round(seg.end->x) - round(seg.start->x);
+  const double dy = round(seg.end->y) - round(seg.start->y);
 
   short_angle_t result = 0;
 
-  switch (seg->linedef->angle)
+  switch (seg.linedef->angle)
   {
   case FX_RotateRelativeDegrees:
     result = ComputeAngle_BAM(dx, dy);
-    result += DegreesToShortBAM(seg->linedef->id);
+    result += DegreesToShortBAM(seg.linedef->id);
     break;
   case FX_RotateAbsoluteDegrees:
-    result = DegreesToShortBAM(seg->linedef->id);
+    result = DegreesToShortBAM(seg.linedef->id);
     break;
   case FX_RotateRelativeBAM:
     result = ComputeAngle_BAM(dx, dy);
-    result += static_cast<short_angle_t>(seg->linedef->id);
+    result += static_cast<short_angle_t>(seg.linedef->id);
     break;
   case FX_RotateAbsoluteBAM:
-    result = static_cast<short_angle_t>(seg->linedef->id);
+    result = static_cast<short_angle_t>(seg.linedef->id);
     break;
   case FX_DoNotRotate:
     result = ComputeAngle_BAM(dx, dy);
@@ -104,19 +103,19 @@ void PutVertices(WadIO &io, Level &level, bool fractional, bool include_new_vert
 
   for (size_t i = 0; i < vert_count; i++)
   {
-    const Vertex *vert = level.vertices[i];
+    const Vertex &vert = *level.vertices[i];
     if (fractional)
     {
       MapVertexFractional raw;
-      raw.x = GetLittleEndian(FloatToFixed(vert->x));
-      raw.y = GetLittleEndian(FloatToFixed(vert->y));
+      raw.x = GetLittleEndian(FloatToFixed(vert.x));
+      raw.y = GetLittleEndian(FloatToFixed(vert.y));
       io.AddToLump(&raw, sizeof(raw));
     }
     else
     {
       MapVertexIntegral raw;
-      raw.x = GetLittleEndian(FloatToShort(floor(vert->x)));
-      raw.y = GetLittleEndian(FloatToShort(floor(vert->y)));
+      raw.x = GetLittleEndian(FloatToShort(floor(vert.x)));
+      raw.y = GetLittleEndian(FloatToShort(floor(vert.y)));
       io.AddToLump(&raw, sizeof(raw));
     }
   }
@@ -130,16 +129,16 @@ void PutSegs_DoomBSP(WadIO &io, const Level &level)
 {
   io.StartWritingLump("SEGS");
 
-  for (auto seg : level.segs)
+  for (auto &seg : level.segs)
   {
     MapSegmentDoomBSP raw;
 
     raw.start = GetLittleEndian(IndexToShort(seg->start->index));
     raw.end = GetLittleEndian(IndexToShort(seg->end->index));
-    raw.angle = GetLittleEndian(VanillaSegAngle(seg));
+    raw.angle = GetLittleEndian(VanillaSegAngle(*seg));
     raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
     raw.flip = GetLittleEndian(seg->side);
-    raw.dist = GetLittleEndian(VanillaSegDist(seg));
+    raw.dist = GetLittleEndian(VanillaSegDist(*seg));
 
     io.AddToLump(&raw, sizeof(raw));
 
@@ -157,7 +156,7 @@ void PutSubsecs_DoomBSP(WadIO &io, const Level &level)
 {
   io.StartWritingLump("SSECTORS");
 
-  for (auto sub : level.subsecs)
+  for (auto &sub : level.subsecs)
   {
     MapSubsectorDoomBSP raw;
 
@@ -261,7 +260,7 @@ void PutLeafs_DoomBSP(WadIO &io, const Level &level)
   io.StartWritingLump("LEAFS");
   uint16_t actual_seg_index = 0;
 
-  for (auto subsec : level.subsecs)
+  for (auto &subsec : level.subsecs)
   {
     const Segment *seg = subsec->seg_list;
     uint16_t seg_count = IndexToShort(subsec->seg_count);
@@ -311,16 +310,16 @@ void PutSegs_DeePBSPV4(WadIO &io, const Level &level)
 {
   io.StartWritingLump("SEGS");
 
-  for (auto seg : level.segs)
+  for (auto &seg : level.segs)
   {
     MapSegmentDeePBSPV4 raw;
 
     raw.start = GetLittleEndian(IndexToUInt(seg->start->index));
     raw.end = GetLittleEndian(IndexToUInt(seg->end->index));
-    raw.angle = GetLittleEndian(VanillaSegAngle(seg));
+    raw.angle = GetLittleEndian(VanillaSegAngle(*seg));
     raw.linedef = GetLittleEndian(IndexToShort(seg->linedef->index));
     raw.flip = GetLittleEndian(seg->side);
-    raw.dist = GetLittleEndian(VanillaSegDist(seg));
+    raw.dist = GetLittleEndian(VanillaSegDist(*seg));
 
     io.AddToLump(&raw, sizeof(raw));
 
@@ -338,7 +337,7 @@ void PutSubsecs_DeePBSPV4(WadIO &io, const Level &level)
 {
   io.StartWritingLump("SSECTORS");
 
-  for (auto sub : level.subsecs)
+  for (auto &sub : level.subsecs)
   {
     MapSubsectorDeePBSPV4 raw;
 
@@ -443,7 +442,7 @@ void PutLeafs_DeePBSPV4(WadIO &io, const Level &level)
   io.StartWritingLump("LEAFS");
   uint32_t actual_seg_index = 0;
 
-  for (auto subsec : level.subsecs)
+  for (auto &subsec : level.subsecs)
   {
     const Segment *seg = subsec->seg_list;
     uint32_t seg_count = IndexToUInt(subsec->seg_count);
@@ -498,7 +497,7 @@ static void PutVertices_XNOD(WadIO &io, Level &level)
   io.AddToLumpZ(&newverts, sizeof(newverts));
 
   size_t count = 0;
-  for (auto vert : level.vertices)
+  for (auto &vert : level.vertices)
   {
     MapVertexXNOD raw;
 
@@ -527,7 +526,7 @@ static void PutSubsecs_XNOD(WadIO &io, const Level &level)
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
   size_t cur_seg_index = 0;
-  for (auto sub : level.subsecs)
+  for (auto &sub : level.subsecs)
   {
     MapSubsectorXNOD raw;
     raw.segnum = GetLittleEndian(IndexToUInt(sub->seg_count));
@@ -562,7 +561,7 @@ static void PutSegs_XNOD(WadIO &io, const Level &level)
   uint32_t raw_num = GetLittleEndian(IndexToUInt(level.segs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
-  for (auto seg : level.segs)
+  for (auto &seg : level.segs)
   {
     MapSegmentXNOD raw;
 
@@ -670,7 +669,7 @@ static void PutSegs_XGLN(WadIO &io, const Level &level)
   uint32_t raw_num = GetLittleEndian(IndexToUInt(level.segs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
-  for (auto seg : level.segs)
+  for (auto &seg : level.segs)
   {
     MapSegmentXGLN raw;
 
@@ -695,7 +694,7 @@ static void PutSegs_XGL2(WadIO &io, const Level &level)
   uint32_t raw_num = GetLittleEndian(IndexToUInt(level.segs.size()));
   io.AddToLumpZ(&raw_num, sizeof(raw_num));
 
-  for (auto seg : level.segs)
+  for (auto &seg : level.segs)
   {
     MapSegmentXGL2 raw;
 
