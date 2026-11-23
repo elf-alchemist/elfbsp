@@ -88,62 +88,62 @@ Sidedef *Level::SafeLookupSidedef(int32_t num) const
 
 Vertex *Level::NewVertex()
 {
-  auto *V = this->vertices.emplace_back().get();
+  auto *V = this->vertices.emplace_back(std::make_unique<Vertex>()).get();
   V->index = this->vertices.size() - 1;
   return V;
 }
 
 Linedef *Level::NewLinedef()
 {
-  auto *L = this->linedefs.emplace_back().get();
+  auto *L = this->linedefs.emplace_back(std::make_unique<Linedef>()).get();
   L->index = this->linedefs.size() - 1;
   return L;
 }
 
 Sidedef *Level::NewSidedef()
 {
-  auto *S = this->sidedefs.emplace_back().get();
+  auto *S = this->sidedefs.emplace_back(std::make_unique<Sidedef>()).get();
   S->index = this->sidedefs.size() - 1;
   return S;
 }
 
 Sector *Level::NewSector()
 {
-  auto *S = this->sectors.emplace_back().get();
+  auto *S = this->sectors.emplace_back(std::make_unique<Sector>()).get();
   S->index = this->sectors.size() - 1;
   return S;
 }
 
 Mobj *Level::NewThing()
 {
-  auto *T = this->things.emplace_back().get();
+  auto *T = this->things.emplace_back(std::make_unique<Mobj>()).get();
   T->index = this->things.size() - 1;
   return T;
 }
 
 Segment *Level::NewSeg()
 {
-  return this->segs.emplace_back().get();
+  return this->segs.emplace_back(std::make_unique<Segment>()).get();
 }
 
 Subsector *Level::NewSubsec()
 {
-  return this->subsecs.emplace_back().get();
+  return this->subsecs.emplace_back(std::make_unique<Subsector>()).get();
 }
 
 Node *Level::NewNode()
 {
-  return this->nodes.emplace_back().get();
+  return this->nodes.emplace_back(std::make_unique<Node>()).get();
 }
 
 WallTip *Level::NewWallTip()
 {
-  return this->walltips.emplace_back().get();
+  return this->walltips.emplace_back(std::make_unique<WallTip>()).get();
 }
 
 Intersection *Level::NewIntersection()
 {
-  return this->intercuts.emplace_back().get();
+  return this->intercuts.emplace_back(std::make_unique<Intersection>()).get();
 }
 
 /* ----- free routines ---------------------------- */
