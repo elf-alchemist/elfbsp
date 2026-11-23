@@ -492,7 +492,7 @@ struct Level
 
   void SetLumps(WadIO &io, size_t label_index);
 
-  [[nodiscard]] Vertex *SafeLookupVertex(size_t num, size_t num_line) const;
+  [[nodiscard]] Vertex &SafeLookupVertex(size_t num, size_t num_line) const;
   [[nodiscard]] Sector *SafeLookupSector(size_t num, size_t num_side) const;
   [[nodiscard]] Sidedef *SafeLookupSidedef(int32_t num) const;
 

@@ -47,13 +47,13 @@ void Level::SetLumps(WadIO &io, size_t label_index)
   this->lumps.scripts = io.LevelLookupLump(this->lumps.label, "SCRIPTS");
 }
 
-Vertex *Level::SafeLookupVertex(size_t num, size_t num_line) const
+Vertex &Level::SafeLookupVertex(size_t num, size_t num_line) const
 {
   if (num >= vertices.size())
   {
     throw RuntimeException("Illegal map-vertex number {}, on line {}, maximum is {}", num, num_line, vertices.size());
   }
-  return vertices[num].get();
+  return *vertices[num];
 }
 
 Sector *Level::SafeLookupSector(size_t num, size_t num_side) const

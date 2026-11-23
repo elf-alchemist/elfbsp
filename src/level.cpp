@@ -265,8 +265,8 @@ static void GetLinedefs_Doom(WadIO &io, Level &level)
   {
     auto &l = level.NewLinedef();
 
-    l.start = level.SafeLookupVertex(GetLittleEndian(raw.start), l.index);
-    l.end = level.SafeLookupVertex(GetLittleEndian(raw.end), l.index);
+    l.start = &level.SafeLookupVertex(GetLittleEndian(raw.start), l.index);
+    l.end = &level.SafeLookupVertex(GetLittleEndian(raw.end), l.index);
     l.right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
     l.left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
     l.special = GetLittleEndian(raw.special);
@@ -367,8 +367,8 @@ static void GetLinedefs_Hexen(WadIO &io, Level &level)
   {
     auto &l = level.NewLinedef();
 
-    l.start = level.SafeLookupVertex(GetLittleEndian(raw.start), l.index);
-    l.end = level.SafeLookupVertex(GetLittleEndian(raw.end), l.index);
+    l.start = &level.SafeLookupVertex(GetLittleEndian(raw.start), l.index);
+    l.end = &level.SafeLookupVertex(GetLittleEndian(raw.end), l.index);
     l.special = raw.special;
     l.right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
     l.left = level.SafeLookupSidedef(GetLittleEndian(raw.left));
@@ -451,8 +451,8 @@ static void GetLinedefs_Doom64(WadIO &io, Level &level)
   {
     auto &l = level.NewLinedef();
 
-    l.start = level.SafeLookupVertex(GetLittleEndian(raw.start), l.index);
-    l.end = level.SafeLookupVertex(GetLittleEndian(raw.end), l.index);
+    l.start = &level.SafeLookupVertex(GetLittleEndian(raw.start), l.index);
+    l.end = &level.SafeLookupVertex(GetLittleEndian(raw.end), l.index);
     l.special = GetLittleEndian(raw.special);
     l.id = GetLittleEndian(raw.tag);
     l.right = level.SafeLookupSidedef(GetLittleEndian(raw.right));
@@ -574,8 +574,8 @@ static void GetLinedefs_UDMF(Level &level)
   for (const auto &u_linedef : level.udmf_linedef)
   {
     auto &l = level.NewLinedef();
-    l.start = level.SafeLookupVertex(u_linedef.v1_id, l.index);
-    l.end = level.SafeLookupVertex(u_linedef.v2_id, l.index);
+    l.start = &level.SafeLookupVertex(u_linedef.v1_id, l.index);
+    l.end = &level.SafeLookupVertex(u_linedef.v2_id, l.index);
     l.right = level.SafeLookupSidedef(u_linedef.sidefront);
     l.left = level.SafeLookupSidedef(u_linedef.sideback);
     l.special = u_linedef.special;
