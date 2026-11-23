@@ -36,7 +36,8 @@
 template <typename T>
 std::vector<T *> UqPtrVecToRawPtrVec(const std::vector<std::unique_ptr<T>> &vec)
 {
-  std::vector<T *> ret(vec.size());
+  std::vector<T *> ret;
+  ret.reserve(vec.size());
   for (auto &elem : vec)
   {
     ret.push_back(elem.get());
@@ -130,7 +131,7 @@ void PruneVerticesAtEnd(Level &level)
 
   // scan all vertices.
   // only remove from the end, so stop when hit a used one.
-  while (!level.vertices.empty() && level.vertices.back()->is_used)
+  while (!level.vertices.empty() && !level.vertices.back()->is_used)
   {
     level.vertices.pop_back();
   }
