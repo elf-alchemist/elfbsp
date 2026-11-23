@@ -65,19 +65,19 @@ static bool FileExists(std::string_view filename)
   return std::filesystem::exists(filename);
 }
 
-static bool CheckMapInRange(const map_range_t *range, std::string_view name)
+static bool CheckMapInRange(const map_range_t &range, std::string_view name)
 {
-  if (name.size() != range->low.size())
+  if (name.size() != range.low.size())
   {
     return false;
   }
 
-  if (name < range->low)
+  if (name < range.low)
   {
     return false;
   }
 
-  if (name > range->high)
+  if (name > range.high)
   {
     return false;
   }
@@ -95,7 +95,7 @@ static bool CheckMapInMapList(std::string_view name)
 
   for (const auto &map : map_list)
   {
-    if (CheckMapInRange(&map, name))
+    if (CheckMapInRange(map, name))
     {
       return true;
     }
