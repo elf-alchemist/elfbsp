@@ -76,7 +76,7 @@ static void Reject_Free(Level &level)
 // merge the two sector groups into one.  That's it !
 //
 
-static void Reject_GroupSectors(Level &level)
+static void Reject_GroupSectors(const Level &level)
 {
   for (auto line : level.linedefs)
   {
@@ -88,7 +88,6 @@ static void Reject_GroupSectors(Level &level)
 
     Sector *sec1 = line->right->sector;
     Sector *sec2 = line->left->sector;
-    Sector *tmp;
 
     if (!sec1                                         // invalid
         || !sec2                                      // invalid
@@ -109,15 +108,14 @@ static void Reject_GroupSectors(Level &level)
     // thereby minimising the updates to 'rej_group' fields when merging.
     if (sec1->rej_group > sec2->rej_group)
     {
-      tmp = sec1;
-      sec1 = sec2;
-      sec2 = tmp;
+      using std::swap;
+      swap(sec1, sec2);
     }
 
     // update the group numbers in the second group
     sec2->rej_group = sec1->rej_group;
 
-    for (tmp = sec2->rej_next; tmp != sec2; tmp = tmp->rej_next)
+    for (Sector *tmp = sec2->rej_next; tmp != sec2; tmp = tmp->rej_next)
     {
       tmp->rej_group = sec1->rej_group;
     }
@@ -126,9 +124,8 @@ static void Reject_GroupSectors(Level &level)
     sec1->rej_next->rej_prev = sec2;
     sec2->rej_next->rej_prev = sec1;
 
-    tmp = sec1->rej_next;
-    sec1->rej_next = sec2->rej_next;
-    sec2->rej_next = tmp;
+    using std::swap;
+    swap(sec1->rej_next, sec2->rej_next);
   }
 }
 
@@ -188,9 +185,9 @@ static void SortUnique(std::vector<SightPoint> &points)
 {
   std::ranges::sort(points, [](const SightPoint &a, const SightPoint &b) { return a.x < b.x || (a.x == b.x && a.y < b.y); });
 
-  points.erase(std::unique(points.begin(), points.end(),
-                           [](const SightPoint &a, const SightPoint &b) { return a.x == b.x && a.y == b.y; }),
-               points.end());
+  points.erase(
+      std::ranges::unique(points, [](const SightPoint &a, const SightPoint &b) { return a.x == b.x && a.y == b.y; }).begin(),
+      points.end());
 }
 
 // Number of parts each open line is cut into. A split of N gives N - 1 points per open line,
@@ -224,12 +221,12 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment> &lines, in
   for (const auto &line : lines)
   {
     // Log absolute raw corner coordinates.
-    points.verts.push_back({line.x1, line.y1});
-    points.verts.push_back({line.x2, line.y2});
-    points.firstVerts.push_back({line.x1, line.y1});
+    points.verts.push_back({.x = line.x1, .y = line.y1});
+    points.verts.push_back({.x = line.x2, .y = line.y2});
+    points.firstVerts.push_back({.x = line.x1, .y = line.y1});
 
     // Do structural midpoints once
-    const SightPoint mid = {(line.x1 + line.x2) * 0.5, (line.y1 + line.y2) * 0.5};
+    const SightPoint mid = {.x = (line.x1 + line.x2) * 0.5, .y = (line.y1 + line.y2) * 0.5};
     points.allMids.push_back(mid);
 
     // Non-solid structural lines can be open portals or windows.
@@ -241,7 +238,7 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment> &lines, in
       for (int32_t k = 1; k < split; ++k)
       {
         const double t = static_cast<double>(k) / static_cast<double>(split);
-        points.openSplit.push_back({line.x1 + (line.x2 - line.x1) * t, line.y1 + (line.y2 - line.y1) * t});
+        points.openSplit.push_back({.x = line.x1 + (line.x2 - line.x1) * t, .y = line.y1 + (line.y2 - line.y1) * t});
       }
     }
   }
@@ -268,7 +265,7 @@ static SectorPoints BuildSectorPoints(const std::vector<SightSegment> &lines, in
     cx /= static_cast<double>(points.verts.size());
     cy /= static_cast<double>(points.verts.size());
 
-    auto byAngle = [cx, cy](const SightPoint &a, const SightPoint &b)
+    const auto byAngle = [cx, cy](const SightPoint &a, const SightPoint &b)
     { return std::atan2(a.y - cy, a.x - cx) < std::atan2(b.y - cy, b.x - cx); };
 
     std::ranges::sort(points.verts, byAngle);
@@ -378,7 +375,7 @@ static BlockerGrid BuildBlockerGrid(const std::vector<SightSegment> &blockers, d
   grid.cellStart.assign(cols * rows + 1, 0);
 
   // Calls (cellIndex) for every cell the blocker's padded bbox covers.
-  auto forEachCell = [&](const SightSegment &s, auto &&fn)
+  const auto forEachCell = [&](const SightSegment &s, auto &&fn)
   {
     const size_t x0 = GetCellIndex(s.minX - padding, originX, cols - 1, cellSize);
     const size_t x1 = GetCellIndex(s.maxX + padding, originX, cols - 1, cellSize);
@@ -445,10 +442,10 @@ static constexpr double SHADOW_MARGIN = SIDE_MARGIN * 2.0;
 // 2D intersection check between two line segments.
 inline bool TrueSegmentsIntersect(const SightSegment &s1, const SightSegment &s2)
 {
-  double d1 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1);
-  double d2 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x2, s1.y2);
-  double d3 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x1, s2.y1);
-  double d4 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x2, s2.y2);
+  const double d1 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1);
+  const double d2 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x2, s1.y2);
+  const double d3 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x1, s2.y1);
+  const double d4 = SegmentSide(s1.x1, s1.y1, s1.x2, s1.y2, s2.x2, s2.y2);
 
   if (((d1 > SIDE_MARGIN && d2 < -SIDE_MARGIN) || (d1 < -SIDE_MARGIN && d2 > SIDE_MARGIN))
       && ((d3 > SIDE_MARGIN && d4 < -SIDE_MARGIN) || (d3 < -SIDE_MARGIN && d4 > SIDE_MARGIN)))
@@ -509,7 +506,7 @@ static bool IsRayBlocked(const SightSegment &ray, const std::vector<SightSegment
 
   // The same checks apply to every candidate blocker, whether it comes from
   // the recent-blocker ring or from the grid walk below.
-  auto blocks = [&ray](const SightSegment &blocker) -> bool { return SolidBlocksRay(ray, blocker); };
+  const auto blocks = [&ray](const SightSegment &blocker) -> bool { return SolidBlocksRay(ray, blocker); };
 
   // Try the walls that stopped the previous rays first. This is only a reordering of
   // the same tests, so a ray is blocked here only if the full walk would also block it.
@@ -527,7 +524,7 @@ static bool IsRayBlocked(const SightSegment &ray, const std::vector<SightSegment
   const double fx = (ray.x1 - grid.originX) * inv;
   const double fy = (ray.y1 - grid.originY) * inv;
 
-  auto clampCell = [](double v, ptrdiff_t limit) -> ptrdiff_t
+  const auto clampCell = [](double v, ptrdiff_t limit) -> ptrdiff_t
   { return static_cast<ptrdiff_t>(std::clamp(std::floor(v), 0.0, static_cast<double>(limit))); };
 
   // Cell holding the ray start, and cell holding the ray end.
@@ -551,13 +548,13 @@ static bool IsRayBlocked(const SightSegment &ray, const std::vector<SightSegment
 
   if (stepX != 0)
   {
-    const double border = static_cast<double>(stepX > 0 ? cx + 1 : cx);
+    const auto border = static_cast<double>(stepX > 0 ? cx + 1 : cx);
     tMaxX = (border - fx) * grid.cellSize / dx;
     tDeltaX = grid.cellSize / std::abs(dx);
   }
   if (stepY != 0)
   {
-    const double border = static_cast<double>(stepY > 0 ? cy + 1 : cy);
+    const auto border = static_cast<double>(stepY > 0 ? cy + 1 : cy);
     tMaxY = (border - fy) * grid.cellSize / dy;
     tDeltaY = grid.cellSize / std::abs(dy);
   }
@@ -571,7 +568,7 @@ static bool IsRayBlocked(const SightSegment &ray, const std::vector<SightSegment
   {
     ++scratch.cellSteps; // Analysis Counter
 
-    const size_t cell = static_cast<size_t>(cy * grid.cols + cx);
+    const auto cell = static_cast<size_t>(cy * grid.cols + cx);
 
     for (uint32_t k = grid.cellStart[cell]; k < grid.cellStart[cell + 1]; ++k)
     {
@@ -710,7 +707,7 @@ static bool DoVisibilityTest(const SectorPoints &A, const SectorPoints &B, const
   uint32_t shadowWall = NO_INDEX_INT32;
   int32_t shadowSide = 0;
 
-  auto shadowed = [&](const SightPoint &from) -> bool
+  const auto shadowed = [&](const SightPoint &from) -> bool
   {
     if (scratch.ringCount == 0) return false;
 
@@ -723,7 +720,7 @@ static bool DoVisibilityTest(const SectorPoints &A, const SectorPoints &B, const
     return WallShadowsBox(blockers[id], shadowSide, from.x, from.y, boxB);
   };
 
-  auto clear = [&](const SightPoint &from, const SightPoint &to) -> bool
+  const auto clear = [&](const SightPoint &from, const SightPoint &to) -> bool
   {
     ++scratch.rayCasts; // Analysis Counter
 
@@ -824,7 +821,7 @@ static bool DoVisibilityTest(const SectorPoints &A, const SectorPoints &B, const
 }
 
 // Mark a sector pair as blind in both directions.
-static inline void SetPairBits(Level &level, size_t view, size_t target, size_t num_secs)
+static inline void SetPairBits(const Level &level, size_t view, size_t target, size_t num_secs)
 {
   const size_t p1 = view * num_secs + target;
   const size_t p2 = target * num_secs + view;
@@ -833,12 +830,12 @@ static inline void SetPairBits(Level &level, size_t view, size_t target, size_t 
 }
 
 // Mark a sector pair as blind in both directions using thread-safe atomic guards.
-static inline void SetPairBitsAtomic(Level &level, size_t view, size_t target, size_t num_secs)
+static inline void SetPairBitsAtomic(const Level &level, size_t view, size_t target, size_t num_secs)
 {
   const size_t p1 = view * num_secs + target;
   const size_t p2 = target * num_secs + view;
-  const uint8_t bit1 = static_cast<uint8_t>(1u << (p1 & 7));
-  const uint8_t bit2 = static_cast<uint8_t>(1u << (p2 & 7));
+  const auto bit1 = static_cast<uint8_t>(1_uz << (p1 & 7_uz));
+  const auto bit2 = static_cast<uint8_t>(1_uz << (p2 & 7_uz));
 
   // Several threads can touch the same byte, so each bit is set with an atomic OR.
   std::atomic_ref<uint8_t>(level.reject_matrix[p1 >> 3]).fetch_or(bit1, std::memory_order_relaxed);
@@ -848,7 +845,7 @@ static inline void SetPairBitsAtomic(Level &level, size_t view, size_t target, s
 // Restore process priority back to default.
 static inline void RestorePriority()
 {
-#if defined(_WIN32)
+#ifdef _WIN32
   SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
 #else
   setpriority(PRIO_PROCESS, 0, 0);
@@ -970,7 +967,7 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>> &neighbo
       // form one block, joined to the rest of the map only through 'above'.
       if (lowest[current] >= order[above])
       {
-        const uint32_t block = static_cast<uint32_t>(cuts.cutParent.size());
+        const auto block = static_cast<uint32_t>(cuts.cutParent.size());
         cuts.cutParent.push_back(above);
         blockCount[above]++;
 
@@ -1009,7 +1006,7 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>> &neighbo
     if (cuts.cutDepth[node] != NO_INDEX_INT32) continue;
 
     chain.clear();
-    uint32_t ancestor = static_cast<uint32_t>(node);
+    auto ancestor = static_cast<uint32_t>(node);
     while (ancestor != NO_INDEX_INT32 && cuts.cutDepth[ancestor] == NO_INDEX_INT32)
     {
       chain.push_back(ancestor);
@@ -1034,7 +1031,7 @@ BuildCutLevels(const CutPoints &cuts, const std::vector<std::vector<uint32_t>> &
                const std::vector<size_t> &activeSectors)
 {
   std::vector<uint8_t> isActive(num_secs, 0);
-  for (size_t cutSector : activeSectors)
+  for (const size_t cutSector : activeSectors)
   {
     isActive[cutSector] = 1;
   }
@@ -1043,7 +1040,7 @@ BuildCutLevels(const CutPoints &cuts, const std::vector<std::vector<uint32_t>> &
   std::vector<int32_t> dist(num_secs);
   std::vector<uint32_t> queue;
 
-  for (size_t cutSector : cuts.cutList)
+  for (const size_t cutSector : cuts.cutList)
   {
     if (!isActive[cutSector]) continue;
 
@@ -1052,7 +1049,7 @@ BuildCutLevels(const CutPoints &cuts, const std::vector<std::vector<uint32_t>> &
     queue.assign(1, static_cast<uint32_t>(cutSector));
     for (size_t head = 0; head < queue.size(); ++head)
     {
-      for (uint32_t v : neighbors[queue[head]])
+      for (const uint32_t v : neighbors[queue[head]])
       {
         if (dist[v] < 0)
         {
@@ -1062,15 +1059,15 @@ BuildCutLevels(const CutPoints &cuts, const std::vector<std::vector<uint32_t>> &
       }
     }
 
-    for (uint32_t other : queue)
+    for (const uint32_t other : queue)
     {
       if (other == cutSector || !isActive[other]) continue;
       if (cuts.isCut[other] && other < cutSector) continue; // A pair of two cut points is only listed once
 
-      const size_t distance = static_cast<size_t>(dist[other]);
+      const auto distance = static_cast<size_t>(dist[other]);
       if (levels.size() <= distance) levels.resize(distance + 1);
-      levels[distance].push_back({static_cast<uint32_t>(std::max<size_t>(other, cutSector)),
-                                  static_cast<uint32_t>(std::min<size_t>(other, cutSector))});
+      levels[distance].emplace_back(static_cast<uint32_t>(std::max<size_t>(other, cutSector)),
+                                    static_cast<uint32_t>(std::min<size_t>(other, cutSector)));
     }
   }
 
@@ -1120,13 +1117,13 @@ static CountSummary SummarizeCounts(std::vector<uint64_t> values)
   summary.max = values.back();
 
   uint64_t sum = 0;
-  for (uint64_t v : values)
+  for (const uint64_t v : values)
   {
     sum += v;
   }
 
-  const double totalSum = static_cast<double>(sum);
-  const double totalCount = static_cast<double>(summary.count);
+  const auto totalSum = static_cast<double>(sum);
+  const auto totalCount = static_cast<double>(summary.count);
 
   summary.mean = totalSum / totalCount;
 
@@ -1153,22 +1150,12 @@ static CountSummary SummarizeCounts(std::vector<uint64_t> values)
   return summary;
 }
 
-// Two decimals, built manually so it does not depend on what format options PrintLine accepts.
-static std::string FormatTwoDecimals(double value)
-{
-  const uint64_t hundredths = static_cast<uint64_t>(value * 100.0 + 0.5);
-  std::string fraction = std::to_string(hundredths % 100);
-  if (fraction.size() < 2) fraction.insert(0, "0");
-  return std::to_string(hundredths / 100) + "." + fraction;
-}
-
 static void PrintCountSummary(const char *tag, const char *label, const std::vector<uint64_t> &values)
 {
   const CountSummary summary = SummarizeCounts(values);
 
-  PrintLine(Log::NORMAL, "[{}]   {}: mean {}  median {}  mode {} (x{})  min {}  max {}", tag, label,
-            FormatTwoDecimals(summary.mean), FormatTwoDecimals(summary.median), summary.mode, summary.modeFreq, summary.min,
-            summary.max);
+  PrintLine(Log::NORMAL, "[{}]   {}: mean {:.2f}  median {:.2f}  mode {} (x{})  min {}  max {}", tag, label, summary.mean,
+            summary.median, summary.mode, summary.modeFreq, summary.min, summary.max);
 }
 
 static void RejectAnalysis(const RejectStats &stats)
@@ -1233,7 +1220,7 @@ static void Reject_ProcessSectors(Level &level)
 
 // Lowers the operating system priority for this process.
 // This prevents the PC from becoming choppy or unresponsive during long compile times.
-#if defined(_WIN32)
+#ifdef _WIN32
   // On Windows, set priority to below normal
   SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
 #else
@@ -1251,7 +1238,7 @@ static void Reject_ProcessSectors(Level &level)
   sectorBoxes.resize(num_secs);
 
   // Pre-allocate bit-matrix to track touching sectors instantly.
-  size_t adj_matrix_size = (num_secs * num_secs + 7) / 8;
+  const size_t adj_matrix_size = (num_secs * num_secs + 7) / 8;
   std::vector<uint8_t> adjacencyMatrix;
   adjacencyMatrix.assign(adj_matrix_size, 0);
 
@@ -1274,8 +1261,7 @@ static void Reject_ProcessSectors(Level &level)
   {
     if (!line || !line->start || !line->end) continue;
 
-    SightSegment seg(static_cast<double>(line->start->x), static_cast<double>(line->start->y),
-                     static_cast<double>(line->end->x), static_cast<double>(line->end->y));
+    SightSegment seg(line->start->x, line->start->y, line->end->x, line->end->y);
 
     mapMinX = std::min({mapMinX, seg.x1, seg.x2});
     mapMaxX = std::max({mapMaxX, seg.x1, seg.x2});
@@ -1309,8 +1295,8 @@ static void Reject_ProcessSectors(Level &level)
       // Accuracy Fix!
       // If a two-sided linedef sits between two different sectors, they share a physical edge.
       // We log this connection in our bitset matrix to bypass ray casting entirely later.
-      size_t idx1 = sLeft->index * num_secs + sRight->index;
-      size_t idx2 = sRight->index * num_secs + sLeft->index;
+      const size_t idx1 = sLeft->index * num_secs + sRight->index;
+      const size_t idx2 = sRight->index * num_secs + sLeft->index;
       if ((adjacencyMatrix[idx1 >> 3] & (1 << (idx1 & 7))) == 0)
       {
         neighbors[sLeft->index].push_back(static_cast<uint32_t>(sRight->index));
@@ -1403,7 +1389,7 @@ static void Reject_ProcessSectors(Level &level)
       if (openCount[target] == 0 || groupOf[view] != groupOf[target]) continue;
 
       const size_t adjIdx = view * num_secs + target;
-      if ((adjacencyMatrix[adjIdx >> 3] & (1 << (adjIdx & 7))) != 0) continue;
+      if ((adjacencyMatrix[adjIdx >> 3_uz] & (1_uz << (adjIdx & 7_uz))) != 0) continue;
       if (CheckGapTooWide(sectorBoxes[view], sectorBoxes[target], maxMapSpanSq)) continue;
 
       portalPairs += openCount[view] * openCount[target];
@@ -1488,8 +1474,8 @@ static void Reject_ProcessSectors(Level &level)
   {
     if (cuts.cutMap[sectorA] != cuts.cutMap[sectorB]) return false;
 
-    uint32_t nodeA = static_cast<uint32_t>(sectorA);
-    uint32_t nodeB = static_cast<uint32_t>(sectorB);
+    auto nodeA = static_cast<uint32_t>(sectorA);
+    auto nodeB = static_cast<uint32_t>(sectorB);
 
     while (nodeA != nodeB)
     {
@@ -1521,123 +1507,120 @@ static void Reject_ProcessSectors(Level &level)
 
   std::mutex totalsMutex;
 
-  RunTeam(threadCount,
-          [&](size_t threadIndex, TeamSync &team)
-          {
-            // One ray scratch space per thread, made by the thread that uses it.
-            RayWalkSpace scratch(solidBlockers.size(), num_secs);
+  RunTeam(threadCount, [&](size_t threadIndex, TeamSync &team)
+  {
+    // One ray scratch space per thread, made by the thread that uses it.
+    RayWalkSpace scratch(solidBlockers.size(), num_secs);
 
-            // Everything that decides one pair of sectors.
-            auto testPair = [&](size_t view, size_t target)
-            {
-              // Sectors in different groups were already marked blind in bulk.
-              if (groupOf[view] != groupOf[target])
-              {
-                return;
-              }
+    // Everything that decides one pair of sectors.
+    auto testPair = [&](size_t view, size_t target)
+    {
+      // Sectors in different groups were already marked blind in bulk.
+      if (groupOf[view] != groupOf[target])
+      {
+        return;
+      }
 
-              // Wow Yet Again Another Accuracy Fix! :(
-              // If these sectors touch directly, they are unconditionally visible!
-              // Skipping curved alternative geometric checks prevents tunnel/cave blindness bugs.
-              const size_t adjIdx = view * num_secs + target;
-              if ((adjacencyMatrix[adjIdx >> 3] & (1 << (adjIdx & 7))) != 0)
-              {
-                return;
-              }
+      // Wow Yet Again Another Accuracy Fix! :(
+      // If these sectors touch directly, they are unconditionally visible!
+      // Skipping curved alternative geometric checks prevents tunnel/cave blindness bugs.
+      const size_t adjIdx = view * num_secs + target;
+      if ((adjacencyMatrix[adjIdx >> 3_uz] & (1_uz << (adjIdx & 7_uz))) != 0)
+      {
+        return;
+      }
 
-              const auto &boxA = sectorBoxes[view];
-              const auto &boxB = sectorBoxes[target];
+      const auto &boxA = sectorBoxes[view];
+      const auto &boxB = sectorBoxes[target];
 
-              // Every ray endpoint lies inside its sector's bbox, so no ray can be shorter
-              // than the gap between the boxes. IsRayBlocked rejects anything longer than
-              // maxMapSpanSq anyway, so such a pair is blind without casting a ray.
-              if (CheckGapTooWide(boxA, boxB, maxMapSpanSq))
-              {
-                SetPairBitsAtomic(level, view, target, num_secs);
-                return;
-              }
+      // Every ray endpoint lies inside its sector's bbox, so no ray can be shorter
+      // than the gap between the boxes. IsRayBlocked rejects anything longer than
+      // maxMapSpanSq anyway, so such a pair is blind without casting a ray.
+      if (CheckGapTooWide(boxA, boxB, maxMapSpanSq))
+      {
+        SetPairBitsAtomic(level, view, target, num_secs);
+        return;
+      }
 
-              // A cut point blocks this pair, no rays needed.
-              if (prune && inferredBlind(view, target))
-              {
-                SetPairBitsAtomic(level, view, target, num_secs);
-                return;
-              }
+      // A cut point blocks this pair, no rays needed.
+      if (prune && inferredBlind(view, target))
+      {
+        SetPairBitsAtomic(level, view, target, num_secs);
+        return;
+      }
 
-              // Each ray now walks the grid on its own inside IsRayBlocked via DDA steps.
-              const uint64_t raysBefore = scratch.rayCasts;
+      // Each ray now walks the grid on its own inside IsRayBlocked via DDA steps.
+      const uint64_t raysBefore = scratch.rayCasts;
 
-              const bool visible = DoVisibilityTest(sectorPoints[view], sectorPoints[target], solidBlockers, grid, touchWalls,
-                                                    boxB, scratch, maxMapSpanSq, withinBudget);
+      const bool visible = DoVisibilityTest(sectorPoints[view], sectorPoints[target], solidBlockers, grid, touchWalls, boxB,
+                                            scratch, maxMapSpanSq, withinBudget);
 
-              const uint64_t raysUsed = scratch.rayCasts - raysBefore;
-              scratch.sectorRays[view] += raysUsed;
-              scratch.sectorRays[target] += raysUsed;
+      const uint64_t raysUsed = scratch.rayCasts - raysBefore;
+      scratch.sectorRays[view] += raysUsed;
+      scratch.sectorRays[target] += raysUsed;
 
-              if (!visible)
-              {
-                SetPairBitsAtomic(level, view, target, num_secs);
-              }
-            };
+      if (!visible)
+      {
+        SetPairBitsAtomic(level, view, target, num_secs);
+      }
+    };
 
-            // Pairs that involve a cut point first, nearest pairs first. Each level is finished
-            // before the next one starts, so the results it relies on are all in place.
-            for (size_t lv = 0; lv < cutLevels.size(); ++lv)
-            {
-              team.For(threadIndex, cutLevels[lv].size(),
-                       [&](size_t pairIndex)
-                       {
-                         const auto &cutPair = cutLevels[lv][pairIndex];
-                         testPair(cutPair.first, cutPair.second);
-                       });
+    // Pairs that involve a cut point first, nearest pairs first. Each level is finished
+    // before the next one starts, so the results it relies on are all in place.
+    for (auto &cutLevel : cutLevels)
+    {
+      team.For(threadIndex, cutLevel.size(), [&](size_t pairIndex)
+      {
+        const auto &cutPair = cutLevel[pairIndex];
+        testPair(cutPair.first, cutPair.second);
+      });
 
-              // Every thread is finished at this point. The others wait
-              // until this thread gets there, so the snapshot is safe to take.
-              if (threadIndex == 0)
-              {
-                memcpy(blindSnap.data(), level.reject_matrix, level.reject_size);
-              }
-            }
+      // Every thread is finished at this point. The others wait
+      // until this thread gets there, so the snapshot is safe to take.
+      if (threadIndex == 0)
+      {
+        memcpy(blindSnap.data(), level.reject_matrix, level.reject_size);
+      }
+    }
 
-            team.For(threadIndex, activeCount,
-                     [&](size_t rowIndex)
-                     {
-                       // Walk from the last active sector down.
-                       // Row 'a' tests 'a' targets, so the biggest rows go first
-                       // and no long row is left as a straggler.
-                       const size_t from = activeCount - 1 - rowIndex;
+    team.For(threadIndex, activeCount, [&](size_t rowIndex)
+    {
+      // Walk from the last active sector down.
+      // Row 'a' tests 'a' targets, so the biggest rows go first
+      // and no long row is left as a straggler.
+      const size_t from = activeCount - 1 - rowIndex;
 
-                       // Map our active iterator index back to the real sector index
-                       const size_t view = activeSectors[from];
+      // Map our active iterator index back to the real sector index
+      const size_t view = activeSectors[from];
 
-                       for (size_t to = 0; to < from; to++)
-                       {
-                         // Map our active target iterator index back to the real sector index
-                         const size_t target = activeSectors[to];
+      for (size_t to = 0; to < from; to++)
+      {
+        // Map our active target iterator index back to the real sector index
+        const size_t target = activeSectors[to];
 
-                         // Pairs with a cut point were already done above.
-                         if (prune && (cuts.isCut[view] || cuts.isCut[target]))
-                         {
-                           continue;
-                         }
+        // Pairs with a cut point were already done above.
+        if (prune && (cuts.isCut[view] || cuts.isCut[target]))
+        {
+          continue;
+        }
 
-                         testPair(view, target);
-                       }
-                     });
+        testPair(view, target);
+      }
+    });
 
-            // Add this thread's counters to the totals, one thread at a time.
-            {
-              std::lock_guard<std::mutex> lock(totalsMutex);
+    // Add this thread's counters to the totals, one thread at a time.
+    {
+      const std::scoped_lock lock(totalsMutex);
 
-              totalRayCasts += scratch.rayCasts;
-              totalCellSteps += scratch.cellSteps;
+      totalRayCasts += scratch.rayCasts;
+      totalCellSteps += scratch.cellSteps;
 
-              for (size_t i = 0; i < num_secs; ++i)
-              {
-                totalSectorRays[i] += scratch.sectorRays[i];
-              }
-            }
-          });
+      for (size_t i = 0; i < num_secs; ++i)
+      {
+        totalSectorRays[i] += scratch.sectorRays[i];
+      }
+    }
+  });
 
   // Restore process priority back to normal once the heavy CPU work finishes
   RestorePriority();
@@ -1655,7 +1638,7 @@ static void Reject_ProcessSectors(Level &level)
     stats.gridCols = static_cast<uint64_t>(gridCols);
 
     // Sectors without any line are left out so they do not pull the averages down.
-    for (size_t sector : activeSectors)
+    for (const size_t sector : activeSectors)
     {
       stats.portalsPerSector.push_back(portalsPerSector[sector]);
       stats.blockersPerSector.push_back(blockersPerSector[sector]);
@@ -1674,7 +1657,7 @@ static void Reject_ProcessSectors(Level &level)
 }
 
 // Note: this routine is destructive to the group numbers
-static void Reject_DebugGroups(Level &level)
+static void Reject_DebugGroups(const Level &level)
 {
   if (HAS_NONE(config.debug, DEBUG_REJECT)) return;
 
@@ -1711,11 +1694,11 @@ void PutReject(WadIO &io, Level &level)
     return;
   }
 
-  auto mark = Benchmarker(__func__);
+  const auto mark = Benchmarker(__func__);
   io.StartWritingLump("REJECT");
 
   // just leave an empty reject lump
-  if (level.sectors.size() == 0)
+  if (level.sectors.empty())
   {
     return;
   }

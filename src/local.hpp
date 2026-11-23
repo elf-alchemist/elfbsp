@@ -154,7 +154,7 @@ struct Linedef
   // length lines has occurred.
   size_t index;
 
-  inline double MinX(void) const
+  [[nodiscard]] double MinX() const
   {
     return std::min(start->x, end->x);
   }
@@ -223,12 +223,12 @@ struct Segment
 
   // compute the parallel and perpendicular distances from a partition
   // line to a point.
-  inline double ParallelDist(double x, double y) const
+  [[nodiscard]] double ParallelDist(double x, double y) const
   {
     return (x * pdx + y * pdy + p_para) / p_length;
   }
 
-  inline double PerpDist(double x, double y) const
+  [[nodiscard]] double PerpDist(double x, double y) const
   {
     return (x * pdy - y * pdx + p_perp) / p_length;
   }
@@ -299,16 +299,16 @@ struct Quadtree
   Quadtree *subs[2];
 
   // count of real/minisegs contained in this node AND ALL CHILDREN.
-  size_t real_num;
-  size_t mini_num;
+  size_t real_num{0};
+  size_t mini_num{0};
 
   // list of segs completely contained in this node.
-  Segment *list;
+  Segment *list{nullptr};
 
   Quadtree(int _x1, int _y1, int _x2, int _y2);
-  ~Quadtree(void);
+  ~Quadtree();
 
-  inline bool Empty(void) const
+  [[nodiscard]] bool Empty() const
   {
     return (real_num + mini_num) == 0;
   }
@@ -317,7 +317,7 @@ struct Quadtree
 // check relationship between this box and the partition line.
 // returns -1 or +1 if box is definitively on a particular side,
 // or 0 if the line intersects or touches the box.
-int OnLineSide(Quadtree *quadtree, const Segment *part);
+int OnLineSide(const Quadtree *quadtree, const Segment *part);
 
 // an "intersection" remembers the vertex that touches a BSP divider
 // line (especially a new vertex that is created at a seg split).
@@ -355,7 +355,7 @@ struct BlockList
   FNV1a<size_t> sum;            // to check against other blocks for duplicates detection
   std::vector<size_t> lines;    // actual line index list
 
-  BlockList(size_t _self_index) : self_index(_self_index)
+  explicit BlockList(size_t _self_index) : self_index(_self_index)
   {
   }
 };
@@ -389,7 +389,7 @@ struct BlockMap
     SouthEither,
     WestEither,
 
-    Any
+    Any,
   } cardinal_weight;
 
   // Actual blockmap size, from origin
@@ -419,7 +419,7 @@ struct BlockMap
   double block_compression = 0.0;
 
   [[nodiscard]]
-  size_t BlockCount(void) const
+  size_t BlockCount() const
   {
     return this->columns * this->rows;
   }
@@ -492,33 +492,33 @@ struct Level
 
   void SetLumps(WadIO &io, size_t label_index);
 
-  Vertex *SafeLookupVertex(size_t num, size_t num_line) const;
-  Sector *SafeLookupSector(size_t num, size_t num_side) const;
-  Sidedef *SafeLookupSidedef(int32_t num) const;
+  [[nodiscard]] Vertex *SafeLookupVertex(size_t num, size_t num_line) const;
+  [[nodiscard]] Sector *SafeLookupSector(size_t num, size_t num_side) const;
+  [[nodiscard]] Sidedef *SafeLookupSidedef(int32_t num) const;
 
-  Vertex *NewVertex(void);
-  Linedef *NewLinedef(void);
-  Sidedef *NewSidedef(void);
-  Sector *NewSector(void);
-  Mobj *NewThing(void);
+  Vertex *NewVertex();
+  Linedef *NewLinedef();
+  Sidedef *NewSidedef();
+  Sector *NewSector();
+  Mobj *NewThing();
 
-  Segment *NewSeg(void);
-  Subsector *NewSubsec(void);
-  Node *NewNode(void);
-  WallTip *NewWallTip(void);
-  Intersection *NewIntersection(void);
+  Segment *NewSeg();
+  Subsector *NewSubsec();
+  Node *NewNode();
+  WallTip *NewWallTip();
+  Intersection *NewIntersection();
 
-  void FreeVertices(void);
-  void FreeSidedefs(void);
-  void FreeLinedefs(void);
-  void FreeSectors(void);
-  void FreeThings(void);
+  void FreeVertices();
+  void FreeSidedefs();
+  void FreeLinedefs();
+  void FreeSectors();
+  void FreeThings();
 
-  void FreeSegs(void);
-  void FreeSubsecs(void);
-  void FreeNodes(void);
-  void FreeWallTips(void);
-  void FreeIntersections(void);
+  void FreeSegs();
+  void FreeSubsecs();
+  void FreeNodes();
+  void FreeWallTips();
+  void FreeIntersections();
 };
 
 void ParseUDMF(WadIO &io, Level &level);
@@ -532,9 +532,9 @@ void ParseUDMF(WadIO &io, Level &level);
 //
 
 // detection routines
-void DetectOverlappingVertices(Level &level);
-void DetectOverlappingLines(Level &level);
-void DetectPolyobjSectors(BuildInfo &config, Level &level);
+void DetectOverlappingVertices(const Level &level);
+void DetectOverlappingLines(const Level &level);
+void DetectPolyobjSectors(const BuildInfo &config, const Level &level);
 
 // pruning routines
 void ClearNewVertices(Level &level);
@@ -545,12 +545,12 @@ void CalculateWallTips(Level &level);
 
 // return a new vertex (with correct wall-tip info) for the split that
 // happens along the given seg at the given location.
-Vertex *NewVertexFromSplitSeg(Level &level, Segment *seg, double x, double y);
+Vertex *NewVertexFromSplitSeg(Level &level, const Segment *seg, double x, double y);
 
 // return a new end vertex to compensate for a seg that would end up
 // being zero-length (after integer rounding).  Doesn't compute the wall-tip
 // info (thus this routine should only be used *after* node building).
-Vertex *NewVertexDegenerate(Level &level, Vertex *start, Vertex *end);
+Vertex *NewVertexDegenerate(Level &level, const Vertex *start, const Vertex *end);
 
 //------------------------------------------------------------------------
 // SEG : Choose the best Seg to use for a node line.
@@ -596,7 +596,7 @@ enum class BuildResult
   Ok = 0,
 
   // when saving the map, one or more lumps overflowed
-  Overflow
+  Overflow,
 };
 
 // build the nodes of a particular level. otherwise the wad
