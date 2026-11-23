@@ -93,15 +93,7 @@ static bool CheckMapInMapList(std::string_view name)
     return true;
   }
 
-  for (const auto &map : map_list)
-  {
-    if (CheckMapInRange(map, name))
-    {
-      return true;
-    }
-  }
-
-  return false;
+  return std::ranges::any_of(map_list, [&](const auto &map) { return CheckMapInRange(map, name); });
 }
 
 static void VisitFile(std::string_view filename)
