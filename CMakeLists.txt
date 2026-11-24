@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 3.28)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-include(CheckIncludeFile)
-
 project(elfbsp
         VERSION "1.3.1"
         LANGUAGES CXX
