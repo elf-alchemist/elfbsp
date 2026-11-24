@@ -49,6 +49,25 @@ jobs:
               -DENABLE_HARDENING=ON \
               -DENABLE_LTO=ON
 
+          - name: Linux Clang ARM64
+            os: ubuntu-26.04-arm
+            shell: bash
+            package_name: linux_arm64
+            artifact_path: build/*.zip
+            install: |
+              sudo apt-get update
+              sudo apt-get install -y \
+                clang \
+                lld \
+                libc++-dev \
+                libc++abi-dev
+            configure: |
+              -DCMAKE_C_COMPILER=clang \
+              -DCMAKE_CXX_COMPILER=clang++ \
+              -DENABLE_STATIC=ON \
+              -DENABLE_HARDENING=ON \
+              -DENABLE_LTO=ON
+
           - name: Linux GCC x86_64
             os: ubuntu-latest
             shell: bash
@@ -85,6 +104,25 @@ jobs:
               mingw-w64-clang-x86_64-cmake
               mingw-w64-clang-x86_64-ninja
               mingw-w64-clang-x86_64-git
+            configure: |
+              -DCMAKE_C_COMPILER=clang \
+              -DCMAKE_CXX_COMPILER=clang++ \
+              -DENABLE_STATIC=ON \
+              -DENABLE_HARDENING=ON \
+              -DENABLE_LTO=ON
+
+          - name: Windows MSYS2 Clang ARM64
+            os: windows-11-arm
+            shell: "msys2 {0}"
+            msystem: clangarm64
+            package_name: windows_clang_arm64
+            artifact_path: build/*.zip
+            msys2_packages: >-
+              mingw-w64-clang-aarch64-clang
+              mingw-w64-clang-aarch64-lld
+              mingw-w64-clang-aarch64-cmake
+              mingw-w64-clang-aarch64-ninja
+              mingw-w64-clang-aarch64-git
             configure: |
               -DCMAKE_C_COMPILER=clang \
               -DCMAKE_CXX_COMPILER=clang++ \
