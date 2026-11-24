@@ -64,6 +64,10 @@ add_library(scanner STATIC
   library/scanner/scanner.cpp
 )
 
+target_include_directories(scanner PUBLIC
+  library/scanner
+)
+
 add_executable(${PROJECT_NAME}
   src/blockmap.cpp
   src/bsp.cpp
@@ -78,10 +82,6 @@ add_executable(${PROJECT_NAME}
   src/thread.cpp
   src/udmf.cpp
   src/wad.cpp
-)
-
-target_include_directories(${PROJECT_NAME} PRIVATE
-  library/scanner
 )
 
 string(TOUPPER "${PROJECT_NAME}" PROJECT_TITLE)
