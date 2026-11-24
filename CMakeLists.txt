@@ -1,7 +1,7 @@
 # ELFBSP CMake Script
 cmake_minimum_required(VERSION 3.28)
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+list(PREPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 project(elfbsp
         VERSION "1.3.1"
