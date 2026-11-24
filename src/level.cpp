@@ -188,8 +188,8 @@ static void GetVertices_Fractional(WadIO &io, Level &level)
   {
     auto v = level.NewVertex();
 
-    v->x = static_cast<double>(GetLittleEndian(raw.x) / FRACFACTOR);
-    v->y = static_cast<double>(GetLittleEndian(raw.y) / FRACFACTOR);
+    v->x = static_cast<double>(GetLittleEndian(raw.x)) / FRACFACTOR;
+    v->y = static_cast<double>(GetLittleEndian(raw.y)) / FRACFACTOR;
   }
 
   level.num_old_vert = level.vertices.size();
