@@ -491,7 +491,7 @@ static void GetLinedefs_Doom64(WadIO &io, Level &level)
 
 static void GetThings_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapThingDoom64>(level.lumps.label, "LINEDEFS");
+  auto lump = io.ReadLevelLump<MapThingDoom64>(level.lumps.label, "THINGS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
