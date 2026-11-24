@@ -264,9 +264,9 @@ void PutLeafs_DoomBSP(WadIO &io, Level &level)
   for (auto subsec : level.subsecs)
   {
     Segment *seg = subsec->seg_list;
-    uint16_t seg_count = IndexToShort(subsec->seg_count);
-
-    io.AddToLump(&seg_count, sizeof(seg_count));
+    const uint16_t seg_count = IndexToShort(subsec->seg_count);
+    const auto le_seg_count = GetLittleEndian(seg_count);
+    io.AddToLump(&le_seg_count, sizeof(le_seg_count));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {
@@ -446,9 +446,9 @@ void PutLeafs_DeePBSPV4(WadIO &io, Level &level)
   for (auto subsec : level.subsecs)
   {
     Segment *seg = subsec->seg_list;
-    uint32_t seg_count = IndexToUInt(subsec->seg_count);
-
-    io.AddToLump(&seg_count, sizeof(seg_count));
+    const uint32_t seg_count = IndexToUInt(subsec->seg_count);
+    const auto le_seg_count = GetLittleEndian(seg_count);
+    io.AddToLump(&le_seg_count, sizeof(le_seg_count));
 
     if (HAS_BIT(config.debug, DEBUG_BSP))
     {

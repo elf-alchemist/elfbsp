@@ -188,8 +188,8 @@ static void GetVertices_Fractional(WadIO &io, Level &level)
   {
     auto v = level.NewVertex();
 
-    v->x = static_cast<double>(GetLittleEndian(raw.x) / FRACFACTOR);
-    v->y = static_cast<double>(GetLittleEndian(raw.y) / FRACFACTOR);
+    v->x = static_cast<double>(GetLittleEndian(raw.x)) / FRACFACTOR;
+    v->y = static_cast<double>(GetLittleEndian(raw.y)) / FRACFACTOR;
   }
 
   level.num_old_vert = level.vertices.size();
@@ -491,7 +491,7 @@ static void GetLinedefs_Doom64(WadIO &io, Level &level)
 
 static void GetThings_Doom64(WadIO &io, Level &level)
 {
-  auto lump = io.ReadLevelLump<MapThingDoom64>(level.lumps.label, "LINEDEFS");
+  auto lump = io.ReadLevelLump<MapThingDoom64>(level.lumps.label, "THINGS");
 
   if (HAS_BIT(config.debug, DEBUG_LOAD))
   {
