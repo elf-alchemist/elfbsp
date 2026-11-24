@@ -40,6 +40,7 @@
 #include <chrono>
 #include <limits>
 #include <numbers>
+#include <print>
 #include <source_location>
 #include <vector>
 
@@ -99,31 +100,12 @@ constexpr char DIR_SEP_CH = WINDOWS ? '/' : '\\';
 constexpr auto ENDIAN_BIG = (std::endian::native == std::endian::big);
 constexpr auto ENDIAN_LITTLE = !ENDIAN_BIG;
 
-template <std::integral T>
-constexpr T byteswap(T value) noexcept
-{
-  static_assert(sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "byteswap: only 16/32/64-bit supported");
-
-  if constexpr (sizeof(T) == 2)
-  {
-    return static_cast<T>(__builtin_bswap16(static_cast<uint16_t>(value)));
-  }
-  else if constexpr (sizeof(T) == 4)
-  {
-    return static_cast<T>(__builtin_bswap32(static_cast<uint32_t>(value)));
-  }
-  else
-  {
-    return static_cast<T>(__builtin_bswap64(static_cast<uint64_t>(value)));
-  }
-}
-
 template <typename T>
 constexpr T GetLittleEndian(T value)
 {
   if constexpr (ENDIAN_BIG)
   {
-    return byteswap(value);
+    return std::byteswap(value);
   }
   else
   {
@@ -136,7 +118,7 @@ constexpr T GetBigEndian(T value)
 {
   if constexpr (ENDIAN_LITTLE)
   {
-    return byteswap(value);
+    return std::byteswap(value);
   }
   else
   {
@@ -266,13 +248,6 @@ constexpr short_angle_t DegreesToShortBAM(const double x)
   return static_cast<short_angle_t>(static_cast<long_angle_t>(LONG_ANGLE_1 * x) >> FRACBITS);
 }
 
-// C++23's uz suffix for size_t literals
-
-consteval size_t operator""_uz(unsigned long long val)
-{
-  return val;
-}
-
 //------------------------------------------------------------------------
 // STRING STUFF
 //------------------------------------------------------------------------
@@ -310,10 +285,8 @@ template <typename... Args>
 void PrintLine(const Log level, std::format_string<Args...> fmt, Args &&...args)
 {
   FILE *const stream = (level == Log::NORMAL) ? stdout : stderr;
-  const std::string str = std::format(fmt, std::forward<Args>(args)...);
-
-  fprintf(stream, "%s\n", str.c_str());
-  fflush(stream);
+  std::println(stream, fmt, std::forward<Args>(args)...);
+  std::fflush(stream);
 }
 
 //
@@ -1234,60 +1207,6 @@ struct FNV1a
 
     return this->hash;
   }
-};
-
-//
-// Simple iota, from Rum-And-Raisin
-//
-
-template <typename T>
-struct Iota
-{
-  struct Iterator
-  {
-    T val;
-
-    constexpr T operator*() noexcept
-    {
-      return val;
-    }
-
-    constexpr bool operator!=(const Iterator &rhs)
-    {
-      return val != rhs.val;
-    }
-
-    constexpr Iterator &operator++()
-    {
-      ++val;
-      return *this;
-    }
-  };
-
-  constexpr explicit Iota(T e)
-  {
-    _begin = {0};
-    _end = {e};
-  }
-
-  constexpr Iota(T b, T e)
-  {
-    _begin = {b};
-    _end = {e};
-  }
-
-  constexpr Iterator begin() noexcept
-  {
-    return _begin;
-  }
-
-  constexpr Iterator end() noexcept
-  {
-    return _end;
-  }
-
-  Iterator _begin;
-  Iterator _end;
 };
 
 template <std::integral T>
