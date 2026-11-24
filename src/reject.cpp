@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <span>
 
 #include "core.hpp"
 #include "local.hpp"
@@ -205,7 +206,7 @@ static constexpr uint64_t OPEN_SPLIT_RAY_BUDGET = 50000000;
 
 // This extracts and groups unique locations (corners, open door frames, etc.) exactly once.
 // This will shift heavy allocation and duplication entirely out of the inner loops.
-static SectorPoints BuildSectorPoints(const std::vector<SightSegment> &lines, int32_t split)
+static SectorPoints BuildSectorPoints(std::span<const SightSegment> lines, int32_t split)
 {
   SectorPoints points;
 
@@ -354,7 +355,7 @@ static inline size_t GetCellIndex(double v, double origin, size_t limit, double 
 
 // Each blocker is registered in every cell its
 // padded bounding box covers, same coverage as the old vector-of-vectors grid.
-static BlockerGrid BuildBlockerGrid(const std::vector<SightSegment> &blockers, double originX, double originY, size_t cols,
+static BlockerGrid BuildBlockerGrid(std::span<const SightSegment> blockers, double originX, double originY, size_t cols,
                                     size_t rows, double cellSize, double padding)
 {
   BlockerGrid grid;
@@ -485,7 +486,7 @@ static inline bool SolidBlocksRay(const SightSegment &ray, const SightSegment &b
 // Is ray blocked by any solid walls?
 // Walks only the grid cells the ray passes through DDA,
 // so each ray is tested against nearby blockers instead of a gathered list.
-static bool IsRayBlocked(const SightSegment &ray, const std::vector<SightSegment> &blockers, const BlockerGrid &grid,
+static bool IsRayBlocked(const SightSegment &ray, std::span<const SightSegment> blockers, const BlockerGrid &grid,
                          RayWalkSpace &scratch, double maxRayLengthSq)
 {
   const double dx = ray.x2 - ray.x1;
@@ -686,8 +687,8 @@ static inline bool WallShadowsBox(const SightSegment &wall, int32_t boxSide, dou
 
 // Tests between the points of Sector A and the points of Sector B.
 // Returns true if a valid line of sight connects the two places.
-static bool DoVisibilityTest(const SectorPoints &A, const SectorPoints &B, const std::vector<SightSegment> &blockers,
-                             const BlockerGrid &grid, const std::vector<uint32_t> &touchWalls, const SectorBBox &boxB,
+static bool DoVisibilityTest(const SectorPoints &A, const SectorPoints &B, std::span<const SightSegment> blockers,
+                             const BlockerGrid &grid, const std::span<const uint32_t> touchWalls, const SectorBBox &boxB,
                              RayWalkSpace &scratch, double maxRayLengthSq, bool vertexRays)
 {
   // Every point of B lies inside its sector's bounding box. When the wall that blocked the
@@ -852,7 +853,7 @@ static inline bool CheckGapTooWide(const SectorBBox &boxA, const SectorBBox &box
 }
 
 // Maps a ray endpoint vertex to its corresponding cell index and logs any touching solid wall data.
-static inline void RecordTouchingWalls(std::vector<SightPoint> &list, const std::vector<SightSegment> &solidBlockers,
+static inline void RecordTouchingWalls(std::span<SightPoint> list, const std::vector<SightSegment> &solidBlockers,
                                        const BlockerGrid &grid, std::vector<uint32_t> &touchWalls, double mapMinX,
                                        double mapMinY, size_t gridCols, size_t gridRows, double cellSize)
 {
@@ -1019,7 +1020,7 @@ static CutPoints FindCutPoints(const std::vector<std::vector<uint32_t>> &neighbo
 // can be worked out from them.
 static std::vector<std::vector<std::pair<uint32_t, uint32_t>>>
 BuildCutLevels(const CutPoints &cuts, const std::vector<std::vector<uint32_t>> &neighbors, size_t num_secs,
-               const std::vector<size_t> &activeSectors)
+               std::span<const size_t> activeSectors)
 {
   std::vector<uint8_t> isActive(num_secs, 0);
   for (const size_t cutSector : activeSectors)
@@ -1141,9 +1142,9 @@ static CountSummary SummarizeCounts(std::vector<uint64_t> values)
   return summary;
 }
 
-static void PrintCountSummary(const char *tag, const char *label, const std::vector<uint64_t> &values)
+static void PrintCountSummary(std::string_view tag, std::string_view label, std::vector<uint64_t> values)
 {
-  const CountSummary summary = SummarizeCounts(values);
+  const CountSummary summary = SummarizeCounts(std::move(values));
 
   PrintLine(Log::NORMAL, "[{}]   {}: mean {:.2f}  median {:.2f}  mode {} (x{})  min {}  max {}", tag, label, summary.mean,
             summary.median, summary.mode, summary.modeFreq, summary.min, summary.max);

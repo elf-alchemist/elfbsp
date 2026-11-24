@@ -929,6 +929,8 @@ enum LineSpecialDoom : int32_t
 
 enum LineTagDoom : uint16_t
 {
+  Tag_DoNotSplitSegStart = 900,
+  Tag_DoNotSplitSegEnd = 996,
   Tag_NoReject = 997,
   Tag_DoNotRender = 998,
   Tag_NoBlockmap = 999,

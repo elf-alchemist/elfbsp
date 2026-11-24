@@ -86,9 +86,9 @@ struct Vertex
 // check whether a line with the given delta coordinates from this
 // vertex is open or closed.  If there exists a walltip at same
 // angle, it is closed, likewise if line is in void space.
-bool CheckOpen(const Vertex *vertex, double dx, double dy);
+bool CheckOpen(const Vertex &vertex, double dx, double dy);
 
-bool Overlaps(const Vertex *vertex, const Vertex *other);
+bool Overlaps(const Vertex &vertex, const Vertex &other);
 
 struct Sector
 {
@@ -318,7 +318,7 @@ struct Quadtree
 // check relationship between this box and the partition line.
 // returns -1 or +1 if box is definitively on a particular side,
 // or 0 if the line intersects or touches the box.
-int OnLineSide(const Quadtree &quadtree, const Segment *part);
+int OnLineSide(const Quadtree &quadtree, const Segment &part);
 
 // an "intersection" remembers the vertex that touches a BSP divider
 // line (especially a new vertex that is created at a seg split).
@@ -492,21 +492,21 @@ struct Level
 
   void SetLumps(WadIO &io, size_t label_index);
 
-  [[nodiscard]] Vertex *SafeLookupVertex(size_t num, size_t num_line) const;
+  [[nodiscard]] Vertex &SafeLookupVertex(size_t num, size_t num_line) const;
   [[nodiscard]] Sector *SafeLookupSector(size_t num, size_t num_side) const;
   [[nodiscard]] Sidedef *SafeLookupSidedef(int32_t num) const;
 
-  Vertex *NewVertex();
-  Linedef *NewLinedef();
-  Sidedef *NewSidedef();
-  Sector *NewSector();
-  Mobj *NewThing();
+  Vertex &NewVertex();
+  Linedef &NewLinedef();
+  Sidedef &NewSidedef();
+  Sector &NewSector();
+  Mobj &NewThing();
 
-  Segment *NewSeg();
-  Subsector *NewSubsec();
-  Node *NewNode();
-  WallTip *NewWallTip();
-  Intersection *NewIntersection();
+  Segment &NewSeg();
+  Subsector &NewSubsec();
+  Node &NewNode();
+  WallTip &NewWallTip();
+  Intersection &NewIntersection();
 
   void FreeVertices();
   void FreeSidedefs();
@@ -545,12 +545,12 @@ void CalculateWallTips(Level &level);
 
 // return a new vertex (with correct wall-tip info) for the split that
 // happens along the given seg at the given location.
-Vertex *NewVertexFromSplitSeg(Level &level, const Segment *seg, double x, double y);
+Vertex *NewVertexFromSplitSeg(Level &level, const Segment &seg, double x, double y);
 
 // return a new end vertex to compensate for a seg that would end up
 // being zero-length (after integer rounding).  Doesn't compute the wall-tip
 // info (thus this routine should only be used *after* node building).
-Vertex *NewVertexDegenerate(Level &level, const Vertex *start, const Vertex *end);
+Vertex *NewVertexDegenerate(Level &level, const Vertex &start, const Vertex &end);
 
 //------------------------------------------------------------------------
 // SEG : Choose the best Seg to use for a node line.
@@ -582,7 +582,7 @@ Segment *CreateSegs(Level &level);
 // and '*N' is the new node (and '*S' is set to nullptr).  Normally
 // returns BUILD_OK.
 
-void BuildNodes(Level &level, Segment *seg_list, int depth, MapBoundBox &bounds, Node **N, Subsector **S, double split_cost,
+void BuildNodes(Level &level, Segment *seg_list, int depth, MapBoundBox &bounds, Node *&N, Subsector *&S, double split_cost,
                 bool fast, bool analysis);
 
 // compute the height of the bsp tree, starting at 'node'.

@@ -45,10 +45,10 @@ std::vector<T *> UqPtrVecToRawPtrVec(const std::vector<std::unique_ptr<T>> &vec)
   return ret;
 }
 
-bool Overlaps(const Vertex *vertex, const Vertex *other)
+bool Overlaps(const Vertex &vertex, const Vertex &other)
 {
-  const double dx = fabs(other->x - vertex->x);
-  const double dy = fabs(other->y - vertex->y);
+  const double dx = fabs(other.x - vertex.x);
+  const double dy = fabs(other.y - vertex.y);
   return (dx < DIST_EPSILON) && (dy < DIST_EPSILON);
 }
 
@@ -72,13 +72,13 @@ void DetectOverlappingVertices(const Level &level)
   // now mark them off
   for (size_t i = 0; i < level.vertices.size() - 1; i++)
   {
-    Vertex *A = array[i];
+    Vertex &A = *array[i];
 
     for (size_t k = i + 1; k < level.vertices.size(); k++)
     {
-      Vertex *B = array[k];
+      Vertex &B = *array[k];
 
-      if (B->x > A->x + DIST_EPSILON)
+      if (B.x > A.x + DIST_EPSILON)
       {
         break;
       }
@@ -86,7 +86,7 @@ void DetectOverlappingVertices(const Level &level)
       if (Overlaps(A, B))
       {
         // found an overlap !
-        B->overlap = A->overlap ? A->overlap : A;
+        B.overlap = A.overlap ? A.overlap : &A;
 
         if (HAS_BIT(config.debug, DEBUG_OVERLAPS))
         {
@@ -207,48 +207,48 @@ void DetectOverlappingLines(const Level &level)
 
 /* ----- vertex routines ------------------------------- */
 
-void AddWallTip(Level &level, Vertex *vertex, double dx, double dy, bool open_left, bool open_right)
+void AddWallTip(Level &level, Vertex &vertex, double dx, double dy, bool open_left, bool open_right)
 {
-  SYS_ASSERT(vertex->overlap == nullptr);
+  SYS_ASSERT(vertex.overlap == nullptr);
 
-  WallTip *tip = level.NewWallTip();
+  WallTip &tip = level.NewWallTip();
   WallTip *after;
 
-  tip->angle = ComputeAngle(dx, dy);
-  tip->open_left = open_left;
-  tip->open_right = open_right;
+  tip.angle = ComputeAngle(dx, dy);
+  tip.open_left = open_left;
+  tip.open_right = open_right;
 
   // find the correct place (order is increasing angle)
-  for (after = vertex->tip_set; after && after->next; after = after->next)
+  for (after = vertex.tip_set; after && after->next; after = after->next)
   {
   }
 
-  while (after && tip->angle + ANG_EPSILON < after->angle)
+  while (after && tip.angle + ANG_EPSILON < after->angle)
   {
     after = after->prev;
   }
 
   // link it in
-  tip->next = after ? after->next : vertex->tip_set;
-  tip->prev = after;
+  tip.next = after ? after->next : vertex.tip_set;
+  tip.prev = after;
 
   if (after)
   {
     if (after->next)
     {
-      after->next->prev = tip;
+      after->next->prev = &tip;
     }
 
-    after->next = tip;
+    after->next = &tip;
   }
   else
   {
-    if (vertex->tip_set != nullptr)
+    if (vertex.tip_set != nullptr)
     {
-      vertex->tip_set->prev = tip;
+      vertex.tip_set->prev = &tip;
     }
 
-    vertex->tip_set = tip;
+    vertex.tip_set = &tip;
   }
 }
 
@@ -272,8 +272,9 @@ void CalculateWallTips(Level &level)
     // note that start->overlap and end->overlap should be nullptr
     // due to logic in DetectOverlappingVertices.
 
-    AddWallTip(level, L->start, x2 - x1, y2 - y1, left, right);
-    AddWallTip(level, L->end, x1 - x2, y1 - y2, right, left);
+    AddWallTip(level, *L->start, x2 - x1, y2 - y1, left, right);
+    // NOLINTNEXTLINE(readability-suspicious-call-argument) -- swapping is intentional
+    AddWallTip(level, *L->end, x1 - x2, y1 - y2, right, left);
   }
 
   if (HAS_BIT(config.debug, DEBUG_WALLTIPS))
@@ -291,59 +292,60 @@ void CalculateWallTips(Level &level)
   }
 }
 
-Vertex *NewVertexFromSplitSeg(Level &level, const Segment *seg, double x, double y)
+Vertex *NewVertexFromSplitSeg(Level &level, const Segment &seg, double x, double y)
 {
-  Vertex *vert = level.NewVertex();
+  Vertex &vert = level.NewVertex();
 
-  vert->x = x;
-  vert->y = y;
+  vert.x = x;
+  vert.y = y;
 
-  vert->is_new = true;
-  vert->is_used = true;
+  vert.is_new = true;
+  vert.is_used = true;
   level.num_new_vert++;
 
   // compute wall-tip info
-  if (seg->linedef == nullptr)
+  if (seg.linedef == nullptr)
   {
-    AddWallTip(level, vert, seg->pdx, seg->pdy, true, true);
-    AddWallTip(level, vert, -seg->pdx, -seg->pdy, true, true);
+    AddWallTip(level, vert, seg.pdx, seg.pdy, true, true);
+    AddWallTip(level, vert, -seg.pdx, -seg.pdy, true, true);
   }
   else
   {
-    const Sidedef *front = seg->side ? seg->linedef->left : seg->linedef->right;
-    const Sidedef *back = seg->side ? seg->linedef->right : seg->linedef->left;
+    const Sidedef *front = seg.side ? seg.linedef->left : seg.linedef->right;
+    const Sidedef *back = seg.side ? seg.linedef->right : seg.linedef->left;
 
     const bool left = (back != nullptr) && (back->sector != nullptr);
     const bool right = (front != nullptr) && (front->sector != nullptr);
 
-    AddWallTip(level, vert, seg->pdx, seg->pdy, left, right);
-    AddWallTip(level, vert, -seg->pdx, -seg->pdy, right, left);
+    AddWallTip(level, vert, seg.pdx, seg.pdy, left, right);
+    // NOLINTNEXTLINE(readability-suspicious-call-argument) -- swapping is intentional
+    AddWallTip(level, vert, -seg.pdx, -seg.pdy, right, left);
   }
 
-  return vert;
+  return &vert;
 }
 
-Vertex *NewVertexDegenerate(Level &level, const Vertex *start, const Vertex *end)
+Vertex *NewVertexDegenerate(Level &level, const Vertex &start, const Vertex &end)
 {
   // this is only called when rounding off the BSP tree and
   // all the segs are degenerate (zero length), hence we need
   // to create at least one seg which won't be zero length.
-  double dx = end->x - start->x;
-  double dy = end->y - start->y;
+  double dx = end.x - start.x;
+  double dy = end.y - start.y;
 
   const double dlen = hypot(dx, dy);
 
-  Vertex *vert = level.NewVertex();
+  Vertex &vert = level.NewVertex();
 
-  vert->is_new = false;
-  vert->is_used = true;
+  vert.is_new = false;
+  vert.is_used = true;
 
-  vert->index = level.num_old_vert;
+  vert.index = level.num_old_vert;
   level.num_old_vert++;
 
   // compute new coordinates
-  vert->x = start->x;
-  vert->y = start->x;
+  vert.x = start.x;
+  vert.y = start.x;
 
   if (dlen == 0)
   {
@@ -353,26 +355,24 @@ Vertex *NewVertexDegenerate(Level &level, const Vertex *start, const Vertex *end
   dx /= dlen;
   dy /= dlen;
 
-  while (FloatToShort(vert->x) == FloatToShort(start->x) && FloatToShort(vert->y) == FloatToShort(start->y))
+  while (FloatToShort(vert.x) == FloatToShort(start.x) && FloatToShort(vert.y) == FloatToShort(start.y))
   {
-    vert->x += dx;
-    vert->y += dy;
+    vert.x += dx;
+    vert.y += dy;
   }
 
-  return vert;
+  return &vert;
 }
 
-bool CheckOpen(const Vertex *vertex, double dx, double dy)
+bool CheckOpen(const Vertex &vertex, double dx, double dy)
 {
-  const WallTip *tip;
-
   const double angle = ComputeAngle(dx, dy);
 
   // first check whether there's a wall-tip that lies in the exact
   // direction of the given direction (which is relative to the
   // vertex).
 
-  for (tip = vertex->tip_set; tip; tip = tip->next)
+  for (const WallTip *tip = vertex.tip_set; tip; tip = tip->next)
   {
     if (fabs(tip->angle - angle) < ANG_EPSILON || fabs(tip->angle - angle) > (360.0 - ANG_EPSILON))
     {
@@ -385,7 +385,7 @@ bool CheckOpen(const Vertex *vertex, double dx, double dy)
   // the angle we're interested in.  Therefore we'll be on the RIGHT
   // side of that wall-tip.
 
-  for (tip = vertex->tip_set; tip; tip = tip->next)
+  for (const WallTip *tip = vertex.tip_set; tip; tip = tip->next)
   {
     if (angle + ANG_EPSILON < tip->angle)
     {

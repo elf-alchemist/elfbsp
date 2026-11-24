@@ -47,13 +47,13 @@ void Level::SetLumps(WadIO &io, size_t label_index)
   this->lumps.scripts = io.LevelLookupLump(this->lumps.label, "SCRIPTS");
 }
 
-Vertex *Level::SafeLookupVertex(size_t num, size_t num_line) const
+Vertex &Level::SafeLookupVertex(size_t num, size_t num_line) const
 {
   if (num >= vertices.size())
   {
     throw RuntimeException("Illegal map-vertex number {}, on line {}, maximum is {}", num, num_line, vertices.size());
   }
-  return vertices[num].get();
+  return *vertices[num];
 }
 
 Sector *Level::SafeLookupSector(size_t num, size_t num_side) const
@@ -86,64 +86,64 @@ Sidedef *Level::SafeLookupSidedef(int32_t num) const
 
 /* ----- allocation routines ---------------------------- */
 
-Vertex *Level::NewVertex()
+Vertex &Level::NewVertex()
 {
   auto *V = this->vertices.emplace_back(std::make_unique<Vertex>()).get();
   V->index = this->vertices.size() - 1;
-  return V;
+  return *V;
 }
 
-Linedef *Level::NewLinedef()
+Linedef &Level::NewLinedef()
 {
   auto *L = this->linedefs.emplace_back(std::make_unique<Linedef>()).get();
   L->index = this->linedefs.size() - 1;
-  return L;
+  return *L;
 }
 
-Sidedef *Level::NewSidedef()
+Sidedef &Level::NewSidedef()
 {
   auto *S = this->sidedefs.emplace_back(std::make_unique<Sidedef>()).get();
   S->index = this->sidedefs.size() - 1;
-  return S;
+  return *S;
 }
 
-Sector *Level::NewSector()
+Sector &Level::NewSector()
 {
   auto *S = this->sectors.emplace_back(std::make_unique<Sector>()).get();
   S->index = this->sectors.size() - 1;
-  return S;
+  return *S;
 }
 
-Mobj *Level::NewThing()
+Mobj &Level::NewThing()
 {
   auto *T = this->things.emplace_back(std::make_unique<Mobj>()).get();
   T->index = this->things.size() - 1;
-  return T;
+  return *T;
 }
 
-Segment *Level::NewSeg()
+Segment &Level::NewSeg()
 {
-  return this->segs.emplace_back(std::make_unique<Segment>()).get();
+  return *this->segs.emplace_back(std::make_unique<Segment>());
 }
 
-Subsector *Level::NewSubsec()
+Subsector &Level::NewSubsec()
 {
-  return this->subsecs.emplace_back(std::make_unique<Subsector>()).get();
+  return *this->subsecs.emplace_back(std::make_unique<Subsector>());
 }
 
-Node *Level::NewNode()
+Node &Level::NewNode()
 {
-  return this->nodes.emplace_back(std::make_unique<Node>()).get();
+  return *this->nodes.emplace_back(std::make_unique<Node>());
 }
 
-WallTip *Level::NewWallTip()
+WallTip &Level::NewWallTip()
 {
-  return this->walltips.emplace_back(std::make_unique<WallTip>()).get();
+  return *this->walltips.emplace_back(std::make_unique<WallTip>());
 }
 
-Intersection *Level::NewIntersection()
+Intersection &Level::NewIntersection()
 {
-  return this->intercuts.emplace_back(std::make_unique<Intersection>()).get();
+  return *this->intercuts.emplace_back(std::make_unique<Intersection>());
 }
 
 /* ----- free routines ---------------------------- */
