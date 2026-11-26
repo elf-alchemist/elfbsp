@@ -1,5 +1,5 @@
 # ELFBSP CMake Script
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 4.5)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
@@ -66,20 +66,23 @@ add_library(scanner STATIC
   library/scanner/scanner.cpp
 )
 
-add_executable(${PROJECT_NAME}
-  src/blockmap.cpp
-  src/bsp.cpp
-  src/info.cpp
-  src/level.cpp
-  src/local.cpp
-  src/main.cpp
-  src/misc.cpp
-  src/node.cpp
-  src/polyobj.cpp
-  src/reject.cpp
-  src/thread.cpp
-  src/udmf.cpp
-  src/wad.cpp
+add_executable(${PROJECT_NAME})
+
+target_sources(${PROJECT_NAME}
+  PRIVATE
+    src/blockmap.cpp
+    src/bsp.cpp
+    src/info.cpp
+    src/level.cpp
+    src/local.cpp
+    src/main.cpp
+    src/misc.cpp
+    src/node.cpp
+    src/polyobj.cpp
+    src/reject.cpp
+    src/thread.cpp
+    src/udmf.cpp
+    src/wad.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
