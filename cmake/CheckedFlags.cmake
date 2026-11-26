@@ -6,23 +6,34 @@ include(CheckLinkerFlag)
 # Add compiler option if compiler supports it.
 function(_checked_add_compile_option FLAG)
   # Turn flag into suitable internal cache variable.
-  string(REGEX REPLACE "-(.*)" "CFLAG_\\1" FLAG_FOUND ${FLAG})
+  string(REGEX REPLACE "-(.*)" "CFLAG_\\1" FLAG_FOUND "${FLAG}")
   string(REGEX REPLACE "[,=-]+" "_" FLAG_FOUND "${FLAG_FOUND}")
 
-  check_cxx_compiler_flag(${FLAG} ${FLAG_FOUND})
+  check_cxx_compiler_flag("${FLAG}" "${FLAG_FOUND}")
   if(${FLAG_FOUND})
-    set(COMMON_COMPILE_OPTIONS ${COMMON_COMPILE_OPTIONS} ${FLAG} PARENT_SCOPE)
+    set(COMMON_COMPILE_OPTIONS "${COMMON_COMPILE_OPTIONS};${FLAG}" PARENT_SCOPE)
+  endif()
+endfunction()
+
+function(_checked_add_config_compile_option CONFIG FLAG)
+  # Turn flag into suitable internal cache variable.
+  string(REGEX REPLACE "-(.*)" "CFLAG_\\1" FLAG_FOUND "${FLAG}")
+  string(REGEX REPLACE "[,=-]+" "_" FLAG_FOUND "${FLAG_FOUND}")
+  check_cxx_compiler_flag("${FLAG}" "${FLAG_FOUND}")
+
+  if(${FLAG_FOUND})
+    set(COMMON_COMPILE_OPTIONS "${COMMON_COMPILE_OPTIONS};$<$<CONFIG:${CONFIG}>:${FLAG}>" PARENT_SCOPE)
   endif()
 endfunction()
 
 function(_checked_add_link_option FLAG)
   # Turn flag into suitable internal cache variable.
-  string(REGEX REPLACE "-(.*)" "LDFLAG_\\1" FLAG_FOUND ${FLAG})
+  string(REGEX REPLACE "-(.*)" "LDFLAG_\\1" FLAG_FOUND "${FLAG}")
   string(REGEX REPLACE "[,=-]+" "_" FLAG_FOUND "${FLAG_FOUND}")
 
-  check_linker_flag(CXX "${FLAG}" ${FLAG_FOUND})
+  check_linker_flag(CXX "${FLAG}" "${FLAG_FOUND}")
   if(${FLAG_FOUND})
-    set(COMMON_LINK_OPTIONS ${COMMON_LINK_OPTIONS} ${FLAG} PARENT_SCOPE)
+    set(COMMON_LINK_OPTIONS "${COMMON_LINK_OPTIONS};${FLAG}" PARENT_SCOPE)
   endif()
 endfunction()
 
@@ -124,11 +135,11 @@ if(ENABLE_HARDENING)
 endif()
 
 function(target_settings)
-    foreach(target ${ARGN})
-        target_compile_options(${target} PRIVATE ${COMMON_COMPILE_OPTIONS})
-        target_link_options(${target} PRIVATE ${COMMON_LINK_OPTIONS})
+    foreach(target IN LISTS ARGN)
+        target_compile_options("${target}" PRIVATE ${COMMON_COMPILE_OPTIONS})
+        target_link_options("${target}" PRIVATE ${COMMON_LINK_OPTIONS})
         if(HAVE_LTO)
-            set_target_properties(${target} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+            set_target_properties("${target}" PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
         endif()
     endforeach()
 endfunction()
