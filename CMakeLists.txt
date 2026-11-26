@@ -175,7 +175,7 @@ include(CheckedFlags)
 _checked_add_config_compile_option("Release;RelWithDebInfo" -O3)
 _checked_add_config_compile_option("Release;RelWithDebInfo" -ffunction-sections)
 _checked_add_config_compile_option("Release;RelWithDebInfo" -fdata-sections)
-_checked_add_config_link_option("Release;RelWithDebInfo" -Wl,--gc-sections)
+_checked_add_config_link_option("Release;RelWithDebInfo" LINKER:--gc-sections)
 
 if(ENABLE_STATIC AND NOT APPLE)
   target_link_options(${PROJECT_NAME} PRIVATE -static)
