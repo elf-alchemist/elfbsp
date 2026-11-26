@@ -82,9 +82,9 @@ target_sources(${PROJECT_NAME}
     src/reject.cpp
     src/thread.cpp
     src/udmf.cpp
-    src/wad.cpp
   PRIVATE FILE_SET CXX_MODULES FILES
     src/core.cpp
+    src/wad.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

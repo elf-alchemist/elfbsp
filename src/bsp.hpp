@@ -24,6 +24,7 @@
 #pragma once
 
 #include "local.hpp"
+#include "macros.hpp"
 
 import core;
 

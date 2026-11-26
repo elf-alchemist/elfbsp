@@ -21,7 +21,8 @@
 #pragma once
 
 #include "local.hpp"
-#include "wad.hpp"
+
+import wad;
 
 void SetupAnalysisFile(std::string_view filepath);
 void GenerateAnalysis(WadIO &io, Level &level, std::string_view filename);
