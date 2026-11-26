@@ -1,9 +1,7 @@
 # ELFBSP CMake Script
 cmake_minimum_required(VERSION 3.28)
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-
-include(CheckIncludeFile)
+list(PREPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 project(elfbsp
         VERSION "1.3.1"
@@ -66,6 +64,10 @@ add_library(scanner STATIC
   library/scanner/scanner.cpp
 )
 
+target_include_directories(scanner PUBLIC
+  library/scanner
+)
+
 add_executable(${PROJECT_NAME}
   src/blockmap.cpp
   src/bsp.cpp
@@ -80,10 +82,6 @@ add_executable(${PROJECT_NAME}
   src/thread.cpp
   src/udmf.cpp
   src/wad.cpp
-)
-
-target_include_directories(${PROJECT_NAME} PRIVATE
-  library/scanner
 )
 
 string(TOUPPER "${PROJECT_NAME}" PROJECT_TITLE)
@@ -110,7 +108,7 @@ set(PROJECT_DESKTOP "${PROJECT_IDENTIFIER}.desktop")
 set(PROJECT_INFO_PLIST "${PROJECT_IDENTIFIER}.Info.plist")
 set(PROJECT_MANIFEST "${PROJECT_IDENTIFIER}.manifest.xml")
 set(PROJECT_METAINFO "${PROJECT_IDENTIFIER}.metainfo.xml")
-set(PROJECT_RESOURSE_RC "${PROJECT_IDENTIFIER}.version.rc")
+set(PROJECT_RESOURCE_RC "${PROJECT_IDENTIFIER}.version.rc")
 
 set(MACOSX_BUNDLE_EXECUTABLE_NAME "${PROJECT_NAME}")
 set(MACOSX_BUNDLE_INFO_STRING "${PROJECT_COPYRIGHT}")
@@ -124,8 +122,8 @@ set(MACOSX_BUNDLE_COPYRIGHT "${PROJECT_COPYRIGHT}")
 
 if(WIN32)
   configure_file("res/${PROJECT_MANIFEST}.in" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_MANIFEST}" @ONLY)
-  configure_file("res/${PROJECT_RESOURSE_RC}.in" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_RESOURSE_RC}" @ONLY)
-  target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_MANIFEST}" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_RESOURSE_RC}")
+  configure_file("res/${PROJECT_RESOURCE_RC}.in" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_RESOURCE_RC}" @ONLY)
+  target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_MANIFEST}" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_RESOURCE_RC}")
 elseif(APPLE)
   configure_file("res/${PROJECT_INFO_PLIST}.in" "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_INFO_PLIST}" @ONLY)
   set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -157,17 +155,27 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
   GIT_SHORT_HASH="${GIT_SHORT_HASH}"
 )
 
+if(WIN32)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    # Make windows.h less annoying
+    WIN32_LEAN_AND_MEAN
+    NOMINMAX
+    NODRAWTEXT
+  )
+endif()
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS ON
 )
 
 include(CheckedFlags)
 
-if (CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo")
-  _checked_add_compile_option(-ffunction-sections)
-  _checked_add_compile_option(-fdata-sections)
-  _checked_add_link_option(-Wl,--gc-sections)
-endif()
+_checked_add_config_compile_option("Release;RelWithDebInfo" -O3)
+_checked_add_config_compile_option("Release;RelWithDebInfo" -ffunction-sections)
+_checked_add_config_compile_option("Release;RelWithDebInfo" -fdata-sections)
+_checked_add_config_link_option("Release;RelWithDebInfo" LINKER:--gc-sections)
 
 if(ENABLE_STATIC AND NOT APPLE)
   target_link_options(${PROJECT_NAME} PRIVATE -static)
@@ -190,14 +198,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   zlib-ng::zlib
   Threads::Threads
 )
-
-if(CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo")
-  _checked_add_compile_option(-O3)
-elseif(CMAKE_BUILD_TYPE MATCHES "Debug")
-  _checked_add_compile_option(-O0)
-elseif(CMAKE_BUILD_TYPE MATCHES "MinSizeRel")
-  _checked_add_compile_option(-Os)
-endif()
 
 # Actually apply the collected COMMON_COMPILE_OPTIONS / COMMON_LINK_OPTIONS.
 # Must come after every _checked_add_* call and after the targets exist.
@@ -239,14 +239,6 @@ endif()
 
 set(CPACK_PACKAGE_NAME "elfbsp")
 set(CPACK_PACKAGE_VENDOR "elfbsp")
-
-set(CPACK_PACKAGE_VERSION
-    "${CPACK_PACKAGE_VERSION}"
-    CACHE STRING "CPack version override")
-
-if(NOT CPACK_PACKAGE_VERSION)
-  set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-endif()
 
 if(WIN32)
   set(CPACK_SYSTEM_NAME "windows_x86_64")
