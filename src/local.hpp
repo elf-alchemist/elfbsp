@@ -533,7 +533,7 @@ void ParseUDMF(WadIO &io, Level &level);
 // detection routines
 void DetectOverlappingVertices(const Level &level);
 void DetectOverlappingLines(const Level &level);
-void DetectPolyobjSectors(const BuildInfo &config, const Level &level);
+void DetectPolyobjSectors(const BuildInfo &ctx, const Level &level);
 
 // pruning routines
 void ClearNewVertices(Level &level);
