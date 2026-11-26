@@ -231,14 +231,6 @@ endif()
 set(CPACK_PACKAGE_NAME "elfbsp")
 set(CPACK_PACKAGE_VENDOR "elfbsp")
 
-set(CPACK_PACKAGE_VERSION
-    "${CPACK_PACKAGE_VERSION}"
-    CACHE STRING "CPack version override")
-
-if(NOT CPACK_PACKAGE_VERSION)
-  set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-endif()
-
 if(WIN32)
   set(CPACK_SYSTEM_NAME "windows_x86_64")
 elseif(APPLE)
