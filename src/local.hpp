@@ -26,8 +26,7 @@
 #include "core.hpp"
 #include "wad.hpp"
 
-#include <memory>
-#include <vector>
+import std.compat;
 
 //------------------------------------------------------------------------
 // BLOCKMAP : Generate the blockmap

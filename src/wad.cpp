@@ -22,7 +22,10 @@
 #include "wad.hpp"
 #include "core.hpp"
 
-#include <cstdio>
+// for strnlen
+#include <string.h>
+
+import std.compat;
 
 //------------------------------------------------------------------------
 //  Utilities

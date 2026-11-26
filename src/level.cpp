@@ -26,9 +26,7 @@
 #include "info.hpp"
 #include "local.hpp"
 
-#include <algorithm>
-#include <cstring>
-#include <vector>
+import std.compat;
 
 bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2)
 {

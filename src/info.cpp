@@ -18,9 +18,7 @@
 //
 //------------------------------------------------------------------------------
 
-#include <filesystem>
-#include <format>
-#include <fstream>
+import std.compat;
 
 #include "core.hpp"
 #include "local.hpp"

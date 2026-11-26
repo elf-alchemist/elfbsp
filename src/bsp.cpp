@@ -25,9 +25,7 @@
 #include "core.hpp"
 #include "local.hpp"
 
-#include <algorithm>
-#include <cstdint>
-#include <vector>
+import std.compat;
 
 // Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
 constexpr uint16_t NF_SUBSECTOR_VANILLA = BIT(15);

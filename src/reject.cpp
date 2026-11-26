@@ -22,9 +22,7 @@
 //
 //------------------------------------------------------------------------------
 
-#include <algorithm>
-#include <atomic>
-#include <span>
+import std.compat;
 
 #include "core.hpp"
 #include "local.hpp"

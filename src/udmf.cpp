@@ -5,8 +5,8 @@
 #include "wad.hpp"
 
 #include "scanner.h"
-#include <cctype>
-#include <span>
+
+import std.compat;
 
 //-----------------------------------------------------------------------------
 

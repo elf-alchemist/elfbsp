@@ -24,7 +24,7 @@
 #include "core.hpp"
 #include "local.hpp"
 
-#include <utility>
+import std.compat;
 
 //
 // To be able to divide the nodes down, this routine must decide which

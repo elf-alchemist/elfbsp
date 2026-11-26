@@ -23,9 +23,8 @@
 #pragma once
 
 #include "core.hpp"
-#include <fstream>
-#include <string_view>
-#include <vector>
+
+import std.compat;
 
 //------------------------------------------------------------------------
 // WAD STRUCTURES
