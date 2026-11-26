@@ -163,11 +163,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 include(CheckedFlags)
 
-if (CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo")
-  _checked_add_compile_option(-ffunction-sections)
-  _checked_add_compile_option(-fdata-sections)
-  _checked_add_link_option(-Wl,--gc-sections)
-endif()
+_checked_add_config_compile_option("Release;RelWithDebInfo" -O3)
+_checked_add_config_compile_option("Release;RelWithDebInfo" -ffunction-sections)
+_checked_add_config_compile_option("Release;RelWithDebInfo" -fdata-sections)
+_checked_add_config_link_option("Release;RelWithDebInfo" -Wl,--gc-sections)
 
 if(ENABLE_STATIC AND NOT APPLE)
   target_link_options(${PROJECT_NAME} PRIVATE -static)
@@ -191,13 +190,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   Threads::Threads
 )
 
-if(CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo")
-  _checked_add_compile_option(-O3)
-elseif(CMAKE_BUILD_TYPE MATCHES "Debug")
-  _checked_add_compile_option(-O0)
-elseif(CMAKE_BUILD_TYPE MATCHES "MinSizeRel")
-  _checked_add_compile_option(-Os)
-endif()
+_checked_add_config_compile_option("Release;RelWithDebInfo" -O3)
+_checked_add_config_compile_option("Debug" -O0)
+_checked_add_config_compile_option("MinSizeRel" -Os)
 
 # Actually apply the collected COMMON_COMPILE_OPTIONS / COMMON_LINK_OPTIONS.
 # Must come after every _checked_add_* call and after the targets exist.
