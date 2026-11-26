@@ -22,11 +22,12 @@
 //
 //------------------------------------------------------------------------------
 
-import std.compat;
-
-#include "core.hpp"
 #include "local.hpp"
 #include "thread.hpp"
+
+import std.compat;
+
+import core;
 
 // Native platform headers required for low-level process priority
 #ifdef _WIN32

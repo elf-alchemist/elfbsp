@@ -23,8 +23,9 @@
 
 #pragma once
 
-#include "core.hpp"
 #include "local.hpp"
+
+import core;
 
 //
 // DoomBSP

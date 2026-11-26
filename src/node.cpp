@@ -21,10 +21,11 @@
 //
 //------------------------------------------------------------------------------
 
-#include "core.hpp"
 #include "local.hpp"
 
 import std.compat;
+
+import core;
 
 //
 // To be able to divide the nodes down, this routine must decide which

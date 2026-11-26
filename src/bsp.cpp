@@ -22,10 +22,11 @@
 //------------------------------------------------------------------------------
 
 #include "bsp.hpp"
-#include "core.hpp"
 #include "local.hpp"
 
 import std.compat;
+
+import core;
 
 // Upper-most bit is used for distinguishing sub-sectors, i.e tree leaves
 constexpr uint16_t NF_SUBSECTOR_VANILLA = BIT(15);

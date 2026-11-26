@@ -21,12 +21,13 @@
 //
 //------------------------------------------------------------------------------
 
-#include "core.hpp"
 #include "info.hpp"
 #include "local.hpp"
 #include "wad.hpp"
 
 import std.compat;
+
+import core;
 
 static bool opt_help = false;
 static bool opt_version = false;
@@ -47,8 +48,6 @@ struct map_range_t
 };
 
 static std::vector<map_range_t> map_list;
-
-BuildInfo config;
 
 //------------------------------------------------------------------------
 

@@ -22,21 +22,26 @@
 //
 //------------------------------------------------------------------------------
 
-#pragma once
+module;
 
 /*
  *  Standard headers
  */
 
-import std.compat;
-
 // for stdout/stderr
 #include <cstdio>
 // for strcasecmp
 #include <strings.h>
-#include <zlib-ng.h>
 
 #include "macros.hpp"
+
+export module core;
+
+import std.compat;
+
+// export everything!
+export
+{
 
 //
 //  OS support
@@ -395,7 +400,7 @@ enum class MapFormat
   UDMF,
 };
 
-static std::string_view format_name[] = {"ERROR", "Doom Format", "Hexen Format", "Doom64 Format", "UDMF"};
+inline constexpr std::string_view format_name[] = {"ERROR", "Doom Format", "Hexen Format", "Doom64 Format", "UDMF"};
 
 // Lump order in a map WAD: each map needs a couple of lumps
 // to provide a complete scene geometry description.
@@ -438,7 +443,7 @@ enum lump_order_t
   LM_LMAPS,
 };
 
-static constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
+inline constexpr uint32_t MAX_LUMPS_IN_A_LEVEL = 21;
 
 struct MapVertexIntegral
 {
@@ -1051,7 +1056,7 @@ struct BuildInfo
   bool skip_bmap_zero = false; // Skip "zero index" header on vanilla blockmap lump
 };
 
-extern BuildInfo config;
+inline BuildInfo config;
 
 struct AnalysisData
 {
@@ -1182,3 +1187,5 @@ std::pair<size_t, T> LargestElement(std::vector<T> input)
   const auto index = std::distance(input.begin(), value);
   return std::pair<size_t, T>(index, *value);
 }
+
+} // export

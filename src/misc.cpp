@@ -21,10 +21,11 @@
 //
 //------------------------------------------------------------------------------
 
-#include "core.hpp"
 #include "local.hpp"
 
 import std.compat;
+
+import core;
 
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures

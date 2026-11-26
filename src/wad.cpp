@@ -20,12 +20,13 @@
 //------------------------------------------------------------------------------
 
 #include "wad.hpp"
-#include "core.hpp"
 
 // for strnlen
 #include <string.h>
 
 import std.compat;
+
+import core;
 
 //------------------------------------------------------------------------
 //  Utilities

@@ -21,8 +21,9 @@
 //
 //------------------------------------------------------------------------------
 
-#include "core.hpp"
 #include "local.hpp"
+
+import core;
 
 static constexpr uint32_t POLY_BOX_SZ = 10;
 
