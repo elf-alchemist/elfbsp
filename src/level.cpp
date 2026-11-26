@@ -26,6 +26,7 @@
 
 import std.compat;
 
+import blockmap;
 import core;
 import info;
 import reject;

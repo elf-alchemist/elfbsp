@@ -187,9 +187,6 @@ void NormaliseBspTree(const Level &level);
 // rounded coordinates degenerate to the same point).
 void RoundOffBspTree(Level &level);
 
-// both BLOCKAMP and REJECT exist as single lumps on all supported map formats
-void Blockmap_Init(Level &level);
-void PutBlockmap(WadIO &io, Level &level);
 
 // the BSP tree lumps differ notably on each map format -- Doom/Hexen/Doom64
 // have NODES, SSECTORS & SEGS, but UDMF is generally only ZNODES, and there's

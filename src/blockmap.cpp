@@ -21,11 +21,18 @@
 //
 //------------------------------------------------------------------------------
 
+module;
+
 #include "local.hpp"
+
+export module blockmap;
 
 import std.compat;
 
 import core;
+
+export void Blockmap_Init(Level &level);
+export void PutBlockmap(WadIO &io, Level &level);
 
 static constexpr auto BlockMap_GridSize = 128;
 static constexpr auto BlockMap_GridMask = BlockMap_GridSize - static_cast<int32_t>(OFF_BY_ONE);

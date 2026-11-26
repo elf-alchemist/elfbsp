@@ -70,7 +70,6 @@ add_executable(${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME}
   PRIVATE
-    src/blockmap.cpp
     src/bsp.cpp
     src/info-impl.cpp
     src/level.cpp
@@ -80,6 +79,7 @@ target_sources(${PROJECT_NAME}
     src/node.cpp
     src/polyobj.cpp
   PRIVATE FILE_SET CXX_MODULES FILES
+    src/blockmap.cpp
     src/core.cpp
     src/info.cpp
     src/reject.cpp
