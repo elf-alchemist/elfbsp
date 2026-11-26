@@ -21,12 +21,12 @@
 //
 //------------------------------------------------------------------------------
 
-#include "info.hpp"
 #include "local.hpp"
 
 import std.compat;
 
 import core;
+import info;
 import wad;
 
 static bool opt_help = false;

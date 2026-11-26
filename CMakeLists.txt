@@ -72,7 +72,7 @@ target_sources(${PROJECT_NAME}
   PRIVATE
     src/blockmap.cpp
     src/bsp.cpp
-    src/info.cpp
+    src/info-impl.cpp
     src/level.cpp
     src/local.cpp
     src/main.cpp
@@ -83,6 +83,7 @@ target_sources(${PROJECT_NAME}
     src/udmf.cpp
   PRIVATE FILE_SET CXX_MODULES FILES
     src/core.cpp
+    src/info.cpp
     src/thread.cpp
     src/wad.cpp
 )

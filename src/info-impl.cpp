@@ -1,0 +1,197 @@
+//------------------------------------------------------------------------------
+//
+//  ELFBSP
+//
+//------------------------------------------------------------------------------
+//
+//  Copyright 2026 Guilherme Miranda
+//
+//  This program is free software; you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License
+//  as published by the Free Software Foundation; either version 2
+//  of the License, or (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//------------------------------------------------------------------------------
+
+module;
+
+#include "local.hpp"
+
+module info;
+
+import std.compat;
+
+import core;
+
+static std::vector<std::string> analysis_csv;
+
+//------------------------------------------------------------------------
+
+static void FileClear(const std::filesystem::path &filename)
+{
+  const std::ofstream file(filename);
+}
+
+void SetupAnalysisFile(std::string_view filepath)
+{
+  const auto csv_path = std::filesystem::path(filepath).replace_extension(".csv");
+
+  FileClear(csv_path);
+
+  const std::string line =
+      "map,is_fast,split_cost,old_vertex,lines,sides,sectors,new_vertex,nodes,subsecs,segs,splits,left_depth,"
+      "right_depth,average_depth,optimal_depth,tree_balance,worst_case_ratio,tree_quality";
+  analysis_csv.push_back(line);
+}
+
+// writes out for current file
+// expects AnalysisPushLine to have been called with all 0-32 split costs during node-building
+void WriteAnalysis(std::string_view filename)
+{
+  const auto mark = Benchmarker(__func__);
+  const auto csv_path = std::filesystem::path(filename).replace_extension(".csv");
+
+  // Append to fresh CSV
+  auto csv_file = std::ofstream(csv_path, std::ios::app);
+
+  if (!csv_file.is_open())
+  {
+    PrintLine(Log::WARN, "[{}] Couldn't open file {} for writing.", __func__, csv_path.string());
+    return;
+  }
+
+  for (const auto &line : analysis_csv)
+  {
+    csv_file << line << '\n';
+  }
+
+  csv_file.close();
+
+  // Flush out from memory
+  analysis_csv.clear();
+
+  PrintLine(Log::NORMAL, "[{}] Successfully wrote data to CSV file {}.", __func__, csv_path.string());
+}
+
+static void ComputeTotalBspHeights(const Node *node, size_t depth, double &leaf_depth_sum)
+{
+  if (!node)
+  {
+    return;
+  }
+
+  depth++;
+
+  if (!node->l.node)
+  {
+    leaf_depth_sum += static_cast<double>(depth);
+  }
+  else
+  {
+    ComputeTotalBspHeights(node->l.node, depth, leaf_depth_sum);
+  }
+
+  if (!node->r.node)
+  {
+    leaf_depth_sum += static_cast<double>(depth);
+  }
+  else
+  {
+    ComputeTotalBspHeights(node->r.node, depth, leaf_depth_sum);
+  }
+}
+
+void GenerateAnalysis(WadIO &io, Level &level, std::string_view /*filename*/)
+{
+  const auto mark = Benchmarker(__func__);
+  const auto generate_analysis_data = [&io, &level](bool is_fast, size_t split_cost) -> auto
+  {
+    AnalysisData data;
+    Node *analysis_node = nullptr;
+    Subsector *analysis_sub = nullptr;
+    Segment *analysis_seg = nullptr;
+
+    // Using 'double's to get around strict type casting
+    // and implicit conversion warnings
+    double left_size = 0.0;
+    double right_size = 0.0;
+    double total_depth_sum = 0.0;
+
+    double num_leafs = 0.0;
+    double optimal_depth = 0.0;
+    double expected_leafs_for_optimal_depth = 0.0;
+
+    // external path length
+    double min_epl = 0.0;
+    double max_epl = 0.0;
+
+    MapBoundBox dummy = {.maxy = 0, .miny = 0, .minx = 0, .maxx = 0};
+    analysis_seg = CreateSegs(level);
+    BuildNodes(level, analysis_seg, 0, dummy, analysis_node, analysis_sub, static_cast<double>(split_cost), is_fast, true);
+
+    data.vertex = level.num_old_vert;
+    data.lines = level.linedefs.size();
+    data.sides = level.sidedefs.size();
+    data.sectors = level.sectors.size();
+
+    data.bsp_vertex = level.num_new_vert;
+    data.nodes = level.nodes.size();
+    data.subsecs = level.subsecs.size();
+    data.segs = level.segs.size();
+
+    // TODO: sidedef math should account for non-seg-generating sides, actually
+    data.splits = level.segs.size() - level.sidedefs.size();
+    num_leafs = static_cast<double>(data.subsecs);
+
+    ComputeTotalBspHeights(analysis_node, 0, total_depth_sum);
+    data.left_depth = ComputeBspHeight(analysis_node->l.node);
+    data.right_depth = ComputeBspHeight(analysis_node->r.node);
+
+    left_size = static_cast<double>(data.left_depth);
+    right_size = static_cast<double>(data.right_depth);
+
+    data.average_depth = total_depth_sum / num_leafs;
+
+    optimal_depth = ceil(log2(num_leafs));
+
+    data.optimal_depth = static_cast<size_t>(optimal_depth);
+    data.tree_balance = (left_size < right_size) ? left_size / right_size : right_size / left_size;
+
+    // math pulled from Marc Rousseau's BSPInfo utility
+    expected_leafs_for_optimal_depth = pow(2, static_cast<double>(data.optimal_depth)); // 2 to the power N
+    min_epl = num_leafs * (optimal_depth + 1) - expected_leafs_for_optimal_depth;
+    max_epl = num_leafs * ((num_leafs - 1) / 2 + 1) - 1;
+    data.worst_case_ratio = min_epl / max_epl;
+    data.tree_quality = ((min_epl / total_depth_sum) - data.worst_case_ratio) / (1 - data.worst_case_ratio);
+
+    const std::string line =
+        std::format("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}", io.LumpName(level.lumps.label), is_fast,
+                    split_cost, data.vertex, data.lines, data.sides, data.sectors, data.bsp_vertex, data.nodes, data.subsecs,
+                    data.segs, data.splits, data.left_depth, data.right_depth, data.average_depth, data.optimal_depth,
+                    data.tree_balance, data.worst_case_ratio, data.tree_quality);
+    analysis_csv.push_back(line);
+
+    level.FreeNodes();
+    level.FreeSubsecs();
+    level.FreeSegs();
+    ClearNewVertices(level);
+    level.num_new_vert = 0;
+  };
+
+  // normal mode, and fast mode
+  for (size_t is_fast = 0; is_fast <= 1; is_fast++)
+  {
+    // across all split costs
+    for (size_t split_cost = 1; split_cost <= 32; split_cost++)
+    {
+      generate_analysis_data(is_fast != 0, split_cost);
+      PrintLine(Log::NORMAL, "[{}] Analyzed {}, {} mode, split cost factor of {}", __func__, io.LumpName(level.lumps.label),
+                is_fast ? "fast" : "normal", split_cost);
+    }
+  }
+}
