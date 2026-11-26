@@ -190,9 +190,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   Threads::Threads
 )
 
-_checked_add_config_compile_option("Debug" -O0)
-_checked_add_config_compile_option("MinSizeRel" -Os)
-
 # Actually apply the collected COMMON_COMPILE_OPTIONS / COMMON_LINK_OPTIONS.
 # Must come after every _checked_add_* call and after the targets exist.
 target_settings(${PROJECT_NAME} scanner)
