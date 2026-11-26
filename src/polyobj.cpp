@@ -29,7 +29,7 @@ static constexpr uint32_t POLY_BOX_SZ = 10;
 
 /* ----- polyobj handling ----------------------------- */
 
-void MarkPolyobjSector(const Level &level, Sector *sector)
+static void MarkPolyobjSector(const Level &level, Sector *sector)
 {
   if (sector == nullptr)
   {
@@ -60,7 +60,7 @@ void MarkPolyobjSector(const Level &level, Sector *sector)
   }
 }
 
-void MarkPolyobjPoint(const Level &level, double x, double y)
+static void MarkPolyobjPoint(const Level &level, double x, double y)
 {
   size_t inside_count = 0;
 
