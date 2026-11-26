@@ -190,7 +190,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   Threads::Threads
 )
 
-_checked_add_config_compile_option("Release;RelWithDebInfo" -O3)
 _checked_add_config_compile_option("Debug" -O0)
 _checked_add_config_compile_option("MinSizeRel" -Os)
 
