@@ -134,6 +134,9 @@ jobs:
           -DCPACK_PACKAGE_VERSION=nightly
           ${{ matrix.config.configure }}
 
+      - name: Build
+        run: cmake --build build
+
       - name: Run Clang-Tidy
         if: ${{ matrix.config.package_name == 'linux_x86_64' }}
         uses: cpp-linter/cpp-linter-action@v2
@@ -152,9 +155,6 @@ jobs:
       - name: Fail on lint errors
         if: steps.cpp-linter.outputs.checks-failed > 0
         run: exit 1
-
-      - name: Build
-        run: cmake --build build
 
       - name: Check static linking
         if: ${{ runner.os == 'Linux' }}
