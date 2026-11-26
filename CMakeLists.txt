@@ -155,6 +155,15 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
   GIT_SHORT_HASH="${GIT_SHORT_HASH}"
 )
 
+if(WIN32)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    # Make windows.h less annoying
+    WIN32_LEAN_AND_MEAN
+    NOMINMAX
+    NODRAWTEXT
+  )
+endif()
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 20
   CXX_STANDARD_REQUIRED ON
