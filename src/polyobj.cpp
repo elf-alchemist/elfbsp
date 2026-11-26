@@ -21,9 +21,15 @@
 //
 //------------------------------------------------------------------------------
 
+module;
+
 #include "local.hpp"
 
+export module polyobj;
+
 import core;
+
+export void DetectPolyobjSectors(const BuildInfo &ctx, const Level &level);
 
 static constexpr uint32_t POLY_BOX_SZ = 10;
 

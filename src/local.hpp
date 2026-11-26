@@ -531,7 +531,6 @@ struct Level
 // detection routines
 void DetectOverlappingVertices(const Level &level);
 void DetectOverlappingLines(const Level &level);
-void DetectPolyobjSectors(const BuildInfo &ctx, const Level &level);
 
 // pruning routines
 void ClearNewVertices(Level &level);

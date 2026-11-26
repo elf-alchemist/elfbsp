@@ -29,6 +29,7 @@ import std.compat;
 import blockmap;
 import core;
 import info;
+import polyobj;
 import reject;
 import udmf;
 
