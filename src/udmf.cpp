@@ -1,13 +1,39 @@
+//------------------------------------------------------------------------------
+//
+//  ELFBSP
+//
+//------------------------------------------------------------------------------
+//
+//  Copyright 2025-2026 Guilherme Miranda
+//  Copyright 2001-2022 Andrew Apted
+//  Copyright 1994-1998 Colin Reed
+//  Copyright 1997-1998 Lee Killough
+//
+//  This program is free software; you can redistribute it and/or
+//  modify it under the terms of the GNU General Public License
+//  as published by the Free Software Foundation; either version 2
+//  of the License, or (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//------------------------------------------------------------------------------
+
+module;
 
 #include "local.hpp"
-#include "scanner_support.h"
-
 #include "scanner.h"
+
+export module udmf;
 
 import std.compat;
 
 import core;
 import wad;
+
+export void ParseUDMF(WadIO &io, Level &level);
 
 //-----------------------------------------------------------------------------
 
@@ -494,7 +520,7 @@ void ParseUSector(Scanner &s, Level &level)
   level.udmf_sector.push_back(sector);
 }
 
-void ParseUThing(Scanner &s, Level &level)
+static void ParseUThing(Scanner &s, Level &level)
 {
   UThingMinimal thing{};
 
@@ -613,7 +639,7 @@ void ParseUThing(Scanner &s, Level &level)
 
 //-----------------------------------------------------------------------------
 
-void ParseTextMap(const WadIO &io, Level &level, std::span<char> lump)
+static void ParseTextMap(const WadIO &io, Level &level, std::span<char> lump)
 {
   auto s = Scanner(lump.data(), lump.size());
 

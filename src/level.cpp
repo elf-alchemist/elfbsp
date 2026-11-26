@@ -28,6 +28,7 @@ import std.compat;
 
 import core;
 import info;
+import udmf;
 
 bool CheckLinedefInsideBox(int xmin, int ymin, int xmax, int ymax, int x1, int y1, int x2, int y2)
 {

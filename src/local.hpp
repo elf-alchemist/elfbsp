@@ -520,8 +520,6 @@ struct Level
   void FreeIntersections();
 };
 
-void ParseUDMF(WadIO &io, Level &level);
-
 //------------------------------------------------------------------------
 // ANALYZE : Analyzing level structures
 //------------------------------------------------------------------------
