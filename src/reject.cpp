@@ -22,12 +22,9 @@
 //
 //------------------------------------------------------------------------------
 
+module;
+
 #include "local.hpp"
-
-import std.compat;
-
-import core;
-import thread;
 
 // Native platform headers required for low-level process priority
 #ifdef _WIN32
@@ -37,6 +34,15 @@ import thread;
   #include <sys/resource.h>
   #include <unistd.h>
 #endif
+
+export module reject;
+
+import std.compat;
+
+import core;
+import thread;
+
+export void PutReject(WadIO &io, Level &level);
 
 //------------------------------------------------------------------------
 // REJECT : Generate the reject table
@@ -431,7 +437,7 @@ static constexpr double SIDE_MARGIN = 1e-3;
 static constexpr double SHADOW_MARGIN = SIDE_MARGIN * 2.0;
 
 // 2D intersection check between two line segments.
-inline bool TrueSegmentsIntersect(const SightSegment &s1, const SightSegment &s2)
+static inline bool TrueSegmentsIntersect(const SightSegment &s1, const SightSegment &s2)
 {
   const double d1 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x1, s1.y1);
   const double d2 = SegmentSide(s2.x1, s2.y1, s2.x2, s2.y2, s1.x2, s1.y2);

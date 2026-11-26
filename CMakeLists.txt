@@ -79,10 +79,10 @@ target_sources(${PROJECT_NAME}
     src/misc.cpp
     src/node.cpp
     src/polyobj.cpp
-    src/reject.cpp
   PRIVATE FILE_SET CXX_MODULES FILES
     src/core.cpp
     src/info.cpp
+    src/reject.cpp
     src/thread.cpp
     src/wad.cpp
     src/udmf.cpp
