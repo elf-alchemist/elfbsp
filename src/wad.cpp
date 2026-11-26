@@ -22,10 +22,10 @@
 
 module;
 
-// for strnlen
+#include "macros.hpp"
+// NOLINTNEXTLINE(modernize-deprecated-headers) -- for strnlen
 #include <string.h>
 #include <zlib-ng.h>
-#include "macros.hpp"
 
 export module wad;
 
